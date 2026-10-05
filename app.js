@@ -1069,7 +1069,7 @@ function renderCol() {
 }
 function renderTab() {
   const html = tab === 'shop' ? renderShop() : tab === 'ceo' ? renderCeo() : tab === 'gacha' ? renderGacha() : renderCol();
-  tabBody.innerHTML = html; dirty = false; refreshDynamic(true);
+  tabBody.innerHTML = html; dirty = false; updateCompactHead(); refreshDynamic(true); // 顶部「谁在管哪家店」跟着一起刷新（调任/交换/新 CEO 后两处同步）
 }
 function setTab(t) {
   tab = t;

@@ -108,12 +108,22 @@ with sync_playwright() as p:
     check(s3['shops'] == shops_before, '换招牌不重置店铺进度（等级/员工）')
     check(s3['ceos']['rocket']['at'] == 0 and s3['ceos']['c77']['at'] == 3, '确认后火箭老板↔77 互换')
     check(S(pg, "__tzz.E.signOf(__tzz.state,0).name") == '老马烧烤', '招牌换成「老马烧烤」')
+    ch = pg.inner_text('#compactHead')
+    check('老马烧烤' in ch and '77烧烤店' not in ch, '交换任职后顶部「谁在管哪家店」同步刷新')
     check(modal_visible(pg) and '火箭烤炉' in pg.inner_text('#mpanel') and pg.locator('#mpanel .comic.two .panel4').count() == 2 and '香味先起飞了' in pg.inner_text('#mpanel') and '占位' not in pg.inner_text('#mpanel'), '跨行事件漫画：火箭烤炉（两格定稿）')
     pg.wait_for_timeout(900); pg.screenshot(path=f'{SHOTS}/07_comic.png')
     pg.click('#mOk'); pg.wait_for_timeout(400)
     check(modal_visible(pg) and '麻辣服务器' in pg.inner_text('#mpanel'), '第二个跨行漫画：麻辣服务器')
     close_modals(pg)
     check(S(pg, "__tzz.E.offlineCap(__tzz.state)") == 36000, '77 在科技公司：离线上限 10 小时')
+    # 让 77 休息：下方卡片和顶部「谁在管哪家店」要同时显示休息中
+    pg.evaluate("__tzz.showPreview('c77', -1)"); pg.wait_for_timeout(300); pg.click('#pvYes'); pg.wait_for_timeout(500); close_modals(pg)
+    card77 = pg.evaluate("[...document.querySelectorAll('#compactHead .ch-card')].map(e=>e.innerText).find(t=>t.includes('77'))") or ''
+    check(st(pg)['ceos']['c77']['at'] == -1 and '休息中' in card77 and '休息中' in pg.inner_text('#tabBody'), '77 休息后顶部和下方卡片同步显示「休息中」')
+    pg.screenshot(path=f'{SHOTS}/07b_rest_sync.png')
+    pg.evaluate("__tzz.showPreview('c77', 3)"); pg.wait_for_timeout(300); pg.click('#pvYes'); pg.wait_for_timeout(500); close_modals(pg)
+    card77 = pg.evaluate("[...document.querySelectorAll('#compactHead .ch-card')].map(e=>e.innerText).find(t=>t.includes('77'))") or ''
+    check(st(pg)['ceos']['c77']['at'] == 3 and '休息中' not in card77, '77 调回科技公司，顶部同步更新')
     pg.locator('#bottomNav [data-tab="shop"]').click(); pg.locator('#shopTabs [data-shop="0"]').click(); pg.wait_for_timeout(1300)
     pg.screenshot(path=f'{SHOTS}/08_laoma_bbq.png')
     print('== 3b. 大客户团单 / 漫画杯套 ==')
