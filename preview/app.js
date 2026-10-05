@@ -1682,9 +1682,9 @@ function homeLiveTap(e) {
     const p = E.homeOf(state, id).placed.find(q => q.uid === fEl.dataset.uid); if (!p) return;
     const f = E.FURN_BY_ID[p.fid], sz = E.furnSize(p.fid, p.rot);
     const cx = p.x + Math.floor(sz.w / 2), cy = p.y + Math.floor(sz.h / 2);
-    if (p.fid === 'furn_bed') return go(cx, Math.min(T.rows - 1, p.y + sz.h - 1), 'rest');
-    if (p.fid === 'furn_bookshelf') return go(cx, Math.min(T.rows - 1, p.y + 1), 'read');
-    if (p.fid === 'furn_wardrobe') return go(cx, Math.min(T.rows - 1, p.y + 1), 'dress');
+    const act = E.furnLiveAct(p.fid);
+    if (act === 'rest') return go(cx, Math.min(T.rows - 1, p.y + sz.h - 1), 'rest');
+    if (act === 'read' || act === 'dress') return go(cx, Math.min(T.rows - 1, p.y + 1), act);
     return go(cx, cy, 'walk');
   }
   if (!e.target.closest('#roomFloor')) return;

@@ -552,6 +552,15 @@
     inv[fid]--; if (inv[fid] <= 0) delete inv[fid]; return true;
   }
   function homeOpen(st, id) { return !!(CEO_BY_ID[id] && st.ceos[id] && st.ceos[id].unlocked); }
+  // 生活模式点家具的互动：按类别 / 明确能力，不认死 ID（新床、新书架等自动接上）。f.act 可显式覆盖
+  function furnLiveAct(fid) {
+    const f = FURN_BY_ID[fid]; if (!f) return 'walk';
+    if (f.act) return f.act;
+    if (f.cat === 'bed') return 'rest';
+    if (f.sub === 'bookshelf') return 'read';
+    if (f.sub === 'wardrobe') return 'dress';
+    return 'walk';
+  }
   function furnSize(fid, rot) { const f = FURN_BY_ID[fid]; return (rot & 1) ? { w:f.h, h:f.w } : { w:f.w, h:f.h }; }
   const boxOverlap = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
   function itemSurf(p, fid) {
@@ -838,6 +847,6 @@
     canOpen, openShop, hireEmp, upgradeEmp, upgradeCeo, upgradeShop,
     dayKey, nextResetTs, clockRolledBack, computeOffline, settleOffline, canDouble, claimOffline,
     gachaUnlocked, gachaRemaining, gachaOdds, gachaPrice, gachaDraw, cardsComplete, newState, migrate, nextGoal,
-    HOME_TIERS, HOME_MAX, WALL_ROWS, WALL_BLOCK, wallBlockedCells, MALL_CATS, FURNITURE, FURN_BY_ID, newHome, homeTier, homeOf, furnInvOf, homeOpen, furnSize, itemSurf, canPlace, findFree, homeUpgradeCost,
+    HOME_TIERS, HOME_MAX, WALL_ROWS, WALL_BLOCK, wallBlockedCells, MALL_CATS, FURNITURE, FURN_BY_ID, newHome, homeTier, homeOf, furnInvOf, homeOpen, furnLiveAct, furnSize, itemSurf, canPlace, findFree, homeUpgradeCost,
     buyFurniture, upgradeHome, placeItem, moveItem, rotateItem, storeItem, undoHome, migrateWallPaintings, homeLuxury, invCount, furnStats, normHomes, normFurnInv, normHomeBundle };
 });

@@ -400,5 +400,14 @@ ok(E.CROSS['rocket@0'].effect === 'bigFreq' && E.CROSS['c77@3'].effect === 'offl
   ok(E.furnStats(old, 'furn_painting').owned === 3, '挪动 / 退仓后总数不变（3 幅）');
 }
 
+// 生活互动按类别接：所有 bed 类都能休息（旧床 + 新云朵床），书架 / 衣柜不变，其它家具只走过去
+{
+  const beds = E.FURNITURE.filter(f => f.cat === 'bed');
+  ok(beds.length >= 2 && beds.every(f => E.furnLiveAct(f.id) === 'rest'), 'bed 类全部触发休息（' + beds.map(f => f.id).join(' / ') + '）');
+  ok(E.furnLiveAct('furn_bed') === 'rest' && E.furnLiveAct('furn_s77_cloud_canopy') === 'rest', '旧床 furn_bed、新云朵床都休息');
+  ok(E.furnLiveAct('furn_bookshelf') === 'read' && E.furnLiveAct('furn_wardrobe') === 'dress', '书架看书、衣柜换衣不变');
+  ok(['furn_sofa', 'furn_rocket_biosphere_dome', 'furn_rocket_rocket_model', 'nope'].every(id => E.furnLiveAct(id) === 'walk'), '非床家具 / 未知 ID 只走过去');
+}
+
 console.log(`economy tests: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

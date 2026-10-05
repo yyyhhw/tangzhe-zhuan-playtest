@@ -3,7 +3,7 @@
 import sys, json, os
 from playwright.sync_api import sync_playwright
 URL = sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:49710/index.html'
-KEY = 'tangzhe-save'
+KEY = 'tangzhe-preview-save'  # 预览专用存档键（11r 起）
 SHOTS = os.path.join(os.path.dirname(os.path.abspath(__file__)), '_shots')
 os.makedirs(SHOTS, exist_ok=True)
 results = []
@@ -313,7 +313,7 @@ with sync_playwright() as p:
     pg2.evaluate(f"(v)=>{{localStorage.clear(); v.lastSeen=Date.now()-10e3; v.maxSeen=v.lastSeen; localStorage.setItem('{KEY}', JSON.stringify(v));}}", v1)
     pg2.goto(URL); pg2.wait_for_timeout(800)
     s7 = st(pg2)
-    check(s7['v'] == 3 and s7['shops'][0]['emp'] == 1 and s7['ceos']['pearl']['at'] == 1 and S(pg2, "!!localStorage.getItem('tangzhe-save-bak-v1')"), '旧档 v1 → v3 迁移（伙伴→员工、CEO 就位、留备份）')
+    check(s7['v'] == 3 and s7['shops'][0]['emp'] == 1 and s7['ceos']['pearl']['at'] == 1 and S(pg2, "!!localStorage.getItem('tangzhe-preview-save-bak-v1')"), '旧档 v1 → v3 迁移（伙伴→员工、CEO 就位、留备份）')
     print('== 7. Safari 多标签：只有一个页面能玩 ==')
     pgA = pg2; pgB = ctx.new_page(); hook(pgB, 'pB')
     pgB.goto(URL); pgB.wait_for_timeout(1000)
@@ -336,7 +336,7 @@ with sync_playwright() as p:
     hc = b.new_context(**dev); hp = hc.new_page(); hook(hp, 'home')
     hp.goto(URL); hp.evaluate("localStorage.clear()"); hp.reload(); hp.wait_for_timeout(900); close_modals(hp)
     vv = S(hp, "fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()).then(j=>[j.v, document.querySelector('script[src^=\"app.js\"]').getAttribute('src'), document.querySelector('script[src^=\"economy.js\"]').getAttribute('src'), document.querySelector('link[href^=\"style.css\"]').getAttribute('href')])")
-    check(vv == ['11', 'app.js?v=11', 'economy.js?v=11', 'style.css?v=11'], f'缓存号统一 v11：{vv}')
+    B = vv[0]; check(vv == [B, f'app.js?v={B}', f'economy.js?v={B}', f'style.css?v={B}'], f'缓存号统一 {B}：{vv}')
     hp.evaluate("__tzz.state.coins = 1e6; __tzz.persist()")
     check(S(hp, "__tzz.E.onlineRate(__tzz.state, Date.now())") == 0, '（测试前提）没雇员工 → 每秒 0，金币只会被买东西改变')
     hp.locator('#bottomNav [data-tab="home"]').click(); hp.wait_for_timeout(450)
@@ -347,19 +347,19 @@ with sync_playwright() as p:
     hp.locator('.home-who [data-arg="pearl"]').click(); hp.wait_for_timeout(250)
     check('还没开放' in hp.inner_text('#tabBody') and hp.locator('#room').count() == 0, '点锁着的珍珠姐：显示「家还没开放」')
     hp.locator('.book-tabs [data-arg="mall"]').click(); hp.wait_for_timeout(450)
-    check(hp.locator('.mall-card:not(.mall-ghost)').count() == 12 and hp.locator('.home-lock').count() == 0 and '还没加入' in hp.inner_text('.mall-head') and '珍珠姐' in hp.inner_text('.mall-head'), '选着锁着的珍珠姐点「商城」：照样能逛公共商城（顶部提示她还没加入）')
+    NF = S(hp, '__tzz.E.FURNITURE.length'); check(hp.locator('.mall-card:not(.mall-ghost)').count() == NF and hp.locator('.home-lock').count() == 0 and '还没加入' in hp.inner_text('.mall-head') and '珍珠姐' in hp.inner_text('.mall-head'), '选着锁着的珍珠姐点「商城」：照样能逛公共商城（顶部提示她还没加入）')
     hp.locator('.book-tabs [data-arg="room"]').click(); hp.wait_for_timeout(450)
     check('还没开放' in hp.inner_text('#tabBody') and hp.locator('#room').count() == 0, '再回「家宅」：珍珠姐的家仍显示没开放')
     hp.locator('.home-who [data-arg="c77"]').click(); hp.wait_for_timeout(200)
     # 商城
     hp.locator('.book-tabs [data-arg="mall"]').click(); hp.wait_for_timeout(450)
     names = S(hp, "[...document.querySelectorAll('.mall-card:not(.mall-ghost) .name')].map(e=>e.firstChild.textContent.trim())")
-    check(hp.locator('.mall-card:not(.mall-ghost)').count() == 12 and all(n in names for n in ['床','沙发','桌子','台灯','地毯','绿植','书架','电视','冰箱','衣柜','挂画','猫窝']), f'商城 12 件家具：{"/".join(names)}')
+    check(hp.locator('.mall-card:not(.mall-ghost)').count() == NF and all(n in names for n in ['床','沙发','桌子','台灯','地毯','绿植','书架','电视','冰箱','衣柜','挂画','猫窝']), f'商城 {NF} 件家具（含新接入）：{"/".join(names)}')
     check(hp.locator('#mallSearch').count() == 1 and hp.locator('.mall-cats .mc').count() >= 9, '商城有固定搜索框 + 分类')
     check(S(hp, "[...document.querySelectorAll('.mall-card:not(.mall-ghost)')].every(c=>c.querySelector('[data-act=homeBuy] small') && /豪华 \\+\\d+/.test(c.innerText) && /占地 \\d×\\d/.test(c.innerText))"), '每件都标价格 / 豪华度 / 占地')
     check('余额' in hp.inner_text('.mall-head') and '100.0万' in hp.inner_text('.mall-head'), '商城顶部显示余额')
     hp.locator('.mall-cats [data-arg="bed"]').click(); hp.wait_for_timeout(200)
-    check(hp.locator('.mall-card:not(.mall-ghost)').count() == 1 and '床' in hp.inner_text('.mall-list'), '分类「床具」只显示床')
+    NB = S(hp, "__tzz.E.FURNITURE.filter(f=>f.cat==='bed').length"); check(hp.locator('.mall-card:not(.mall-ghost)').count() == NB and '床' in hp.inner_text('.mall-list') and '沙发' not in hp.inner_text('.mall-list'), f'分类「床具」只显示床类（{NB} 件：旧床 + 云朵纱帐床）')
     hp.locator('.mall-cats [data-arg="cabinet"]').click(); hp.wait_for_timeout(200)
     check(hp.locator('.mall-subs').count() == 1 and hp.locator('.mall-card:not(.mall-ghost)').count() == 2, '柜架：子类 + 书架/衣柜')
     hp.locator('.mall-subs [data-arg="wardrobe"]').click(); hp.wait_for_timeout(200)
@@ -514,6 +514,19 @@ with sync_playwright() as p:
     hp.locator('#roomFloor .furn[data-fid="furn_bed"]').click(); hp.wait_for_timeout(700)
     ac2 = S(hp, "(()=>{const a=__tzz.homeActor.c77; return {act:a.act,line:!!a.line};})()")
     check(ac2['act'] == 'rest' and ac2['line'], f'点床：休息 + 台词 {ac2}')
+    # 新云朵纱帐床（bed 类）同样休息：先点空地清掉状态，再摆一张新床点它
+    hp.mouse.click(fb['x'] + fb['width'] * 0.1, fb['y'] + fb['height'] * 0.1); hp.wait_for_timeout(500)
+    check(S(hp, "__tzz.homeActor.c77.act") != 'rest', f'点空地后不再是休息状态')
+    cb = S(hp, "(()=>{const s=__tzz.state,E=__tzz.E; s.coins+=E.FURN_BY_ID.furn_s77_cloud_canopy.price; const r=E.buyFurniture(s,'furn_s77_cloud_canopy'); const sp=E.findFree(s,'c77','furn_s77_cloud_canopy',0); if(!r.ok||!sp) return {ok:false,why:r.why||'没空位'}; const q=E.placeItem(s,'c77','furn_s77_cloud_canopy',sp.x,sp.y,0); __tzz.renderTab(); return {ok:!!q.ok,uid:q.uid,x:sp.x,y:sp.y};})()")
+    hp.wait_for_timeout(300)
+    if cb.get('ok'):
+        hp.locator(f'#roomFloor .furn[data-uid="{cb["uid"]}"]').click(); hp.wait_for_timeout(700)
+        ac3 = S(hp, "(()=>{const a=__tzz.homeActor.c77; return {act:a.act,line:!!a.line};})()")
+        check(ac3['act'] == 'rest' and ac3['line'], f'点新云朵纱帐床：同样休息 + 台词 {ac3}')
+        hp.screenshot(path=f'{SHOTS}/07c_cloud_bed_rest.png')
+        hp.evaluate(f"(()=>{{const s=__tzz.state,E=__tzz.E,h=s.homes.c77,i=h.placed.findIndex(p=>p.uid==='{cb['uid']}'); h.placed.splice(i,1); s.furnInv.furn_s77_cloud_canopy=0; delete s.furnInv.furn_s77_cloud_canopy; __tzz.renderTab();}})()"); hp.wait_for_timeout(200)
+    else:
+        check(False, f'摆新云朵床失败 {cb}')
     hp.locator('.mode-tabs [data-arg="decor"]').click(); hp.wait_for_timeout(250)
     view(); hp.locator('#roomFloor .furn[data-fid="furn_sofa"]').click(); hp.wait_for_timeout(2200)
     view(); hp.wait_for_timeout(200)
