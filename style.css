@@ -287,3 +287,18 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 
 /* 团单进度条（画在 canvas 上为主；DOM 备用） */
 .order-hud{position:absolute;left:8px;right:8px;bottom:8px;z-index:3;pointer-events:none}
+/* CEO×店铺 任职形象 */
+.job-gal{display:flex;gap:10px;align-items:stretch;margin:-6px 4px 14px;padding:10px 8px 8px;background:#fff6e3;border:3px solid var(--ink);border-top:none;border-radius:0 0 12px 12px}
+.job-pic{position:relative;flex:0 0 auto;width:132px;height:132px;padding:0;border:2.5px solid var(--ink);border-radius:12px;overflow:hidden;background:#fbf4e6;cursor:pointer}
+.job-pic img{width:100%;height:100%;object-fit:cover;display:block}
+.job-wip{position:absolute;left:0;right:0;bottom:0;background:rgba(20,20,20,.72);color:#fff;font-size:11px;font-weight:800;padding:2px 0;text-align:center}
+.job-side{flex:1;min-width:0;display:flex;flex-direction:column;gap:6px}
+.job-cap{font-size:12px}
+.job-chips{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.job-chip{position:relative;min-height:36px;font:inherit;font-size:12px;font-weight:800;border:2px solid var(--ink);border-radius:8px;background:#fff;padding:4px 2px;cursor:pointer;white-space:nowrap}
+.job-chip.on{background:var(--yellow);box-shadow:2px 2px 0 var(--ink)}
+.job-chip.lock{opacity:.45;cursor:default}
+.job-chip i{position:absolute;top:-8px;right:-4px;font-style:normal;font-size:9px;background:var(--red);color:#fff;border-radius:6px;padding:0 4px;border:1.5px solid var(--ink)}
+.job-hint{font-size:10px;color:#6b5b4b}
+.job-big{display:flex;justify-content:center;margin:6px 0}
+.job-big img{width:min(78vw,340px);aspect-ratio:1;object-fit:cover;border:3px solid var(--ink);border-radius:16px;background:#fbf4e6}

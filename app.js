@@ -360,6 +360,25 @@ const faceURL = id => PORTRAIT[id] ? `art/face_${id}.webp?v=${ART_V}` : avatarUR
 const bustURL = id => PORTRAIT[id] ? `art/ceo_${id}.webp?v=${ART_V}` : avatarURL(id);
 const faceImg = id => `<img src="${faceURL(id)}"${PORTRAIT[id] ? ` class="art" data-fb="${id}"` : ''} alt="">`;
 const bustImg = id => `<img src="${bustURL(id)}"${PORTRAIT[id] ? ` class="art" data-fb="${id}"` : ''} alt="">`;
+// CEO×店铺 任职形象（16 张）：本行用 ceo_<id>.webp，其余放 art/job_<id>_<店id>.webp，交过来一张在 JOB_ART 里登记一张
+const JOB_ART = {};
+const homeShop = id => E.CEO_BY_ID[id].home;
+const hasJobArt = (id, i) => i === homeShop(id) ? !!PORTRAIT[id] : !!JOB_ART[id + '_' + E.SHOPS[i].id];
+const jobURL = (id, i) => i !== homeShop(id) && JOB_ART[id + '_' + E.SHOPS[i].id] ? `art/job_${id}_${E.SHOPS[i].id}.webp?v=${ART_V}` : bustURL(id);
+const jobImg = (id, i) => `<img src="${jobURL(id, i)}"${PORTRAIT[id] ? ` class="art" data-fb="${id}"` : ''} alt="">`;
+const jobView = {}; // 每位 CEO 在 CEO 页正在看哪家店的形象（不存档，默认当前任职）
+function jobShown(id) {
+  const j = jobView[id], s = state.ceos[id];
+  if (j && j.at === s.at && state.shops[j.i] && state.shops[j.i].open) return j.i; // 调任后自动回到新任职
+
+  return s.at >= 0 ? s.at : homeShop(id);
+}
+function showJobArt(id, i) {
+  const c = E.CEO_BY_ID[id], ready = hasJobArt(id, i);
+  openModal(`<div class="mtitle">${c.name} × ${E.SHOPS[i].short}</div><div class="job-big">${jobImg(id, i)}</div>
+    ${ready ? '' : '<div class="mnote">这家店的形象画师还在赶稿，先放本行形象。</div>'}<button class="buy big" id="mOk">好</button>`, false);
+  $('#mOk').addEventListener('click', closeModal, { once:true });
+}
 document.addEventListener('error', e => {
   const el = e.target; if (!el || el.tagName !== 'IMG' || !el.dataset || !el.dataset.fb || el.dataset.fbd) return;
   el.dataset.fbd = '1'; el.src = avatarURL(el.dataset.fb);
@@ -904,6 +923,8 @@ function act(a, arg, btn) {
     case 'draw': return doGacha(btn);
     case 'equip': { const [who, slot, id] = arg.split(':'); if (!state.wear[who]) state.wear[who] = { clothes:null, hat:null }; state.wear[who][slot] = id === 'none' ? null : id; persist(); dirty = true; avaCacheClear(); sfx('buy'); break; }
     case 'wearWho': wardrobeWho = arg; dirty = true; break;
+    case 'jobView': { const [who, k] = arg.split(':'); jobView[who] = { i:+k, at:state.ceos[who].at }; dirty = true; sfx('tap'); break; }
+    case 'jobBig': { const [who, k] = arg.split(':'); return showJobArt(who, +k); }
     case 'decor': { const h = state.decorHidden || (state.decorHidden = []); const k = h.indexOf(arg); if (k >= 0) h.splice(k, 1); else h.push(arg); persist(); dirty = true; bgKey = ''; break; }
     case 'card': return showCard(arg);
     case 'reset': return confirmReset();
@@ -986,6 +1007,16 @@ function renderShop() {
   return h;
 }
 function ceoPost(id) { const s = state.ceos[id]; return s.at >= 0 ? E.signOf(state, s.at).name : '休息中（空着）'; }
+function jobGallery(id) {
+  const s = state.ceos[id], v = jobShown(id), cur = s.at === v, ready = hasJobArt(id, v);
+  const chips = E.SHOPS.map((S, i) => {
+    const open = !!state.shops[i].open;
+    return `<button class="job-chip ${i === v ? 'on' : ''} ${open ? '' : 'lock'}" ${open ? `data-act="jobView" data-arg="${id}:${i}"` : 'disabled'}>${open ? SHOP_ICON[i] : '🔒'} ${S.short}${s.at === i ? '<i>现任</i>' : ''}</button>`;
+  }).join('');
+  return `<div class="job-gal" data-ceo="${id}"><button class="job-pic" data-act="jobBig" data-arg="${id}:${v}">${jobImg(id, v)}${ready ? '' : '<span class="job-wip">画师赶稿中</span>'}</button>
+    <div class="job-side"><div class="job-cap">${cur ? '现任形象' : s.at < 0 && v === homeShop(id) ? '本行形象（休息中）' : '换店预览'}：<b>${E.SHOPS[v].short}</b></div>
+    <div class="job-chips">${chips}</div><div class="job-hint">点店名看 TA 在别家店的样子，点图放大</div></div></div>`;
+}
 function renderCeo() {
   let h = `<div class="sec-title">CEO 们（同一时间只管一家）</div>
     <div class="note" style="margin-top:0">流程：当前任职 → 选目的店 → 双方去向与 $/秒对比 → 确认。确认后换新招牌。</div>`;
@@ -997,6 +1028,7 @@ function renderCeo() {
       <div class="desc one">现任：<b>${ceoPost(c.id)}</b>${info ? `（${info.match ? '专长' : '跨行'} ×${info.mult.toFixed(2)}）` : ''}</div>
       <div class="desc one">“${c.line}”</div></div>
       <div class="btns">${s.lv >= CFG.CEO_MAX ? '' : btn('ceoUp', c.id, '升级', E.ceoCost(c.id, s.lv))}<button class="buy alt" data-act="assign" data-arg="${c.id}">调任</button></div></div>`;
+    h += jobGallery(c.id);
   }
   h += `<div class="sec-title">跨行组合</div><div class="cross-grid">`;
   for (const [k, x] of Object.entries(E.CROSS)) {
@@ -1383,5 +1415,5 @@ window.__tzz = { E, showComic, showCeoJoin, get state() { return state; }, set s
   forceSupers() { for (const k in superNext) superNext[k] = 0; updateSupers(); renderTab(); },
   get big() { return order; }, get order() { return order; }, get special() { return special; }, get guests() { return guests; },
   hitBig, modalOpen, closeModal, get frozen() { return frozen; },
-  audioState() { return AU.ctx ? AU.ctx.state : 'none'; }, showPreview, openAssign };
+  audioState() { return AU.ctx ? AU.ctx.state : 'none'; }, showPreview, openAssign, JOB_ART, jobShown, jobURL, showJobArt };
 })();

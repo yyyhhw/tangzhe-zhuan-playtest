@@ -124,6 +124,23 @@ with sync_playwright() as p:
     pg.evaluate("__tzz.showPreview('c77', 3)"); pg.wait_for_timeout(300); pg.click('#pvYes'); pg.wait_for_timeout(500); close_modals(pg)
     card77 = pg.evaluate("[...document.querySelectorAll('#compactHead .ch-card')].map(e=>e.innerText).find(t=>t.includes('77'))") or ''
     check(st(pg)['ceos']['c77']['at'] == 3 and '休息中' not in card77, '77 调回科技公司，顶部同步更新')
+    print('== 3a. CEO×店铺 任职形象 ==')
+    close_modals(pg); pg.evaluate("__tzz.renderTab()"); pg.wait_for_timeout(200)
+    g = '.job-gal[data-ceo="c77"]'
+    check(pg.locator('.job-gal').count() == 4, 'CEO 页每位已加入 CEO 都有任职形象区')
+    check(pg.locator(g + ' .job-chip').count() == 4 and pg.locator(g + ' .job-chip.lock').count() == 0 and '科技公司' in pg.inner_text(g + ' .job-chip.on') and '现任' in pg.inner_text(g + ' .job-chip.on'), '77 默认显示现任科技公司，4 家已开店都能点')
+    check('现任形象' in pg.inner_text(g + ' .job-cap') and pg.locator(g + ' .job-wip').count() == 1, '还没交图的组合先用本行形象并标「画师赶稿中」')
+    pg.screenshot(path=f'{SHOTS}/07c_job_gallery.png')
+    pg.locator(g + ' [data-act="jobView"][data-arg="c77:0"]').click(); pg.wait_for_timeout(250)
+    src = pg.get_attribute(g + ' .job-pic img', 'src') or ''
+    check('烧烤摊' in pg.inner_text(g + ' .job-chip.on') and 'ceo_c77.webp' in src and pg.locator(g + ' .job-wip').count() == 0 and '换店预览' in pg.inner_text(g + ' .job-cap'), '点烧烤摊：切到 77 的本行形象（已有图，不标赶稿）')
+    check(st(pg)['ceos']['c77']['at'] == 3, '看别家形象不改任职')
+    pg.locator(g + ' .job-pic').click(); pg.wait_for_timeout(300)
+    check(modal_visible(pg) and pg.locator('#mpanel .job-big img').count() == 1 and '77 × 烧烤摊' in pg.inner_text('#mpanel'), '点图放大看大图')
+    close_modals(pg)
+    check(S(pg, "(()=>{__tzz.JOB_ART.c77_tech=1; const u=__tzz.jobURL('c77',3); delete __tzz.JOB_ART.c77_tech; return u;})()").startswith('art/job_c77_tech.webp') and S(pg, "__tzz.jobURL('c77',3)").startswith('art/ceo_c77.webp'), '登记新图后按 job_<CEO>_<店>.webp 加载，未登记退回本行图')
+    check(S(pg, "(()=>{const s=__tzz.state.ceos.c77; s.at=2; const v=__tzz.jobShown('c77'); s.at=3; return v;})()") == 2, '调任后默认显示新任职形象')
+    check(S(pg, "(()=>{__tzz.state.shops[2].open=false; __tzz.renderTab(); const n=document.querySelectorAll('.job-gal[data-ceo=\"c77\"] .job-chip.lock').length; __tzz.state.shops[2].open=true; __tzz.renderTab(); return n;})()") == 1, '没开的店锁着不能看')
     pg.locator('#bottomNav [data-tab="shop"]').click(); pg.locator('#shopTabs [data-shop="0"]').click(); pg.wait_for_timeout(1300)
     pg.screenshot(path=f'{SHOTS}/08_laoma_bbq.png')
     print('== 3b. 大客户团单 / 漫画杯套 ==')
