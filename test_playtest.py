@@ -315,6 +315,10 @@ with sync_playwright() as p:
     check('小屋' in hp.inner_text('.home-card') and '6×4' in hp.inner_text('.home-card') and S(hp, "getComputedStyle(document.getElementById('room')).getPropertyValue('--cols').trim()") == '6', '77 的小屋：6×4 格')
     hp.locator('.home-who [data-arg="pearl"]').click(); hp.wait_for_timeout(250)
     check('还没开放' in hp.inner_text('#tabBody') and hp.locator('#room').count() == 0, '点锁着的珍珠姐：显示「家还没开放」')
+    hp.locator('.book-tabs [data-arg="mall"]').click(); hp.wait_for_timeout(450)
+    check(hp.locator('.mall-card').count() == 12 and hp.locator('.home-lock').count() == 0 and '还没加入' in hp.inner_text('.mall-head') and '珍珠姐' in hp.inner_text('.mall-head'), '选着锁着的珍珠姐点「商城」：照样能逛公共商城（顶部提示她还没加入）')
+    hp.locator('.book-tabs [data-arg="room"]').click(); hp.wait_for_timeout(450)
+    check('还没开放' in hp.inner_text('#tabBody') and hp.locator('#room').count() == 0, '再回「家宅」：珍珠姐的家仍显示没开放')
     hp.locator('.home-who [data-arg="c77"]').click(); hp.wait_for_timeout(200)
     # 商城
     hp.locator('.book-tabs [data-arg="mall"]').click(); hp.wait_for_timeout(450)

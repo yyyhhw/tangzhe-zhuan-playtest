@@ -1378,7 +1378,7 @@ function homeLocked() {
 function renderHome() {
   if (!E.CEO_BY_ID[homeWho]) homeWho = 'c77';
   let h = homeBook(homeSub) + homeWhoRow();
-  if (!E.homeOpen(state, homeWho)) return h + homeLocked();
+  if (homeSub !== 'mall' && !E.homeOpen(state, homeWho)) return h + homeLocked(); // 商城是公共的，不受当前 CEO 是否加入限制
   return h + (homeSub === 'mall' ? renderMall() : renderRoom());
 }
 function renderRoom() {
@@ -1414,8 +1414,8 @@ function renderRoom() {
   return h;
 }
 function renderMall() {
-  const c = E.CEO_BY_ID[homeWho];
-  let h = `<div class="mall-head"><div>公共仓库 · 现看 <b>${c.name}</b> 的家</div><div>余额 ${coinSm}<b id="mallBal">${fmt(state.coins)}</b></div></div><div class="mall-list">`;
+  const c = E.CEO_BY_ID[homeWho], open = E.homeOpen(state, homeWho), nm = open || c.id !== 'rocket' ? c.name : '？？？';
+  let h = `<div class="mall-head"><div>公共仓库 · ${open ? `现看 <b>${nm}</b> 的家` : `<b>${nm}</b> 还没加入，买的先进仓库`}</div><div>余额 ${coinSm}<b id="mallBal">${fmt(state.coins)}</b></div></div><div class="mall-list">`;
   h += E.FURNITURE.map(f => { const stt = E.furnStats(state, f.id);
     const where = stt.where.length ? stt.where.map(w => w.name).join('、') : '未摆出';
     return `<div class="card mall-card" data-fid="${f.id}"><div class="ava sq furn-ico" style="--fc:${f.color}">${furnInner(f.id, 0)}</div><div class="info"><div class="name">${f.name}<span class="tag match">豪华 +${f.lux}</span></div>
