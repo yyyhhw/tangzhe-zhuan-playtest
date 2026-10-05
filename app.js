@@ -1446,10 +1446,10 @@ function showIntro() {
 // 房间底图：art/home_<ceo>_<lv>.webp（ceo=c77/pearl/otaku/rocket，lv=1/2/3），例 { c77_1:1 }
 // 底图规格：宽 = 列数×200px，高 = (2 + 行数)×200px；上面 2 格高是后墙，下面是地板格，平行投影无消失点。Lv1 6×4 → 1200×1200，墙地分界 y=400
 const HOME_ART = { c77_1: 1, pearl_1: 1, otaku_1: 1, rocket_1: 1 };  // 熊大四位 CEO 的 Lv1（原图墙 / 地板在踢脚线底边处分开，分别缩放到 1200×400 + 1200×800）
-const FURN_ART = { bed:1, bookshelf:1, wardrobe:1 };  // 熊大小床 / 书架 / 衣柜 400×600 透明底。家具：art/furn_<bed|sofa|table|lamp|rug|plant|bookshelf|tv|fridge|wardrobe|painting|catbed>.webp，例 { bed:1 }
+const FURN_ART = { bed:1, bookshelf:1, wardrobe:1, table:1, fridge:1, sofa:1, rug:1, plant:1, lamp:1 };  // 熊大小床 / 书架 / 衣柜 400×600 透明底；桌子 / 冰箱 / 沙发 / 地毯 / 绿植 / 台灯 透明底（裁掉四周透明留白，宽 = 占地格数×200，1 格的 240）。家具：art/furn_<bed|sofa|table|lamp|rug|plant|bookshelf|tv|fridge|wardrobe|painting|catbed>.webp，例 { bed:1 }
 const furnName = fid => fid.replace(/^furn_/, '');
 // 高家具：占地只有底下那排格子，图按「高 / 宽」比例往上伸（盖住后墙），底脚对齐占地底边；值 = 图高 / 图宽（400×600 → 1.5）
-const FURN_UP = { bookshelf: 1.5, wardrobe: 1.5 };
+const FURN_UP = { bookshelf: 1.5, wardrobe: 1.5, table: 202 / 400, sofa: 225 / 600, fridge: 512 / 240, plant: 396 / 240, lamp: 468 / 240 };  // 桌子 / 沙发是正面图：保持竖直、底脚贴占地底边；冰箱 / 绿植 / 台灯 1×1 往上伸
 const furnTall = fid => !!(FURN_ART[furnName(fid)] && FURN_UP[furnName(fid)]);
 const HOME_ICON = ['🏠', '🏢', '🏰'];
 let homeWho = 'c77', homeSub = 'room', homeMode = 'live', homeSel = null, homeDrag = null;

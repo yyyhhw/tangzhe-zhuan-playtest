@@ -362,6 +362,8 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 #wallHl{z-index:5}
 .drag-ghost.tall{background:transparent;border-width:0;box-shadow:none}
 .furn.tall .fi img{object-position:center bottom}
+.furn.rug.art .fi img{object-fit:fill}  /* 地毯平铺在地上：图拉满占地格 */
+.furn.rug.art{opacity:1}
 .furn .fn{position:absolute;left:2px;bottom:1px;font-size:9px;font-weight:900;background:rgba(255,255,255,.85);border-radius:3px;padding:0 3px;pointer-events:none;white-space:nowrap}
 .drag-ghost{position:fixed;z-index:70;pointer-events:none;opacity:.85;transform:scale(1.05);box-shadow:4px 6px 0 rgba(20,20,20,.4)}
 .drag-ghost.ok{outline:3px solid var(--green)}
