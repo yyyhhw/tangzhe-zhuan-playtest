@@ -207,7 +207,9 @@ ok(E.CROSS['rocket@0'].effect === 'bigFreq' && E.CROSS['c77@3'].effect === 'offl
 {
   const F = id => E.FURN_BY_ID[id];
   const NEW43 = ['s77_quilt_daybed','s77_drawer_bed','s77_book_nook_bed','s77_peg_cubby','s77_ladder_shelf','s77_basket_cabinet','s77_round_corner_chest','s77_sewing_cabinet','s77_pantry_hutch','s77_attic_trunk','s77_reading_stool','s77_rocking_chair','s77_heart_bench','s77_folding_tray','s77_quilt_ottoman','s77_window_bench','s77_sewing_desk','s77_curved_sectional','s77_lantern_stand','s77_mushroom_lamp','s77_petal_uplight','s77_quilt_shade_lamp','s77_hearth_light','s77_box_fan','s77_toaster_cart','s77_record_console','s77_sewing_machine_stand','s77_stove_oven','s77_laundry_pair','s77_braided_runner','s77_patchwork_flower_rug','s77_quilt_island_rug','s77_embroidery_hoops','s77_wood_cuckoo','s77_quilt_wall','s77_pressed_flower_frame','s77_family_silhouette','s77_watering_stand','s77_knitting_basket','s77_olive_planter','s77_mini_greenhouse','pearl_tea_daybed','pearl_pearl_bed'];
-  ok(E.FURNITURE.length === 60 && ['bed','sofa','table','lamp','rug','plant','bookshelf','tv','fridge','wardrobe','painting','catbed','rocket_rocket_model','rocket_meteor_stand','rocket_biosphere_dome','s77_cloud_canopy','rocket_capsule_bunk'].concat(NEW43).every(n => F('furn_' + n)), '商城 60 件家具（12 基础 + 5 前批 + 11v 43 件），id = furn_<名>');
+  const NEW34 = ["pearl_cup_carousel", "pearl_bakery_display", "pearl_sideboard_island", "pearl_archive_apothecary", "pearl_conversation_pit", "pearl_tea_gongfu_desk", "pearl_paper_pear_lamp", "pearl_tea_glass_lamp", "pearl_boba_globe_lamp", "pearl_tea_mat", "pearl_scallop_rug", "pearl_tea_river_runner", "otaku_floor_chair", "otaku_modular_couch", "otaku_arcade_bench", "otaku_streaming_desk", "otaku_panel_rug", "otaku_controller_rug", "otaku_speed_runner", "otaku_pixel_succulent", "otaku_manga_book_stack", "otaku_robot_planter", "otaku_aquatic_pixel_tank", "rocket_field_cot", "rocket_cargo_crate", "rocket_mesh_rack", "rocket_airlock_wardrobe", "rocket_rail_bench", "rocket_mission_table", "rocket_zero_g_lounger", "rocket_cage_lamp", "rocket_tripod_searchlight", "rocket_pipe_valve_lamp", "rocket_rocket_nozzle_light"];
+  ok(E.FURNITURE.length === 94 && ['bed','sofa','table','lamp','rug','plant','bookshelf','tv','fridge','wardrobe','painting','catbed','rocket_rocket_model','rocket_meteor_stand','rocket_biosphere_dome','s77_cloud_canopy','rocket_capsule_bunk'].concat(NEW43, NEW34).every(n => F('furn_' + n)), '商城 94 件家具（12 基础 + 5 前批 + 11v 43 件 + 11w 34 件），id = furn_<名>');
+  ok(NEW34.length === 34, '11w 新接 34 件');
   ok(NEW43.length === 43 && new Set(E.FURNITURE.map(f => f.id)).size === E.FURNITURE.length, '11v 新接 43 件、全表 id 不重复');
   ok(E.FURNITURE.every(f => f.w >= 1 && f.h >= 1 && f.price > 0 && f.lux > 0), '每件家具都有占地 / 价格 / 豪华度');
   ok(E.HOME_TIERS.map(t => t.name + t.cols + 'x' + t.rows).join() === '小屋6x4,公寓8x5,豪宅10x6', '三档房子：小屋 6×4 → 公寓 8×5 → 豪宅 10×6');
@@ -411,9 +413,9 @@ ok(E.CROSS['rocket@0'].effect === 'bigFreq' && E.CROSS['c77@3'].effect === 'offl
   ok(['furn_sofa', 'furn_rocket_biosphere_dome', 'furn_rocket_rocket_model', 'nope'].every(id => E.furnLiveAct(id) === 'walk'), '非床家具 / 未知 ID 只走过去');
 }
 
-// 11v：packs 01–10 的 43 件（跳过已接入的云朵纱帐床）：价格 / 豪华度 / 分类 / 占地按公共资产索引提案；花瓣转角沙发 3×3 实测改 3×2
+// 11v：packs 01–10 的 43 件；11w 熊大拍板占地：抽屉床/贝壳床 2×2、摇椅/拼布灯 1×1、花瓣沙发保持 3×2
 {
-  const SPEC = {"furn_s77_quilt_daybed": [3, 1, 1800, 2, "bed"], "furn_s77_drawer_bed": [2, 3, 6500, 4, "bed"], "furn_s77_book_nook_bed": [3, 3, 36000, 7, "bed"], "furn_s77_peg_cubby": [1, 1, 850, 1, "cabinet"], "furn_s77_ladder_shelf": [2, 1, 1600, 2, "cabinet"], "furn_s77_basket_cabinet": [2, 1, 2200, 2, "cabinet"], "furn_s77_round_corner_chest": [2, 1, 5200, 4, "cabinet"], "furn_s77_sewing_cabinet": [2, 1, 8500, 4, "cabinet"], "furn_s77_pantry_hutch": [2, 1, 15000, 4, "cabinet"], "furn_s77_attic_trunk": [2, 1, 28000, 7, "cabinet"], "furn_s77_reading_stool": [1, 1, 400, 1, "seat"], "furn_s77_rocking_chair": [1, 2, 3500, 2, "seat"], "furn_s77_heart_bench": [3, 1, 2800, 2, "seat"], "furn_s77_folding_tray": [1, 1, 650, 1, "seat"], "furn_s77_quilt_ottoman": [1, 1, 1200, 2, "seat"], "furn_s77_window_bench": [3, 1, 9000, 4, "seat"], "furn_s77_sewing_desk": [2, 1, 17000, 7, "seat"], "furn_s77_curved_sectional": [3, 2, 65000, 11, "seat"], "furn_s77_lantern_stand": [1, 1, 550, 1, "lamp"], "furn_s77_mushroom_lamp": [1, 1, 1600, 2, "lamp"], "furn_s77_petal_uplight": [1, 1, 4800, 2, "lamp"], "furn_s77_quilt_shade_lamp": [1, 2, 10000, 4, "lamp"], "furn_s77_hearth_light": [2, 1, 28000, 7, "lamp"], "furn_s77_box_fan": [1, 1, 900, 1, "appliance"], "furn_s77_toaster_cart": [1, 1, 2400, 2, "appliance"], "furn_s77_record_console": [2, 1, 7800, 4, "appliance"], "furn_s77_sewing_machine_stand": [2, 1, 12000, 4, "appliance"], "furn_s77_stove_oven": [2, 1, 26000, 7, "appliance"], "furn_s77_laundry_pair": [1, 1, 55000, 11, "appliance"], "furn_s77_braided_runner": [1, 3, 750, 1, "rug"], "furn_s77_patchwork_flower_rug": [3, 3, 3800, 2, "rug"], "furn_s77_quilt_island_rug": [3, 2, 15000, 4, "rug"], "furn_s77_embroidery_hoops": [2, 1, 500, 1, "wall"], "furn_s77_wood_cuckoo": [1, 2, 2500, 2, "wall"], "furn_s77_quilt_wall": [2, 2, 4800, 2, "wall"], "furn_s77_pressed_flower_frame": [1, 2, 1300, 2, "wall"], "furn_s77_family_silhouette": [2, 1, 12000, 4, "wall"], "furn_s77_watering_stand": [1, 1, 1100, 2, "plant"], "furn_s77_knitting_basket": [1, 1, 450, 1, "plant"], "furn_s77_olive_planter": [1, 1, 6200, 4, "plant"], "furn_s77_mini_greenhouse": [2, 1, 24000, 7, "plant"], "furn_pearl_tea_daybed": [3, 1, 2400, 2, "bed"], "furn_pearl_pearl_bed": [2, 3, 8000, 4, "bed"]};
+  const SPEC = {"furn_s77_quilt_daybed": [3, 1, 1800, 2, "bed"], "furn_s77_drawer_bed": [2, 2, 6500, 4, "bed"], "furn_s77_book_nook_bed": [3, 3, 36000, 7, "bed"], "furn_s77_peg_cubby": [1, 1, 850, 1, "cabinet"], "furn_s77_ladder_shelf": [2, 1, 1600, 2, "cabinet"], "furn_s77_basket_cabinet": [2, 1, 2200, 2, "cabinet"], "furn_s77_round_corner_chest": [2, 1, 5200, 4, "cabinet"], "furn_s77_sewing_cabinet": [2, 1, 8500, 4, "cabinet"], "furn_s77_pantry_hutch": [2, 1, 15000, 4, "cabinet"], "furn_s77_attic_trunk": [2, 1, 28000, 7, "cabinet"], "furn_s77_reading_stool": [1, 1, 400, 1, "seat"], "furn_s77_rocking_chair": [1, 1, 3500, 2, "seat"], "furn_s77_heart_bench": [3, 1, 2800, 2, "seat"], "furn_s77_folding_tray": [1, 1, 650, 1, "seat"], "furn_s77_quilt_ottoman": [1, 1, 1200, 2, "seat"], "furn_s77_window_bench": [3, 1, 9000, 4, "seat"], "furn_s77_sewing_desk": [2, 1, 17000, 7, "seat"], "furn_s77_curved_sectional": [3, 2, 65000, 11, "seat"], "furn_s77_lantern_stand": [1, 1, 550, 1, "lamp"], "furn_s77_mushroom_lamp": [1, 1, 1600, 2, "lamp"], "furn_s77_petal_uplight": [1, 1, 4800, 2, "lamp"], "furn_s77_quilt_shade_lamp": [1, 1, 10000, 4, "lamp"], "furn_s77_hearth_light": [2, 1, 28000, 7, "lamp"], "furn_s77_box_fan": [1, 1, 900, 1, "appliance"], "furn_s77_toaster_cart": [1, 1, 2400, 2, "appliance"], "furn_s77_record_console": [2, 1, 7800, 4, "appliance"], "furn_s77_sewing_machine_stand": [2, 1, 12000, 4, "appliance"], "furn_s77_stove_oven": [2, 1, 26000, 7, "appliance"], "furn_s77_laundry_pair": [1, 1, 55000, 11, "appliance"], "furn_s77_braided_runner": [1, 3, 750, 1, "rug"], "furn_s77_patchwork_flower_rug": [3, 3, 3800, 2, "rug"], "furn_s77_quilt_island_rug": [3, 2, 15000, 4, "rug"], "furn_s77_embroidery_hoops": [2, 1, 500, 1, "wall"], "furn_s77_wood_cuckoo": [1, 2, 2500, 2, "wall"], "furn_s77_quilt_wall": [2, 2, 4800, 2, "wall"], "furn_s77_pressed_flower_frame": [1, 2, 1300, 2, "wall"], "furn_s77_family_silhouette": [2, 1, 12000, 4, "wall"], "furn_s77_watering_stand": [1, 1, 1100, 2, "plant"], "furn_s77_knitting_basket": [1, 1, 450, 1, "plant"], "furn_s77_olive_planter": [1, 1, 6200, 4, "plant"], "furn_s77_mini_greenhouse": [2, 1, 24000, 7, "plant"], "furn_pearl_tea_daybed": [3, 1, 2400, 2, "bed"], "furn_pearl_pearl_bed": [2, 2, 8000, 4, "bed"]};
   const CATS = E.MALL_CATS.map(c => c.id), bad = [];
   for (const [id, [w, h, price, lux, cat]] of Object.entries(SPEC)) {
     const f = E.FURN_BY_ID[id];
@@ -433,6 +435,29 @@ ok(E.CROSS['rocket@0'].effect === 'bigFreq' && E.CROSS['c77@3'].effect === 'offl
   E.buyFurniture(s, 'furn_s77_patchwork_flower_rug'); E.buyFurniture(s, 'furn_s77_curved_sectional'); E.buyFurniture(s, 'furn_s77_embroidery_hoops');
   ok(E.placeItem(s, 'c77', 'furn_s77_patchwork_flower_rug', 0, 0, 0).ok && E.placeItem(s, 'c77', 'furn_s77_curved_sectional', 0, 1, 0).ok, '3×3 拼布花园毯上叠放 3×2 转角沙发');
   ok(!E.canPlace(s, 'c77', 'furn_s77_embroidery_hoops', 3, 3, 0, null, 'floor').ok && E.placeItem(s, 'c77', 'furn_s77_embroidery_hoops', 0, 0, 0, 'wall').ok, '刺绣圆绷组只能挂墙（左上空墙 2×1）');
+}
+
+// 11w：packs 13/16/19/27/30/33/36/39 的 34 件：价格 / 豪华度 / 分类 / 占地按公共资产索引提案；环形茶会沙发 3×3 实测改 3×2（同花瓣转角沙发）
+{
+  const SPEC = {"furn_pearl_cup_carousel": [1, 1, 6800, 4, "cabinet"], "furn_pearl_bakery_display": [2, 1, 18000, 7, "cabinet"], "furn_pearl_sideboard_island": [3, 2, 42000, 11, "cabinet"], "furn_pearl_archive_apothecary": [3, 1, 90000, 11, "cabinet"], "furn_pearl_conversation_pit": [3, 2, 75000, 11, "seat"], "furn_pearl_tea_gongfu_desk": [3, 1, 145000, 16, "seat"], "furn_pearl_paper_pear_lamp": [1, 1, 700, 1, "lamp"], "furn_pearl_tea_glass_lamp": [1, 1, 2600, 2, "lamp"], "furn_pearl_boba_globe_lamp": [1, 1, 5800, 4, "lamp"], "furn_pearl_tea_mat": [2, 2, 450, 1, "rug"], "furn_pearl_scallop_rug": [2, 2, 1600, 2, "rug"], "furn_pearl_tea_river_runner": [1, 3, 5500, 4, "rug"], "furn_otaku_floor_chair": [1, 1, 1300, 2, "seat"], "furn_otaku_modular_couch": [3, 2, 18000, 7, "seat"], "furn_otaku_arcade_bench": [2, 1, 3200, 2, "seat"], "furn_otaku_streaming_desk": [3, 2, 36000, 7, "seat"], "furn_otaku_panel_rug": [2, 2, 650, 1, "rug"], "furn_otaku_controller_rug": [3, 2, 2800, 2, "rug"], "furn_otaku_speed_runner": [1, 3, 6800, 4, "rug"], "furn_otaku_pixel_succulent": [1, 1, 1800, 2, "plant"], "furn_otaku_manga_book_stack": [1, 1, 500, 1, "plant"], "furn_otaku_robot_planter": [1, 1, 12500, 4, "plant"], "furn_otaku_aquatic_pixel_tank": [2, 1, 58000, 11, "plant"], "furn_rocket_field_cot": [2, 3, 1500, 2, "bed"], "furn_rocket_cargo_crate": [1, 1, 1900, 2, "cabinet"], "furn_rocket_mesh_rack": [2, 1, 2800, 2, "cabinet"], "furn_rocket_airlock_wardrobe": [2, 1, 26000, 7, "cabinet"], "furn_rocket_rail_bench": [3, 1, 6500, 4, "seat"], "furn_rocket_mission_table": [3, 3, 82000, 11, "seat"], "furn_rocket_zero_g_lounger": [2, 3, 190000, 16, "seat"], "furn_rocket_cage_lamp": [1, 1, 800, 1, "lamp"], "furn_rocket_tripod_searchlight": [1, 1, 3400, 2, "lamp"], "furn_rocket_pipe_valve_lamp": [1, 1, 6800, 4, "lamp"], "furn_rocket_rocket_nozzle_light": [1, 1, 14000, 4, "lamp"]};
+  const CATS = E.MALL_CATS.map(c => c.id), bad = [];
+  for (const [id, [w, h, price, lux, cat]] of Object.entries(SPEC)) {
+    const f = E.FURN_BY_ID[id];
+    if (!f || f.w !== w || f.h !== h || f.price !== price || f.lux !== lux || f.cat !== cat || !CATS.includes(cat) || !f.name || !f.emoji || !/^#[0-9a-f]{6}$/.test(f.color)) bad.push(id);
+    else if ((cat === 'rug') !== (f.layer === 'rug') || !!f.wall) bad.push(id + '(layer/wall)');
+  }
+  ok(Object.keys(SPEC).length === 34 && bad.length === 0, '34 件新家具字段对上索引（价格/豪华度/分类/占地/地毯层）' + (bad.length ? '：' + bad.join(',') : ''));
+  ok(E.FURN_BY_ID.furn_pearl_conversation_pit.w === 3 && E.FURN_BY_ID.furn_pearl_conversation_pit.h === 2, '环形茶会沙发占地 3×2（索引 3×3，宽扁正面图实测改）');
+  ok(E.FURN_BY_ID.furn_rocket_field_cot.cat === 'bed' && E.furnLiveAct('furn_rocket_field_cot') === 'rest', '折叠行军床点了休息');
+  ok(['furn_pearl_conversation_pit', 'furn_rocket_airlock_wardrobe', 'furn_otaku_controller_rug', 'furn_rocket_zero_g_lounger', 'furn_otaku_aquatic_pixel_tank'].every(id => E.furnLiveAct(id) === 'walk'), '新沙发 / 气闸衣柜（暂无换装 sub）/ 地毯 / 躺椅 / 水草缸只走过去');
+  const s = E.newState(T0); s.coins = 1e12;
+  const miss = Object.keys(SPEC).filter(id => !E.findFree(s, 'c77', id, 0));
+  ok(miss.length === 0, '每件 11w 新家具在空小屋都有合法位置' + (miss.length ? '：' + miss.join(',') : ''));
+  ['furn_otaku_controller_rug', 'furn_pearl_conversation_pit', 'furn_rocket_mission_table', 'furn_pearl_tea_glass_lamp'].forEach(id => E.buyFurniture(s, id));
+  ok(E.placeItem(s, 'c77', 'furn_otaku_controller_rug', 0, 0, 0).ok && E.placeItem(s, 'c77', 'furn_pearl_conversation_pit', 0, 0, 0).ok, '3×2 手柄绒毯上叠放 3×2 茶会沙发');
+  ok(!E.canPlace(s, 'c77', 'furn_rocket_mission_table', 1, 1, 0).ok, '3×3 会议桌压到沙发 → 不能放');
+  ok(E.placeItem(s, 'c77', 'furn_rocket_mission_table', 3, 0, 0).ok && !E.canPlace(s, 'c77', 'furn_pearl_tea_glass_lamp', 5, 2, 0).ok && E.placeItem(s, 'c77', 'furn_pearl_tea_glass_lamp', 0, 3, 0).ok, '会议桌放右边 3×3；立柱灯撞桌不行、放左下空格可以');
+  ok(!E.canPlace(s, 'c77', 'furn_rocket_mission_table', 4, 0, 0).ok, '3×3 会议桌出右边界 → 不能放');
 }
 
 // 舱式单层床：保留索引 ID / 价格 / 豪华度；占地按正面扁图实测改 2×1（索引提案 2×3 会让上面 2 排空着挡位）
@@ -466,6 +491,76 @@ ok(E.CROSS['rocket@0'].effect === 'bigFreq' && E.CROSS['c77@3'].effect === 'offl
   ok(E.canPlace(s, 'c77', 'furn_table', 2, 2, 0).ok, '收回后原位置空出来');
   ok(E.undoHome(s, sr.undo).ok && s.homes.c77.placed.some(q => q.uid === a.uid), '撤销收回：放回原位');
   ok(E.furnStats(s, id).owned === 2, '总数始终 2 张（不丢不复制）');
+}
+
+
+// 11w 熊大拍板：4 件占地收紧 + 底边锚定一次性迁移（不擦档、不改金币/件数）
+{
+  const F = id => E.FURN_BY_ID[id];
+  ok(F('furn_s77_drawer_bed').w === 2 && F('furn_s77_drawer_bed').h === 2 && F('furn_s77_drawer_bed').price === 6500 && F('furn_s77_drawer_bed').lux === 4, '抽屉床 2×2，价/lux 不动');
+  ok(F('furn_pearl_pearl_bed').w === 2 && F('furn_pearl_pearl_bed').h === 2 && F('furn_pearl_pearl_bed').price === 8000 && F('furn_pearl_pearl_bed').lux === 4, '贝壳床 2×2，价/lux 不动');
+  ok(F('furn_s77_rocking_chair').w === 1 && F('furn_s77_rocking_chair').h === 1 && F('furn_s77_rocking_chair').price === 3500, '摇椅 1×1');
+  ok(F('furn_s77_quilt_shade_lamp').w === 1 && F('furn_s77_quilt_shade_lamp').h === 1 && F('furn_s77_quilt_shade_lamp').price === 10000, '拼布弧臂灯 1×1');
+  ok(F('furn_s77_curved_sectional').w === 3 && F('furn_s77_curved_sectional').h === 2, '花瓣沙发保持 3×2 不缩到 3×1');
+  ok(E.furnLiveAct('furn_s77_drawer_bed') === 'rest' && E.furnLiveAct('furn_pearl_pearl_bed') === 'rest', '两张改过的床都能休息');
+
+  // 边界 / 四邻贴边 / 回仓 / 撤销（抽屉床 2×2）
+  const id = 'furn_s77_drawer_bed';
+  const s = E.newState(T0); s.coins = 1e9;
+  E.buyFurniture(s, id); E.buyFurniture(s, id); E.buyFurniture(s, 'furn_plant'); E.buyFurniture(s, 'furn_table');
+  ok(E.canPlace(s, 'c77', id, 4, 2, 0).ok && E.canPlace(s, 'c77', id, 0, 0, 0).ok, '抽屉床边界：右下 (4,2)、左上 (0,0)');
+  ok(!E.canPlace(s, 'c77', id, 5, 0, 0).ok && !E.canPlace(s, 'c77', id, 0, 3, 0).ok, '抽屉床出右边 / 出下边拒绝');
+  const a = E.placeItem(s, 'c77', id, 2, 1, 0); ok(a.ok, '抽屉床摆 (2,1)');
+  ok(E.canPlace(s, 'c77', 'furn_plant', 2, 0, 0).ok && E.canPlace(s, 'c77', 'furn_plant', 1, 1, 0).ok && E.canPlace(s, 'c77', 'furn_plant', 4, 1, 0).ok && E.canPlace(s, 'c77', 'furn_plant', 2, 3, 0).ok, '抽屉床上/左/右/下一圈可贴');
+  ok(!E.canPlace(s, 'c77', 'furn_plant', 2, 1, 0).ok && !E.canPlace(s, 'c77', 'furn_plant', 3, 2, 0).ok, '抽屉床本体 2×2 被占');
+  const lux0 = E.homeLuxury(s, 'c77'), inv0 = s.furnInv[id] || 0;
+  const sr = E.storeItem(s, 'c77', a.uid);
+  ok(sr.ok && (s.furnInv[id] || 0) === inv0 + 1 && !s.homes.c77.placed.some(q => q.uid === a.uid), '抽屉床回仓');
+  ok(E.homeLuxury(s, 'c77') < lux0, '回仓豪华度下降');
+  ok(E.undoHome(s, sr.undo).ok && s.homes.c77.placed.some(q => q.uid === a.uid), '撤销回仓');
+  ok(E.furnStats(s, id).owned === 2, '抽屉床件数不丢不复制');
+
+  // 贝壳床同样能休息 + 边界右下
+  const pb = 'furn_pearl_pearl_bed';
+  E.buyFurniture(s, pb);
+  ok(E.canPlace(s, 'c77', pb, 4, 2, 0).ok && E.furnLiveAct(pb) === 'rest', '贝壳床右下能放且休息');
+
+  // 旧 11v 坐标模拟：drawer_bed 旧 2×3 在 (1,0) 底边=3 → 新 2×2 应落到 y=1；摇椅旧 1×2 在 (5,2) 底边=4 → y=3
+  const old = E.newState(T0); old.coins = 99999; old.totalEarned = 99999;
+  old.homes.c77.placed = [
+    { uid:'u1', fid:'furn_s77_drawer_bed', x:1, y:0, rot:0, surf:'floor' },
+    { uid:'u2', fid:'furn_pearl_pearl_bed', x:3, y:1, rot:0, surf:'floor' },
+    { uid:'u3', fid:'furn_s77_rocking_chair', x:5, y:2, rot:0, surf:'floor' },
+    { uid:'u4', fid:'furn_s77_quilt_shade_lamp', x:0, y:2, rot:0, surf:'floor' },
+    { uid:'u5', fid:'furn_s77_curved_sectional', x:0, y:0, rot:0, surf:'floor' },
+  ];
+  old.homes.c77.next = 6;
+  // 注意：curved 3×2 在 (0,0) 与 drawer 迁移后 (1,1) 会重叠？drawer 旧(1,0)h3 底=3 → y=1 占(1,1)(2,1)(1,2)(2,2)；curved(0,0) 占 x0-2 y0-1 → 重叠 (1,1)(2,1)
+  // 为测锚定，先不放 curved 冲突件；改用植物占位
+  old.homes.c77.placed[4] = { uid:'u5', fid:'furn_plant', x:5, y:0, rot:0, surf:'floor' };
+  const coins0 = old.coins, earned0 = old.totalEarned;
+  const owned = id => E.furnStats(old, id).owned;
+  const oDrawer = owned('furn_s77_drawer_bed'), oPearl = owned('furn_pearl_pearl_bed'), oRock = owned('furn_s77_rocking_chair'), oLamp = owned('furn_s77_quilt_shade_lamp'), oPlant = owned('furn_plant');
+  const m1 = E.migrateFootprint11w(old);
+  ok(!m1.skipped && m1.stored === 0, '迁移跑了一次且无退仓 stored=' + m1.stored + ' shifted=' + m1.shifted);
+  const by = Object.fromEntries(old.homes.c77.placed.map(p => [p.uid, p]));
+  ok(by.u1 && by.u1.y === 1 && by.u1.x === 1, '抽屉床底边锚定 (1,0)h3 → (1,1)h2');
+  ok(by.u2 && by.u2.y === 2 && by.u2.x === 3, '贝壳床底边锚定 (3,1)h3 → (3,2)h2');
+  ok(by.u3 && by.u3.y === 3 && by.u3.x === 5, '摇椅底边锚定 (5,2)h2 → (5,3)h1');
+  ok(by.u4 && by.u4.y === 3 && by.u4.x === 0, '拼布灯底边锚定 (0,2)h2 → (0,3)h1');
+  ok(by.u5 && by.u5.x === 5 && by.u5.y === 0, '无关植物不动');
+  ok(old.coins === coins0 && old.totalEarned === earned0, '迁移不改金币/累计');
+  ok(owned('furn_s77_drawer_bed') === oDrawer && owned('furn_pearl_pearl_bed') === oPearl && owned('furn_s77_rocking_chair') === oRock && owned('furn_s77_quilt_shade_lamp') === oLamp && owned('furn_plant') === oPlant, '迁移后件数不变');
+  const m2 = E.migrateFootprint11w(old);
+  ok(m2.skipped && old.fpMig11w === 1 && by.u1.y === 1, '第二次迁移跳过，坐标不再挪');
+
+  // 刷新存读档：migrate + footprint mig 后位置仍在
+  const raw = JSON.parse(JSON.stringify(old));
+  const loaded = E.migrate(raw, T0).st;
+  const m3 = E.migrateFootprint11w(loaded);
+  ok(m3.skipped, '读档后已有 fpMig11w 标记则跳过');
+  const p1 = loaded.homes.c77.placed.find(p => p.uid === 'u1');
+  ok(p1 && p1.y === 1 && p1.x === 1 && loaded.coins === coins0, '存读档后抽屉床位置与金币保持');
 }
 
 console.log(`economy tests: ${pass} passed, ${fail} failed`);

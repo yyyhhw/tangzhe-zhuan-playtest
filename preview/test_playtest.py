@@ -703,7 +703,7 @@ with sync_playwright() as p:
     l43 = S(hp, "Promise.all(" + json.dumps(NEW43) + ".map(id=>new Promise(r=>{ const f=__tzz.E.FURN_BY_ID[id], n=id.replace(/^furn_/,''); if(!f) return r(id+' 不在商城'); if(!__tzz.FURN_ART[n]) return r(n+' 没登记图'); const im=new Image(); im.onload=()=>{ const W=f.w===1?240:f.w*200, k=im.naturalHeight/im.naturalWidth; let bad=im.naturalWidth!==W; if(f.layer==='rug') bad=bad||Math.abs(k-f.h/f.w)>0.01||!!__tzz.FURN_UP[n]; else if(f.wall) bad=bad||!!__tzz.FURN_UP[n]; else bad=bad||!__tzz.FURN_UP[n]||Math.abs(k-__tzz.FURN_UP[n])>0.01; r(bad?n+' '+im.naturalWidth+'×'+im.naturalHeight:null); }; im.onerror=()=>r(n+' 加载失败'); im.src='art/furn_'+n+'.webp?v='+Date.now();}))).then(a=>a.filter(Boolean))")
     check(len(NEW43) == 43 and l43 == [], f'11v 43 件图都登记、能加载，宽 = 占地×200（1 格 240），往上伸比例 / 地毯铺满比例对得上 {l43}')
     r43 = S(hp, "(()=>{const s=__tzz.state,E=__tzz.E; s.homes.c77.placed.slice().forEach(p=>E.storeItem(s,'c77',p.uid)); s.coins=1e9; ['furn_s77_curved_sectional','furn_s77_pantry_hutch','furn_s77_petal_uplight','furn_s77_braided_runner','furn_s77_quilt_wall','furn_s77_drawer_bed'].forEach(f=>E.buyFurniture(s,f)); const a=[E.placeItem(s,'c77','furn_s77_curved_sectional',0,2,0), E.placeItem(s,'c77','furn_s77_pantry_hutch',0,0,0), E.placeItem(s,'c77','furn_s77_petal_uplight',2,0,0), E.placeItem(s,'c77','furn_s77_braided_runner',5,1,0), E.placeItem(s,'c77','furn_s77_quilt_wall',0,0,0,'wall'), E.placeItem(s,'c77','furn_s77_drawer_bed',3,1,0)]; __tzz.persist(); __tzz.renderTab(); return a.map(x=>x.ok?1:x.why);})()")
-    check(r43 == [1] * 6, f'摆 11v 新件：转角沙发 3×2 / 餐具柜 2×1 / 上照灯 1×1 / 长廊毯 1×3（垫在床边）/ 挂毯 2×2 上墙 / 抽屉床 2×3 都成功 {r43}')
+    check(r43 == [1] * 6, f'摆 11v 新件：转角沙发 3×2 / 餐具柜 2×1 / 上照灯 1×1 / 长廊毯 1×3（垫在床边）/ 挂毯 2×2 上墙 / 抽屉床 2×2 都成功 {r43}')
     hp.locator('.book-tabs [data-arg="room"]').click(); hp.wait_for_timeout(600)
     f, cw, ch = tview()
     g = geo('furn_s77_curved_sectional')
@@ -715,7 +715,7 @@ with sync_playwright() as p:
     g = geo('furn_s77_braided_runner')
     check(g and not g['tall'] and abs(g['iW'] - cw) < 2 and abs(g['iH'] - 3 * ch) < 2, f'麻花长廊毯铺满 1×3 占地')
     g = geo('furn_s77_drawer_bed')
-    check(g and g['tall'] and abs(g['iB'] - g['eB']) < 1.5 and abs(g['iW'] - 2 * cw) < 2 and abs(g['eH'] - 3 * ch) < 1.5, f'抽屉收纳床占地 2×3（按索引），图 2 格宽、贴底')
+    check(g and g['tall'] and abs(g['iB'] - g['eB']) < 1.5 and abs(g['iW'] - 2 * cw) < 2 and abs(g['eH'] - 2 * ch) < 1.5, f'抽屉收纳床占地 2×2（11w 熊大拍板），图 2 格宽、贴底')
     qw = S(hp, "(()=>{const e=document.querySelector('#wallGrid .furn[data-fid=furn_s77_quilt_wall]'), i=e&&e.querySelector('img'); if(!e||!i||!i.complete||!i.naturalWidth) return null; const a=e.getBoundingClientRect(), b=i.getBoundingClientRect(); return {art:e.classList.contains('art'), inside:b.top>=a.top-1&&b.bottom<=a.bottom+1&&b.left>=a.left-1&&b.right<=a.right+1, fl:document.querySelectorAll('#roomFloor .furn[data-fid=furn_s77_quilt_wall]').length}})()")
     check(qw and qw['art'] and qw['inside'] and qw['fl'] == 0, f'拼布故事挂毯挂在墙面、显示图、完整在框内 {qw}')
     hp.locator('#roomFloor .furn[data-fid="furn_s77_drawer_bed"]').click(); hp.wait_for_timeout(300)
@@ -725,6 +725,47 @@ with sync_playwright() as p:
     mi43 = S(hp, json.dumps(NEW43) + ".filter(f=>{const c=document.querySelector('.mall-card[data-fid='+f+'] .furn-ico'), i=c&&c.querySelector('img'); if(!i||!i.complete||!i.naturalWidth) return true; const a=c.getBoundingClientRect(), b=i.getBoundingClientRect(); return !(b.top>=a.top-1&&b.bottom<=a.bottom+1&&b.height>0)})")
     check(mi43 == [], f'商城里 43 件新家具都有卡片、缩略图加载并在方框内完整显示 {mi43}')
     hp.locator('.mall-card[data-fid="furn_s77_curved_sectional"]').scroll_into_view_if_needed(); hp.wait_for_timeout(300); hp.screenshot(path=f'{SHOTS}/mall_11v.png')
+
+    # 11w 熊大拍板占地 + 底边迁移：旧档坐标按脚重锚；两张床都能休息；二次迁移跳过
+    mig = S(hp, """(()=>{const E=__tzz.E; const raw={v:3,coins:777,totalEarned:777,homes:{c77:{lv:1,next:5,placed:[
+      {uid:'u1',fid:'furn_s77_drawer_bed',x:1,y:0,rot:0,surf:'floor'},
+      {uid:'u2',fid:'furn_pearl_pearl_bed',x:3,y:1,rot:0,surf:'floor'},
+      {uid:'u3',fid:'furn_s77_rocking_chair',x:5,y:2,rot:0,surf:'floor'},
+      {uid:'u4',fid:'furn_s77_quilt_shade_lamp',x:0,y:2,rot:0,surf:'floor'}]}},furnInv:{},ceos:{c77:{unlocked:true,lv:1,at:0},pearl:{unlocked:false,lv:1,at:-1},otaku:{unlocked:false,lv:1,at:-1},rocket:{unlocked:false,lv:1,at:-1}},shops:[{open:true,lv:1,emp:1},{open:false,lv:0,emp:0},{open:false,lv:0,emp:0},{open:false,lv:0,emp:0}]};
+      const st=E.migrate(raw,Date.now()).st; const m1=E.migrateFootprint11w(st); const by=Object.fromEntries(st.homes.c77.placed.map(p=>[p.uid,p]));
+      const m2=E.migrateFootprint11w(st);
+      return {shifted:m1.shifted,stored:m1.stored,skip2:!!m2.skipped,coins:st.coins,
+        y1:by.u1&&by.u1.y,y2:by.u2&&by.u2.y,y3:by.u3&&by.u3.y,y4:by.u4&&by.u4.y,
+        rest:E.furnLiveAct('furn_s77_drawer_bed')==='rest'&&E.furnLiveAct('furn_pearl_pearl_bed')==='rest',
+        wh:[E.FURN_BY_ID.furn_s77_drawer_bed.h,E.FURN_BY_ID.furn_pearl_pearl_bed.h,E.FURN_BY_ID.furn_s77_rocking_chair.h,E.FURN_BY_ID.furn_s77_quilt_shade_lamp.h,E.FURN_BY_ID.furn_s77_curved_sectional.h]};})()""")
+    check(mig and mig['stored']==0 and mig['y1']==1 and mig['y2']==2 and mig['y3']==3 and mig['y4']==3 and mig['skip2'] and mig['coins']==777 and mig['rest'] and mig['wh']==[2,2,1,1,2], f'11w 占地迁移底边锚定 + 只跑一次 + 两床休息 + 金币不变 {mig}')
+
+    # 11w：packs 13/16/19/27/30/33/36/39 的 34 件：图全登记、能加载、尺寸比例对；摆放 / 贴底 / 铺满；商城缩略图
+    NEW34 = ["furn_pearl_cup_carousel", "furn_pearl_bakery_display", "furn_pearl_sideboard_island", "furn_pearl_archive_apothecary", "furn_pearl_conversation_pit", "furn_pearl_tea_gongfu_desk", "furn_pearl_paper_pear_lamp", "furn_pearl_tea_glass_lamp", "furn_pearl_boba_globe_lamp", "furn_pearl_tea_mat", "furn_pearl_scallop_rug", "furn_pearl_tea_river_runner", "furn_otaku_floor_chair", "furn_otaku_modular_couch", "furn_otaku_arcade_bench", "furn_otaku_streaming_desk", "furn_otaku_panel_rug", "furn_otaku_controller_rug", "furn_otaku_speed_runner", "furn_otaku_pixel_succulent", "furn_otaku_manga_book_stack", "furn_otaku_robot_planter", "furn_otaku_aquatic_pixel_tank", "furn_rocket_field_cot", "furn_rocket_cargo_crate", "furn_rocket_mesh_rack", "furn_rocket_airlock_wardrobe", "furn_rocket_rail_bench", "furn_rocket_mission_table", "furn_rocket_zero_g_lounger", "furn_rocket_cage_lamp", "furn_rocket_tripod_searchlight", "furn_rocket_pipe_valve_lamp", "furn_rocket_rocket_nozzle_light"]
+    l34 = S(hp, "Promise.all(" + json.dumps(NEW34) + ".map(id=>new Promise(r=>{ const f=__tzz.E.FURN_BY_ID[id], n=id.replace(/^furn_/,''); if(!f) return r(id+' 不在商城'); if(!__tzz.FURN_ART[n]) return r(n+' 没登记图'); const im=new Image(); im.onload=()=>{ const W=f.w===1?240:f.w*200, k=im.naturalHeight/im.naturalWidth; let bad=im.naturalWidth!==W; if(f.layer==='rug') bad=bad||Math.abs(k-f.h/f.w)>0.01||!!__tzz.FURN_UP[n]; else bad=bad||!__tzz.FURN_UP[n]||Math.abs(k-__tzz.FURN_UP[n])>0.01; r(bad?n+' '+im.naturalWidth+'×'+im.naturalHeight:null); }; im.onerror=()=>r(n+' 加载失败'); im.src='art/furn_'+n+'.webp?v='+Date.now();}))).then(a=>a.filter(Boolean))")
+    check(len(NEW34) == 34 and l34 == [], f'11w 34 件图都登记、能加载，宽 = 占地×200（1 格 240），往上伸 / 地毯铺满比例对得上 {l34}')
+    mi34 = S(hp, json.dumps(NEW34) + ".filter(f=>{const c=document.querySelector('.mall-card[data-fid='+f+'] .furn-ico'); if(!c) return true; c.scrollIntoView(); return false})")
+    check(mi34 == [], f'商城里 34 件 11w 新家具都有卡片 {mi34}')
+    hp.wait_for_function("[...document.querySelectorAll('.mall-card .furn-ico img')].every(i=>i.complete)", timeout=20000)
+    mi34 = S(hp, json.dumps(NEW34) + ".filter(f=>{const c=document.querySelector('.mall-card[data-fid='+f+'] .furn-ico'), i=c&&c.querySelector('img'); if(!i||!i.complete||!i.naturalWidth) return true; const a=c.getBoundingClientRect(), b=i.getBoundingClientRect(); return !(b.top>=a.top-1&&b.bottom<=a.bottom+1&&b.height>0)})")
+    check(mi34 == [], f'商城 34 件 11w 缩略图加载并在方框内完整显示 {mi34}')
+    hp.locator('.mall-card[data-fid="furn_pearl_conversation_pit"]').scroll_into_view_if_needed(); hp.wait_for_timeout(300); hp.screenshot(path=f'{SHOTS}/mall_11w.png')
+    r34 = S(hp, "(()=>{const s=__tzz.state,E=__tzz.E; s.homes.c77.placed.slice().forEach(p=>E.storeItem(s,'c77',p.uid)); s.coins=1e9; ['furn_otaku_controller_rug','furn_pearl_conversation_pit','furn_rocket_airlock_wardrobe','furn_pearl_tea_glass_lamp','furn_rocket_field_cot'].forEach(f=>E.buyFurniture(s,f)); const a=[E.placeItem(s,'c77','furn_otaku_controller_rug',0,2,0), E.placeItem(s,'c77','furn_pearl_conversation_pit',0,2,0), E.placeItem(s,'c77','furn_rocket_airlock_wardrobe',0,0,0), E.placeItem(s,'c77','furn_pearl_tea_glass_lamp',2,0,0), E.placeItem(s,'c77','furn_rocket_field_cot',4,1,0)]; __tzz.persist(); __tzz.renderTab(); return a.map(x=>x.ok?1:x.why);})()")
+    check(r34 == [1] * 5, f'摆 11w 新件：手柄绒毯 3×2 上叠茶会沙发 3×2 / 气闸衣柜 2×1 / 立柱灯 1×1 / 行军床 2×3 都成功 {r34}')
+    hp.locator('.book-tabs [data-arg="room"]').click(); hp.wait_for_timeout(600)
+    f, cw, ch = tview()
+    g = geo('furn_pearl_conversation_pit')
+    check(g and g['tall'] and abs(g['iB'] - g['eB']) < 1.5 and abs(g['iW'] - 3 * cw) < 2 and abs(g['eH'] - 2 * ch) < 1.5, f'环形茶会沙发占地 3×2（索引 3×3 实测改），图 3 格宽、贴底')
+    g = geo('furn_rocket_airlock_wardrobe')
+    check(g and g['tall'] and g['ov'] == 'visible' and abs(g['iB'] - g['eB']) < 1.5 and abs(g['iW'] - 2 * cw) < 2 and abs(g['iH'] - 633 / 400 * 2 * cw) < 3 and abs(g['eH'] - ch) < 1.5, f'气闸圆门衣柜占地 2×1，图往上伸、底脚贴占地底边')
+    g = geo('furn_pearl_tea_glass_lamp')
+    check(g and g['tall'] and abs(g['iB'] - g['eB']) < 1.5 and abs(g['iW'] - cw) < 2 and g['iH'] > 3 * cw, f'茶玻璃立柱灯 1×1 往上伸约 4 格、底脚贴底')
+    g = geo('furn_otaku_controller_rug')
+    check(g and not g['tall'] and abs(g['iW'] - 3 * cw) < 2 and abs(g['iH'] - 2 * ch) < 2, f'手柄轮廓绒毯铺满 3×2 占地')
+    g = geo('furn_rocket_field_cot')
+    check(g and g['tall'] and abs(g['iB'] - g['eB']) < 1.5 and abs(g['iW'] - 2 * cw) < 2 and abs(g['eH'] - 3 * ch) < 1.5, f'折叠行军床占地 2×3（按索引），图 2 格宽、贴底')
+    hp.wait_for_timeout(800); hp.locator('#room').screenshot(path=f'{SHOTS}/home_11w.png')
+    hp.locator('.book-tabs [data-arg="mall"]').click(); hp.wait_for_timeout(400)
     em = S(hp, "__tzz.E.FURNITURE.filter(f=>!__tzz.FURN_ART[f.id.replace(/^furn_/,'')]).map(f=>f.id)")
     check(em == [], f'商城全部 {S(hp, "__tzz.E.FURNITURE.length")} 件家具都有图，没有表情占位了 {em}')
     hc.close()

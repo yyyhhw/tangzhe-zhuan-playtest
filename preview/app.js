@@ -357,7 +357,7 @@ function avatarURL(id, key) {
   return (avaCache[k] = o.toDataURL());
 }
 // 熊大画的 CEO 头像（图没加载出来就退回画布小人头像）
-const ART_V = '8', PORTRAIT = { c77:1, pearl:1, otaku:1, rocket:1 };
+const ART_V = '9', PORTRAIT = { c77:1, pearl:1, otaku:1, rocket:1 };
 const faceURL = id => PORTRAIT[id] ? `art/face_${id}.webp?v=${ART_V}` : avatarURL(id);
 const bustURL = id => PORTRAIT[id] ? `art/ceo_${id}.webp?v=${ART_V}` : avatarURL(id);
 const faceImg = id => `<img src="${faceURL(id)}"${PORTRAIT[id] ? ` class="art" data-fb="${id}"` : ''} alt="">`;
@@ -1466,6 +1466,9 @@ const FURN_UP = { bookshelf: 1.5, wardrobe: 1.5, table: 202 / 400, sofa: 225 / 6
 // 11v：packs 01–10 的 43 件；地毯（透明边补成占地比例、铺满）和墙饰（贴墙上沿）不登记往上伸，其余地上家具都按图高/宽贴底
 Object.assign(FURN_ART, { s77_quilt_daybed:1, s77_drawer_bed:1, s77_book_nook_bed:1, s77_peg_cubby:1, s77_ladder_shelf:1, s77_basket_cabinet:1, s77_round_corner_chest:1, s77_sewing_cabinet:1, s77_pantry_hutch:1, s77_attic_trunk:1, s77_reading_stool:1, s77_rocking_chair:1, s77_heart_bench:1, s77_folding_tray:1, s77_quilt_ottoman:1, s77_window_bench:1, s77_sewing_desk:1, s77_curved_sectional:1, s77_lantern_stand:1, s77_mushroom_lamp:1, s77_petal_uplight:1, s77_quilt_shade_lamp:1, s77_hearth_light:1, s77_box_fan:1, s77_toaster_cart:1, s77_record_console:1, s77_sewing_machine_stand:1, s77_stove_oven:1, s77_laundry_pair:1, s77_braided_runner:1, s77_patchwork_flower_rug:1, s77_quilt_island_rug:1, s77_embroidery_hoops:1, s77_wood_cuckoo:1, s77_quilt_wall:1, s77_pressed_flower_frame:1, s77_family_silhouette:1, s77_watering_stand:1, s77_knitting_basket:1, s77_olive_planter:1, s77_mini_greenhouse:1, pearl_tea_daybed:1, pearl_pearl_bed:1 });
 Object.assign(FURN_UP, { s77_quilt_daybed: 157 / 600, s77_drawer_bed: 359 / 400, s77_book_nook_bed: 579 / 600, s77_peg_cubby: 431 / 240, s77_ladder_shelf: 539 / 400, s77_basket_cabinet: 330 / 400, s77_round_corner_chest: 426 / 400, s77_sewing_cabinet: 360 / 400, s77_pantry_hutch: 693 / 400, s77_attic_trunk: 321 / 400, s77_reading_stool: 234 / 240, s77_rocking_chair: 249 / 240, s77_heart_bench: 252 / 600, s77_folding_tray: 134 / 240, s77_quilt_ottoman: 224 / 240, s77_window_bench: 140 / 600, s77_sewing_desk: 269 / 400, s77_curved_sectional: 335 / 600, s77_lantern_stand: 255 / 240, s77_mushroom_lamp: 224 / 240, s77_petal_uplight: 647 / 240, s77_quilt_shade_lamp: 301 / 240, s77_hearth_light: 190 / 400, s77_box_fan: 263 / 240, s77_toaster_cart: 235 / 240, s77_record_console: 293 / 400, s77_sewing_machine_stand: 358 / 400, s77_stove_oven: 534 / 400, s77_laundry_pair: 440 / 240, s77_watering_stand: 369 / 240, s77_knitting_basket: 212 / 240, s77_olive_planter: 458 / 240, s77_mini_greenhouse: 475 / 400, pearl_tea_daybed: 156 / 600, pearl_pearl_bed: 382 / 400 });
+// 11w：packs 13/16/19/27/30/33/36/39 的 34 件；地毯铺满不登记往上伸，其余地上家具按图高/宽贴底
+Object.assign(FURN_ART, { pearl_cup_carousel:1, pearl_bakery_display:1, pearl_sideboard_island:1, pearl_archive_apothecary:1, pearl_conversation_pit:1, pearl_tea_gongfu_desk:1, pearl_paper_pear_lamp:1, pearl_tea_glass_lamp:1, pearl_boba_globe_lamp:1, pearl_tea_mat:1, pearl_scallop_rug:1, pearl_tea_river_runner:1, otaku_floor_chair:1, otaku_modular_couch:1, otaku_arcade_bench:1, otaku_streaming_desk:1, otaku_panel_rug:1, otaku_controller_rug:1, otaku_speed_runner:1, otaku_pixel_succulent:1, otaku_manga_book_stack:1, otaku_robot_planter:1, otaku_aquatic_pixel_tank:1, rocket_field_cot:1, rocket_cargo_crate:1, rocket_mesh_rack:1, rocket_airlock_wardrobe:1, rocket_rail_bench:1, rocket_mission_table:1, rocket_zero_g_lounger:1, rocket_cage_lamp:1, rocket_tripod_searchlight:1, rocket_pipe_valve_lamp:1, rocket_rocket_nozzle_light:1 });
+Object.assign(FURN_UP, { pearl_cup_carousel: 525 / 240, pearl_bakery_display: 252 / 400, pearl_sideboard_island: 225 / 600, pearl_archive_apothecary: 355 / 600, pearl_conversation_pit: 335 / 600, pearl_tea_gongfu_desk: 211 / 600, pearl_paper_pear_lamp: 521 / 240, pearl_tea_glass_lamp: 1006 / 240, pearl_boba_globe_lamp: 932 / 240, otaku_floor_chair: 231 / 240, otaku_modular_couch: 264 / 600, otaku_arcade_bench: 254 / 400, otaku_streaming_desk: 291 / 600, otaku_pixel_succulent: 211 / 240, otaku_manga_book_stack: 236 / 240, otaku_robot_planter: 241 / 240, otaku_aquatic_pixel_tank: 163 / 400, rocket_field_cot: 430 / 400, rocket_cargo_crate: 229 / 240, rocket_mesh_rack: 328 / 400, rocket_airlock_wardrobe: 633 / 400, rocket_rail_bench: 177 / 600, rocket_mission_table: 414 / 600, rocket_zero_g_lounger: 392 / 400, rocket_cage_lamp: 369 / 240, rocket_tripod_searchlight: 367 / 240, rocket_pipe_valve_lamp: 480 / 240, rocket_rocket_nozzle_light: 266 / 240 });
 const furnTall = fid => !!(FURN_ART[furnName(fid)] && FURN_UP[furnName(fid)]);
 const HOME_ICON = ['🏠', '🏢', '🏰'];
 let homeWho = 'c77', homeSub = 'room', homeMode = 'live', homeSel = null, homeDrag = null;
@@ -1869,11 +1872,13 @@ function boot() {
   $('#mute').classList.toggle('off', !!state.muted);
   resize();
   const first = !state.taps && !state.totalEarned && state.shops[0].emp === 0;
+  const fpMig = E.migrateFootprint11w(state);
   const wallMig = E.migrateWallPaintings(state);
   const p = E.settleOffline(state, now(), rid);
   persist();
   scheduleBig(); scheduleSpecial(); renderTabs(); setTab('shop');
   if (migratedFrom != null) toast('存档已升级到 v' + CFG.SAVE_VERSION + '（新盲盒 + CEO 穿搭，收藏都保留）', 2600);
+  if (fpMig && !fpMig.skipped && (fpMig.shifted || fpMig.stored)) toast(fpMig.stored ? `家具占地收紧：${fpMig.shifted} 件按脚底重锚，${fpMig.stored} 件腾不出空位已退回仓库` : `家具占地收紧：${fpMig.shifted} 件已按脚底重锚`, 3200);
   if (wallMig && (wallMig.moved || wallMig.stored)) toast(wallMig.stored ? `挂画改挂墙了：${wallMig.moved} 幅上墙，${wallMig.stored} 幅墙面没空已退回仓库` : `挂画改挂墙了：${wallMig.moved} 幅已迁到墙面`, 3200);
   if (p && p.rolledBack) toast('检测到手机时间被往回调，这段时间不发离线收益');
   if (first) queueModal(showIntro);
