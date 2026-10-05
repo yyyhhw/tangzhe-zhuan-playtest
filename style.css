@@ -253,9 +253,9 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 @media (prefers-reduced-motion:reduce){.item.superpop{animation:none}}
 
 /* ===== 布局：店景只留在经营页；其他页紧凑页头 ===== */
-#app:not([data-tab="shop"]) #stage{display:none}
-#app:not([data-tab="shop"]) #shopTabs{display:none}
-#app:not([data-tab="shop"]) #goal{display:none}
+#app[data-tab]:not([data-tab="shop"]) #stage{display:none}
+#app[data-tab]:not([data-tab="shop"]) #shopTabs{display:none}
+#app[data-tab]:not([data-tab="shop"]) #goal{display:none}
 #compactHead{flex:0 0 auto;background:#fff;border:3px solid var(--ink);border-radius:8px;box-shadow:3px 3px 0 var(--ink);padding:8px 10px;margin-bottom:8px}
 #compactHead.hidden{display:none!important}
 #compactHead .ch-title{font-weight:900;font-size:14px;margin-bottom:6px}

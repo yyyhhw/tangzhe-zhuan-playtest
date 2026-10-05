@@ -1330,6 +1330,9 @@ window.addEventListener('pageshow', e => { if (e.persisted) onShow(); });
 window.addEventListener('blur', () => { if (!frozen) persist(); });
 let resizeT = 0;
 window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(resize, 120); });
+// 店景区尺寸变了（切回「经营」、App 内置浏览器工具栏收起/展开）就重算画布，避免画布停在 0 高度
+if (window.ResizeObserver) new ResizeObserver(() => { const r = cv.getBoundingClientRect(); if (Math.abs(r.width - W) > 1 || Math.abs(r.height - H) > 1) resize(); }).observe($('#stage'));
+window.addEventListener('pageshow', () => resize());
 
 let lastFrame = performance.now(), dynAcc = 0, saveAcc = 0;
 function frame(ts) {
