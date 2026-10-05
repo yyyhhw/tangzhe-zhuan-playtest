@@ -15,5 +15,7 @@ iPhone 竖屏 Safari 漫画风挂机小游戏。**试玩链接，不是正式上
 
 开发：`node test_economy.js`、`python test_playtest.py URL`（WebKit/iPhone）。
 
+11t：生活模式点家具改按类别 / 能力触发（bed 类休息、书架看书、衣柜换衣），新云朵纱帐床也能休息；旧床回归通过。
+
 ## 存档
 预览专用 localStorage 键：`tangzhe-preview-save` / `-bak` / `tangzhe-preview-tab-lock`，与线上 v11 的 `tangzhe-save` 互不影响。
