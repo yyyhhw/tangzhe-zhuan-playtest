@@ -414,6 +414,9 @@ with sync_playwright() as p:
     view(); hp.locator('#roomFloor .furn[data-fid="furn_sofa"]').click(); hp.wait_for_timeout(2200)
     view(); hp.wait_for_timeout(200)
     hp.screenshot(path=f'{SHOTS}/home_v10.png')
+    # 四位 CEO 的 Lv1 底图都登记了，且原图是 1200×1200
+    hl = S(hp, "Promise.all(['c77','pearl','otaku','rocket'].map(id=>new Promise(r=>{ if(!__tzz.HOME_ART[id+'_1']) return r(id+' 没登记'); const im=new Image(); im.onload=()=>r(im.naturalWidth===1200&&im.naturalHeight===1200?null:id+' 尺寸 '+im.naturalWidth+'×'+im.naturalHeight); im.onerror=()=>r(id+' 加载失败'); im.src='art/home_'+id+'_1.webp';}))).then(a=>a.filter(Boolean))")
+    check(hl == [], f'四位 CEO 的 Lv1 家宅底图都登记且是 1200×1200 {hl}')
     # 存档往返
     h_before = home(); inv_before = S(hp, "JSON.parse(JSON.stringify(__tzz.state.furnInv))")
     hp.reload(); hp.wait_for_timeout(900); close_modals(hp)
