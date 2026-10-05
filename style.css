@@ -244,6 +244,8 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 .critline{display:flex;gap:6px;margin-top:3px;flex-wrap:wrap}
 .critline span{background:#fff0f5;border:1.5px solid var(--ink);border-radius:4px;padding:0 6px;font-size:11px}
 .critline b{color:var(--red)}
+.critline small{font-size:10px;color:#555;margin-left:2px}
+.critline .cl-tip{background:#effaf5;font-size:10px;color:#333}
 .card.super{background:linear-gradient(135deg,#fff6cf,#ffe0ef);box-shadow:4px 4px 0 var(--pink)}
 .card.super .ava{background:#fff}
 .card.super .ava.sq{font-size:30px;display:flex;align-items:center;justify-content:center}
@@ -353,6 +355,11 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 .furn.art .fi img{filter:drop-shadow(2px 3px 0 rgba(20,20,20,.35))}
 .furn.art:not(.sel) .fn{display:none}
 .furn.tall{overflow:visible}
+.room-wall{position:relative; overflow:visible}
+.wall-grid{position:absolute;inset:0;z-index:2}
+.room-wall .furn.wallf{z-index:2; border-radius:4px}
+.room-wall .rw-deco,.room-wall .rw-name{position:relative;z-index:1;pointer-events:none}
+#wallHl{z-index:5}
 .drag-ghost.tall{background:transparent;border-width:0;box-shadow:none}
 .furn.tall .fi img{object-position:center bottom}
 .furn .fn{position:absolute;left:2px;bottom:1px;font-size:9px;font-weight:900;background:rgba(255,255,255,.85);border-radius:3px;padding:0 3px;pointer-events:none;white-space:nowrap}
@@ -392,3 +399,31 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 .flip-next{transform-origin:left center;animation:flipNext .38s cubic-bezier(.2,.8,.3,1)}
 .flip-prev{transform-origin:right center;animation:flipPrev .38s cubic-bezier(.2,.8,.3,1)}
 @media (prefers-reduced-motion:reduce){.flip-next,.flip-prev,.furn.sel{animation:none}}
+
+/* 商城：分类 + 搜索 + 筛选（留白给以后加商品） */
+.mall-search{display:flex;gap:6px;position:sticky;top:0;z-index:5;background:var(--paper,#f7f1e3);padding:4px 0 8px;margin-bottom:2px}
+.mall-search input{flex:1;min-height:40px;border:2.5px solid var(--ink);border-radius:10px;padding:0 12px;font:inherit;font-weight:800;font-size:14px;background:#fff}
+.mall-cats,.mall-subs{display:flex;gap:6px;overflow-x:auto;padding:0 0 8px;-webkit-overflow-scrolling:touch}
+.mall-cats .mc,.mall-subs .ms{flex:0 0 auto;min-height:34px;padding:0 12px;border:2px solid var(--ink);border-radius:999px;background:#fff;font-weight:900;font-size:12px}
+.mall-cats .mc.on,.mall-subs .ms.on{background:var(--yellow);box-shadow:2px 2px 0 var(--ink)}
+.mall-filters{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}
+.mall-filters .mf{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:800;background:#fff;border:2px solid var(--ink);border-radius:8px;padding:4px 8px;min-height:34px}
+.mall-filters select{min-height:34px;border:2px solid var(--ink);border-radius:8px;font:inherit;font-weight:800;font-size:12px;padding:0 8px;background:#fff}
+.mall-count{font-size:11px;font-weight:800;color:#666;margin:0 0 8px;display:flex;justify-content:space-between}
+.mall-spacer{color:#999}
+.mall-list{display:flex;flex-direction:column;gap:8px;min-height:220px}
+.mall-card.mall-ghost{opacity:.45;border-style:dashed}
+.mall-card.mall-ghost .buy{display:none}
+
+.mode-tabs{display:flex;gap:0;margin:0 4px 8px 0;border:2.5px solid var(--ink);border-radius:10px;overflow:hidden;background:#fff}
+.mode-tabs .mt{flex:1;min-height:36px;border:0;border-left:2px solid var(--ink);background:#fff;font-weight:900;font-size:13px}
+.mode-tabs .mt:first-child{border-left:0}
+.mode-tabs .mt.on{background:#b8f2e6}
+.mode-tabs .mt.on:last-child{background:#ffe8a3}
+.home-actor{position:absolute;z-index:6;width:18%;height:0;transform:translate(-50%,-70%);pointer-events:none;transition:left .05s linear, top .05s linear}
+.home-actor .ha-ava{display:block;width:100%;aspect-ratio:1}
+.home-actor .ha-ava .ava{width:100%;height:100%;border-width:2px}
+.home-actor .ha-line{position:absolute;left:50%;bottom:108%;transform:translateX(-50%);background:#fff;border:2px solid var(--ink);border-radius:8px;padding:2px 6px;font-size:10px;font-weight:800;white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis}
+.home-actor .ha-act{position:absolute;right:-4px;top:-8px;font-style:normal;font-size:14px}
+.live-note{margin:0 4px 8px 0}
+.room.live-mode .furn{cursor:pointer}

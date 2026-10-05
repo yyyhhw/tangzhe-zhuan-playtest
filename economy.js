@@ -32,7 +32,16 @@
     SPECIAL_MIN: 420, SPECIAL_MAX: 720, // 特殊客户每 7~12 分钟来一次（在线）
     SPECIAL_REWARD_SEC: 60,     // 特殊客户小奖励：本店 60 秒产量
     BIG_FREQ_ROCKET_BBQ: 0.5,   // 跨行事件「火箭烤炉」：间隔 ×0.5
-    CRIT_CHANCE: 0.12, CRIT_MULT: 5,
+    CRIT_CHANCE: 0.35, CRIT_MULT: 5,  // CRIT_CHANCE = 三档合计（兼容旧字段）；CRIT_MULT = 第 1 档倍率
+    // 手点三档暴击（杨总 19:07 定，熊大 19:11 细化）：三档互斥，一次点击只结算一种
+    CRIT_TIERS: [
+      { p:0.20, mult:5,  name:'暴击',       word:'暴击！' },
+      { p:0.10, mult:10, name:'超级暴击',   word:'超级暴击！' },
+      { p:0.05, mult:20, name:'超超超级暴击', word:'超超超级暴击！！' },
+    ],
+    COMBO_GAP: 1.0,             // 两次点击间隔 ≤ 1 秒才续连
+    COMBO_STEP: 50,             // 每满 50 连击……
+    COMBO_ADD: 0.05,            // ……三档各 +5 个百分点；合计超过 100% 时封顶，剩余均分给三档
     TAP_FRAC: 0.35,             // 手点一次 ≈ 该店（含 CEO 加成）每秒基础产量的 35%
     TAP_X_PEARL_BOOK: 2,        // 跨行事件「奶茶漫画联名」：书店手点 ×2
     AZHAI_BONUS_SEC: 120,       // 跨行事件「漫画杯套」：奶茶店冲里程碑送 120 秒奶茶店产量
@@ -43,10 +52,10 @@
     SUPER_P: 0.10,              // 每抽出超级装饰的概率（还有没抽到的超级装饰时）
     SUPER_PITY: 15,             // 保底：连续 14 抽没出超级装饰，第 15 抽必出
     SUPER_RATE: 1.3,            // 超级装饰：本店产量常驻 ×1.3（离线也算）
-    PANDA_CRIT: 0.30,           // 熊猫食神：烧烤摊手点暴击概率 12% → 30%
+    PANDA_CRIT_ADD: 0.05,       // 熊猫食神：烧烤摊三档暴击各再 +5 个百分点（35% → 50%）
     FOUNTAIN_EVERY: 180, FOUNTAIN_SEC: 20, FOUNTAIN_MULT: 3,   // 珍珠喷泉：每 3 分钟连续爆单 20 秒，奶茶店 ×3、手点必暴击
     PORTAL_EVERY: 240, PORTAL_SEC: 90,                         // 次元传送门：每 4 分钟送书店 90 秒产量
-    SUN_EVERY: 300, SUN_SEC: 30, SUN_MULT: 3, SUN_CRIT_MULT: 10, // 人造太阳反应堆：每 5 分钟超频 30 秒，科技 ×3、暴击倍率 ×10
+    SUN_EVERY: 300, SUN_SEC: 30, SUN_MULT: 3, SUN_CRIT_X: 2, // 人造太阳反应堆：每 5 分钟超频 30 秒，科技 ×3、三档暴击倍率翻倍
   };
 
   /* ===== 火箭老板：名字只在这一处配置（公开上架前再评估真名/肖像权） ===== */
@@ -123,12 +132,28 @@
     return 1;
   }
   function startRush(st, k, now) { if (!st.rush) st.rush = { tea:0, tech:0 }; st.rush[k] = now + CFG[RUSH_SEC[k]] * 1000; }
-  function critChance(st, i, now) {
-    if (i === 1 && hasSuper(st, 1) && rushActive(st, 'tea', now)) return 1;
-    if (i === 0 && hasSuper(st, 0)) return CFG.PANDA_CRIT;
-    return CFG.CRIT_CHANCE;
+  // 连击：上一击在 gap 秒内就 +1，否则从 1 重新算（tSec / lastSec 单位：秒）
+  function comboNext(prevN, lastSec, tSec) { return prevN > 0 && tSec - lastSec <= CFG.COMBO_GAP + 1e-9 && tSec >= lastSec ? prevN + 1 : 1; }
+  // 已连 prev 下之后，下一击的加成档数（满 50 连击 → 1 档）
+  function comboSteps(prev) { return Math.floor(Math.max(0, prev || 0) / CFG.COMBO_STEP); }
+  // 三档各自概率 [p1,p2,p3]；prev = 这一击之前已经连了几下
+  function critTiers(st, i, now, prev) {
+    const base = CFG.CRIT_TIERS.map(t => t.p), sum = base.reduce((a, b) => a + b, 0);
+    let add = comboSteps(prev) * CFG.COMBO_ADD;
+    if (i === 0 && hasSuper(st, 0)) add += CFG.PANDA_CRIT_ADD;
+    const capAdd = (1 - sum) / base.length;
+    if (i === 1 && hasSuper(st, 1) && rushActive(st, 'tea', now)) add = capAdd; // 爆单：必暴击
+    if (add > capAdd) add = capAdd;
+    return base.map(p => p + add);
   }
-  function critMult(st, i, now) { return i === 3 && hasSuper(st, 3) && rushActive(st, 'tech', now) ? CFG.SUN_CRIT_MULT : CFG.CRIT_MULT; }
+  function critChance(st, i, now, prev) { const r = critTiers(st, i, now, prev).reduce((a, b) => a + b, 0); return Math.min(1, Math.round(r * 1e6) / 1e6); }
+  function tierMult(st, i, now, k) { const m = CFG.CRIT_TIERS[k].mult; return i === 3 && hasSuper(st, 3) && rushActive(st, 'tech', now) ? m * CFG.SUN_CRIT_X : m; }
+  function critMult(st, i, now) { return tierMult(st, i, now, 0); }
+  // 下一档进度：{ steps, into, need, maxed }
+  function comboProgress(st, i, now, n) {
+    const maxed = critChance(st, i, now, n) >= 1, into = n % CFG.COMBO_STEP;
+    return { steps:comboSteps(n), into:maxed ? CFG.COMBO_STEP : into, need:CFG.COMBO_STEP, maxed };
+  }
   function portalReward(st) { return hasSuper(st, 2) ? shopRate(st, 2) * CFG.PORTAL_SEC : 0; }
 
   function ceoAt(st, i) { for (const c of CEOS) { const s = st.ceos[c.id]; if (s && s.unlocked && s.at === i) return c.id; } return null; }
@@ -171,10 +196,12 @@
     const v = Math.max(SHOPS[i].tapMin, Math.round(shopBase(i, s.lv) * ceoInfo(st, i).mult * CFG.TAP_FRAC * 10) / 10);
     return v * tapMult(st, i);
   }
-  function tapReward(st, i, now, rnd) {
-    const crit = rnd < critChance(st, i, now);
-    const v = tapValue(st, i) * (crit ? critMult(st, i, now) : 1);
-    return { value:v, crit };
+  // prev = 这一击之前已连了几下（不传 = 0）；tier 0 = 普通，1/2/3 = 三档暴击
+  function tapReward(st, i, now, rnd, prev) {
+    const ps = critTiers(st, i, now, prev); let acc = 0, tier = 0;
+    for (let k = 0; k < ps.length; k++) { acc += ps[k]; if (rnd < acc - 1e-12 || (k === ps.length - 1 && acc >= 1 - 1e-9 && rnd < 1)) { tier = k + 1; break; } }
+    const mult = tier ? tierMult(st, i, now, tier - 1) : 1;
+    return { value:tapValue(st, i) * mult, crit:tier > 0, tier, mult };
   }
 
   /* ================= CEO 解锁 / 调任 ================= */
@@ -391,10 +418,10 @@
     { id:'k_6', type:'card', name:'名场面',       text:'阿宅店长把收银台画成漫画格，客人排队像在等下一话更新。' },
     { id:'k_7', type:'card', name:'发射倒计时',   text:'火箭老板喊完三、二、一，起飞的只有门口那串气球。' },
     { id:'k_8', type:'card', name:'一条街的灯',   text:'四家店同时亮灯那晚，77说：今天的龙门阵，摆一整条街。' },
-    { id:'s_panda',    type:'super', shop:0, name:'熊猫食神',       desc:'抱着竹笋串营业：烧烤摊产量 +30%，手点暴击概率 12% → 30%' },
+    { id:'s_panda',    type:'super', shop:0, name:'熊猫食神',       desc:'抱着竹笋串营业：烧烤摊产量 +30%，手点三档暴击各 +5 个百分点（35% → 50%）' },
     { id:'s_fountain', type:'super', shop:1, name:'珍珠喷泉',       desc:'奶茶店产量 +30%；在线每 3 分钟连续爆单 20 秒：奶茶店产量 ×3、手点必暴击' },
     { id:'s_portal',   type:'super', shop:2, name:'次元传送门',     desc:'漫画书店产量 +30%；在线每 4 分钟漫画角色客串，送书店 90 秒产量的大订单' },
-    { id:'s_sun',      type:'super', shop:3, name:'人造太阳反应堆', desc:'科技公司产量 +30%；在线每 5 分钟超频 30 秒：科技公司产量 ×3、暴击倍率 ×5 → ×10' },
+    { id:'s_sun',      type:'super', shop:3, name:'人造太阳反应堆', desc:'科技公司产量 +30%；在线每 5 分钟超频 30 秒：科技公司产量 ×3、三档暴击倍率翻倍' },
   ];
   const ITEM_BY_ID = {}; ITEMS.forEach(it => ITEM_BY_ID[it.id] = it);
   const REGULAR_ITEMS = ITEMS.filter(it => it.type !== 'super'), SUPER_ITEMS = ITEMS.filter(it => it.type === 'super');
@@ -445,20 +472,53 @@
     { id:'apt',   name:'公寓', cols:8,  rows:5, cost:80000,   bonus:10, wall:'#e3f0ff', floor:'#c9d6e3', trim:'#3a86ff' },
     { id:'villa', name:'豪宅', cols:10, rows:6, cost:6000000, bonus:30, wall:'#fff3c4', floor:'#e9d5a8', trim:'#b8860b' },
   ];
-  // w×h = 占地（格），rot 为奇数时宽高互换；layer:'rug' 地毯可以垫在家具下面（地毯之间不能叠）；wall:true 挂画只能靠后墙（第一排）
+  // w×h = 占地（格），rot 为奇数时宽高互换；layer:'rug' 地毯可以垫在家具下面（地毯之间不能叠）
+  // wall:true = 挂画：只挂墙面（surf:'wall'），不占地板格；墙面格子 cols×WALL_ROWS，避开窗户 / 房名牌
+  const WALL_ROWS = 2;
+  // 墙面禁区（房名牌左上 + 各家阳光窗）：格子坐标，挂画任意一格踩到就不行
+  const WALL_BLOCK = {
+    _name: [[0, 0]],
+    c77_1: [[2, 0], [3, 0]],
+    pearl_1: [[1, 0], [2, 0], [4, 0], [5, 0]],
+    otaku_1: [[2, 0], [3, 0]],
+    rocket_1: [[2, 0], [3, 0]],
+  };
+  function wallKey(st, id) { const h = homeOf(st, id); return id + '_' + h.lv; }
+  function wallBlockedCells(st, id) {
+    const k = wallKey(st, id), extra = WALL_BLOCK[k] || WALL_BLOCK[id + '_1'] || [];
+    return WALL_BLOCK._name.concat(extra);
+  }
+  function hitsWallBlock(st, id, x, y, w, h) {
+    const blocked = wallBlockedCells(st, id);
+    for (const [bx, by] of blocked) if (bx >= x && bx < x + w && by >= y && by < y + h) return true;
+    return false;
+  }
+  // cat = 商城一级分类；sub = 柜架子类（衣柜/书架/储物柜）
+  const MALL_CATS = [
+    { id:'bed',   name:'床具' },
+    { id:'cabinet', name:'柜架', subs:[
+      { id:'wardrobe', name:'衣柜' }, { id:'bookshelf', name:'书架' }, { id:'storage', name:'储物柜' },
+    ]},
+    { id:'seat',  name:'桌椅沙发' },
+    { id:'lamp',  name:'灯具' },
+    { id:'appliance', name:'家电' },
+    { id:'rug',   name:'地毯' },
+    { id:'wall',  name:'墙饰' },
+    { id:'plant', name:'绿植摆件' },
+  ];
   const FURNITURE = [
-    { id:'furn_rug',       name:'地毯', emoji:'🟥', color:'#e76f51', w:3, h:2, price:300,   lux:3,  layer:'rug' },
-    { id:'furn_plant',     name:'绿植', emoji:'🪴', color:'#52b788', w:1, h:1, price:500,   lux:2 },
-    { id:'furn_lamp',      name:'台灯', emoji:'💡', color:'#ffd23f', w:1, h:1, price:800,   lux:3 },
-    { id:'furn_table',     name:'桌子', emoji:'🪵', color:'#b08968', w:2, h:2, price:1500,  lux:5 },
-    { id:'furn_painting',  name:'挂画', emoji:'🖼️', color:'#9b5de5', w:2, h:1, price:2500,  lux:8,  wall:true },
-    { id:'furn_catbed',    name:'猫窝', emoji:'🐱', color:'#f4a261', w:1, h:1, price:3000,  lux:6 },
-    { id:'furn_sofa',      name:'沙发', emoji:'🛋️', color:'#ef476f', w:3, h:1, price:6000,  lux:12 },
-    { id:'furn_bookshelf', name:'书架', emoji:'📚', color:'#8d6e63', w:2, h:1, price:8000,  lux:10 },
-    { id:'furn_bed',       name:'床',   emoji:'🛏️', color:'#90caf9', w:2, h:3, price:12000, lux:15 },
-    { id:'furn_wardrobe',  name:'衣柜', emoji:'🚪', color:'#a1887f', w:2, h:1, price:15000, lux:14 },
-    { id:'furn_fridge',    name:'冰箱', emoji:'🧊', color:'#bde0fe', w:1, h:1, price:20000, lux:18 },
-    { id:'furn_tv',        name:'电视', emoji:'📺', color:'#264653', w:2, h:1, price:30000, lux:25 },
+    { id:'furn_rug',       name:'地毯', emoji:'🟥', color:'#e76f51', w:3, h:2, price:300,   lux:3,  layer:'rug', cat:'rug' },
+    { id:'furn_plant',     name:'绿植', emoji:'🪴', color:'#52b788', w:1, h:1, price:500,   lux:2,  cat:'plant' },
+    { id:'furn_lamp',      name:'台灯', emoji:'💡', color:'#ffd23f', w:1, h:1, price:800,   lux:3,  cat:'lamp' },
+    { id:'furn_table',     name:'桌子', emoji:'🪵', color:'#b08968', w:2, h:2, price:1500,  lux:5,  cat:'seat' },
+    { id:'furn_painting',  name:'挂画', emoji:'🖼️', color:'#9b5de5', w:2, h:1, price:2500,  lux:8,  wall:true, cat:'wall' },
+    { id:'furn_catbed',    name:'猫窝', emoji:'🐱', color:'#f4a261', w:1, h:1, price:3000,  lux:6,  cat:'plant' },
+    { id:'furn_sofa',      name:'沙发', emoji:'🛋️', color:'#ef476f', w:3, h:1, price:6000,  lux:12, cat:'seat' },
+    { id:'furn_bookshelf', name:'书架', emoji:'📚', color:'#8d6e63', w:2, h:1, price:8000,  lux:10, cat:'cabinet', sub:'bookshelf' },
+    { id:'furn_bed',       name:'床',   emoji:'🛏️', color:'#90caf9', w:2, h:3, price:12000, lux:15, cat:'bed' },
+    { id:'furn_wardrobe',  name:'衣柜', emoji:'🚪', color:'#a1887f', w:2, h:1, price:15000, lux:14, cat:'cabinet', sub:'wardrobe' },
+    { id:'furn_fridge',    name:'冰箱', emoji:'🧊', color:'#bde0fe', w:1, h:1, price:20000, lux:18, cat:'appliance' },
+    { id:'furn_tv',        name:'电视', emoji:'📺', color:'#264653', w:2, h:1, price:30000, lux:25, cat:'appliance' },
   ];
   const FURN_BY_ID = {}; FURNITURE.forEach(f => FURN_BY_ID[f.id] = f);
   const HOME_MAX = HOME_TIERS.length;
@@ -486,26 +546,38 @@
   function homeOpen(st, id) { return !!(CEO_BY_ID[id] && st.ceos[id] && st.ceos[id].unlocked); }
   function furnSize(fid, rot) { const f = FURN_BY_ID[fid]; return (rot & 1) ? { w:f.h, h:f.w } : { w:f.w, h:f.h }; }
   const boxOverlap = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
-  // 能不能摆在 (x,y)：不出界、不和别的家具重叠（地毯例外）、挂画只能靠后墙；ignoreUid = 正在移动/旋转的那件
-  function canPlace(st, id, fid, x, y, rot, ignoreUid) {
+  function itemSurf(p, fid) {
+    const f = FURN_BY_ID[fid || (p && p.fid)];
+    if (p && (p.surf === 'wall' || p.surf === 'floor')) return p.surf;
+    return f && f.wall ? 'wall' : 'floor';
+  }
+  // 能不能摆在 (x,y)：挂画只走墙面格，其余只走地板格；同面才算重叠；墙面避开窗户/房名牌
+  function canPlace(st, id, fid, x, y, rot, ignoreUid, surf) {
     const f = FURN_BY_ID[fid]; if (!f) return { ok:false, why:'没有这件家具' };
+    const want = f.wall ? 'wall' : 'floor';
+    surf = surf || want;
+    if (surf !== want) return { ok:false, why:f.wall ? f.name + '只能挂在墙上' : f.name + '不能挂墙' };
     const h = homeOf(st, id), T = homeTier(h.lv), sz = furnSize(fid, rot || 0);
     if (!Number.isInteger(x) || !Number.isInteger(y)) return { ok:false, why:'位置不对' };
-    if (x < 0 || y < 0 || x + sz.w > T.cols || y + sz.h > T.rows) return { ok:false, why:'超出房间了' };
-    if (f.wall && y !== 0) return { ok:false, why:f.name + '要挂在后墙（第一排）' };
+    const rows = surf === 'wall' ? WALL_ROWS : T.rows, cols = T.cols;
+    if (x < 0 || y < 0 || x + sz.w > cols || y + sz.h > rows) return { ok:false, why:surf === 'wall' ? '超出墙面了' : '超出房间了' };
+    if (surf === 'wall' && hitsWallBlock(st, id, x, y, sz.w, sz.h)) return { ok:false, why:'这里有窗户 / 房名牌，换个位置挂' };
     const me = { x, y, w:sz.w, h:sz.h }, rug = f.layer === 'rug';
     for (const p of h.placed) {
       if (p.uid === ignoreUid) continue;
       const pf = FURN_BY_ID[p.fid]; if (!pf) continue;
-      if ((pf.layer === 'rug') !== rug) continue;           // 地毯和普通家具不同层，可以叠
+      if (itemSurf(p) !== surf) continue;                  // 墙面 / 地板分开，互不挡
+      if (surf === 'floor' && (pf.layer === 'rug') !== rug) continue; // 地毯和普通家具不同层，可以叠
       const ps = furnSize(p.fid, p.rot);
       if (boxOverlap(me, { x:p.x, y:p.y, w:ps.w, h:ps.h })) return { ok:false, why:'和' + pf.name + '重叠了' };
     }
     return { ok:true };
   }
-  function findFree(st, id, fid, rot) {
-    const T = homeTier(homeOf(st, id).lv);
-    for (let y = 0; y < T.rows; y++) for (let x = 0; x < T.cols; x++) if (canPlace(st, id, fid, x, y, rot || 0).ok) return { x, y };
+  function findFree(st, id, fid, rot, surf) {
+    const f = FURN_BY_ID[fid]; if (!f) return null;
+    const want = surf || (f.wall ? 'wall' : 'floor');
+    const T = homeTier(homeOf(st, id).lv), rows = want === 'wall' ? WALL_ROWS : T.rows;
+    for (let y = 0; y < rows; y++) for (let x = 0; x < T.cols; x++) if (canPlace(st, id, fid, x, y, rot || 0, null, want).ok) return { x, y, surf:want };
     return null;
   }
   function homeUpgradeCost(st, id) { const h = homeOf(st, id); return h.lv >= HOME_MAX ? null : HOME_TIERS[h.lv].cost; }
@@ -523,42 +595,44 @@
     st.coins -= c; h.lv++;   // 格子只会变大、坐标不动，原来摆好的家具都还合法
     return { ok:true, cost:c, lv:h.lv, tier:homeTier(h.lv) };
   }
-  function placeItem(st, id, fid, x, y, rot) {
+  function placeItem(st, id, fid, x, y, rot, surf) {
     rot = (rot | 0) & 3;
     if (!homeOpen(st, id)) return { ok:false, why:'这位 CEO 还没加入' };
-    const inv = furnInvOf(st); if (!(inv[fid] > 0)) return { ok:false, why:'仓库里没有' + (FURN_BY_ID[fid] ? FURN_BY_ID[fid].name : '这件') };
-    const c = canPlace(st, id, fid, x, y, rot); if (!c.ok) return c;
+    const f = FURN_BY_ID[fid], inv = furnInvOf(st); if (!(inv[fid] > 0)) return { ok:false, why:'仓库里没有' + (f ? f.name : '这件') };
+    const want = surf || (f && f.wall ? 'wall' : 'floor');
+    const c = canPlace(st, id, fid, x, y, rot, null, want); if (!c.ok) return c;
     const h = homeOf(st, id), uid = 'u' + (h.next++);
-    takeInv(inv, fid); h.placed.push({ uid, fid, x, y, rot });
+    takeInv(inv, fid); h.placed.push({ uid, fid, x, y, rot, surf:want });
     return { ok:true, uid, undo:{ type:'place', ceo:id, uid } };
   }
   function itemOf(h, uid) { return h.placed.find(p => p.uid === uid) || null; }
   function moveItem(st, id, uid, x, y) {
     const h = homeOf(st, id), p = itemOf(h, uid); if (!p) return { ok:false, why:'找不到这件家具' };
+    const surf = itemSurf(p);
     if (p.x === x && p.y === y) return { ok:false, why:'没动', same:true };
-    const c = canPlace(st, id, p.fid, x, y, p.rot, uid); if (!c.ok) return c;
-    const undo = { type:'pose', ceo:id, uid, x:p.x, y:p.y, rot:p.rot };
-    p.x = x; p.y = y; return { ok:true, undo };
+    const c = canPlace(st, id, p.fid, x, y, p.rot, uid, surf); if (!c.ok) return c;
+    const undo = { type:'pose', ceo:id, uid, x:p.x, y:p.y, rot:p.rot, surf };
+    p.x = x; p.y = y; p.surf = surf; return { ok:true, undo };
   }
-  // 原地转 90°（宽高互换）；放不下就在附近找个最近的空位，再放不下就不转
+  // 原地转 90°（宽高互换）；放不下就在附近找个最近的空位，再放不下就不转；挂画仍留在墙面
   function rotateItem(st, id, uid) {
     const h = homeOf(st, id), p = itemOf(h, uid); if (!p) return { ok:false, why:'找不到这件家具' };
-    const nr = (p.rot + 1) & 3;
+    const nr = (p.rot + 1) & 3, surf = itemSurf(p);
     let best = null;
     for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
       const x = p.x + dx, y = p.y + dy;
-      if (!canPlace(st, id, p.fid, x, y, nr, uid).ok) continue;
+      if (!canPlace(st, id, p.fid, x, y, nr, uid, surf).ok) continue;
       const d = Math.abs(dx) + Math.abs(dy); if (!best || d < best.d) best = { x, y, d };
     }
     if (!best) return { ok:false, why:'转不开：旁边没空位' };
-    const undo = { type:'pose', ceo:id, uid, x:p.x, y:p.y, rot:p.rot };
-    p.x = best.x; p.y = best.y; p.rot = nr;
+    const undo = { type:'pose', ceo:id, uid, x:p.x, y:p.y, rot:p.rot, surf };
+    p.x = best.x; p.y = best.y; p.rot = nr; p.surf = surf;
     return { ok:true, undo, moved:best.d > 0 };
   }
   function storeItem(st, id, uid) {
     const h = homeOf(st, id), k = h.placed.findIndex(p => p.uid === uid); if (k < 0) return { ok:false, why:'找不到这件家具' };
     const p = h.placed[k]; h.placed.splice(k, 1); addInv(furnInvOf(st), p.fid, 1);
-    return { ok:true, undo:{ type:'store', ceo:id, item:{ uid:p.uid, fid:p.fid, x:p.x, y:p.y, rot:p.rot } } };
+    return { ok:true, undo:{ type:'store', ceo:id, item:{ uid:p.uid, fid:p.fid, x:p.x, y:p.y, rot:p.rot, surf:itemSurf(p) } } };
   }
   // 撤销一步摆放操作（摆上/移动/旋转/收回）；不碰金币，不撤销购买
   function undoHome(st, u) {
@@ -567,12 +641,46 @@
     if (u.type === 'place') { const k = h.placed.findIndex(p => p.uid === u.uid); if (k < 0) return { ok:false, why:'已经不在房间里' };
       const p = h.placed[k]; h.placed.splice(k, 1); addInv(inv, p.fid, 1); return { ok:true }; }
     if (u.type === 'pose') { const p = itemOf(h, u.uid); if (!p) return { ok:false, why:'已经不在房间里' };
-      if (!canPlace(st, u.ceo, p.fid, u.x, u.y, u.rot, u.uid).ok) return { ok:false, why:'原位置被占了' };
-      p.x = u.x; p.y = u.y; p.rot = u.rot; return { ok:true }; }
+      const surf = u.surf || itemSurf(p);
+      if (!canPlace(st, u.ceo, p.fid, u.x, u.y, u.rot, u.uid, surf).ok) return { ok:false, why:'原位置被占了' };
+      p.x = u.x; p.y = u.y; p.rot = u.rot; p.surf = surf; return { ok:true }; }
     if (u.type === 'store') { const it = u.item; if (!(inv[it.fid] > 0)) return { ok:false, why:'仓库里已经没有了' };
-      if (!canPlace(st, u.ceo, it.fid, it.x, it.y, it.rot).ok) return { ok:false, why:'原位置被占了' };
-      takeInv(inv, it.fid); h.placed.push(Object.assign({}, it)); return { ok:true }; }
+      const surf = it.surf || itemSurf(it);
+      if (!canPlace(st, u.ceo, it.fid, it.x, it.y, it.rot, null, surf).ok) return { ok:false, why:'原位置被占了' };
+      takeInv(inv, it.fid); h.placed.push({ uid:it.uid, fid:it.fid, x:it.x, y:it.y, rot:it.rot, surf }); return { ok:true }; }
     return { ok:false, why:'未知操作' };
+  }
+  // 旧档：地板上的挂画迁到墙面；墙面没位 → 完整退回公共仓库（不丢、不重复、不多算豪华度）
+  function migrateWallPaintings(st) {
+    let moved = 0, stored = 0;
+    CEOS.forEach(c => {
+      const h = homeOf(st, c.id), keep = [];
+      (h.placed || []).forEach(p => {
+        const f = FURN_BY_ID[p.fid]; if (!f) return;
+        if (!f.wall) { p.surf = p.surf === 'wall' ? 'floor' : (p.surf || 'floor'); keep.push(p); return; }
+        // 已是墙面且合法 → 保留
+        if (p.surf === 'wall' && canPlace(st, c.id, p.fid, p.x, p.y, p.rot, p.uid, 'wall').ok) { keep.push(p); return; }
+        // 试原 x 贴到墙排 0，再找空位
+        let spot = canPlace(st, c.id, p.fid, p.x, 0, p.rot, p.uid, 'wall').ok ? { x:p.x, y:0 } : findFree(st, c.id, p.fid, p.rot, 'wall');
+        // findFree 会看到 keep 里还没有的旧件；临时把 keep 当作当前 placed
+        if (!spot) {
+          const saved = h.placed; h.placed = keep.slice();
+          spot = findFree(st, c.id, p.fid, p.rot, 'wall');
+          h.placed = saved;
+        } else {
+          // 验证时也要相对 keep
+          const saved = h.placed; h.placed = keep.slice();
+          if (!canPlace(st, c.id, p.fid, spot.x, spot.y, p.rot, null, 'wall').ok) {
+            spot = findFree(st, c.id, p.fid, p.rot, 'wall');
+          }
+          h.placed = saved;
+        }
+        if (spot) { keep.push({ uid:p.uid, fid:p.fid, x:spot.x, y:spot.y, rot:p.rot || 0, surf:'wall' }); moved++; }
+        else { addInv(furnInvOf(st), p.fid, 1); stored++; }
+      });
+      h.placed = keep;
+    });
+    return { moved, stored };
   }
   function homeLuxury(st, id) {
     const h = homeOf(st, id); let s = homeTier(h.lv).bonus;
@@ -603,9 +711,18 @@
       const tmp = { homes:{ [c.id]:h }, ceos:{ [c.id]:{ unlocked:true } }, furnInv:{} }, seen = {};
       (Array.isArray(o.placed) ? o.placed : []).forEach(p => {
         if (!p || !FURN_BY_ID[p.fid]) return;
-        const rot = Number.isInteger(p.rot) ? p.rot & 3 : 0, uid = typeof p.uid === 'string' && p.uid && !seen[p.uid] ? p.uid : 'u' + (h.next++);
-        if (Number.isInteger(p.x) && Number.isInteger(p.y) && canPlace(tmp, c.id, p.fid, p.x, p.y, rot).ok) { h.placed.push({ uid, fid:p.fid, x:p.x, y:p.y, rot }); seen[uid] = true; }
-        else addInv(inv, p.fid, 1);
+        const f = FURN_BY_ID[p.fid], rot = Number.isInteger(p.rot) ? p.rot & 3 : 0;
+        const uid = typeof p.uid === 'string' && p.uid && !seen[p.uid] ? p.uid : 'u' + (h.next++);
+        let surf = p.surf === 'wall' || p.surf === 'floor' ? p.surf : (f.wall ? 'wall' : 'floor');
+        // 旧档挂画还在地板上：先按墙面尝试原 x / 找空位，再不行退仓库
+        if (f.wall && surf !== 'wall') {
+          if (Number.isInteger(p.x) && canPlace(tmp, c.id, p.fid, p.x, 0, rot, null, 'wall').ok) { h.placed.push({ uid, fid:p.fid, x:p.x, y:0, rot, surf:'wall' }); seen[uid] = true; }
+          else { const spot = findFree(tmp, c.id, p.fid, rot, 'wall');
+            if (spot) { h.placed.push({ uid, fid:p.fid, x:spot.x, y:spot.y, rot, surf:'wall' }); seen[uid] = true; }
+            else addInv(inv, p.fid, 1); }
+        } else if (Number.isInteger(p.x) && Number.isInteger(p.y) && canPlace(tmp, c.id, p.fid, p.x, p.y, rot, null, surf).ok) {
+          h.placed.push({ uid, fid:p.fid, x:p.x, y:p.y, rot, surf }); seen[uid] = true;
+        } else addInv(inv, p.fid, 1);
         const m = /^u(\d+)$/.exec(uid); if (m) h.next = Math.max(h.next, +m[1] + 1);
       });
       out[c.id] = h;
@@ -704,11 +821,11 @@
     milestoneMult, nextMilestone, upgradeCost, bulkUpgradeCost, empCost, ceoCost, empMult, shopBase,
     ceoAt, ceoInfo, shopRate, baseRate, onlineRate, offlineRate, rushOnlineRate, boostActive, orderPayout, settleOrder,
     BIG_ORDERS, SPECIAL_GUESTS, specialReward, settleSpecial, specialInterval,
-    crossKey, crossActive, offlineCap, bigInterval, tapMult, tapValue, tapReward,
+    crossKey, crossActive, offlineCap, bigInterval, tapMult, tapValue, tapReward, critTiers, tierMult, comboNext, comboSteps, comboProgress,
     checkUnlocks, assignCeo, assignCeoWithPayout, creditOnline, previewAssign, signOf, cloneState,
     canOpen, openShop, hireEmp, upgradeEmp, upgradeCeo, upgradeShop,
     dayKey, nextResetTs, clockRolledBack, computeOffline, settleOffline, canDouble, claimOffline,
     gachaUnlocked, gachaRemaining, gachaOdds, gachaPrice, gachaDraw, cardsComplete, newState, migrate, nextGoal,
-    HOME_TIERS, HOME_MAX, FURNITURE, FURN_BY_ID, newHome, homeTier, homeOf, furnInvOf, homeOpen, furnSize, canPlace, findFree, homeUpgradeCost,
-    buyFurniture, upgradeHome, placeItem, moveItem, rotateItem, storeItem, undoHome, homeLuxury, invCount, furnStats, normHomes, normFurnInv, normHomeBundle };
+    HOME_TIERS, HOME_MAX, WALL_ROWS, WALL_BLOCK, MALL_CATS, FURNITURE, FURN_BY_ID, newHome, homeTier, homeOf, furnInvOf, homeOpen, furnSize, itemSurf, canPlace, findFree, homeUpgradeCost,
+    buyFurniture, upgradeHome, placeItem, moveItem, rotateItem, storeItem, undoHome, migrateWallPaintings, homeLuxury, invCount, furnStats, normHomes, normFurnInv, normHomeBundle };
 });

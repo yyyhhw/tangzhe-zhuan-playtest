@@ -101,7 +101,9 @@ function sfx(name) {
   const t = AU.ctx.currentTime;
   switch (name) {
     case 'tap': tone(880 + Math.random() * 120, t, 0.08, 'square', 0.12); tone(1320, t + 0.03, 0.08, 'sine', 0.1); break;
-    case 'crit': tone(660, t, 0.1, 'square', 0.15); tone(990, t + 0.06, 0.1, 'square', 0.15); tone(1480, t + 0.12, 0.18, 'sine', 0.18); break;
+    case 'crit': case 'crit1': tone(660, t, 0.1, 'square', 0.15); tone(990, t + 0.06, 0.1, 'square', 0.15); tone(1480, t + 0.12, 0.18, 'sine', 0.18); break;
+    case 'crit2': tone(120, t, 0.12, 'sawtooth', 0.2, AU.sfx, 60); tone(784, t, 0.1, 'square', 0.16); tone(1175, t + 0.05, 0.1, 'square', 0.16); tone(1760, t + 0.1, 0.22, 'sine', 0.2); break;
+    case 'crit3': tone(90, t, 0.22, 'sawtooth', 0.26, AU.sfx, 40); [784, 988, 1319, 1760, 2093].forEach((f, k) => tone(f, t + k * 0.045, 0.16, k % 2 ? 'square' : 'triangle', 0.18)); tone(2637, t + 0.25, 0.3, 'sine', 0.16); break;
     case 'buy': tone(1046, t, 0.07, 'triangle', 0.22); tone(1568, t + 0.06, 0.14, 'triangle', 0.22); break;
     case 'no': tone(160, t, 0.18, 'sawtooth', 0.12, AU.sfx, 120); break;
     case 'mile': [523, 659, 784, 1046].forEach((f, i) => tone(f, t + i * 0.09, 0.25, 'triangle', 0.22)); break;
@@ -453,7 +455,7 @@ function drawSuper(c, i, t) {
 function drawRushBanner(c, i, t) {
   const ms = now(); let txt = null, end = 0;
   if (i === 1 && E.hasSuper(state, 1) && E.rushActive(state, 'tea', ms)) { txt = '珍珠喷泉 · 连续爆单 ×' + CFG.FOUNTAIN_MULT + ' · 手点必暴击'; end = state.rush.tea; }
-  if (i === 3 && E.hasSuper(state, 3) && E.rushActive(state, 'tech', ms)) { txt = '人造太阳 · 超频 ×' + CFG.SUN_MULT + ' · 暴击 ×' + CFG.SUN_CRIT_MULT; end = state.rush.tech; }
+  if (i === 3 && E.hasSuper(state, 3) && E.rushActive(state, 'tech', ms)) { txt = '人造太阳 · 超频 ×' + CFG.SUN_MULT + ' · 暴击倍率翻倍'; end = state.rush.tech; }
   if (!txt) return;
   const l = L(); drawStrokeText(c, txt + '（' + Math.ceil((end - ms) / 1000) + '）', W / 2, l.awnY + l.awnH * 1.9, 12 * U, '#ff4f9a', -0.03);
 }
@@ -592,6 +594,7 @@ function render(t) {
       drawStrokeText(g, 'Lv' + mileFx.lv + '！收益 ×' + mileFx.mult, W / 2, H * 0.45 - k * 20 * U, 22 * U * (1 + Math.max(0, 0.3 - k)), YELLOW, -0.06, a);
     }
   }
+  drawCritFx(g, t); drawComboHud(g, t); drawTapHint(g, t);
   // 飘字 / 金币
   for (let k = fx.length - 1; k >= 0; k--) { const f = fx[k], a = (t - f.t0) / f.life; if (a >= 1) { fx.splice(k, 1); continue; }
     drawStrokeText(g, f.txt, f.x, f.y - a * 36 * U, f.size * (a < 0.15 ? 0.6 + a * 2.7 : 1), f.color, f.rot, 1 - a * a); }
@@ -650,19 +653,107 @@ function onReturn() {
   dirty = true;
 }
 
-/* ---------- 点店铺 ---------- */
+/* ---------- 点店铺：三档互斥暴击 + 连击（两击间隔 ≤ 1 秒续连；特效只是画，不拦点击） ---------- */
 const TAP_WORDS = ['滋啦！', '香！', '叮！', '嘿！', '巴适！'];
+const combo = { n:0, last:-1e9, shop:-1 };   // 不存档：刷新 / 切店 / 超过 1 秒就从 1 重新算
+const tapSec = () => performance.now() / 1000;
+function comboLive(ts) { return combo.n > 0 && combo.shop === state.cur && ts - combo.last <= CFG.COMBO_GAP + 1e-9; }
+function comboNow() { return comboLive(tapSec()) ? combo.n : 0; }     // 下一击之前已连了几下
+let critFx = null;                                                       // 同一时间只留一个暴击特效：新的替换旧的，不堆粒子
+const TIER_COLOR = [YELLOW, '#ffb703', '#ff4f9a', '#9d4edd'];
 function tapShop(x, y) {
   const i = state.cur, s = state.shops[i];
   if (!s.open) { toast(i > 0 && !state.shops[i - 1].open ? '先把上一家店开起来' : '在下面点「开张」'); return; }
-  const r = E.tapReward(state, i, now(), rand());
+  const ts = tapSec(), prev = comboLive(ts) ? combo.n : 0;
+  combo.n = prev + 1; combo.last = ts; combo.shop = i;
+  const r = E.tapReward(state, i, now(), rand(), prev);
   earn(r.value); state.taps++; if (r.crit) state.crits++;
-  addText('+' + fmt(r.value), x, y, r.crit ? { size:22 * U, color:RED } : {});
-  burstCoins(x, y, r.crit ? 8 : 3);
-  if (r.crit) { focusT = 0.3; shake = 0.25; popWord('暴击！'); sfx('crit'); }
-  else { sfx('tap'); if (Math.random() < 0.25) popWord(TAP_WORDS[Math.floor(Math.random() * TAP_WORDS.length)]); }
+  const col = TIER_COLOR[r.tier];
+  addText('+' + fmt(r.value) + (r.tier ? ' ×' + r.mult : ''), x, y, r.tier ? { size:(18 + r.tier * 4) * U, color:col, life:0.8 + r.tier * 0.15 } : {});
+  burstCoins(x, y, r.tier ? 4 + r.tier * 4 : 3);
+  if (r.tier) {
+    critFx = { shop:i, tier:r.tier, x, y, t0:clock, seed:Math.random() * 1000 };
+    focusT = r.tier >= 2 ? 0.18 + r.tier * 0.06 : 0; shake = [0, 0.18, 0.32, 0.5][r.tier];
+    popWord(CFG.CRIT_TIERS[r.tier - 1].word); sfx('crit' + r.tier);
+    try { if (navigator.vibrate) navigator.vibrate([0, 12, 22, 40][r.tier]); } catch (e) {}
+  } else { sfx('tap'); if (Math.random() < 0.25) popWord(TAP_WORDS[Math.floor(Math.random() * TAP_WORDS.length)]); }
+  // 每满 50 连击：三档各 +5 个百分点
+  if (combo.n % CFG.COMBO_STEP === 0) { const pc = Math.round(E.critChance(state, i, now(), combo.n) * 100);
+    addText('连击 ' + combo.n + '！暴击率 ' + pc + '%', W / 2, H * 0.42, { size:16 * U, color:'#06d6a0', life:1.3, rot:-0.05 }); sfx('mile'); }
   bumpCoins();
   if (Math.random() < 0.12) { const cid = E.ceoAt(state, i); if (cid) sayLine('c', E.SIGNS[cid][i][1]); }
+}
+// 四家店各一套暴击特效：烧烤火星炭火 / 奶茶珍珠弹射 + 涟漪 / 书店速度线 + 翻页 / 科技电弧 + 能量环；档越高越大越久
+function drawCritFx(c, t) {
+  const f = critFx; if (!f || f.shop !== state.cur) return;
+  const dur = 0.35 + f.tier * 0.15, k = (t - f.t0) / dur; if (k >= 1 || k < 0) { if (k >= 1) critFx = null; return; }
+  const R = (26 + f.tier * 22) * U, e = 1 - Math.pow(1 - k, 3), a = 1 - k, n = 6 + f.tier * 4, col = TIER_COLOR[f.tier];
+  const rnd = j => { const v = Math.sin(f.seed + j * 12.9898) * 43758.5453; return v - Math.floor(v); };
+  c.save(); c.translate(f.x, f.y); c.lineCap = 'round';
+  // 共用：冲击圈（一圈，越高档越粗）
+  c.globalAlpha = a * 0.9; c.strokeStyle = col; c.lineWidth = (2 + f.tier * 1.5) * U * a; c.beginPath(); c.arc(0, 0, R * e, 0, TAU); c.stroke();
+  c.strokeStyle = INK; c.lineWidth = 1.2 * U; c.globalAlpha = a * 0.6; c.beginPath(); c.arc(0, 0, R * e + 2 * U, 0, TAU); c.stroke();
+  c.globalAlpha = a;
+  if (f.shop === 0) {        // 烧烤：火星飞溅 + 炭火块
+    for (let j = 0; j < n; j++) { const ang = rnd(j) * TAU, d0 = R * 0.3 * e, d1 = R * (0.7 + rnd(j + 50) * 0.6) * e;
+      c.strokeStyle = j % 2 ? '#ff7b00' : '#ffd23f'; c.lineWidth = (1.5 + f.tier * 0.6) * U;
+      c.beginPath(); c.moveTo(Math.cos(ang) * d0, Math.sin(ang) * d0); c.lineTo(Math.cos(ang) * d1, Math.sin(ang) * d1); c.stroke(); }
+    for (let j = 0; j < 2 + f.tier; j++) { const ang = rnd(j + 99) * TAU, d = R * 0.8 * e; c.fillStyle = '#3a1f12';
+      c.beginPath(); c.arc(Math.cos(ang) * d, Math.sin(ang) * d + k * 18 * U, (2.5 + f.tier) * U, 0, TAU); c.fill(); c.fillStyle = '#ff5400'; c.beginPath(); c.arc(Math.cos(ang) * d, Math.sin(ang) * d + k * 18 * U, 1.4 * U, 0, TAU); c.fill(); }
+  } else if (f.shop === 1) { // 奶茶：珍珠弹射 + 奶茶涟漪
+    for (let r2 = 1; r2 <= Math.min(3, f.tier); r2++) { c.strokeStyle = '#d4a373'; c.lineWidth = 2 * U; c.globalAlpha = a * 0.7; c.beginPath(); c.ellipse(0, 0, R * e * (0.4 + r2 * 0.3), R * e * (0.2 + r2 * 0.15), 0, 0, TAU); c.stroke(); }
+    c.globalAlpha = a;
+    for (let j = 0; j < n; j++) { const ang = rnd(j) * TAU, d = R * (0.5 + rnd(j + 7) * 0.7) * e, hop = Math.abs(Math.sin(k * Math.PI * 2 + j)) * 8 * U;
+      c.fillStyle = '#3d2314'; c.strokeStyle = INK; c.lineWidth = 1 * U; c.beginPath(); c.arc(Math.cos(ang) * d, Math.sin(ang) * d - hop, (3 + f.tier) * U, 0, TAU); c.fill(); c.stroke();
+      c.fillStyle = 'rgba(255,255,255,.7)'; c.beginPath(); c.arc(Math.cos(ang) * d - 1 * U, Math.sin(ang) * d - hop - 1 * U, 1 * U, 0, TAU); c.fill(); }
+  } else if (f.shop === 2) { // 书店：漫画速度线 + 翻页
+    c.strokeStyle = INK; c.lineWidth = 1.3 * U;
+    for (let j = 0; j < n + 4; j++) { const ang = j / (n + 4) * TAU + rnd(j) * 0.2, d0 = R * (0.55 + 0.15 * rnd(j + 3)), d1 = d0 + R * (0.5 + f.tier * 0.15) * (1 - k * 0.5);
+      c.beginPath(); c.moveTo(Math.cos(ang) * d0, Math.sin(ang) * d0); c.lineTo(Math.cos(ang) * d1, Math.sin(ang) * d1); c.stroke(); }
+    for (let j = 0; j < f.tier + 1; j++) { const ang = -Math.PI / 2 + (j - f.tier / 2) * 0.7, d = R * 0.9 * e;
+      c.save(); c.translate(Math.cos(ang) * d, Math.sin(ang) * d); c.rotate(k * 3 + j); c.scale(Math.cos(k * 9 + j), 1); c.fillStyle = '#fff'; c.strokeStyle = INK; c.lineWidth = 1.2 * U;
+      c.fillRect(-6 * U, -8 * U, 12 * U, 16 * U); c.strokeRect(-6 * U, -8 * U, 12 * U, 16 * U); c.restore(); }
+  } else {                   // 科技：电弧 + 能量环
+    c.strokeStyle = '#4cc9f0'; c.lineWidth = (1.6 + f.tier * 0.5) * U;
+    for (let j = 0; j < 3 + f.tier; j++) { const ang = rnd(j) * TAU; c.beginPath(); c.moveTo(0, 0);
+      for (let q = 1; q <= 5; q++) { const d = R * 1.1 * e * q / 5, off = (rnd(j * 9 + q + Math.floor(t * 30)) - 0.5) * 12 * U; c.lineTo(Math.cos(ang) * d - Math.sin(ang) * off, Math.sin(ang) * d + Math.cos(ang) * off); }
+      c.stroke(); }
+    c.strokeStyle = '#b5179e'; c.lineWidth = 2 * U; c.setLineDash([6 * U, 5 * U]); c.lineDashOffset = -t * 60;
+    for (let r2 = 0; r2 < Math.min(2, f.tier); r2++) { c.beginPath(); c.arc(0, 0, R * (0.55 + r2 * 0.3) * (0.6 + e * 0.4), 0, TAU); c.stroke(); }
+    c.setLineDash([]);
+  }
+  c.restore();
+  // 档名大字（停在点击点上方，0.5 秒内淡出）
+  const name = CFG.CRIT_TIERS[f.tier - 1].name + '！';
+  drawStrokeText(c, name, Math.max(W * 0.18, Math.min(W * 0.82, f.x)), Math.max(18 * U, f.y - R - 10 * U), (13 + f.tier * 3) * U * (k < 0.12 ? 0.7 + k * 2.5 : 1), col, -0.06, a);
+}
+// 连击 HUD：连击数 + 下一档进度 + 当前总暴击率（左下角小卡；不连击时只留一行小字）
+function drawComboHud(c, t) {
+  if (!state.shops[state.cur].open || tab !== 'shop') return;
+  const ts = tapSec(), live = comboLive(ts), n = live ? combo.n : 0, i = state.cur;
+  const pct = Math.round(E.critChance(state, i, now(), n) * 100), pg = E.comboProgress(state, i, now(), n);
+  const x = 6 * U, y = H * 0.33, w = 96 * U, h = live ? 40 * U : 17 * U;
+  c.save(); c.globalAlpha = live ? 1 : 0.75; rr(c, x, y, w, h, 5 * U); inkFill(c, 'rgba(255,255,255,.92)', 1.6 * U);
+  c.fillStyle = INK; c.textAlign = 'left'; c.textBaseline = 'middle'; c.font = `900 ${10 * U}px sans-serif`;
+  c.fillText('暴击率 ', x + 6 * U, y + 9 * U); const tw = c.measureText('暴击率 ').width; c.fillStyle = RED; c.fillText(pct + '%', x + 6 * U + tw, y + 9 * U);
+  if (live) {
+    c.fillStyle = INK; c.textAlign = 'right'; c.fillText('连击 ' + n, x + w - 6 * U, y + 9 * U);
+    const bx = x + 6 * U, by = y + 19 * U, bw = w - 12 * U, bh = 7 * U; rr(c, bx, by, bw, bh, 3 * U); inkFill(c, '#fff', 1.2 * U);
+    c.fillStyle = pg.maxed ? RED : '#06d6a0'; rr(c, bx + 1, by + 1, Math.max(0, (bw - 2) * pg.into / pg.need), bh - 2, 2 * U); c.fill();
+    c.fillStyle = INK; c.textAlign = 'left'; c.font = `700 ${8 * U}px sans-serif`;
+    c.fillText(pg.maxed ? '满档：必暴击' : `下一档 ${pg.into}/${pg.need}（+5%）`, bx, by + bh + 6 * U);
+    // 1 秒续连窗口：顶边一条倒计时细线
+    const left = Math.max(0, 1 - (ts - combo.last) / CFG.COMBO_GAP); c.fillStyle = RED; c.fillRect(x + 4 * U, y + 1.5 * U, (w - 8 * U) * left, 1.6 * U);
+  }
+  c.restore();
+}
+// 首次营业：手势提示（点满 12 下自动消失）
+function drawTapHint(c, t) {
+  if (state.taps >= 12 || tab !== 'shop' || !state.shops[state.cur].open || modalOpen()) return;
+  const x = W * 0.42, y = H * 0.56, p = (t * 1.6) % 1, a = 0.85;
+  c.save(); c.globalAlpha = a * (1 - p); c.strokeStyle = '#fff'; c.lineWidth = 3 * U; c.beginPath(); c.arc(x, y, (10 + p * 26) * U, 0, TAU); c.stroke(); c.restore();
+  drawStrokeText(c, '👆', x + 8 * U, y + 16 * U - Math.abs(Math.sin(t * 5)) * 6 * U, 24 * U, '#fff', 0, a);
+  drawStrokeText(c, '点店铺赚钱，连续点击提高暴击率', W / 2, H * 0.78, 12 * U, YELLOW, -0.02, a);
 }
 /* ---------- 营业小舞台：普通客人（只可视化自动收入）+ 大客户团单 + 特殊客户 ---------- */
 const GUEST_LOOKS = [
@@ -930,7 +1021,7 @@ function act(a, arg, btn) {
     case 'card': return showCard(arg);
     case 'reset': return confirmReset();
     case 'goShop': switchShop(+arg); setTab('shop'); break;
-    default: if (a.indexOf('home') === 0) return homeAct(a, arg, btn);
+    default: if (a.indexOf('home') === 0 || a.indexOf('mall') === 0) return homeAct(a, arg, btn);
   }
 }
 function avaCacheClear() { for (const k of Object.keys(avaCache)) delete avaCache[k]; }
@@ -962,6 +1053,12 @@ function ceoTags(i) {
   const info = E.ceoInfo(state, i); if (!info.id) return '';
   return info.match ? `<span class="tag match">专长 ×${CFG.MATCH_MULT}</span>` : `<span class="tag cross">跨行 ×${CFG.CROSS_MULT}${info.cross ? ' · ' + info.cross.title : ''}</span>`;
 }
+// 暴击概率 / 倍率分开显示：概率 = 三档合计（含连击、超级装饰），倍率 = 三档各自
+function critLine(i) {
+  const t = now(), n = comboNow(), ps = E.critTiers(state, i, t, n), tot = Math.round(E.critChance(state, i, t, n) * 100);
+  const sum = ps.reduce((a, b) => a + b, 0), sc = sum > 1 ? 1 / sum : 1, pc = p => Math.round(p * sc * 1000) / 10;
+  return `<div class="critline" id="critLine"><span>暴击概率 <b id="critPct">${tot}%</b><small id="critTiers">（${CFG.CRIT_TIERS.map((c, k) => c.name + ' ' + pc(ps[k]) + '%').join(' · ')}）</small></span><span>暴击倍率 <b>${CFG.CRIT_TIERS.map((c, k) => '×' + E.tierMult(state, i, t, k)).join(' / ')}</b></span><span class="cl-tip">连点（间隔 ≤1 秒）每满 ${CFG.COMBO_STEP} 下三档各 +5%，最高 100%</span></div>`;
+}
 function renderShop() {
   const i = state.cur, S = E.SHOPS[i], s = state.shops[i];
   if (!s.open) {
@@ -979,7 +1076,7 @@ function renderShop() {
   let h = `<div class="summary">「${sign.name}」每秒 <b style="color:var(--red)">+${fmt(sr)}</b>${s.emp > 0
       ? `<br>店铺 ${fmt(E.shopBase(i, s.lv))} × 员工 ×${E.empMult(s.emp).toFixed(2)} × CEO ×${info.mult.toFixed(2)}${E.hasSuper(state, i) ? ` × 超级装饰 ×${CFG.SUPER_RATE}` : ''}`
       : '<br>还没员工：不会自动赚钱（可以点画面手动赚）'}
-    <div class="critline"><span>手点暴击概率 <b>${Math.round(E.critChance(state, i, now()) * 100)}%</b></span><span>暴击倍率 <b>×${E.critMult(state, i, now())}</b></span></div></div>`;
+    ${critLine(i)}</div>`;
   if (E.hasSuper(state, i)) { const sp = E.ITEM_BY_ID[E.SUPER_OF_SHOP[i]];
     h += `<div class="card super"><div class="ava sq">${SUPER_ICON[sp.id]}</div><div class="info"><div class="name">${sp.name}<span class="tag match">超级装饰</span></div><div class="desc">${sp.desc}</div></div></div>`; }
   h += `<div class="row-head"><div class="sec-title">店铺</div><div class="buyamt">${[1, 10, 'max'].map(a => `<button data-act="amt" data-arg="${a}" class="${buyAmt === a ? 'on' : ''}">${a === 'max' ? 'MAX' : 'x' + a}</button>`).join('')}</div></div>`;
@@ -1139,7 +1236,7 @@ function updateCompactHead() {
     el.innerHTML = `<div class="ch-title">收藏与穿搭</div><div class="ch-note">衣服 / 帽子分区给 CEO 换装；装饰摆店里；故事卡集齐解锁金牌摊主。</div>`;
   }
 }
-function switchShop(i) { if (i < 0 || i > 3) return; state.cur = i; dirty = true; renderTabs(); }
+function switchShop(i) { if (i < 0 || i > 3) return; if (state.cur !== i) combo.n = 0; state.cur = i; dirty = true; renderTabs(); }
 function renderTabs() {
   $('#shopTabs').innerHTML = E.SHOPS.map((S, i) => { const s = state.shops[i];
     const sub = s.open ? (s.emp > 0 ? '+' + fmt(E.shopRate(state, i)) + '/秒' : '未雇员工') : (i === 0 || state.shops[i - 1].open ? fmt(S.open) : '🔒');
@@ -1170,6 +1267,7 @@ function refreshDynamic(force) {
   const cdot = E.CEOS.some(c => state.ceos[c.id].unlocked && state.ceos[c.id].at === -1);
   const cb = document.querySelector('#bottomNav [data-tab="ceo"]'); const hc = !!cb.querySelector('.dot');
   if (cdot && !hc) cb.insertAdjacentHTML('beforeend', '<i class="dot"></i>'); if (!cdot && hc) cb.querySelector('.dot').remove();
+  const cl = document.getElementById('critLine'); if (cl && tab === 'shop') { const tmp = document.createElement('div'); tmp.innerHTML = critLine(state.cur); if (tmp.firstChild.innerHTML !== cl.innerHTML) cl.innerHTML = tmp.firstChild.innerHTML; }
   const mb = document.getElementById('mallBal'); if (mb) mb.textContent = fmt(state.coins);
   const hl = document.getElementById('homeLux'); if (hl && homeWho) hl.textContent = E.homeLuxury(state, homeWho);
 }
@@ -1337,7 +1435,7 @@ function confirmReset() {
 function showIntro() {
   openModal(`<div class="mbubble">欢迎来到《躺着也能赚》</div><div style="display:flex;justify-content:center;margin:6px 0"><div class="ava art bust">${bustImg('c77')}</div></div>
     <div class="mtitle">77：巴适得很，串串烤起走！</div>
-    <div class="mnote">① 点画面里的烧烤摊赚第一桶金<br>② 攒 50 雇员工阿炭，之后<b>躺着也能赚</b><br>③ 开新店、升级店铺/员工/CEO，把 CEO 调去别的店试试跨行事件<br>离线也有收益（50%，最多 8 小时），每天还有一次免费双倍。</div>
+    <div class="mnote">① 点画面里的烧烤摊赚第一桶金：每一下都有<b>暴击</b>机会（暴击 ×5 / 超级 ×10 / 超超超级 ×20），1 秒内连点越点越容易暴击<br>② 攒 50 雇员工阿炭，之后<b>躺着也能赚</b><br>③ 开新店、升级店铺/员工/CEO，把 CEO 调去别的店试试跨行事件<br>离线也有收益（50%，最多 8 小时），每天还有一次免费双倍。</div>
     <button class="buy big red" id="mOk">开摊！</button>`);
   $('#mOk').addEventListener('click', () => { audioUnlock(); closeModal(); sayLine('c', '巴适得很，串串烤起走！', 3); }, { once:true });
 }
@@ -1354,7 +1452,10 @@ const furnName = fid => fid.replace(/^furn_/, '');
 const FURN_UP = { bookshelf: 1.5, wardrobe: 1.5 };
 const furnTall = fid => !!(FURN_ART[furnName(fid)] && FURN_UP[furnName(fid)]);
 const HOME_ICON = ['🏠', '🏢', '🏰'];
-let homeWho = 'c77', homeSub = 'room', homeSel = null, homeDrag = null;
+let homeWho = 'c77', homeSub = 'room', homeMode = 'live', homeSel = null, homeDrag = null;
+const homeActor = {}; // ceoId -> {x,y,tx,ty,act,line,until,walk}
+let mallQ = '', mallCat = 'all', mallSub = 'all', mallFilter = { afford:false, owned:false, price:'any', size:'any' };
+// price: any|low|mid|high ；size: any|1|2|3p （1×1 / 2 格边 / 3+）
 const homeUndo = {}; // 每位 CEO 一条撤销栈（只在本次打开有效，不存档）
 const undoStack = id => homeUndo[id] || (homeUndo[id] = []);
 function pushUndo(u) { const s = undoStack(u.ceo); s.push(u); if (s.length > 60) s.shift(); }
@@ -1375,6 +1476,20 @@ function homeLocked() {
   const c = E.CEO_BY_ID[homeWho];
   return `<div class="card dim home-lock"><div class="ava">🔒</div><div class="info"><div class="name">${c.id === 'rocket' ? '？？？' : c.name} 的家还没开放</div><div class="desc">${c.unlock}，加入后就有自己的小屋。</div></div></div>`;
 }
+
+const LIVE_LINES = {
+  c77:    { walk:['走两步耍下！','地板巴适得很。','莫慌，慢慢逛。'], rest:['瞌睡来了……','躺平！串串味儿还在。','眯一会儿，招牌自己烤。'], read:['……看不懂，但装得很认真。','书里有没有烤串秘方？','阿宅教的，我翻两页。'], dress:['换件围裙耍帅！','金马甲呢？在仓库。','穿好了，出摊！'] },
+  pearl:  { walk:['脚步要轻，账本怕震。','茶香这边更浓。','客人看不见，我自己逛逛。'], rest:['珍珠姐也要午休。','躺平不等于躺不平账。','Q弹的梦，三分钟。'], read:['这本讲成本核算。','漫画？偶尔也扫一眼。','笔记写在杯套上。'], dress:['旗袍要平整。','换一身再营业。','珍珠发夹——不能掉。'] },
+  otaku:  { walk:['分镜走位，从这格到那格。','地板也是画框。','别踩到我的手办投影。'], rest:['存档点……睡着了。','梦里下一话更新。','被窝是我的次元。'], read:['这本我标了书签！','名场面在第 42 页。','读完去改招牌文案。'], dress:['连帽衫＋新徽章。','换上角色扮演装。','镜子前先摆个 pose。'] },
+  rocket: { walk:['舱内巡检开始。','步进电机：启动。','火星还远，先走到窗边。'], rest:['休眠模式 ON。','充电 20 分钟。','梦到小店起飞。'], read:['说明书：怎么把床送上轨道。','这页有推力公式。','读完继续画火箭。'], dress:['胸针要亮。','换发射正装。','地上的装备，穿上！'] },
+};
+function liveLine(id, act) { const pack = LIVE_LINES[id] || LIVE_LINES.c77, arr = pack[act] || pack.walk; return arr[Math.floor(Math.random() * arr.length)]; }
+function homeActorOf(id) {
+  const T = E.homeTier(E.homeOf(state, id).lv);
+  if (!homeActor[id]) homeActor[id] = { x:Math.floor(T.cols / 2), y:Math.floor(T.rows / 2), tx:null, ty:null, act:null, line:'', until:0 };
+  return homeActor[id];
+}
+
 function renderHome() {
   if (!E.CEO_BY_ID[homeWho]) homeWho = 'c77';
   let h = homeBook(homeSub) + homeWhoRow();
@@ -1390,36 +1505,81 @@ function renderRoom() {
     <div class="gain">${next ? `升级 → ${next.name} ${next.cols}×${next.rows} 格，房型豪华 +${next.bonus}` : '已经是最高档豪宅'}</div></div>
     ${next ? btn('homeUp', id, '升级', next.cost) : '<button class="buy no" disabled>顶级</button>'}</div>`;
   const isRug = p => E.FURN_BY_ID[p.fid].layer === 'rug' ? 0 : 1, footY = p => p.y + E.furnSize(p.fid, p.rot).h;
-  // 前后遮挡：地毯垫最底；其余按底脚所在行排，靠前（底脚更低）的盖住后面的
-  const items = H.placed.slice().sort((a, b) => isRug(a) - isRug(b) || footY(a) - footY(b) || a.x - b.x).map(p => {
+  const isWall = p => E.itemSurf(p) === 'wall';
+  const mkFurn = (p, rows) => {
     const f = E.FURN_BY_ID[p.fid], sz = E.furnSize(p.fid, p.rot);
-    return `<div class="furn ${f.layer === 'rug' ? 'rug' : ''} ${FURN_ART[furnName(p.fid)] ? 'art' : ''} ${furnTall(p.fid) ? 'tall' : ''} ${p.uid === homeSel ? 'sel' : ''}" data-uid="${p.uid}" data-fid="${p.fid}" style="left:${p.x / T.cols * 100}%;top:${p.y / T.rows * 100}%;width:${sz.w / T.cols * 100}%;height:${sz.h / T.rows * 100}%;--fc:${f.color}">${furnInner(p.fid, p.rot, true)}<b class="fn">${f.name}</b></div>`;
-  }).join('');
+    return `<div class="furn ${f.layer === 'rug' ? 'rug' : ''} ${f.wall ? 'wallf' : ''} ${FURN_ART[furnName(p.fid)] ? 'art' : ''} ${furnTall(p.fid) ? 'tall' : ''} ${p.uid === homeSel ? 'sel' : ''}" data-uid="${p.uid}" data-fid="${p.fid}" data-surf="${E.itemSurf(p)}" style="left:${p.x / T.cols * 100}%;top:${p.y / rows * 100}%;width:${sz.w / T.cols * 100}%;height:${sz.h / rows * 100}%;--fc:${f.color}">${furnInner(p.fid, p.rot, true)}<b class="fn">${f.name}</b></div>`;
+  };
+  // 墙面挂画 / 地板家具分开渲染；地板前后遮挡：地毯垫最底，其余按底脚行排
+  const wallItems = H.placed.filter(isWall).slice().sort((a, b) => a.y - b.y || a.x - b.x).map(p => mkFurn(p, E.WALL_ROWS)).join('');
+  const floorItems = H.placed.filter(p => !isWall(p)).slice().sort((a, b) => isRug(a) - isRug(b) || footY(a) - footY(b) || a.x - b.x).map(p => mkFurn(p, T.rows)).join('');
   const artKey = `${id}_${H.lv}`, hasArt = !!HOME_ART[artKey];
   h += `<div class="room tier-${T.id}${hasArt ? ' has-art' : ''}" id="room" data-tier="${T.id}" style="--cols:${T.cols};--rows:${T.rows};--wall:${T.wall};--floor:${T.floor};--trim:${T.trim}">
     ${hasArt ? `<img class="room-art" src="art/home_${artKey}.webp?v=${ART_V}" data-homefb="1" alt="" onerror="this.closest('.room')&&this.closest('.room').classList.remove('has-art')">` : ''}
-    <div class="room-wall"><span class="rw-deco">${T.id === 'hut' ? '🪟' : T.id === 'apt' ? '🪟 🪟' : '✨🕯️✨'}</span><span class="rw-name">${c.name}的${T.name}</span></div>
-    <div class="room-floor" id="roomFloor">${items}<div class="room-hl hidden" id="roomHl"></div></div></div>`;
+    <div class="room-wall" id="roomWall"><span class="rw-deco">${T.id === 'hut' ? '🪟' : T.id === 'apt' ? '🪟 🪟' : '✨🕯️✨'}</span><span class="rw-name">${c.name}的${T.name}</span><div class="wall-grid" id="wallGrid">${wallItems}<div class="room-hl hidden" id="wallHl"></div></div></div>
+    <div class="room-floor" id="roomFloor">${floorItems}<div class="home-actor" id="homeActor" style="left:${(homeActorOf(id).x + 0.5) / T.cols * 100}%;top:${(homeActorOf(id).y + 0.5) / T.rows * 100}%"><span class="ha-ava">${ava(id)}</span>${(() => { const ac = homeActorOf(id); return ac.line && ac.until > clock ? `<b class="ha-line">${ac.line}</b>` : ''; })()}<i class="ha-act">${(() => { const ac = homeActorOf(id); return ac.act === 'rest' ? '💤' : ac.act === 'read' ? '📖' : ac.act === 'dress' ? '👕' : ''; })()}</i></div><div class="room-hl hidden" id="roomHl"></div></div></div>`;
   const st = undoStack(id);
-  h += `<div class="room-tools">${sel ? `<span class="rt-sel">已选：<b>${E.FURN_BY_ID[sel.fid].name}</b></span><button class="buy alt" data-act="homeRot" data-arg="${sel.uid}">↻ 旋转</button><button class="buy alt" data-act="homeStore" data-arg="${sel.uid}">📦 收回</button>`
-    : '<span class="rt-sel">点家具选中：旋转 / 收回；按住拖动换位置</span>'}
-    <button class="buy alt" data-act="homeUndo" data-arg="${id}" ${st.length ? '' : 'disabled'}>↶ 撤销${st.length ? ' ' + st.length : ''}</button></div>`;
+  h += `<div class="mode-tabs" role="tablist"><button class="mt ${homeMode === 'live' ? 'on' : ''}" data-act="homeMode" data-arg="live">🚶 生活</button><button class="mt ${homeMode === 'decor' ? 'on' : ''}" data-act="homeMode" data-arg="decor">🛋️ 布置</button></div>`;
+  h += `<div class="room-tools">${homeMode === 'decor' ? (sel ? `<span class="rt-sel">已选：<b>${E.FURN_BY_ID[sel.fid].name}</b></span><button class="buy alt" data-act="homeRot" data-arg="${sel.uid}">↻ 旋转</button><button class="buy alt" data-act="homeStore" data-arg="${sel.uid}">📦 收回</button>`
+    : '<span class="rt-sel">布置：点家具选中 / 拖动换位；挂画拖到墙面</span>') : '<span class="rt-sel">生活：点空地走过去 · 点床休息 · 点书架看书 · 点衣柜换装</span>'}
+    ${homeMode === 'decor' ? `<button class="buy alt" data-act="homeUndo" data-arg="${id}" ${st.length ? '' : 'disabled'}>↶ 撤销${st.length ? ' ' + st.length : ''}</button>` : ''}</div>`;
   const inv = Object.entries(E.furnInvOf(state)).filter(([, n]) => n > 0);
-  h += `<div class="tray-head"><b>公共家具仓库</b><span>${inv.length ? '按住拖进房间 · 轻点自动摆' : '空空的'}</span><button class="buy alt mall-go" data-act="homeSub" data-arg="mall">🛒 去商城</button></div>`;
-  h += inv.length ? `<div class="inv-strip">${inv.map(([fid, n]) => { const f = E.FURN_BY_ID[fid], stt = E.furnStats(state, fid);
-      const where = stt.where.length ? stt.where.map(w => w.name).join('、') : '';
-      return `<div class="inv-item" data-fid="${fid}" style="--fc:${f.color}" title="${f.name} ${f.w}×${f.h}${where ? ' · 另有在 ' + where : ''}"><span class="ie">${f.emoji}</span><b>${f.name}</b><small>${f.w}×${f.h}</small><i>×${n}</i></div>`; }).join('')}</div>
-      <div class="note">CEO 生活篇：和经营共用金币。家具进公共仓库，四家都能摆，一件同时只在一家（收回后可搬去别家；想几家同时有就多买几件）。拖动时绿 = 能放、红 = 重叠/出界；移动 / 旋转 / 收回 / 撤销都不花钱。</div>`
-    : `<div class="note">仓库空空。去商城买家具（进公共仓库），再拖进 ${c.name} 的房间摆。一件同时只在一家；想四家都有就买四件。和经营共用金币。</div>`;
+  if (homeMode === 'decor') {
+    h += `<div class="tray-head"><b>公共家具仓库</b><span>${inv.length ? '按住拖进房间 · 轻点自动摆' : '空空的'}</span><button class="buy alt mall-go" data-act="homeSub" data-arg="mall">🛒 去商城</button></div>`;
+    h += inv.length ? `<div class="inv-strip">${inv.map(([fid, n]) => { const f = E.FURN_BY_ID[fid], stt = E.furnStats(state, fid);
+        const where = stt.where.length ? stt.where.map(w => w.name).join('、') : '';
+        return `<div class="inv-item" data-fid="${fid}" style="--fc:${f.color}" title="${f.name} ${f.w}×${f.h}${where ? ' · 另有在 ' + where : ''}"><span class="ie">${f.emoji}</span><b>${f.name}</b><small>${f.w}×${f.h}</small><i>×${n}</i></div>`; }).join('')}</div>
+        <div class="note">布置模式：拖家具、旋转、收回。挂画只挂墙。生活模式下去点空地 / 床 / 书架 / 衣柜互动。</div>`
+      : `<div class="note">仓库空空。去商城买家具，再回来布置 ${c.name} 的房间。</div>`;
+  } else {
+    h += `<div class="note live-note">生活模式：点地板空位让 ${c.name} 走过去；点<b>床</b>休息、点<b>书架</b>看书、点<b>衣柜</b>换装。要摆家具请切到「布置」。</div>
+      <button class="buy alt mall-go" data-act="homeSub" data-arg="mall">🛒 去商城</button>`;
+  }
   return h;
+}
+function mallMatch(f) {
+  const q = mallQ.trim().toLowerCase();
+  if (q && !(f.name.toLowerCase().includes(q) || (f.cat && f.cat.includes(q)) || (f.sub && f.sub.includes(q)))) return false;
+  if (mallCat !== 'all' && f.cat !== mallCat) return false;
+  if (mallCat === 'cabinet' && mallSub !== 'all' && f.sub !== mallSub) return false;
+  const stt = E.furnStats(state, f.id);
+  if (mallFilter.afford && state.coins < f.price) return false;
+  if (mallFilter.owned && stt.owned <= 0) return false;
+  if (mallFilter.price === 'low' && f.price >= 3000) return false;
+  if (mallFilter.price === 'mid' && (f.price < 3000 || f.price >= 15000)) return false;
+  if (mallFilter.price === 'high' && f.price < 15000) return false;
+  const area = f.w * f.h, long = Math.max(f.w, f.h);
+  if (mallFilter.size === '1' && !(f.w === 1 && f.h === 1)) return false;
+  if (mallFilter.size === '2' && long !== 2) return false;
+  if (mallFilter.size === '3p' && long < 3) return false;
+  return true;
 }
 function renderMall() {
   const c = E.CEO_BY_ID[homeWho], open = E.homeOpen(state, homeWho), nm = open || c.id !== 'rocket' ? c.name : '？？？';
-  let h = `<div class="mall-head"><div>公共仓库 · ${open ? `现看 <b>${nm}</b> 的家` : `<b>${nm}</b> 还没加入，买的先进仓库`}</div><div>余额 ${coinSm}<b id="mallBal">${fmt(state.coins)}</b></div></div><div class="mall-list">`;
-  h += E.FURNITURE.map(f => { const stt = E.furnStats(state, f.id);
+  const list = E.FURNITURE.filter(mallMatch);
+  let h = `<div class="mall-head"><div>公共仓库 · ${open ? `现看 <b>${nm}</b> 的家` : `<b>${nm}</b> 还没加入，买的先进仓库`}</div><div>余额 ${coinSm}<b id="mallBal">${fmt(state.coins)}</b></div></div>`;
+  h += `<div class="mall-search"><input id="mallSearch" type="search" enterkeyhint="search" placeholder="搜索家具…" value="${mallQ.replace(/"/g, '&quot;')}" autocomplete="off"><button type="button" class="buy alt" data-act="mallClear" ${mallQ || mallCat !== 'all' || mallFilter.afford || mallFilter.owned || mallFilter.price !== 'any' || mallFilter.size !== 'any' ? '' : 'disabled'}>清除</button></div>`;
+  h += `<div class="mall-cats" role="tablist"><button class="mc ${mallCat === 'all' ? 'on' : ''}" data-act="mallCat" data-arg="all">全部</button>${E.MALL_CATS.map(c => `<button class="mc ${mallCat === c.id ? 'on' : ''}" data-act="mallCat" data-arg="${c.id}">${c.name}</button>`).join('')}</div>`;
+  if (mallCat === 'cabinet') {
+    const subs = E.MALL_CATS.find(c => c.id === 'cabinet').subs;
+    h += `<div class="mall-subs">${[{ id:'all', name:'全部柜架' }, ...subs].map(c => `<button class="ms ${mallSub === c.id ? 'on' : ''}" data-act="mallSub" data-arg="${c.id}">${c.name}</button>`).join('')}</div>`;
+  }
+  h += `<div class="mall-filters">
+    <label class="mf"><input type="checkbox" data-act="mallAff" ${mallFilter.afford ? 'checked' : ''}>买得起</label>
+    <label class="mf"><input type="checkbox" data-act="mallOwn" ${mallFilter.owned ? 'checked' : ''}>已拥有</label>
+    <select data-act="mallPrice"><option value="any"${mallFilter.price==='any'?' selected':''}>价格</option><option value="low"${mallFilter.price==='low'?' selected':''}>3千以下</option><option value="mid"${mallFilter.price==='mid'?' selected':''}>3千–1.5万</option><option value="high"${mallFilter.price==='high'?' selected':''}>1.5万+</option></select>
+    <select data-act="mallSize"><option value="any"${mallFilter.size==='any'?' selected':''}>占地</option><option value="1"${mallFilter.size==='1'?' selected':''}>1×1</option><option value="2"${mallFilter.size==='2'?' selected':''}>含 2 格边</option><option value="3p"${mallFilter.size==='3p'?' selected':''}>3 格+</option></select>
+  </div>`;
+  h += `<div class="mall-count">显示 <b>${list.length}</b> / ${E.FURNITURE.length} 件<span class="mall-spacer">后期还会加</span></div>`;
+  h += `<div class="mall-list">`;
+  h += list.map(f => { const stt = E.furnStats(state, f.id);
     const where = stt.where.length ? stt.where.map(w => w.name).join('、') : '未摆出';
+    const cat = E.MALL_CATS.find(c => c.id === f.cat);
     return `<div class="card mall-card" data-fid="${f.id}"><div class="ava sq furn-ico" style="--fc:${f.color}">${furnInner(f.id, 0)}</div><div class="info"><div class="name">${f.name}<span class="tag match">豪华 +${f.lux}</span></div>
-      <div class="desc">占地 ${f.w}×${f.h} 格${f.layer === 'rug' ? ' · 可垫在家具下' : ''}${f.wall ? ' · 挂后墙' : ''}<br>已拥有 ${stt.owned}（摆出 ${stt.placed} / 仓库 ${stt.warehouse}）<br>摆在：${where}</div></div>${btn('homeBuy', f.id, '购买', f.price)}</div>`; }).join('');
+      <div class="desc">${cat ? cat.name + (f.sub ? ' · ' + (((cat.subs || []).find(x => x.id === f.sub) || {}).name || '') : '') + ' · ' : ''}占地 ${f.w}×${f.h} 格${f.layer === 'rug' ? ' · 可垫在家具下' : ''}${f.wall ? ' · 挂墙面（不占地板）' : ''}<br>已拥有 ${stt.owned}（摆出 ${stt.placed} / 仓库 ${stt.warehouse}）<br>摆在：${where}</div></div>${btn('homeBuy', f.id, '购买', f.price)}</div>`; }).join('');
+  // 留白：即使滤完也保留空位提示，方便以后加商品
+  if (list.length < 4) for (let i = list.length; i < 4; i++) h += `<div class="card mall-card mall-ghost" aria-hidden="true"><div class="ava sq">+</div><div class="info"><div class="name">敬请期待</div><div class="desc">商城还会加新家具，先把分类和搜索用起来。</div></div></div>`;
+  if (!list.length) h += `<div class="note">没有符合条件的家具，试试清除筛选。</div>`;
   h += `</div><div class="note">商城只花游戏金币，和经营共用一个钱包。家具进公共仓库；一件同时只在一家，想多家都有就多买。家具只加豪华度，不加产速、不影响开店。</div>`;
   return h;
 }
@@ -1458,40 +1618,80 @@ function homeCommit(r, msg) {
 }
 function homeAutoPlace(fid) {
   for (const rot of [0, 1]) { const at = E.findFree(state, homeWho, fid, rot);
-    if (at) { const r = E.placeItem(state, homeWho, fid, at.x, at.y, rot); if (homeCommit(r)) homeSel = r.uid; return; } }
-  sfx('no'); toast('房间放不下了：先收回点东西，或者升级房子');
+    if (at) { const r = E.placeItem(state, homeWho, fid, at.x, at.y, rot, at.surf); if (homeCommit(r)) homeSel = r.uid; return; } }
+  sfx('no'); toast(E.FURN_BY_ID[fid].wall ? '墙面挂满了：先收一幅，或者换个位置' : '房间放不下了：先收回点东西，或者升级房子');
 }
 function homeAct(a, arg, b) {
   switch (a) {
     case 'homeGo': return setTab(arg);
+    case 'homeMode': homeMode = arg === 'decor' ? 'decor' : 'live'; homeSel = null; if (homeDrag) homeEnd(); sfx('tap'); dirty = true; return;
     case 'homeSub': if (homeSub !== arg) { homeSub = arg; homeSel = null; pageFlip(arg === 'mall' ? 'next' : 'prev'); $('#panel').scrollTop = 0; sfx('swoosh'); } dirty = true; return;
     case 'homeWho': if (homeWho !== arg) { homeWho = arg; homeSel = null; sfx('tap'); } if (!E.homeOpen(state, arg)) toast('这位 CEO 还没加入'); dirty = true; return;
     case 'homeUp': return confirmHomeUp(arg);
     case 'homeBuy': return confirmHomeBuy(arg);
+    case 'mallCat': mallCat = arg; if (arg !== 'cabinet') mallSub = 'all'; dirty = true; return;
+    case 'mallSub': mallSub = arg; dirty = true; return;
+    case 'mallClear': mallQ = ''; mallCat = 'all'; mallSub = 'all'; mallFilter = { afford:false, owned:false, price:'any', size:'any' }; dirty = true; return;
+    case 'mallAff': mallFilter.afford = !!(typeof arg === 'boolean' ? arg : !mallFilter.afford); dirty = true; return;
+    case 'mallOwn': mallFilter.owned = !!(typeof arg === 'boolean' ? arg : !mallFilter.owned); dirty = true; return;
+    case 'mallPrice': mallFilter.price = arg || 'any'; dirty = true; return;
+    case 'mallSize': mallFilter.size = arg || 'any'; dirty = true; return;
     case 'homeRot': { const r = E.rotateItem(state, homeWho, arg); homeCommit(r, r.ok && r.moved ? '转好了（挪了一点才放得下）' : null); return; }
     case 'homeStore': { const r = E.storeItem(state, homeWho, arg); if (homeCommit(r, r.ok ? E.FURN_BY_ID[r.undo.item.fid].name + ' 收回仓库' : null)) homeSel = null; return; }
     case 'homeUndo': { const st = undoStack(arg), u = st.pop(); const r = E.undoHome(state, u); if (r.ok) { persist(); sfx('swoosh'); toast('撤销了一步'); } else { sfx('no'); toast(r.why); } homeSel = null; dirty = true; return; }
   }
 }
 // ---- 拖动（pointer 事件：iPhone 触摸 / 鼠标通用；拖动中禁止页面滚动、暂停重画） ----
-function homeCellAt(px, py, fid, rot, offX, offY) {
-  const fl = $('#roomFloor'); if (!fl) return null;
-  const r = fl.getBoundingClientRect(), T = E.homeTier(E.homeOf(state, homeWho).lv), cw = r.width / T.cols, ch = r.height / T.rows;
-  const inside = px >= r.left - cw * 0.5 && px <= r.right + cw * 0.5 && py >= r.top - ch * 0.5 && py <= r.bottom + ch * 0.5;
-  return { inside, x:Math.round((px - r.left) / cw - offX), y:Math.round((py - r.top) / ch - offY), cw, ch, T };
+function homeCellAt(px, py, fid, rot, offX, offY, surf) {
+  const f = E.FURN_BY_ID[fid], want = surf || (f && f.wall ? 'wall' : 'floor');
+  const el = want === 'wall' ? ($('#wallGrid') || $('#roomWall')) : $('#roomFloor'); if (!el) return null;
+  const r = el.getBoundingClientRect(), T = E.homeTier(E.homeOf(state, homeWho).lv);
+  const rows = want === 'wall' ? E.WALL_ROWS : T.rows, cw = r.width / T.cols, ch = r.height / rows;
+  const pad = want === 'wall' ? Math.max(cw, ch) * 0.8 : Math.max(cw, ch) * 0.5;
+  const inside = px >= r.left - pad && px <= r.right + pad && py >= r.top - pad && py <= r.bottom + pad;
+  return { inside, x:Math.round((px - r.left) / cw - offX), y:Math.round((py - r.top) / ch - offY), cw, ch, T, surf:want, rows };
+}
+function homeLiveTap(e) {
+  const floor = $('#roomFloor'); if (!floor) return;
+  const fEl = e.target.closest('#roomFloor .furn');
+  const id = homeWho, T = E.homeTier(E.homeOf(state, id).lv), ac = homeActorOf(id);
+  const go = (x, y, act) => {
+    x = Math.max(0, Math.min(T.cols - 1, x | 0)); y = Math.max(0, Math.min(T.rows - 1, y | 0));
+    ac.tx = x; ac.ty = y; ac.act = act || null; ac.line = liveLine(id, act || 'walk'); ac.until = clock + 2.4;
+    sfx('tap'); dirty = true;
+  };
+  if (fEl) {
+    const p = E.homeOf(state, id).placed.find(q => q.uid === fEl.dataset.uid); if (!p) return;
+    const f = E.FURN_BY_ID[p.fid], sz = E.furnSize(p.fid, p.rot);
+    const cx = p.x + Math.floor(sz.w / 2), cy = p.y + Math.floor(sz.h / 2);
+    if (p.fid === 'furn_bed') return go(cx, Math.min(T.rows - 1, p.y + sz.h - 1), 'rest');
+    if (p.fid === 'furn_bookshelf') return go(cx, Math.min(T.rows - 1, p.y + 1), 'read');
+    if (p.fid === 'furn_wardrobe') return go(cx, Math.min(T.rows - 1, p.y + 1), 'dress');
+    return go(cx, cy, 'walk');
+  }
+  if (!e.target.closest('#roomFloor')) return;
+  const r = floor.getBoundingClientRect(), x = Math.floor((e.clientX - r.left) / r.width * T.cols), y = Math.floor((e.clientY - r.top) / r.height * T.rows);
+  go(x, y, 'walk');
 }
 function homeDown(e) {
   if (tab !== 'home' || homeSub !== 'room' || frozen || homeDrag) return;
-  const fEl = e.target.closest('#roomFloor .furn'), iEl = e.target.closest('.inv-item');
-  if (!fEl && !iEl) { if (homeSel && e.target.closest('#roomFloor')) { homeSel = null; dirty = true; } return; }
+  if (homeMode === 'live') {
+    if (e.button > 0) return;
+    if (e.target.closest('.mode-tabs, .room-tools, .book-tabs, .home-who, .tray-head, .mall-go, button')) return;
+    e.preventDefault(); audioUnlock(); homeLiveTap(e); return;
+  }
+  const fEl = e.target.closest('#roomFloor .furn, #roomWall .furn'), iEl = e.target.closest('.inv-item');
+  if (!fEl && !iEl) { if (homeSel && (e.target.closest('#roomFloor') || e.target.closest('#roomWall'))) { homeSel = null; dirty = true; } return; }
   if (e.button > 0) return;
   e.preventDefault(); audioUnlock();
-  const H = E.homeOf(state, homeWho), fl = $('#roomFloor'), fr = fl.getBoundingClientRect(), T = E.homeTier(H.lv);
-  const cw = fr.width / T.cols, ch = fr.height / T.rows;
+  const H = E.homeOf(state, homeWho), T = E.homeTier(H.lv);
   let d;
-  if (fEl) { const p = H.placed.find(q => q.uid === fEl.dataset.uid); if (!p) return; const sz = E.furnSize(p.fid, p.rot);
-    d = { src:'room', uid:p.uid, fid:p.fid, rot:p.rot, w:sz.w, h:sz.h, offX:(e.clientX - fr.left) / cw - p.x, offY:(e.clientY - fr.top) / ch - p.y, el:fEl }; }
-  else { const fid = iEl.dataset.fid, sz = E.furnSize(fid, 0); d = { src:'inv', uid:null, fid, rot:0, w:sz.w, h:sz.h, offX:sz.w / 2, offY:sz.h / 2, el:iEl }; }
+  if (fEl) { const p = H.placed.find(q => q.uid === fEl.dataset.uid); if (!p) return; const sz = E.furnSize(p.fid, p.rot), surf = E.itemSurf(p);
+    const el = surf === 'wall' ? ($('#wallGrid') || $('#roomWall')) : $('#roomFloor'), fr = el.getBoundingClientRect(), rows = surf === 'wall' ? E.WALL_ROWS : T.rows;
+    const cw = fr.width / T.cols, ch = fr.height / rows;
+    d = { src:'room', uid:p.uid, fid:p.fid, rot:p.rot, w:sz.w, h:sz.h, surf, offX:(e.clientX - fr.left) / cw - p.x, offY:(e.clientY - fr.top) / ch - p.y, el:fEl }; }
+  else { const fid = iEl.dataset.fid, sz = E.furnSize(fid, 0), surf = E.FURN_BY_ID[fid].wall ? 'wall' : 'floor';
+    d = { src:'inv', uid:null, fid, rot:0, w:sz.w, h:sz.h, surf, offX:sz.w / 2, offY:sz.h / 2, el:iEl }; }
   homeDrag = Object.assign(d, { id:e.pointerId, sx:e.clientX, sy:e.clientY, moved:false, ghost:null, cell:null });
   try { d.el.setPointerCapture(e.pointerId); } catch (x) {}
   window.addEventListener('pointermove', homeMove, { passive:false });
@@ -1513,17 +1713,19 @@ function homeAutoScroll(d) {
   d.raf = requestAnimationFrame(() => homeAutoScroll(d));
 }
 function homeDragAt(d) {
-  const c = homeCellAt(d.px, d.py, d.fid, d.rot, d.offX, d.offY); if (!c) return;
+  const c = homeCellAt(d.px, d.py, d.fid, d.rot, d.offX, d.offY, d.surf); if (!c) return;
   if (!d.moved) { d.moved = true; homeSel = null;
-    const g = document.createElement('div'); g.className = 'furn drag-ghost' + (E.FURN_BY_ID[d.fid].layer === 'rug' ? ' rug' : '') + (furnTall(d.fid) ? ' tall' : '');
+    const g = document.createElement('div'); g.className = 'furn drag-ghost' + (E.FURN_BY_ID[d.fid].layer === 'rug' ? ' rug' : '') + (E.FURN_BY_ID[d.fid].wall ? ' wallf' : '') + (furnTall(d.fid) ? ' tall' : '');
     g.style.cssText = `width:${d.w * c.cw}px;height:${d.h * c.ch}px;--fc:${E.FURN_BY_ID[d.fid].color}`; g.innerHTML = furnInner(d.fid, d.rot, true);
     document.body.appendChild(g); d.ghost = g; if (d.src === 'room') d.el.classList.add('lifting'); }
   d.ghost.style.left = (d.px - d.offX * c.cw) + 'px'; d.ghost.style.top = (d.py - d.offY * c.ch) + 'px';
-  const hl = $('#roomHl'); d.cell = c.inside ? c : null;
-  if (!c.inside) { hl.classList.add('hidden'); d.ghost.classList.remove('ok', 'bad'); return; }
-  const v = E.canPlace(state, homeWho, d.fid, c.x, c.y, d.rot, d.uid); d.valid = v;
-  const cx = Math.max(-d.w + 1, Math.min(c.T.cols - 1, c.x)), cy = Math.max(-d.h + 1, Math.min(c.T.rows - 1, c.y));
-  hl.style.cssText = `left:${cx / c.T.cols * 100}%;top:${cy / c.T.rows * 100}%;width:${d.w / c.T.cols * 100}%;height:${d.h / c.T.rows * 100}%`;
+  const hlFloor = $('#roomHl'), hlWall = $('#wallHl'), hl = c.surf === 'wall' ? hlWall : hlFloor;
+  if (hlFloor) hlFloor.classList.add('hidden'); if (hlWall) hlWall.classList.add('hidden');
+  d.cell = c.inside ? c : null;
+  if (!c.inside || !hl) { d.ghost.classList.remove('ok', 'bad'); return; }
+  const v = E.canPlace(state, homeWho, d.fid, c.x, c.y, d.rot, d.uid, c.surf); d.valid = v;
+  const cx = Math.max(-d.w + 1, Math.min(c.T.cols - 1, c.x)), cy = Math.max(-d.h + 1, Math.min(c.rows - 1, c.y));
+  hl.style.cssText = `left:${cx / c.T.cols * 100}%;top:${cy / c.rows * 100}%;width:${d.w / c.T.cols * 100}%;height:${d.h / c.rows * 100}%`;
   hl.className = 'room-hl ' + (v.ok ? 'ok' : 'bad'); d.ghost.classList.toggle('ok', v.ok); d.ghost.classList.toggle('bad', !v.ok);
 }
 function homeEnd() {
@@ -1540,14 +1742,30 @@ function homeUp(e) {
   if (!d.moved) {   // 轻点：家具 → 选中/取消；仓库 → 自动找空位
     if (d.src === 'room') { homeSel = homeSel === d.uid ? null : d.uid; sfx('tap'); }
     else homeAutoPlace(d.fid);
-  } else if (!d.cell) { sfx('no'); toast(d.src === 'inv' ? '拖到房间的格子里才能放' : '拖出房间了，放回原位'); }
+  } else if (!d.cell) { sfx('no'); toast(d.src === 'inv' ? (d.surf === 'wall' ? '拖到墙面上才能挂' : '拖到房间的格子里才能放') : '拖出房间了，放回原位'); }
   else if (!d.valid || !d.valid.ok) { sfx('no'); toast((d.valid && d.valid.why) || '放不下'); }
-  else if (d.src === 'inv') { const r = E.placeItem(state, homeWho, d.fid, d.cell.x, d.cell.y, d.rot); if (homeCommit(r)) homeSel = r.uid; }
+  else if (d.src === 'inv') { const r = E.placeItem(state, homeWho, d.fid, d.cell.x, d.cell.y, d.rot, d.cell.surf); if (homeCommit(r)) homeSel = r.uid; }
   else { homeCommit(E.moveItem(state, homeWho, d.uid, d.cell.x, d.cell.y)); homeSel = d.uid; }
   dirty = true; renderTab();
 }
 function homeCancel(e) { const d = homeDrag; if (!d || e.pointerId !== d.id) return; homeEnd(); dirty = true; renderTab(); }
 tabBody.addEventListener('pointerdown', homeDown);
+tabBody.addEventListener('input', e => {
+  const t = e.target; if (!t) return;
+  if (t.id === 'mallSearch') { mallQ = t.value || ''; dirty = true; /* 保留光标：只重画列表区 */ renderMallLive(); }
+});
+tabBody.addEventListener('change', e => {
+  const t = e.target; if (!t || !t.dataset || !t.dataset.act) return;
+  if (t.dataset.act === 'mallPrice' || t.dataset.act === 'mallSize') { homeAct(t.dataset.act, t.value); renderTab(); }
+  if (t.type === 'checkbox' && (t.dataset.act === 'mallAff' || t.dataset.act === 'mallOwn')) { /* click on label 也会触发 click handler */ }
+});
+function renderMallLive() {
+  if (tab !== 'home' || homeSub !== 'mall') return;
+  const keep = document.activeElement && document.activeElement.id === 'mallSearch' ? document.activeElement.selectionStart : null;
+  renderTab();
+  const inp = $('#mallSearch'); if (inp && keep != null) { inp.focus(); try { inp.setSelectionRange(keep, keep); } catch (e) {} }
+}
+
 document.addEventListener('touchmove', e => { if (homeDrag) e.preventDefault(); }, { passive:false });
 function pageFlip(dir) {
   ['#panel', '#compactHead'].forEach(s => { const el = $(s); if (!el) return; el.classList.remove('flip-next', 'flip-prev'); void el.offsetWidth; el.classList.add('flip-' + dir); });
@@ -1566,7 +1784,7 @@ cv.addEventListener('pointerup', e => {
   tapShop(x, y);
 });
 cv.addEventListener('pointercancel', e => { delete ptr[e.pointerId]; });
-tabBody.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (!b || b.disabled || frozen) return; audioUnlock(); act(b.dataset.act, b.dataset.arg, b); });
+tabBody.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (!b || b.disabled || frozen) return; if (b.tagName === 'SELECT' || (b.tagName === 'INPUT' && b.type === 'search')) return; audioUnlock(); const arg = (b.type === 'checkbox') ? b.checked : b.dataset.arg; act(b.dataset.act, arg, b); });
 $('#shopTabs').addEventListener('click', e => { const b = e.target.closest('[data-shop]'); if (!b) return; audioUnlock(); switchShop(+b.dataset.shop); if (tab !== 'shop') setTab('shop'); });
 $('#bottomNav').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; audioUnlock(); setTab(b.dataset.tab); });
 $('#mute').addEventListener('click', () => {
@@ -1608,6 +1826,16 @@ function frame(ts) {
     if (state.shops[i].open) { const cid = E.ceoAt(state, i); if (Math.random() < 0.5 && cid) sayLine('c', Math.random() < 0.5 ? E.CEO_BY_ID[cid].line : E.SIGNS[cid][i][1]); else if (state.shops[i].emp > 0) sayLine('e', E.SHOPS[i].emp.line); } }
   render(clock);
   dynAcc += dt; if (dynAcc > 0.25) { dynAcc = 0; refreshDynamic(); }
+  // 家宅生活：CEO 走向目标格（只改小人 DOM，不整页重画）
+  if (tab === 'home' && homeSub === 'room' && homeMode === 'live') {
+    const ac = homeActorOf(homeWho), el = $('#homeActor'), T = E.homeTier(E.homeOf(state, homeWho).lv);
+    if (ac.tx != null) {
+      const spd = 2.8 * dt, dx = ac.tx - ac.x, dy = ac.ty - ac.y, d = Math.hypot(dx, dy);
+      if (d < 0.05) { ac.x = ac.tx; ac.y = ac.ty; ac.tx = ac.ty = null; }
+      else { ac.x += dx / d * Math.min(spd, d); ac.y += dy / d * Math.min(spd, d); }
+      if (el) { el.style.left = ((ac.x + 0.5) / T.cols * 100) + '%'; el.style.top = ((ac.y + 0.5) / T.rows * 100) + '%'; }
+    } else if (ac.line && ac.until < clock) { ac.line = ''; ac.act = null; if (el) { const b = el.querySelector('.ha-line'), i = el.querySelector('.ha-act'); if (b) b.remove(); if (i) i.textContent = ''; } }
+  }
   if (dirty) renderTab();
   saveAcc += dt; if (saveAcc > 5) { saveAcc = 0; persist(); }
 }
@@ -1617,10 +1845,12 @@ function boot() {
   $('#mute').classList.toggle('off', !!state.muted);
   resize();
   const first = !state.taps && !state.totalEarned && state.shops[0].emp === 0;
+  const wallMig = E.migrateWallPaintings(state);
   const p = E.settleOffline(state, now(), rid);
   persist();
   scheduleBig(); scheduleSpecial(); renderTabs(); setTab('shop');
   if (migratedFrom != null) toast('存档已升级到 v' + CFG.SAVE_VERSION + '（新盲盒 + CEO 穿搭，收藏都保留）', 2600);
+  if (wallMig && (wallMig.moved || wallMig.stored)) toast(wallMig.stored ? `挂画改挂墙了：${wallMig.moved} 幅上墙，${wallMig.stored} 幅墙面没空已退回仓库` : `挂画改挂墙了：${wallMig.moved} 幅已迁到墙面`, 3200);
   if (p && p.rolledBack) toast('检测到手机时间被往回调，这段时间不发离线收益');
   if (first) queueModal(showIntro);
   if (state.pending) queueModal(showOffline);
@@ -1631,11 +1861,11 @@ function boot() {
 boot();
 
 // 测试/调试钩子（不影响玩家）
-window.__tzz = { E, showComic, showCeoJoin, get state() { return state; }, set state(v) { state = v; }, persist, onReturn, tapShop, act, setTab, switchShop, renderTab,
-  forceBig() { nextBigAt = 0; if (order) order = null; }, forceSpecial() { nextSpecialAt = 0; special = null; },
+window.__tzz = { E, get combo() { return combo; }, get critFx() { return critFx; }, critLine, showComic, showCeoJoin, get state() { return state; }, set state(v) { state = v; }, persist, onReturn, tapShop, act, setTab, switchShop, renderTab,
+  forceBig() { nextBigAt = 0; if (order) order = null; }, clearVisitors() { order = null; special = null; nextBigAt = clock + 9999; nextSpecialAt = clock + 9999; }, forceSpecial() { nextSpecialAt = 0; special = null; },
   forceSupers() { for (const k in superNext) superNext[k] = 0; updateSupers(); renderTab(); },
   get big() { return order; }, get order() { return order; }, get special() { return special; }, get guests() { return guests; },
   hitBig, modalOpen, closeModal, get frozen() { return frozen; },
   audioState() { return AU.ctx ? AU.ctx.state : 'none'; }, showPreview, openAssign, JOB_ART, jobShown, jobURL, showJobArt,
-  HOME_ART, FURN_ART, FURN_UP, homeAct, get homeWho() { return homeWho; }, get homeSub() { return homeSub; }, get homeSel() { return homeSel; }, get homeDrag() { return homeDrag; }, homeUndo, resize, get canvasSize() { return { W, H }; } };
+  HOME_ART, FURN_ART, FURN_UP, homeAct, get homeWho() { return homeWho; }, get homeSub() { return homeSub; }, get homeMode() { return homeMode; }, set homeMode(v) { homeMode = v === 'decor' ? 'decor' : 'live'; }, get homeSel() { return homeSel; }, get homeDrag() { return homeDrag; }, homeActor, LIVE_LINES, homeUndo, resize, get canvasSize() { return { W, H }; } };
 })();

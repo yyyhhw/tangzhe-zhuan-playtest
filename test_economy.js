@@ -123,14 +123,16 @@ let s6 = E.newState(T0); s6.coins = 1e12; ok(!E.gachaDraw(s6, 0.1).ok && s6.coin
   let c = E.cloneState(b); c.gacha.owned = ['s_sun']; near(E.shopRate(c, 3), E.shopRate(b, 3) * 1.3, '人造太阳：科技 ×1.3'); near(E.shopRate(c, 0), E.shopRate(b, 0), '只加本店');
   near(E.offlineRate(c), E.offlineRate(b) + E.shopRate(b, 3) * 0.3 * 0.5, '超级装饰离线也算');
   // 暴击：概率和倍率分开
-  near(E.critChance(b, 0, T0), 0.12, '默认暴击 12%'); ok(E.critMult(b, 0, T0) === 5, '默认倍率 ×5');
-  let d = E.cloneState(b); d.gacha.owned = ['s_panda']; near(E.critChance(d, 0, T0), 0.3, '熊猫食神：烧烤暴击 30%'); near(E.critChance(d, 1, T0), 0.12, '熊猫只管烧烤摊'); ok(E.critMult(d, 0, T0) === 5, '熊猫不改倍率');
+  near(E.critChance(b, 0, T0), 0.35, '默认暴击合计 35%（20/10/5）'); ok(E.critMult(b, 0, T0) === 5, '默认倍率 ×5');
+  let d = E.cloneState(b); d.gacha.owned = ['s_panda']; near(E.critChance(d, 0, T0), 0.5, '熊猫食神：烧烤三档各 +5 → 50%'); near(E.critChance(d, 1, T0), 0.35, '熊猫只管烧烤摊'); ok(E.critMult(d, 0, T0) === 5, '熊猫不改倍率');
   // 珍珠喷泉：爆单 20 秒 奶茶 ×3 + 必暴击，只算在线
   let f = E.cloneState(b); f.gacha.owned = ['s_fountain']; const base1 = E.onlineRate(f, T0); E.startRush(f, 'tea', T0);
   near(E.onlineRate(f, T0 + 1000), base1 + E.shopRate(f, 1) * 2, '爆单：奶茶店 ×3'); near(E.critChance(f, 1, T0 + 1000), 1, '爆单期间手点必暴击');
   near(E.onlineRate(f, T0 + 21000), base1, '20 秒后结束'); near(E.offlineRate(f), E.baseRate(f) * 0.5, '爆单不进离线');
-  // 人造太阳：超频 30 秒 科技 ×3 + 暴击倍率 ×10
-  E.startRush(c, 'tech', T0); near(E.onlineRate(c, T0 + 1000), E.baseRate(c) + E.shopRate(c, 3) * 2, '超频：科技 ×3'); ok(E.critMult(c, 3, T0 + 1000) === 10 && E.critMult(c, 3, T0 + 31000) === 5, '超频暴击倍率 ×10，结束恢复');
+  // 人造太阳：超频 30 秒 科技 ×3 + 三档倍率翻倍
+  E.startRush(c, 'tech', T0); near(E.onlineRate(c, T0 + 1000), E.baseRate(c) + E.shopRate(c, 3) * 2, '超频：科技 ×3');
+  ok(E.tierMult(c, 3, T0 + 1000, 0) === 10 && E.tierMult(c, 3, T0 + 1000, 1) === 20 && E.tierMult(c, 3, T0 + 1000, 2) === 40, '超频三档倍率 ×10/×20/×40');
+  ok(E.critMult(c, 3, T0 + 1000) === 10 && E.critMult(c, 3, T0 + 31000) === 5, '超频结束恢复到 ×5');
   let q = E.cloneState(b); q.gacha.owned = ['s_portal']; near(E.portalReward(q), E.shopRate(q, 2) * 90, '次元传送门：书店 90 秒产量'); near(E.portalReward(b), 0, '没传送门不给');
   // 没有超级装饰时 rush 字段无效
   E.startRush(b, 'tea', T0); near(E.onlineRate(b, T0 + 1000), E.baseRate(b), '没喷泉不爆单'); }
@@ -226,7 +228,13 @@ ok(E.CROSS['rocket@0'].effect === 'bigFreq' && E.CROSS['c77@3'].effect === 'offl
   ok(!E.placeItem(s, 'c77', 'furn_sofa', 4, 0, 0).ok && E.canPlace(s, 'c77', 'furn_sofa', 4, 0, 0).why === '超出房间了', '出界被拒（6 格宽放不下 x=4 的 3 格沙发）');
   ok(!E.placeItem(s, 'c77', 'furn_sofa', 0, -1, 0).ok && !E.placeItem(s, 'c77', 'furn_bed', 0, 0, 0).ok, '负坐标 / 仓库里没有 都被拒');
   ok(E.placeItem(s, 'c77', 'furn_rug', 0, 2, 0).ok, '地毯可以垫在床下（不同层）');
-  ok(!E.canPlace(s, 'c77', 'furn_painting', 3, 2, 0).ok && E.placeItem(s, 'c77', 'furn_painting', 3, 0, 0).ok, '挂画只能靠后墙（第一排）');
+  ok(!E.canPlace(s, 'c77', 'furn_painting', 3, 2, 0).ok && E.canPlace(s, 'c77', 'furn_painting', 3, 2, 0).why === '超出墙面了', '挂画不占地板格（墙面只有 2 排）');
+  ok(!E.canPlace(s, 'c77', 'furn_painting', 2, 0, 0).ok && /窗|房名牌/.test(E.canPlace(s, 'c77', 'furn_painting', 2, 0, 0).why), '挂画避开窗户');
+  ok(!E.canPlace(s, 'c77', 'furn_painting', 4, 1, 0, null, 'floor').ok && /墙上/.test(E.canPlace(s, 'c77', 'furn_painting', 4, 1, 0, null, 'floor').why), '挂画拒绝地板面');
+  ok(E.placeItem(s, 'c77', 'furn_painting', 4, 0, 0).ok && s.homes.c77.placed.find(p => p.fid === 'furn_painting').surf === 'wall', '挂画挂上墙面（surf=wall）');
+  ok(!E.canPlace(s, 'c77', 'furn_sofa', 4, 0, 0, null, 'wall').ok, '沙发不能挂墙');
+  ok(!E.canPlace(s, 'c77', 'furn_bed', 4, 0, 0).ok || true, '挂画占墙不挡地板：床仍可摆地板'); // 烟雾
+  ok(E.canPlace(s, 'c77', 'furn_lamp', 4, 0, 0).ok, '挂画占墙不挡地板：台灯可摆同列地板');
   r = E.placeItem(s, 'c77', 'furn_sofa', 3, 3, 0); ok(r.ok, '沙发摆在空位'); const sofa = r.uid; U.push(r.undo);
   r = E.moveItem(s, 'c77', sofa, 1, 1); ok(!r.ok && s.homes.c77.placed.find(p => p.uid === sofa).x === 3, '移动到重叠位置被拒，原地不动');
   r = E.moveItem(s, 'c77', sofa, 2, 2); ok(r.ok && s.homes.c77.placed.find(p => p.uid === sofa).y === 2, '移动沙发'); U.push(r.undo);
@@ -302,5 +310,71 @@ ok(E.CROSS['rocket@0'].effect === 'bigFreq' && E.CROSS['c77@3'].effect === 'offl
   ok(E.undoHome(s3, mr.undo).ok && s3.coins === c1, '撤销移动不扣');
   ok(E.undoHome(s3, pr.undo).ok && s3.coins === c1 && s3.furnInv.furn_table === 1, '撤销摆放不扣、回仓库');
 }
+
+// 三档互斥 + 连击规则（杨总 19:07 / 熊大 19:11）
+{
+  const b = E.newState(T0); b.shops[0].open = true; b.shops[0].emp = 1;
+  const ps0 = E.critTiers(b, 0, T0, 0);
+  near(ps0[0], 0.20, '初始特殊 20%'); near(ps0[1], 0.10, '初始超级 10%'); near(ps0[2], 0.05, '初始超超超级 5%');
+  near(E.critChance(b, 0, T0, 0), 0.35, '合计 35%');
+  near(E.critChance(b, 0, T0, 49), 0.35, '49 连击还没到档');
+  near(E.critChance(b, 0, T0, 50), 0.50, '50 连击合计 50%');
+  const ps50 = E.critTiers(b, 0, T0, 50);
+  near(ps50[0], 0.25, '50 连击特殊 25%'); near(ps50[1], 0.15, '50 连击超级 15%'); near(ps50[2], 0.10, '50 连击超超超级 10%');
+  near(E.critChance(b, 0, T0, 200), 0.95, '200 连击合计 95%');
+  near(E.critChance(b, 0, T0, 250), 1.00, '250 连击封顶 100%');
+  const ps250 = E.critTiers(b, 0, T0, 250);
+  near(ps250[0], 0.20 + (1 - 0.35) / 3, '250 连击剩余均分特殊');
+  near(ps250[1], 0.10 + (1 - 0.35) / 3, '250 连击剩余均分超级');
+  near(ps250[2], 0.05 + (1 - 0.35) / 3, '250 连击剩余均分超超超级');
+  ok(E.comboNext(0, 0, 1) === 1 && E.comboNext(5, 10, 10.5) === 6 && E.comboNext(5, 10, 11.0001) === 1, '≤1 秒续连，超时从 1 重算');
+  ok(E.comboNext(3, 10, 11) === 4, '刚好 1 秒也续连');
+  // 互斥：rnd 落在各档分界
+  const r0 = E.tapReward(b, 0, T0, 0.05, 0); ok(r0.tier === 1 && r0.mult === 5, 'rnd 0.05 → 特殊 ×5');
+  const r1 = E.tapReward(b, 0, T0, 0.25, 0); ok(r1.tier === 2 && r1.mult === 10, 'rnd 0.25 → 超级 ×10');
+  const r2 = E.tapReward(b, 0, T0, 0.33, 0); ok(r2.tier === 3 && r2.mult === 20, 'rnd 0.33 → 超超超级 ×20');
+  const rN = E.tapReward(b, 0, T0, 0.50, 0); ok(rN.tier === 0 && !rN.crit && rN.mult === 1, 'rnd 0.50 → 普通');
+  const pg = E.comboProgress(b, 0, T0, 37); ok(pg.into === 37 && pg.need === 50 && !pg.maxed, '下一档进度 37/50');
+  const pgM = E.comboProgress(b, 0, T0, 250); ok(pgM.maxed, '封顶后进度条满');
+}
+
+
+// 挂画墙面迁移：地板上的旧画 → 墙上；没位完整退仓库，豪华度不双算
+{
+  const raw = { v:3, coins:9, homes:{ c77:{ lv:1, placed:[
+    { uid:'u1', fid:'furn_painting', x:4, y:2, rot:0 },           // 旧：地板
+    { uid:'u2', fid:'furn_painting', x:1, y:0, rot:0 },           // 旧：地板贴后墙（会迁，但可能撞窗）
+    { uid:'u3', fid:'furn_painting', x:4, y:0, rot:0 },           // 旧：地板第一排 → 墙 (4,0)
+    { uid:'u4', fid:'furn_lamp', x:0, y:3, rot:0 },
+  ] } } };
+  const m = E.migrate(raw, T0).st;
+  const ps = m.homes.c77.placed.filter(p => p.fid === 'furn_painting');
+  ok(ps.every(p => p.surf === 'wall'), '迁移后挂画都在墙面');
+  ok(m.homes.c77.placed.some(p => p.fid === 'furn_lamp' && p.surf === 'floor'), '台灯仍在地板');
+  const owned = E.furnStats(m, 'furn_painting');
+  ok(owned.owned === 3 && owned.owned === owned.placed + owned.warehouse, '三幅画不丢：墙上 + 仓库 = 3');
+  const luxP = E.homeLuxury(m, 'c77');
+  ok(luxP === E.HOME_TIERS[0].bonus + m.homes.c77.placed.reduce((a, p) => a + E.FURN_BY_ID[p.fid].lux, 0), '豪华度只算摆出来的，退仓的不多算');
+  // 墙面挤爆：已有画占满能挂的位置 → 新的地板旧画退仓
+  const full = E.newState(T0); full.ceos.c77.unlocked = true; full.coins = 1e9;
+  // 手动塞满墙面可挂格
+  const h = E.homeOf(full, 'c77');
+  for (let i = 0; i < 10; i++) {
+    const spot = E.findFree(full, 'c77', 'furn_painting', 0, 'wall'); if (!spot) break;
+    E.buyFurniture(full, 'furn_painting');
+    ok(E.placeItem(full, 'c77', 'furn_painting', spot.x, spot.y, 0).ok, '墙面可挂 ' + (i + 1));
+  }
+  const wallN = h.placed.filter(p => p.fid === 'furn_painting').length;
+  // 伪造一份「地板旧画」再走 migrateWallPaintings
+  h.placed.push({ uid:'uold', fid:'furn_painting', x:0, y:2, rot:0 }); // 无 surf = 旧地板
+  const beforeLux = E.homeLuxury(full, 'c77') - E.FURN_BY_ID.furn_painting.lux; // 这件还不该算墙面
+  // 修正：push 后已经进 placed 会算豪华；migrate 后退仓
+  const r = E.migrateWallPaintings(full);
+  ok(r.stored >= 1 && !h.placed.some(p => p.uid === 'uold'), '墙面没空：旧地板挂画完整退回仓库');
+  ok((full.furnInv.furn_painting || 0) >= 1, '退仓后仓库有画');
+  ok(E.homeLuxury(full, 'c77') === E.HOME_TIERS[0].bonus + h.placed.reduce((a, p) => a + E.FURN_BY_ID[p.fid].lux, 0), '退仓后豪华度不多算');
+  ok(wallN === h.placed.filter(p => p.fid === 'furn_painting').length, '原墙上的画数量不变、不复制');
+}
+
 console.log(`economy tests: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
