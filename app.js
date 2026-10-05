@@ -1348,7 +1348,7 @@ function showIntro() {
 // 房间底图：art/home_<ceo>_<lv>.webp（ceo=c77/pearl/otaku/rocket，lv=1/2/3），例 { c77_1:1 }
 // 底图规格：宽 = 列数×200px，高 = (2 + 行数)×200px；上面 2 格高是后墙，下面是地板格，平行投影无消失点。Lv1 6×4 → 1200×1200，墙地分界 y=400
 const HOME_ART = { c77_1: 1 };  // 熊大 77 Lv1（原图墙 0–400 / 地板分开缩放到 1200×400 + 1200×800）
-const FURN_ART = {};  // 家具：art/furn_<bed|sofa|table|lamp|rug|plant|bookshelf|tv|fridge|wardrobe|painting|catbed>.webp，例 { bed:1 }
+const FURN_ART = { bed:1 };  // 熊大小床 400×600 透明底。家具：art/furn_<bed|sofa|table|lamp|rug|plant|bookshelf|tv|fridge|wardrobe|painting|catbed>.webp，例 { bed:1 }
 const furnName = fid => fid.replace(/^furn_/, '');
 const HOME_ICON = ['🏠', '🏢', '🏰'];
 let homeWho = 'c77', homeSub = 'room', homeSel = null, homeDrag = null;
@@ -1360,7 +1360,7 @@ function furnInner(fid, rot) {
   const st = `width:${odd ? sz.h / sz.w * 100 : 100}%;height:${odd ? sz.w / sz.h * 100 : 100}%;transform:translate(-50%,-50%) rotate(${rot * 90}deg)`;
   return `<div class="fi" style="${st}"><span class="fe">${f.emoji}</span>${FURN_ART[n] ? `<img src="art/furn_${n}.webp?v=${ART_V}" data-homefb="1" alt="">` : ''}</div>`;
 }
-document.addEventListener('error', e => { const el = e.target; if (el && el.tagName === 'IMG' && el.dataset && el.dataset.homefb) el.remove(); }, true);
+document.addEventListener('error', e => { const el = e.target; if (el && el.tagName === 'IMG' && el.dataset && el.dataset.homefb) { const fu = el.closest('.furn'); if (fu) fu.classList.remove('art'); el.remove(); } }, true);
 function homeBook(sub) {
   return `<div class="book-tabs" role="tablist"><button data-act="homeGo" data-arg="shop">📖 经营</button><button class="${sub === 'room' ? 'on' : ''}" data-act="homeSub" data-arg="room">🏠 家宅</button><button class="${sub === 'mall' ? 'on' : ''}" data-act="homeSub" data-arg="mall">🛒 商城</button></div>`;
 }
@@ -1388,7 +1388,7 @@ function renderRoom() {
     ${next ? btn('homeUp', id, '升级', next.cost) : '<button class="buy no" disabled>顶级</button>'}</div>`;
   const items = H.placed.slice().sort((a, b) => (E.FURN_BY_ID[a.fid].layer === 'rug' ? 0 : 1) - (E.FURN_BY_ID[b.fid].layer === 'rug' ? 0 : 1)).map(p => {
     const f = E.FURN_BY_ID[p.fid], sz = E.furnSize(p.fid, p.rot);
-    return `<div class="furn ${f.layer === 'rug' ? 'rug' : ''} ${p.uid === homeSel ? 'sel' : ''}" data-uid="${p.uid}" data-fid="${p.fid}" style="left:${p.x / T.cols * 100}%;top:${p.y / T.rows * 100}%;width:${sz.w / T.cols * 100}%;height:${sz.h / T.rows * 100}%;--fc:${f.color}">${furnInner(p.fid, p.rot)}<b class="fn">${f.name}</b></div>`;
+    return `<div class="furn ${f.layer === 'rug' ? 'rug' : ''} ${FURN_ART[furnName(p.fid)] ? 'art' : ''} ${p.uid === homeSel ? 'sel' : ''}" data-uid="${p.uid}" data-fid="${p.fid}" style="left:${p.x / T.cols * 100}%;top:${p.y / T.rows * 100}%;width:${sz.w / T.cols * 100}%;height:${sz.h / T.rows * 100}%;--fc:${f.color}">${furnInner(p.fid, p.rot)}<b class="fn">${f.name}</b></div>`;
   }).join('');
   const artKey = `${id}_${H.lv}`, hasArt = !!HOME_ART[artKey];
   h += `<div class="room tier-${T.id}${hasArt ? ' has-art' : ''}" id="room" data-tier="${T.id}" style="--cols:${T.cols};--rows:${T.rows};--wall:${T.wall};--floor:${T.floor};--trim:${T.trim}">
