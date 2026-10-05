@@ -791,7 +791,7 @@ function openAssign(id) {
     const here = E.ceoAt(state, i), match = c.type === S.type, cross = E.CROSS[E.crossKey(id, i)];
     h += `<button class="pick ${s.at === i ? 'cur' : ''}" data-pick="${i}" ${s.at === i ? 'disabled' : ''}><div class="ava sq">${SHOP_ICON[i]}</div><div class="pk-main">
       <div class="pk-name">${E.SIGNS[id][i][0]} ${s.at === i ? '（现在在这）' : ''}</div>
-      <div class="pk-sub">${match ? `<span class="tag match">专长 ×${CFG.MATCH_MULT}</span>` : `<span class="tag cross">跨行 ×${CFG.CROSS_MULT}${cross ? ' · ' + cross.title : ''}</span>`} ${here && here !== id ? '· 和 ' + E.CEO_BY_ID[here].name + ' 互换' : ''}</div></div></button>`;
+      <div class="pk-sub">${match ? `<span class="tag match">专长 ×${CFG.MATCH_MULT}</span>` : `<span class="tag cross">跨行 ×${CFG.CROSS_MULT}${cross ? ' · ' + cross.title : ''}</span>`} ${here && here !== id ? '· <b>交换任职</b>：' + E.CEO_BY_ID[here].name + ' 去' + (s.at >= 0 ? E.SHOPS[s.at].short : '休息') : ''}</div></div></button>`;
   });
   h += `<button class="pick ${s.at === -1 ? 'cur' : ''}" data-pick="-1" ${s.at === -1 ? 'disabled' : ''}><div class="ava">😴</div><div class="pk-main"><div class="pk-name">休息（空着）</div><div class="pk-sub">不管任何店</div></div></button>`;
   openSheet(h);
@@ -804,7 +804,7 @@ function openAssignTo(i) {
   if (!list.length && !here) h += `<div class="note">还没有其他 CEO。开新店会有新 CEO 加入。</div>`;
   list.forEach(c => { const match = c.type === S.type, cross = E.CROSS[E.crossKey(c.id, i)];
     h += `<button class="pick" data-ceo="${c.id}">${ava(c.id)}<div class="pk-main"><div class="pk-name">${c.name} <small>Lv.${state.ceos[c.id].lv}</small> → ${E.SIGNS[c.id][i][0]}</div>
-      <div class="pk-sub">${match ? `<span class="tag match">专长 ×${CFG.MATCH_MULT}</span>` : `<span class="tag cross">跨行 ×${CFG.CROSS_MULT}${cross ? ' · ' + cross.title : ''}</span>`} · 现在：${ceoPost(c.id)}</div></div></button>`; });
+      <div class="pk-sub">${match ? `<span class="tag match">专长 ×${CFG.MATCH_MULT}</span>` : `<span class="tag cross">跨行 ×${CFG.CROSS_MULT}${cross ? ' · ' + cross.title : ''}</span>`} · 现在：${ceoPost(c.id)}${here ? ` · <b>交换任职</b>：${E.CEO_BY_ID[here].name} 去${state.ceos[c.id].at >= 0 ? E.SHOPS[state.ceos[c.id].at].short : '休息'}` : ''}</div></div></button>`; });
   if (here) h += `<button class="pick" data-ceo="${here}" data-rest="1"><div class="ava">😴</div><div class="pk-main"><div class="pk-name">让 ${E.CEO_BY_ID[here].name} 休息（空着）</div><div class="pk-sub">这家店没有 CEO 加成</div></div></button>`;
   if (!list.length && !here) h += '';
   openSheet(h);
@@ -822,24 +822,30 @@ function showPreview(id, target) {
     ...pv.crossOn.map(k => `<div>✨ 触发跨行事件「${E.CROSS[k].title}」：${E.CROSS[k].desc}</div>`),
     ...pv.crossOff.map(k => `<div class="off">失去「${E.CROSS[k].title}」：${E.CROSS[k].desc}</div>`),
     ...(pv.offlineCapAfter !== pv.offlineCapBefore ? [`<div>离线上限 ${pv.offlineCapBefore / 3600} 小时 → ${pv.offlineCapAfter / 3600} 小时</div>`] : []),
-    ...(pv.swapped ? [`<div class="off">${E.CEO_BY_ID[pv.swapped].name} 会换到 ${pv.from >= 0 ? E.SHOPS[pv.from].short : '休息'}</div>`] : []),
   ].join('');
-  openModal(`<div class="mbubble">调任预览</div>
+  const dl = s => { const d = s.after - s.before; return `<span class="${cls(s.before, s.after)}">${d >= 0 ? '+' : '−'}${fmt(Math.abs(d))}/秒</span>`; };
+  const tShop = target >= 0 ? pv.shops[target] : null, fShop = pv.from >= 0 ? pv.shops[pv.from] : null;
+  const swapBox = pv.swapped ? `<div class="swap-box"><b>交换任职</b>：${c.name} ⇄ ${E.CEO_BY_ID[pv.swapped].name}
+      <div>${SHOP_ICON[target]} ${E.SHOPS[target].short}：${who(tShop.ceoBefore)} → ${who(tShop.ceoAfter)}，${fmt(tShop.before)} → ${fmt(tShop.after)}（${dl(tShop)}）</div>
+      ${fShop ? `<div>${SHOP_ICON[pv.from]} ${E.SHOPS[pv.from].short}：${who(fShop.ceoBefore)} → ${who(fShop.ceoAfter)}，${fmt(fShop.before)} → ${fmt(fShop.after)}（${dl(fShop)}）</div>` : `<div>${E.CEO_BY_ID[pv.swapped].name} 去休息</div>`}</div>` : '';
+  openModal(`<div class="mbubble">${pv.swapped ? '交换任职预览' : '调任预览'}</div>
     <div class="mtitle">${c.name} → ${target >= 0 ? E.SIGNS[id][target][0] : '休息（空着）'}</div>
+    ${swapBox}
     <table class="pv-table">${rows}</table>
     ${tags ? `<div class="pv-tags">${tags}</div>` : ''}
-    <div class="mbtns two"><button class="buy ghost" id="pvNo">再想想</button><button class="buy red" id="pvYes">确认调任</button></div>`, false);
+    <div class="mbtns two"><button class="buy ghost" id="pvNo">再想想</button><button class="buy red" id="pvYes">${pv.swapped ? '交换任职' : '确认调任'}</button></div>`, false);
   $('#pvNo').addEventListener('click', closeModal, { once:true });
   $('#pvYes').addEventListener('click', () => {
     const oldSigns = E.SHOPS.map((_, i) => state.shops[i].open ? E.signOf(state, i).name : null);
-    const r = E.assignCeo(state, id, target); closeModal(); if (!r.ok) return toast(r.why);
+    tick(); // 先按旧阵容把收益结清（长空档会先走离线结算），再换人；店铺等级/员工/装饰都不动
+    const r = E.assignCeoWithPayout(state, id, target, now()); closeModal(); if (!r.ok) return toast(r.why);
     persist(); sfx('swoosh'); popWord('换牌！'); dirty = true;
     const view = target >= 0 ? target : (r.from >= 0 ? r.from : state.cur);
     switchShop(view); signAnim = { shop:view, from:oldSigns[view] || '', t0:clock };
     if (target >= 0) sayLine('c', E.SIGNS[id][target][1], 3);
     const newCross = pv.crossOn.filter(k => !state.crossSeen[k]);
     if (newCross.length) newCross.forEach(k => queueModal(() => showComic(k, true)));
-    else toast(`${c.name} 已调任，全街每秒 ${fmt(pv.totalAfter)}`);
+    else toast(`${c.name} ${r.swapped ? '交换任职' : '已调任'}（旧岗位收益已结清），全街每秒 ${fmt(pv.totalAfter)}`);
     renderTab();
   }, { once:true });
 }
@@ -849,9 +855,8 @@ function showComic(k, fresh) {
   if (fresh) { state.crossSeen[k] = true; persist(); sfx('mile'); }
   openModal(`<div class="mbubble">${fresh ? '跨行事件！' : '跨行组合'}</div><div class="mtitle">${c.name} × ${E.SHOPS[+shop].short}：「${x.title}」</div>
     <div class="comic-sfx">${x.sfx}</div>
-    <div class="comic">${x.panels.map((p, n) => `<div class="panel4"><span class="pn">${n + 1}</span><div class="pe">${p[0]}</div><div class="pt">${p[1]}</div></div>`).join('')}</div>
+    <div class="comic two">${x.panels.map((p, n) => `<div class="panel4"><span class="pn">${n + 1}</span><div class="pchar"><div class="pimg"><img src="${avatarURL(p[0])}" alt=""></div><span class="pe">${p[1]}</span></div><div class="pt">${p[2]}</div></div>`).join('')}</div>
     <div class="mnote"><b>专属效果：</b>${x.desc}${E.crossActive(state, k) ? '（生效中）' : ''}</div>
-    <div class="placeholder-note">分镜文案为试玩占位，等熊大定稿替换</div>
     <button class="buy big" id="mOk">知道了</button>`);
   $('#mOk').addEventListener('click', closeModal, { once:true });
 }
@@ -902,7 +907,7 @@ function confirmReset() {
 function showIntro() {
   openModal(`<div class="mbubble">欢迎来到《躺着也能赚》</div><div style="display:flex;justify-content:center;margin:6px 0"><div class="ava" style="width:96px;height:96px"><img src="${avatarURL('c77')}" alt=""></div></div>
     <div class="mtitle">77：巴适得很，串串烤起走！</div>
-    <div class="mnote">① 点画面里的烧烤摊赚第一桶金<br>② 攒 50 雇员工小串，之后<b>躺着也能赚</b><br>③ 开新店、升级店铺/员工/CEO，把 CEO 调去别的店试试跨行事件<br>离线也有收益（50%，最多 8 小时），每天还有一次免费双倍。</div>
+    <div class="mnote">① 点画面里的烧烤摊赚第一桶金<br>② 攒 50 雇员工阿炭，之后<b>躺着也能赚</b><br>③ 开新店、升级店铺/员工/CEO，把 CEO 调去别的店试试跨行事件<br>离线也有收益（50%，最多 8 小时），每天还有一次免费双倍。</div>
     <button class="buy big red" id="mOk">开摊！</button>`);
   $('#mOk').addEventListener('click', () => { audioUnlock(); closeModal(); sayLine('c', '巴适得很，串串烤起走！', 3); }, { once:true });
 }
@@ -981,7 +986,7 @@ function boot() {
 boot();
 
 // 测试/调试钩子（不影响玩家）
-window.__tzz = { E, get state() { return state; }, set state(v) { state = v; }, persist, onReturn, tapShop, act, setTab, switchShop, renderTab,
+window.__tzz = { E, showComic, get state() { return state; }, set state(v) { state = v; }, persist, onReturn, tapShop, act, setTab, switchShop, renderTab,
   forceBig() { nextBigAt = 0; big = null; }, get big() { return big; }, hitBig, modalOpen, closeModal, get frozen() { return frozen; },
   audioState() { return AU.ctx ? AU.ctx.state : 'none'; }, showPreview, openAssign };
 })();

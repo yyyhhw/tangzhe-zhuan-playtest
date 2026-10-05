@@ -94,10 +94,10 @@ if (require.main === module && process.env.SIM_JSON) {
   for (const m of Object.keys(MODES)) {
     const r = run(m), t0 = 9 * 3600, e = r.ev;
     console.log(`\n== ${m}  (盲盒 ${fmtN(price)}${E.CFG.GACHA_GROWTH !== 1 ? ' 起，每个×' + E.CFG.GACHA_GROWTH : ' 固定价'}) ==`);
-    console.log(' 雇小串（烧烤摊员工）:', fromStart(e.hire0, t0));
-    console.log(' 开奶茶店 / 珍珠姐加入:', fromStart(e.open1, t0), '| 雇珍珠妹', fromStart(e.hire1, t0));
-    console.log(' 开漫画书店 / 阿宅加入:', fmtT(e.open2), '| 雇翻页君', fmtT(e.hire2));
-    console.log(' 开科技公司          :', fmtT(e.open3), '| 雇老王（盲盒开放）', fmtT(e.hire3));
+    console.log(' 雇阿炭（烧烤摊员工）:', fromStart(e.hire0, t0));
+    console.log(' 开奶茶店 / 珍珠姐加入:', fromStart(e.open1, t0), '| 雇小满', fromStart(e.hire1, t0));
+    console.log(' 开漫画书店 / 阿宅加入:', fmtT(e.open2), '| 雇阿页', fmtT(e.hire2));
+    console.log(' 开科技公司          :', fmtT(e.open3), '| 雇小栈（盲盒开放）', fmtT(e.hire3));
     console.log(' ' + E.ROCKET_NAME.name + '加入(科技Lv25):', fmtT(e.ceo_rocket));
     console.log(' 盲盒 16 件集齐      :', fmtT(r.gachaDone), r.gachaDone && r.gachaStart != null ? '（开放后 ' + ((r.gachaDone - r.gachaStart) / 3600).toFixed(1) + ' 小时）' : '');
     if (process.env.DAILY || m.startsWith('普通')) for (const x of r.daily) console.log(`   第${x.d}天末 产速 ${fmtN(x.rate)}/秒  店Lv/员工Lv ${x.lv}  CEO ${x.ceo}  盲盒 ${x.box}/16`);

@@ -193,7 +193,14 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 .panel4 .pt{font-size:12px;font-weight:800;line-height:1.35;background:#fff;border:2px solid var(--ink);border-radius:10px;padding:3px 6px;margin-top:4px}
 .panel4 .pn{position:absolute;top:2px;left:4px;font-size:10px;font-weight:900}
 .comic-sfx{font-size:30px;font-weight:900;color:var(--red);-webkit-text-stroke:1.5px var(--ink);transform:rotate(-8deg);margin:-4px 0 6px}
-.placeholder-note{font-size:10px;color:#999;margin-top:-6px;margin-bottom:8px}
+.comic.two .panel4{min-height:170px;justify-content:flex-start;padding-top:14px}
+.pchar{position:relative;width:72px;height:72px;border:2.5px solid var(--ink);border-radius:50%;background:#fff;overflow:visible}
+.pimg{width:100%;height:100%;border-radius:50%;overflow:hidden;background:radial-gradient(rgba(20,20,20,.18) 1.2px,transparent 1.6px) 0 0/6px 6px,#fff}
+.pimg img{width:100%;height:100%;display:block;transform:scale(1.75);transform-origin:50% 66%}
+.pchar .pe{position:absolute;right:-14px;bottom:-6px;font-size:28px}
+.comic.two .pt{margin-top:10px}
+.swap-box{text-align:left;font-size:12.5px;line-height:1.6;border:2.5px solid var(--ink);border-radius:8px;background:#fff6cf;padding:6px 9px;margin:4px 0 6px}
+.swap-box b{background:var(--ink);color:var(--yellow);padding:0 6px;border-radius:3px}
 
 /* sheet */
 .sheet{position:fixed;inset:0;z-index:45}

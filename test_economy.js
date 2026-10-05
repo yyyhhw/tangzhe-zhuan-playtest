@@ -12,7 +12,7 @@ let st = E.newState(T0);
 ok(st.ceos.c77.unlocked && st.ceos.c77.at === 0, '77 开局坐镇烧烤摊');
 ok(E.baseRate(st) === 0, '没员工不自动赚');
 ok(E.tapValue(st, 0) >= 1, '可以手点');
-st.coins = 50; ok(E.hireEmp(st, 0).ok && st.shops[0].emp === 1, '雇小串 50');
+st.coins = 50; ok(E.hireEmp(st, 0).ok && st.shops[0].emp === 1, '雇阿炭 50');
 near(E.shopRate(st, 0), E.SHOPS[0].rate * 1 * 1 * 1 * 1.5, '烧烤摊 = 基础 × 员工 × 专长1.5');
 // CEO 等级 +5%/级
 st.ceos.c77.lv = 3; near(E.ceoInfo(st, 0).mult, 1.5 * 1.10, 'CEO Lv3 = ×1.5×1.10');
@@ -31,7 +31,7 @@ st.shops[3].lv = 24; const r25 = E.upgradeShop(st, 3);
 ok(r25.milestone === 4 && r25.unlocked.includes('rocket') && st.ceos.rocket.at === 3, 'Lv25 解锁火箭老板并坐镇科技公司');
 ok(E.CEO_BY_ID.rocket.name === E.ROCKET_NAME.name, '火箭老板名字来自一处配置');
 // 招牌
-ok(E.signOf(st, 0).name === '77烧烤摊', '77+烧烤 = 77烧烤摊');
+ok(E.signOf(st, 0).name === '77烧烤店', '77+烧烤 = 77烧烤店（熊大定稿）');
 // 调任预览：火箭老板 → 烧烤摊（与 77 互换）
 const before = E.cloneState(st);
 const pv = E.previewAssign(st, 'rocket', 0);
@@ -40,7 +40,13 @@ near(pv.shops[0].after, E.shopRate(st, 0) / 1.5 * 1.2 * (1 + 0.05 * (st.ceos.roc
 ok(pv.crossOn.includes('rocket@0') && pv.crossOn.includes('c77@3'), '预览列出两个跨行事件');
 ok(pv.offlineCapAfter === 10 * 3600 && pv.offlineCapBefore === 8 * 3600, '预览：麻辣服务器离线上限 8h→10h');
 near(pv.totalAfter, pv.shops.reduce((a, s) => a + s.after, 0), '全街调后 = 各店之和');
-const a = E.assignCeo(st, 'rocket', 0);
+const prog0 = JSON.stringify(st.shops), oldRate = E.onlineRate(st, T0 + 1e9 - 3000);
+st.lastSeen = T0 + 1e9 - 3000; const coins0 = st.coins;
+const a = E.assignCeoWithPayout(st, 'rocket', 0, T0 + 1e9);
+near(a.paid, oldRate * 3, '换人前按旧阵容结清 3 秒收益');
+near(st.coins - coins0, oldRate * 3, '结清的钱进了账户');
+ok(st.lastSeen === T0 + 1e9, '结清后 lastSeen 前移，不会被新阵容重复结算');
+ok(JSON.stringify(st.shops) === prog0, '换招牌（交换任职）不重置店铺等级/员工/进度');
 ok(a.ok && st.ceos.rocket.at === 0 && st.ceos.c77.at === 3, '确认后互换');
 ok(E.signOf(st, 0).name === E.ROCKET_NAME.sign + '烧烤', '老马烧烤招牌');
 // 火箭烤炉：大客户更频繁
@@ -109,5 +115,28 @@ ok(m.st.gacha.owned.length === 1, '盲盒去重 + 过滤无效 id');
 const bad = E.migrate({ v:2, ceos:{ c77:{ unlocked:true, at:2, lv:3 }, pearl:{ unlocked:true, at:0, lv:1 } }, shops:[{ open:true, lv:1, emp:0 }] }, T0);
 ok(bad.st.ceos.c77.at === -1 && bad.st.ceos.pearl.at === 0, '非法 CEO 位置被修正（不在未开张的店）');
 ok(E.migrate('garbage', T0).st.v === 2, '坏档 → 新档');
+// 熊大文案定稿
+const SG = k => E.SIGNS[k].map(x => x[0]).join('／');
+ok(SG('c77') === '77烧烤店／七分糖七分拽／摆龙门阵书局／巴适不死机', '77 四块招牌');
+ok(SG('pearl') === '掌上明猪烧烤／一颗不剩奶茶／字字珠玑书局／算盘珠子科技', '珍珠姐 四块招牌');
+ok(SG('otaku') === '二次元烤肉部／肥宅快乐茶／再看亿页书店／下班再说科技', '阿宅 四块招牌');
+ok(SG('rocket') === '老马烧烤／特嘶啦奶茶／漫威书店／火箭科技', '火箭老板 四块招牌');
+ok(E.SIGNS.rocket[1][1] === '嘶——这杯加速有点猛。', '特嘶啦奶茶口号');
+ok(new Set(Object.values(E.SIGNS).flat().map(x => x[0])).size === 16, '16 块招牌互不重复');
+ok(E.SHOPS.map(x => x.emp.name).join() === '阿炭,小满,阿页,小栈', '四位员工新名字');
+ok(E.SHOPS[0].emp.line === '翻个面，香气就营业了。' && E.SHOPS[3].emp.line === '代码能重构，午饭不能拖。', '员工台词');
+ok(Object.values(E.CROSS).every(x => x.panels.length === 2), '4 个跨行漫画都是两格');
+ok(E.CROSS['pearl@2'].panels[1][2].includes('案件没破，奶茶先喝完了') && E.CROSS['otaku@1'].panels[0][2].includes('喝一口，追一格'), '漫画台词定稿');
+ok(E.CROSS['rocket@0'].effect === 'bigFreq' && E.CROSS['c77@3'].effect === 'offlineCap' && E.CROSS['pearl@2'].effect === 'tapX2' && E.CROSS['otaku@1'].effect === 'milestonePanel', '跨行效果不变');
+// 招牌跟随 ROCKET_NAME 配置（改配置重新加载 economy）
+{ const src = require('fs').readFileSync(__dirname + '/economy.js', 'utf8').replace("sign:'老马', tea:'特嘶啦', book:'漫威'", "sign:'老牛', tea:'特快', book:'太空'").replace("short:'火箭'", "short:'飞船'");
+  const m = { exports:{} }; new Function('module', 'exports', 'window', src)(m, m.exports, undefined);
+  const E2 = m.exports; ok(E2.SIGNS.rocket.map(x => x[0]).join('／') === '老牛烧烤／特快奶茶／太空书店／飞船科技', '火箭老板招牌跟随 ROCKET_NAME 配置'); }
+// 交换任职：目标店有人 → 两边都有 $/s 变化
+{ const s2 = E.cloneState(st); s2.ceos.c77.at = 3; s2.ceos.otaku.lv = 5; const p2 = E.previewAssign(s2, 'otaku', 3);
+  ok(p2.swapped === 'c77' && p2.shops[3].after !== p2.shops[3].before && p2.shops[p2.from].after !== p2.shops[p2.from].before, '交换任职预览：两家店都有收益变化'); }
+// 离线收益按离开时阵容：settleOffline 在任何操作前结算
+{ const s3 = E.cloneState(st); s3.lastSeen = s3.maxSeen = T0 + 2e9 - 3600e3; const rate = E.baseRate(s3);
+  const o = E.settleOffline(s3, T0 + 2e9); ok(o && o.amount > 0, '离线收益已结算'); }
 console.log(`economy tests: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

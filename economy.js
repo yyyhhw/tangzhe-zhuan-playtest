@@ -41,20 +41,21 @@
   };
 
   /* ===== 火箭老板：名字只在这一处配置（公开上架前再评估真名/肖像权） ===== */
-  const ROCKET_NAME = { name:'火箭老板', sign:'老马' };
+  // 改这里，CEO 名字和火箭老板那一行 4 块招牌一起变：烧烤=sign+'烧烤'，奶茶=tea+'奶茶'，书店=book+'书店'，科技=short+'科技'
+  const ROCKET_NAME = { name:'火箭老板', short:'火箭', sign:'老马', tea:'特嘶啦', book:'漫威' };
 
   const TYPES = { food:'餐饮型', drink:'饮品型', creative:'创意型', tech:'科技型' };
 
   /* ================= 四家店 + 四位员工（一店一位，固定在本店） ================= */
   const SHOPS = [
     { id:'bbq',  name:'77烧烤摊',     short:'烧烤摊',   type:'food',     open:0,       hire:50,       upBase:30,      rate:0.6,  tapMin:1,
-      emp:{ name:'小串',   line:'串串马上就好，莫催莫催！' } },
+      emp:{ name:'阿炭', line:'翻个面，香气就营业了。' } },
     { id:'tea',  name:'奶茶店',       short:'奶茶店',   type:'drink',    open:1000,    hire:2500,     upBase:4000,    rate:4,    tapMin:3,
-      emp:{ name:'珍珠妹', line:'生活有点苦，加点珍珠。' } },
+      emp:{ name:'小满', line:'七分茶，三分好心情。' } },
     { id:'book', name:'漫画书店',     short:'漫画书店', type:'creative', open:60000,   hire:150000,   upBase:200000,  rate:50,   tapMin:30,
-      emp:{ name:'翻页君', line:'再翻一页，就去干活。' } },
+      emp:{ name:'阿页', line:'再翻一页，我就整理书架。' } },
     { id:'tech', name:'摸鱼科技公司', short:'科技公司', type:'tech',     open:4000000, hire:10000000, upBase:3000000, rate:1200, tapMin:800,
-      emp:{ name:'老王',   line:'服务器在跑，我在思考。' } },
+      emp:{ name:'小栈', line:'代码能重构，午饭不能拖。' } },
   ];
 
   /* ================= 四位 CEO ================= */
@@ -67,24 +68,26 @@
   const CEO_BY_ID = {}; CEOS.forEach(c => CEO_BY_ID[c.id] = c);
 
   /* ===== 老板 × 店铺 = 16 块招牌（换 CEO 时招牌、口号跟着换） ===== */
-  const R = ROCKET_NAME.sign;
+  const RN = ROCKET_NAME;
+  // 熊大文案定稿 + 15:05 杨总认可的招牌名（烧烤／奶茶／书店／科技）。口号除「特嘶啦奶茶」外为凤雏补的，可再换。
   const SIGNS = {
-    c77:    [['77烧烤摊','巴适得很，串串烤起走！'], ['77冰粉奶茶','冰粉加珍珠，安逸！'], ['77龙门阵书屋','看漫画也要摆龙门阵'], ['77巴适科技','开会像摆龙门阵']],
-    pearl:  [['珍珠姐烤串','烤串配奶茶，绝配'], ['珍珠姐奶茶','第二杯半价，第三杯Q弹'], ['珍珠漫画茶屋','奶茶漫画联名！'], ['珍珠云科技','服务器也要加珍珠']],
-    otaku:  [['宅宅深夜烧烤','烤串要有分镜感'], ['漫画杯套茶饮','每杯都是一格漫画'], ['阿宅漫画书店','本店漫画，全部看过'], ['二次元摸鱼科技','代码写成热血漫']],
-    rocket: [[R + '烧烤','今天的目标：把羊肉串送上天。'], ['火箭吨吨茶','杯子做成小火箭'], ['火星漫画站','下一卷在火星连载'], ['火箭摸鱼科技','目标：摸鱼摸到火星']],
+    c77:    [['77烧烤店','巴适得很，串串烤起走！'], ['七分糖七分拽','糖可以少，态度不能少'], ['摆龙门阵书局','看漫画也要摆龙门阵'], ['巴适不死机','服务器也要吃得巴适']],
+    pearl:  [['掌上明猪烧烤','烤串配奶茶，绝配'], ['一颗不剩奶茶','珍珠要Q，一颗不剩'], ['字字珠玑书局','每一页都是珍珠'], ['算盘珠子科技','账算得比服务器还快']],
+    otaku:  [['二次元烤肉部','烤串要有分镜感'], ['肥宅快乐茶','快乐是一杯一杯续的'], ['再看亿页书店','本店漫画，全部看过'], ['下班再说科技','代码写成热血漫']],
+    rocket: [[RN.sign + '烧烤','今天的目标：把羊肉串送上天。'], [RN.tea + '奶茶','嘶——这杯加速有点猛。'], [RN.book + '书店','下一卷在火星连载'], [RN.short + '科技','目标：摸鱼摸到火星']],
   };
 
-  /* ===== 4 个跨行组合：专属效果 + 一格（四格）搞笑漫画。分镜文案为占位，等熊大定稿替换 ===== */
+  /* ===== 4 个跨行组合：专属效果 + 两格漫画（熊大文案定稿；效果数值不变） ===== */
+  // panels: [角色 id（头像）, 道具 emoji, 文案]
   const CROSS = {
     'rocket@0': { title:'火箭烤炉', effect:'bigFreq', desc:'大客户出现频率 ×2（间隔减半）',
-      panels:[['🔥','火箭老板盯着炭火：“太慢了。”'], ['📐','掏出图纸：「火箭烤炉 v1」'], ['🚀','轰——！羊肉串直接点火升空'], ['🤑','大客户闻着香味排长队：“这串，有点东西。”']], sfx:'轰！' },
+      panels:[['rocket','🚀',RN.name + '推来火箭造型烤炉：“准备出串！”'], ['e0','🍢','阿炭看串转圈：“香味先起飞了。”']], sfx:'轰！' },
     'c77@3':    { title:'麻辣服务器', effect:'offlineCap', desc:'离线收益上限 +2 小时（8→10 小时）',
-      panels:[['🥶','77走进机房：“好冷哦，冻手。”'], ['🌶️','把空调调成火锅温度'], ['💻','服务器冒出红油香，越跑越热乎'], ['😴','“机房太巴适，离线多挂 2 小时！”']], sfx:'滋啦！' },
+      panels:[['c77','🌶️','77 给机箱贴辣椒：“这台，麻辣款！”'], ['e3','🌡️','小栈盯着温度表：“老板，火候我盯着！”']], sfx:'滋啦！' },
     'pearl@2':  { title:'奶茶漫画联名', effect:'tapX2', desc:'在漫画书店点一下的收益 ×2',
-      panels:[['🧋','珍珠姐推着奶茶车进书店'], ['📚','买一本漫画送一颗珍珠'], ['😋','读者一边吸一边狂翻页'], ['👆','“点一下，收益翻倍！”']], sfx:'吸溜！' },
+      panels:[['pearl','🕵️','珍珠姐画起「珍珠侦探」。'], ['e2','🧋','阿页捧着书：“案件没破，奶茶先喝完了。”']], sfx:'吸溜！' },
     'otaku@1':  { title:'漫画杯套', effect:'milestonePanel', desc:'奶茶店冲里程碑时变成漫画分镜特效 + 一笔小红包',
-      panels:[['🤓','阿宅店长来奶茶店上班'], ['✏️','连夜给每个杯套画分镜'], ['🥤','客人为了集杯套多买一杯'], ['🎉','“冲里程碑就送分镜+小红包！”']], sfx:'唰唰！' },
+      panels:[['otaku','✏️','阿宅店长：“喝一口，追一格。”'], ['e1','🥤','小满转着杯子：“结尾呢？哦，在背面！”']], sfx:'唰唰！' },
   };
   function crossKey(ceoId, shop) { return ceoId + '@' + shop; }
 
@@ -148,7 +151,7 @@
     }
     return out;
   }
-  // 调任：CEO → 目标店（-1 = 空着/休息）。目标店有人时两人互换岗位。
+  // 调任：CEO → 目标店（-1 = 空着/休息）。目标店有人时两人「交换任职」。只改 CEO 位置，店铺进度（按固定店 ID 存）不动。
   function assignCeo(st, id, target) {
     const s = st.ceos[id];
     if (!s || !s.unlocked) return { ok:false, why:'这位 CEO 还没加入' };
@@ -158,6 +161,17 @@
     s.at = target;
     if (other) st.ceos[other].at = from;
     return { ok:true, from, to:target, swapped:other };
+  }
+  // 调任生效前先把旧阵容的在线收益结清（≤5 秒的未结算部分；更长的空档走离线结算），再换人
+  function creditOnline(st, now) {
+    const gap = (now - st.lastSeen) / 1000;
+    if (!(gap > 0) || gap > 5) return 0;
+    const amt = onlineRate(st, now) * gap; st.coins += amt; st.totalEarned += amt; st.lastSeen = now; if (now > st.maxSeen) st.maxSeen = now;
+    return amt;
+  }
+  function assignCeoWithPayout(st, id, target, now) {
+    const paid = creditOnline(st, now);
+    const r = assignCeo(st, id, target); r.paid = paid; return r;
   }
   function cloneState(st) { return JSON.parse(JSON.stringify(st)); }
   // 调任预览：每家店 & 全街每秒收益「调前 → 调后」，以及跨行效果、离线上限变化
@@ -372,15 +386,15 @@
   /* ================= 成就 / 下一步提示 ================= */
   function nextGoal(st) {
     const S = st.shops, c = st.coins;
-    if (S[0].emp <= 0) return { text:'点烧烤摊赚钱，攒 50 雇员工小串', cur:c, need:SHOPS[0].hire };
+    if (S[0].emp <= 0) return { text:'点烧烤摊赚钱，攒 50 雇员工阿炭', cur:c, need:SHOPS[0].hire };
     if (S[0].lv < 5) return { text:'升级烧烤摊，赚得更快', cur:c, need:upgradeCost(0, S[0].lv) };
     if (!S[1].open) return { text:'攒钱开第 2 家：奶茶店（珍珠姐加入）', cur:c, need:SHOPS[1].open };
-    if (S[1].emp <= 0) return { text:'给奶茶店雇员工珍珠妹', cur:c, need:SHOPS[1].hire };
+    if (S[1].emp <= 0) return { text:'给奶茶店雇员工小满', cur:c, need:SHOPS[1].hire };
     if (S[0].lv < 10) return { text:'烧烤摊冲 Lv10：收益×2', cur:S[0].lv, need:10, lv:true };
     if (!S[2].open) return { text:'攒钱开漫画书店（阿宅店长加入）', cur:c, need:SHOPS[2].open };
-    if (S[2].emp <= 0) return { text:'给书店雇员工翻页君', cur:c, need:SHOPS[2].hire };
+    if (S[2].emp <= 0) return { text:'给书店雇员工阿页', cur:c, need:SHOPS[2].hire };
     if (!S[3].open) return { text:'攒钱开摸鱼科技公司', cur:c, need:SHOPS[3].open };
-    if (S[3].emp <= 0) return { text:'给科技公司雇员工老王（盲盒开放）', cur:c, need:SHOPS[3].hire };
+    if (S[3].emp <= 0) return { text:'给科技公司雇员工小栈（盲盒开放）', cur:c, need:SHOPS[3].hire };
     if (S[3].lv < CFG.ROCKET_UNLOCK_LV) return { text:'科技公司冲 Lv25：' + ROCKET_NAME.name + '加入', cur:S[3].lv, need:CFG.ROCKET_UNLOCK_LV, lv:true };
     if (st.gacha.owned.length < ITEMS.length) return { text:'盲盒收集 16 件', cur:st.gacha.owned.length, need:ITEMS.length, count:true };
     for (const i of [0, 1, 2, 3]) if (S[i].lv < 50) return { text:SHOPS[i].short + ' 冲 Lv50：收益×8', cur:S[i].lv, need:50, lv:true };
@@ -391,7 +405,7 @@
     milestoneMult, nextMilestone, upgradeCost, bulkUpgradeCost, empCost, ceoCost, empMult, shopBase,
     ceoAt, ceoInfo, shopRate, baseRate, onlineRate, offlineRate, boostActive,
     crossKey, crossActive, offlineCap, bigInterval, tapMult, tapValue, tapReward,
-    checkUnlocks, assignCeo, previewAssign, signOf, cloneState,
+    checkUnlocks, assignCeo, assignCeoWithPayout, creditOnline, previewAssign, signOf, cloneState,
     canOpen, openShop, hireEmp, upgradeEmp, upgradeCeo, upgradeShop,
     dayKey, nextResetTs, clockRolledBack, computeOffline, settleOffline, canDouble, claimOffline,
     gachaUnlocked, gachaRemaining, gachaOdds, gachaPrice, gachaDraw, cardsComplete, newState, migrate, nextGoal };
