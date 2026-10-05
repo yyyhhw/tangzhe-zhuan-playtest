@@ -99,6 +99,9 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
   background:radial-gradient(rgba(20,20,20,.22) 1.2px,transparent 1.6px) 0 0/6px 6px,#fff;display:grid;place-items:center;font-size:26px}
 .ava img{width:100%;height:100%;display:block}
 .ava.sq{border-radius:10px}
+.ava.art{background:#fbf4e6}
+.ava.art img{object-fit:cover}
+.ava.bust{width:128px;height:128px;border-radius:16px}
 .info{flex:1;min-width:0}
 .name{font-weight:900;font-size:15px;display:flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden}
 .lv{background:var(--ink);color:#fff;font-size:11px;padding:2px 6px;border-radius:3px;font-weight:800;flex:0 0 auto}
@@ -197,6 +200,7 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 .pchar{position:relative;width:72px;height:72px;border:2.5px solid var(--ink);border-radius:50%;background:#fff;overflow:visible}
 .pimg{width:100%;height:100%;border-radius:50%;overflow:hidden;background:radial-gradient(rgba(20,20,20,.18) 1.2px,transparent 1.6px) 0 0/6px 6px,#fff}
 .pimg img{width:100%;height:100%;display:block;transform:scale(1.75);transform-origin:50% 66%}
+.pimg img.art{transform:none;object-fit:cover}
 .pchar .pe{position:absolute;right:-14px;bottom:-6px;font-size:28px}
 .comic.two .pt{margin-top:10px}
 .swap-box{text-align:left;font-size:12.5px;line-height:1.6;border:2.5px solid var(--ink);border-radius:8px;background:#fff6cf;padding:6px 9px;margin:4px 0 6px}

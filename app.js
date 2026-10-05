@@ -354,6 +354,16 @@ function avatarURL(id, key) {
   c.translate(56, 186); c.scale(1.15, 1.15); drawHead(c, lookOf(id), { happy:false });
   return (avaCache[k] = o.toDataURL());
 }
+// 熊大画的 CEO 头像（图没加载出来就退回画布小人头像）
+const ART_V = '6', PORTRAIT = { c77:1, pearl:1, otaku:1, rocket:1 };
+const faceURL = id => PORTRAIT[id] ? `art/face_${id}.webp?v=${ART_V}` : avatarURL(id);
+const bustURL = id => PORTRAIT[id] ? `art/ceo_${id}.webp?v=${ART_V}` : avatarURL(id);
+const faceImg = id => `<img src="${faceURL(id)}"${PORTRAIT[id] ? ` class="art" data-fb="${id}"` : ''} alt="">`;
+const bustImg = id => `<img src="${bustURL(id)}"${PORTRAIT[id] ? ` class="art" data-fb="${id}"` : ''} alt="">`;
+document.addEventListener('error', e => {
+  const el = e.target; if (!el || el.tagName !== 'IMG' || !el.dataset || !el.dataset.fb || el.dataset.fbd) return;
+  el.dataset.fbd = '1'; el.src = avatarURL(el.dataset.fb);
+}, true);
 function wearPreviewURL(id) {
   const eq = wearOf(id); const k = 'wear|' + id + '|' + (eq.clothes||'') + '|' + (eq.hat||'');
   if (avaCache[k]) return avaCache[k];
@@ -824,7 +834,7 @@ function hitBig(x, y) {
 function showSpecialComic(meta, paid) {
   sfx('mile'); focusT = 0.4;
   openModal(`<div class="mbubble">特殊客人！</div><div class="mtitle">${meta.emoji} ${meta.name}</div>
-    <div class="comic two">${meta.panels.map((p, n) => `<div class="panel4"><span class="pn">${n + 1}</span><div class="pchar"><div class="pimg"><img src="${avatarURL(p[0])}" alt=""></div><span class="pe">${p[1]}</span></div><div class="pt">${p[2]}</div></div>`).join('')}</div>
+    <div class="comic two">${meta.panels.map((p, n) => `<div class="panel4"><span class="pn">${n + 1}</span><div class="pchar"><div class="pimg">${faceImg(p[0])}</div><span class="pe">${p[1]}</span></div><div class="pt">${p[2]}</div></div>`).join('')}</div>
     <div class="mreward">${coinSm}+${fmt(paid)}</div>
     <div class="mnote">小奖励：本店 ${CFG.SPECIAL_REWARD_SEC} 秒产量（占位文案，熊大可再换）</div>
     <button class="buy big" id="mOk">收下</button>`);
@@ -922,7 +932,7 @@ function itemIcon(id) {
   if (it && it.type === 'card') return `<span class="ii">📜</span>`;
   const u = itemThumb(id); return u ? `<img src="${u}" alt="" style="width:44px;height:44px">` : '<span class="ii">❓</span>';
 }
-const ava = (id, cls = '') => `<div class="ava ${cls}"><img src="${avatarURL(id, JSON.stringify(E.CEO_BY_ID[id] ? wearOf(id) : ''))}" alt=""></div>`;
+const ava = (id, cls = '') => PORTRAIT[id] ? `<div class="ava art ${cls}">${faceImg(id)}</div>` : `<div class="ava ${cls}"><img src="${avatarURL(id, JSON.stringify(E.CEO_BY_ID[id] ? wearOf(id) : ''))}" alt=""></div>`;
 const btn = (act, arg, label, cost, extra = '') => `<button class="buy ${extra}" data-act="${act}" data-arg="${arg}" ${cost != null ? `data-cost="${cost}"` : ''}>${label}${cost != null ? `<small>${fmt(cost)}</small>` : ''}</button>`;
 function rateDelta(fn) { const c = E.cloneState(state); fn(c); return E.baseRate(c) - E.baseRate(state); }
 function ceoTags(i) {
@@ -1231,14 +1241,14 @@ function showComic(k, fresh) {
   if (fresh) { state.crossSeen[k] = true; persist(); sfx('mile'); }
   openModal(`<div class="mbubble">${fresh ? '跨行事件！' : '跨行组合'}</div><div class="mtitle">${c.name} × ${E.SHOPS[+shop].short}：「${x.title}」</div>
     <div class="comic-sfx">${x.sfx}</div>
-    <div class="comic two">${x.panels.map((p, n) => `<div class="panel4"><span class="pn">${n + 1}</span><div class="pchar"><div class="pimg"><img src="${avatarURL(p[0])}" alt=""></div><span class="pe">${p[1]}</span></div><div class="pt">${p[2]}</div></div>`).join('')}</div>
+    <div class="comic two">${x.panels.map((p, n) => `<div class="panel4"><span class="pn">${n + 1}</span><div class="pchar"><div class="pimg">${faceImg(p[0])}</div><span class="pe">${p[1]}</span></div><div class="pt">${p[2]}</div></div>`).join('')}</div>
     <div class="mnote"><b>专属效果：</b>${x.desc}${E.crossActive(state, k) ? '（生效中）' : ''}</div>
     <button class="buy big" id="mOk">知道了</button>`);
   $('#mOk').addEventListener('click', closeModal, { once:true });
 }
 function showCeoJoin(id) {
   const c = E.CEO_BY_ID[id], s = state.ceos[id]; sfx('mile');
-  openModal(`<div class="mbubble">新 CEO 加入！</div><div style="display:flex;justify-content:center;margin:6px 0"><div class="ava" style="width:96px;height:96px"><img src="${avatarURL(id)}" alt=""></div></div>
+  openModal(`<div class="mbubble">新 CEO 加入！</div><div style="display:flex;justify-content:center;margin:6px 0"><div class="ava art bust">${bustImg(id)}</div></div>
     <div class="mtitle">${c.name}（${E.TYPES[c.type]}）</div><div class="mnote">“${c.line}”<br>${s.at >= 0 ? '已就位：' + E.signOf(state, s.at).name : '现在在休息，去 CEO 页给 TA 安排一家店'}<br>专长对口 ×${CFG.MATCH_MULT}，跨行 ×${CFG.CROSS_MULT} + 专属事件</div>
     <button class="buy big" id="mOk">欢迎！</button>`);
   $('#mOk').addEventListener('click', () => { closeModal(); dirty = true; }, { once:true });
@@ -1284,7 +1294,7 @@ function confirmReset() {
   $('#mYes').addEventListener('click', () => { const rev = state.rev; state = E.newState(now()); state.rev = Math.max(rev, storedRev()); persist(); location.reload(); }, { once:true });
 }
 function showIntro() {
-  openModal(`<div class="mbubble">欢迎来到《躺着也能赚》</div><div style="display:flex;justify-content:center;margin:6px 0"><div class="ava" style="width:96px;height:96px"><img src="${avatarURL('c77')}" alt=""></div></div>
+  openModal(`<div class="mbubble">欢迎来到《躺着也能赚》</div><div style="display:flex;justify-content:center;margin:6px 0"><div class="ava art bust">${bustImg('c77')}</div></div>
     <div class="mtitle">77：巴适得很，串串烤起走！</div>
     <div class="mnote">① 点画面里的烧烤摊赚第一桶金<br>② 攒 50 雇员工阿炭，之后<b>躺着也能赚</b><br>③ 开新店、升级店铺/员工/CEO，把 CEO 调去别的店试试跨行事件<br>离线也有收益（50%，最多 8 小时），每天还有一次免费双倍。</div>
     <button class="buy big red" id="mOk">开摊！</button>`);
@@ -1368,7 +1378,7 @@ function boot() {
 boot();
 
 // 测试/调试钩子（不影响玩家）
-window.__tzz = { E, showComic, get state() { return state; }, set state(v) { state = v; }, persist, onReturn, tapShop, act, setTab, switchShop, renderTab,
+window.__tzz = { E, showComic, showCeoJoin, get state() { return state; }, set state(v) { state = v; }, persist, onReturn, tapShop, act, setTab, switchShop, renderTab,
   forceBig() { nextBigAt = 0; if (order) order = null; }, forceSpecial() { nextSpecialAt = 0; special = null; },
   forceSupers() { for (const k in superNext) superNext[k] = 0; updateSupers(); renderTab(); },
   get big() { return order; }, get order() { return order; }, get special() { return special; }, get guests() { return guests; },
