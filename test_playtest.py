@@ -129,7 +129,12 @@ with sync_playwright() as p:
     g = '.job-gal[data-ceo="c77"]'
     check(pg.locator('.job-gal').count() == 4, 'CEO 页每位已加入 CEO 都有任职形象区')
     check(pg.locator(g + ' .job-chip').count() == 4 and pg.locator(g + ' .job-chip.lock').count() == 0 and '科技公司' in pg.inner_text(g + ' .job-chip.on') and '现任' in pg.inner_text(g + ' .job-chip.on'), '77 默认显示现任科技公司，4 家已开店都能点')
-    check('现任形象' in pg.inner_text(g + ' .job-cap') and pg.locator(g + ' .job-wip').count() == 1, '还没交图的组合先用本行形象并标「画师赶稿中」')
+    src0 = pg.get_attribute(g + ' .job-pic img', 'src') or ''
+    check('现任形象' in pg.inner_text(g + ' .job-cap') and 'job_c77_tech.webp' in src0 and pg.locator(g + ' .job-wip').count() == 0, '77 现任科技公司：显示 job_c77_tech 大图，不再标「画师赶稿中」')
+    m16 = S(pg, "(()=>{const ids=['c77','pearl','otaku','rocket'], sh=['bbq','tea','book','tech'], bad=[]; ids.forEach((id,ci)=>sh.forEach((x,i)=>{const u=__tzz.jobURL(id,i), want = ci===i ? 'art/ceo_'+id+'.webp' : 'art/job_'+id+'_'+x+'.webp'; if(!u.startsWith(want)) bad.push(id+'_'+x+'→'+u);})); return bad;})()")
+    check(m16 == [], '16 种任职形象 ID 对应正确（本行 4 张用 ceo_<id>，其余 12 张用 job_<CEO>_<店>）' + (' 错：' + str(m16) if m16 else ''))
+    ld = S(pg, "Promise.all(['c77','pearl','otaku','rocket'].flatMap(id=>[0,1,2,3].map(i=>new Promise(r=>{const im=new Image(); im.onload=()=>r(im.naturalWidth>=400?null:id+i+' 太小'); im.onerror=()=>r(id+':'+i+' 加载失败'); im.src=__tzz.jobURL(id,i);})))).then(a=>a.filter(Boolean))")
+    check(ld == [], '16 张任职大图都能加载（≥400px）' + (' 错：' + str(ld) if ld else ''))
     pg.screenshot(path=f'{SHOTS}/07c_job_gallery.png')
     pg.locator(g + ' [data-act="jobView"][data-arg="c77:0"]').click(); pg.wait_for_timeout(250)
     src = pg.get_attribute(g + ' .job-pic img', 'src') or ''
@@ -138,7 +143,14 @@ with sync_playwright() as p:
     pg.locator(g + ' .job-pic').click(); pg.wait_for_timeout(300)
     check(modal_visible(pg) and pg.locator('#mpanel .job-big img').count() == 1 and '77 × 烧烤摊' in pg.inner_text('#mpanel'), '点图放大看大图')
     close_modals(pg)
-    check(S(pg, "(()=>{__tzz.JOB_ART.c77_tech=1; const u=__tzz.jobURL('c77',3); delete __tzz.JOB_ART.c77_tech; return u;})()").startswith('art/job_c77_tech.webp') and S(pg, "__tzz.jobURL('c77',3)").startswith('art/ceo_c77.webp'), '登记新图后按 job_<CEO>_<店>.webp 加载，未登记退回本行图')
+    check(S(pg, "(()=>{delete __tzz.JOB_ART.c77_tech; const u=__tzz.jobURL('c77',3); __tzz.JOB_ART.c77_tech=1; return u;})()").startswith('art/ceo_c77.webp') and S(pg, "__tzz.jobURL('c77',3)").startswith('art/job_c77_tech.webp'), '未登记的组合退回本行图，登记后按 job_<CEO>_<店>.webp 加载')
+    for (cid, arg, want) in [('pearl', 'pearl:3', 'job_pearl_tech'), ('otaku', 'otaku:1', 'job_otaku_tea'), ('rocket', 'rocket:0', 'job_rocket_bbq')]:
+        gg = f'.job-gal[data-ceo="{cid}"]'; before = st(pg)['ceos'][cid]['at']
+        pg.locator(gg + f' [data-act="jobView"][data-arg="{arg}"]').click(); pg.wait_for_timeout(250)
+        s2 = pg.get_attribute(gg + ' .job-pic img', 'src') or ''
+        nw = S(pg, f"(()=>{{const im=document.querySelector('{gg} .job-pic img'); return im && im.complete ? im.naturalWidth : -1;}})()")
+        check(want in s2 and st(pg)['ceos'][cid]['at'] == before, f'{cid} 点 {arg.split(":")[1]} 号店切到 {want}，任职不变')
+    pg.screenshot(path=f'{SHOTS}/07d_job_gallery_full.png')
     check(S(pg, "(()=>{const s=__tzz.state.ceos.c77; s.at=2; const v=__tzz.jobShown('c77'); s.at=3; return v;})()") == 2, '调任后默认显示新任职形象')
     check(S(pg, "(()=>{__tzz.state.shops[2].open=false; __tzz.renderTab(); const n=document.querySelectorAll('.job-gal[data-ceo=\"c77\"] .job-chip.lock').length; __tzz.state.shops[2].open=true; __tzz.renderTab(); return n;})()") == 1, '没开的店锁着不能看')
     pg.locator('#bottomNav [data-tab="shop"]').click(); pg.locator('#shopTabs [data-shop="0"]').click(); pg.wait_for_timeout(1300)

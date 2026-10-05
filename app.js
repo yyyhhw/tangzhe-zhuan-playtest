@@ -355,13 +355,14 @@ function avatarURL(id, key) {
   return (avaCache[k] = o.toDataURL());
 }
 // 熊大画的 CEO 头像（图没加载出来就退回画布小人头像）
-const ART_V = '6', PORTRAIT = { c77:1, pearl:1, otaku:1, rocket:1 };
+const ART_V = '7', PORTRAIT = { c77:1, pearl:1, otaku:1, rocket:1 };
 const faceURL = id => PORTRAIT[id] ? `art/face_${id}.webp?v=${ART_V}` : avatarURL(id);
 const bustURL = id => PORTRAIT[id] ? `art/ceo_${id}.webp?v=${ART_V}` : avatarURL(id);
 const faceImg = id => `<img src="${faceURL(id)}"${PORTRAIT[id] ? ` class="art" data-fb="${id}"` : ''} alt="">`;
 const bustImg = id => `<img src="${bustURL(id)}"${PORTRAIT[id] ? ` class="art" data-fb="${id}"` : ''} alt="">`;
 // CEO×店铺 任职形象（16 张）：本行用 ceo_<id>.webp，其余放 art/job_<id>_<店id>.webp，交过来一张在 JOB_ART 里登记一张
-const JOB_ART = {};
+const JOB_ART = { c77_tea:1, c77_book:1, c77_tech:1, pearl_bbq:1, pearl_book:1, pearl_tech:1,
+  otaku_bbq:1, otaku_tea:1, otaku_tech:1, rocket_bbq:1, rocket_tea:1, rocket_book:1 }; // 熊大 12 张补图已全部到齐
 const homeShop = id => E.CEO_BY_ID[id].home;
 const hasJobArt = (id, i) => i === homeShop(id) ? !!PORTRAIT[id] : !!JOB_ART[id + '_' + E.SHOPS[i].id];
 const jobURL = (id, i) => i !== homeShop(id) && JOB_ART[id + '_' + E.SHOPS[i].id] ? `art/job_${id}_${E.SHOPS[i].id}.webp?v=${ART_V}` : bustURL(id);
