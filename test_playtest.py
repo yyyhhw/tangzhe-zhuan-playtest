@@ -327,7 +327,7 @@ with sync_playwright() as p:
     hc = b.new_context(**dev); hp = hc.new_page(); hook(hp, 'home')
     hp.goto(URL); hp.evaluate("localStorage.clear()"); hp.reload(); hp.wait_for_timeout(900); close_modals(hp)
     vv = S(hp, "fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()).then(j=>[j.v, document.querySelector('script[src^=\"app.js\"]').getAttribute('src'), document.querySelector('script[src^=\"economy.js\"]').getAttribute('src'), document.querySelector('link[href^=\"style.css\"]').getAttribute('href')])")
-    check(vv == ['10', 'app.js?v=10', 'economy.js?v=10', 'style.css?v=10'], f'缓存号统一 v10：{vv}')
+    check(vv == ['11', 'app.js?v=11', 'economy.js?v=11', 'style.css?v=11'], f'缓存号统一 v11：{vv}')
     hp.evaluate("__tzz.state.coins = 1e6; __tzz.persist()")
     check(S(hp, "__tzz.E.onlineRate(__tzz.state, Date.now())") == 0, '（测试前提）没雇员工 → 每秒 0，金币只会被买东西改变')
     hp.locator('#bottomNav [data-tab="home"]').click(); hp.wait_for_timeout(450)
