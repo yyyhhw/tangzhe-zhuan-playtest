@@ -306,15 +306,22 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 /* ===== CEO 生活篇：家宅 / 商城（翻书） ===== */
 #bottomNav button{min-width:0}
 .book-tabs{display:flex;gap:0;margin:0 0 8px;border:3px solid var(--ink);border-radius:10px;overflow:hidden;box-shadow:3px 3px 0 var(--ink);background:#fff}
-.book-tabs button{flex:1;min-height:40px;border:0;border-left:2.5px solid var(--ink);background:#fff;font-weight:900;font-size:13px}
+.book-tabs button{flex:1;min-height:38px;border:0;border-left:2.5px solid var(--ink);background:#fff;font-weight:900;font-size:13px}
 .book-tabs button:first-child{border-left:0;background:#f2eee4}
 .book-tabs button.on{background:var(--yellow)}
+.home-who{margin-bottom:6px}
+.home-who .who{min-width:58px;padding:3px 5px;font-size:10.5px}
+.home-who .who .ava{width:30px;height:30px;font-size:16px}
 .home-who .who.locked{opacity:.55}
 .home-card .ava.sq{font-size:30px}
 .home-card .lux{color:var(--red);font-size:14px}
 .room{position:relative;border:3.5px solid var(--ink);border-radius:6px;box-shadow:5px 5px 0 var(--ink);overflow:hidden;margin:2px 4px 10px 0;background:var(--wall)}
-.room-art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;pointer-events:none}
-.room-wall{position:relative;z-index:1;height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;border-bottom:5px solid var(--trim);
+.room-art{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;z-index:0;pointer-events:none}
+/* 有底图时：墙和地板只留透明的格子线，固定装修全靠底图 */
+.room.has-art .room-wall,.room.has-art .room-floor{background:transparent!important;border-bottom-color:transparent}
+.room.has-art .rw-deco{display:none}
+.room.has-art .room-floor{background-image:linear-gradient(to right,rgba(20,20,20,.12) 1px,transparent 1px),linear-gradient(to bottom,rgba(20,20,20,.12) 1px,transparent 1px)!important;background-size:calc(100% / var(--cols)) calc(100% / var(--rows))!important}
+.room-wall{position:relative;z-index:1;aspect-ratio:var(--cols)/2;display:flex;align-items:flex-start;justify-content:space-between;padding:8px 10px 0;border-bottom:5px solid var(--trim);
   background:radial-gradient(rgba(20,20,20,.12) 1.1px,transparent 1.5px) 0 0/7px 7px,var(--wall)}
 .room-wall .rw-deco{font-size:22px}
 .room-wall .rw-name{font-size:11px;font-weight:900;background:#fff;border:2px solid var(--ink);border-radius:4px;padding:1px 6px;transform:rotate(-2deg)}
@@ -353,10 +360,14 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 .room-tools .buy{min-width:64px;min-height:40px;font-size:13px}
 .room-tools .buy[disabled]{opacity:.4}
 .mall-go{min-height:36px!important;font-size:12px!important;margin-bottom:6px}
-.inv-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:6px}
-.inv-item{position:relative;aspect-ratio:1/1.05;border:2.5px solid var(--ink);border-radius:8px;background:linear-gradient(#fff 55%,var(--fc));box-shadow:2px 2px 0 var(--ink);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;touch-action:none;cursor:grab}
-.inv-item .ie{font-size:26px;line-height:1.1;pointer-events:none}
+.inv-strip{display:flex;gap:8px;overflow-x:auto;overflow-y:hidden;padding:8px 2px 6px;margin:0 4px 4px 0;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+.tray-head{display:flex;align-items:center;gap:6px;margin:0 4px 0 0;font-size:11px;color:#555;font-weight:800}
+.tray-head b{font-size:13px;color:var(--ink);background:var(--yellow);border:2px solid var(--ink);border-radius:4px;padding:0 6px;white-space:nowrap}
+.tray-head span{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tray-head .mall-go{margin-bottom:0}
+.inv-item{position:relative;flex:0 0 66px;height:70px;border:2.5px solid var(--ink);border-radius:8px;background:linear-gradient(#fff 55%,var(--fc));box-shadow:2px 2px 0 var(--ink);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;line-height:1.15;touch-action:pan-x;cursor:grab}
+.inv-item .ie{font-size:24px;line-height:1.1;pointer-events:none}
 .inv-item b,.inv-item small{pointer-events:none}
 .inv-item small{font-size:9.5px;color:#555}
 .inv-item i{position:absolute;top:-7px;right:-6px;font-style:normal;font-weight:900;font-size:11px;background:var(--red);color:#fff;border:2px solid var(--ink);border-radius:10px;padding:0 5px}

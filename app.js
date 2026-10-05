@@ -1121,7 +1121,7 @@ function setTab(t) {
 }
 function updateCompactHead() {
   const el = $('#compactHead');
-  if (tab === 'shop') { el.classList.add('hidden'); el.innerHTML = ''; return; }
+  if (tab === 'shop' || tab === 'home') { el.classList.add('hidden'); el.innerHTML = ''; return; } // 家宅页把高度留给房间 + 仓库（页头说明放进页内）
   el.classList.remove('hidden');
   if (tab === 'ceo') {
     let cards = E.CEOS.map(c => {
@@ -1132,8 +1132,6 @@ function updateCompactHead() {
     }).join('');
     el.innerHTML = `<div class="ch-title">谁在管哪家店</div><div class="ch-row">${cards}</div>
       <div class="ch-note">调任：点卡片上的「调任」→ 选目的店 → 看双方去向和全街 $/秒对比 → 确认。目标店有人会变成「交换任职」。</div>`;
-  } else if (tab === 'home') {
-    el.innerHTML = `<div class="ch-title">CEO 生活篇 · ${homeSub === 'mall' ? '商城' : '家宅'}</div><div class="ch-note">和经营共用金币。家具进公共仓库，四家都能摆；一件同时只在一家。移动 / 旋转 / 收回 / 撤销不花钱。</div>`;
   } else if (tab === 'gacha') {
     const owned = state.gacha.owned.length, total = E.ITEMS.length;
     el.innerHTML = `<div class="ch-title">77 收藏盲盒</div><div class="ch-note">已收集 <b>${owned}/${total}</b>（普通 ${E.REGULAR_ITEMS.length} + 超级 ${E.SUPER_ITEMS.length}）。店景在「经营」页；这里专心开盒。</div>`;
@@ -1347,7 +1345,9 @@ function showIntro() {
 /* ================= CEO 生活篇：家宅 / 商城 / 摆放（像翻书：经营 → 家宅 → 商城） ================= */
 // 存档：state.furnInv={fid:数量} 公共仓库；state.homes[ceoId]={ lv, placed:[{uid,fid,x,y,rot}], next }；一件同时只在一家
 // 美术：画师的图转成 webp 后放 art/，在下面两张表里登记一张就用一张；没登记 / 加载失败 → 用色块 + emoji 占位
-const HOME_ART = {};  // 房间底图：art/home_<hut|apt|villa>.webp，例 { hut:1 }
+// 房间底图：art/home_<ceo>_<lv>.webp（ceo=c77/pearl/otaku/rocket，lv=1/2/3），例 { c77_1:1 }
+// 底图规格：宽 = 列数×200px，高 = (2 + 行数)×200px；上面 2 格高是后墙，下面是地板格，平行投影无消失点。Lv1 6×4 → 1200×1200，墙地分界 y=400
+const HOME_ART = {};
 const FURN_ART = {};  // 家具：art/furn_<bed|sofa|table|lamp|rug|plant|bookshelf|tv|fridge|wardrobe|painting|catbed>.webp，例 { bed:1 }
 const furnName = fid => fid.replace(/^furn_/, '');
 const HOME_ICON = ['🏠', '🏢', '🏰'];
@@ -1390,8 +1390,9 @@ function renderRoom() {
     const f = E.FURN_BY_ID[p.fid], sz = E.furnSize(p.fid, p.rot);
     return `<div class="furn ${f.layer === 'rug' ? 'rug' : ''} ${p.uid === homeSel ? 'sel' : ''}" data-uid="${p.uid}" data-fid="${p.fid}" style="left:${p.x / T.cols * 100}%;top:${p.y / T.rows * 100}%;width:${sz.w / T.cols * 100}%;height:${sz.h / T.rows * 100}%;--fc:${f.color}">${furnInner(p.fid, p.rot)}<b class="fn">${f.name}</b></div>`;
   }).join('');
-  h += `<div class="room tier-${T.id}" id="room" data-tier="${T.id}" style="--cols:${T.cols};--rows:${T.rows};--wall:${T.wall};--floor:${T.floor};--trim:${T.trim}">
-    ${HOME_ART[T.id] ? `<img class="room-art" src="art/home_${T.id}.webp?v=${ART_V}" data-homefb="1" alt="">` : ''}
+  const artKey = `${id}_${H.lv}`, hasArt = !!HOME_ART[artKey];
+  h += `<div class="room tier-${T.id}${hasArt ? ' has-art' : ''}" id="room" data-tier="${T.id}" style="--cols:${T.cols};--rows:${T.rows};--wall:${T.wall};--floor:${T.floor};--trim:${T.trim}">
+    ${hasArt ? `<img class="room-art" src="art/home_${artKey}.webp?v=${ART_V}" data-homefb="1" alt="" onerror="this.closest('.room')&&this.closest('.room').classList.remove('has-art')">` : ''}
     <div class="room-wall"><span class="rw-deco">${T.id === 'hut' ? '🪟' : T.id === 'apt' ? '🪟 🪟' : '✨🕯️✨'}</span><span class="rw-name">${c.name}的${T.name}</span></div>
     <div class="room-floor" id="roomFloor">${items}<div class="room-hl hidden" id="roomHl"></div></div></div>`;
   const st = undoStack(id);
@@ -1399,12 +1400,12 @@ function renderRoom() {
     : '<span class="rt-sel">点家具选中：旋转 / 收回；按住拖动换位置</span>'}
     <button class="buy alt" data-act="homeUndo" data-arg="${id}" ${st.length ? '' : 'disabled'}>↶ 撤销${st.length ? ' ' + st.length : ''}</button></div>`;
   const inv = Object.entries(E.furnInvOf(state)).filter(([, n]) => n > 0);
-  h += `<div class="row-head"><div class="sec-title">公共家具仓库</div><button class="buy alt mall-go" data-act="homeSub" data-arg="mall">🛒 去商城</button></div>`;
-  h += inv.length ? `<div class="inv-grid">${inv.map(([fid, n]) => { const f = E.FURN_BY_ID[fid], stt = E.furnStats(state, fid);
+  h += `<div class="tray-head"><b>公共家具仓库</b><span>${inv.length ? '按住拖进房间 · 轻点自动摆' : '空空的'}</span><button class="buy alt mall-go" data-act="homeSub" data-arg="mall">🛒 去商城</button></div>`;
+  h += inv.length ? `<div class="inv-strip">${inv.map(([fid, n]) => { const f = E.FURN_BY_ID[fid], stt = E.furnStats(state, fid);
       const where = stt.where.length ? stt.where.map(w => w.name).join('、') : '';
-      return `<div class="inv-item" data-fid="${fid}" style="--fc:${f.color}"><span class="ie">${f.emoji}</span><b>${f.name}</b><small>${f.w}×${f.h}${where ? ' · 另有在 '+where : ''}</small><i>×${n}</i></div>`; }).join('')}</div>
-      <div class="note">按住仓库家具拖进 ${c.name} 的房间（绿=能放，红=重叠/出界）；轻点自动找空位。收回后可搬到别家。移动 / 旋转 / 收回 / 撤销都不花钱；想几家同时有就多买几件。</div>`
-    : `<div class="note">仓库空空。去商城买家具（进公共仓库），再拖进 ${c.name} 的房间摆。一件同时只在一家；想四家都有就买四件。</div>`;
+      return `<div class="inv-item" data-fid="${fid}" style="--fc:${f.color}" title="${f.name} ${f.w}×${f.h}${where ? ' · 另有在 ' + where : ''}"><span class="ie">${f.emoji}</span><b>${f.name}</b><small>${f.w}×${f.h}</small><i>×${n}</i></div>`; }).join('')}</div>
+      <div class="note">CEO 生活篇：和经营共用金币。家具进公共仓库，四家都能摆，一件同时只在一家（收回后可搬去别家；想几家同时有就多买几件）。拖动时绿 = 能放、红 = 重叠/出界；移动 / 旋转 / 收回 / 撤销都不花钱。</div>`
+    : `<div class="note">仓库空空。去商城买家具（进公共仓库），再拖进 ${c.name} 的房间摆。一件同时只在一家；想四家都有就买四件。和经营共用金币。</div>`;
   return h;
 }
 function renderMall() {
@@ -1495,12 +1496,24 @@ function homeMove(e) {
   const d = homeDrag; if (!d || e.pointerId !== d.id) return;
   e.preventDefault();
   if (!d.moved && Math.hypot(e.clientX - d.sx, e.clientY - d.sy) < 7) return;
-  const c = homeCellAt(e.clientX, e.clientY, d.fid, d.rot, d.offX, d.offY); if (!c) return;
+  d.px = e.clientX; d.py = e.clientY; homeDragAt(d);
+  if (d.moved && !d.raf) d.raf = requestAnimationFrame(() => homeAutoScroll(d));
+}
+// 手指拖到面板上下边缘：自动滚动，房间和仓库不在同一屏也能拖过去
+function homeAutoScroll(d) {
+  d.raf = 0; if (homeDrag !== d) return;
+  const pn = $('#panel'), r = pn.getBoundingClientRect(), edge = 44;
+  const v = d.py < r.top + edge ? -Math.ceil((r.top + edge - d.py) / 4) : d.py > r.bottom - edge ? Math.ceil((d.py - r.bottom + edge) / 4) : 0;
+  if (v) { const before = pn.scrollTop; pn.scrollTop += Math.max(-14, Math.min(14, v)); if (pn.scrollTop !== before) homeDragAt(d); }
+  d.raf = requestAnimationFrame(() => homeAutoScroll(d));
+}
+function homeDragAt(d) {
+  const c = homeCellAt(d.px, d.py, d.fid, d.rot, d.offX, d.offY); if (!c) return;
   if (!d.moved) { d.moved = true; homeSel = null;
     const g = document.createElement('div'); g.className = 'furn drag-ghost' + (E.FURN_BY_ID[d.fid].layer === 'rug' ? ' rug' : '');
     g.style.cssText = `width:${d.w * c.cw}px;height:${d.h * c.ch}px;--fc:${E.FURN_BY_ID[d.fid].color}`; g.innerHTML = furnInner(d.fid, d.rot);
     document.body.appendChild(g); d.ghost = g; if (d.src === 'room') d.el.classList.add('lifting'); }
-  d.ghost.style.left = (e.clientX - d.offX * c.cw) + 'px'; d.ghost.style.top = (e.clientY - d.offY * c.ch) + 'px';
+  d.ghost.style.left = (d.px - d.offX * c.cw) + 'px'; d.ghost.style.top = (d.py - d.offY * c.ch) + 'px';
   const hl = $('#roomHl'); d.cell = c.inside ? c : null;
   if (!c.inside) { hl.classList.add('hidden'); d.ghost.classList.remove('ok', 'bad'); return; }
   const v = E.canPlace(state, homeWho, d.fid, c.x, c.y, d.rot, d.uid); d.valid = v;
@@ -1510,6 +1523,7 @@ function homeMove(e) {
 }
 function homeEnd() {
   const d = homeDrag; homeDrag = null;
+  if (d && d.raf) { cancelAnimationFrame(d.raf); d.raf = 0; }
   window.removeEventListener('pointermove', homeMove); window.removeEventListener('pointerup', homeUp); window.removeEventListener('pointercancel', homeCancel);
   if (d && d.ghost) d.ghost.remove();
   return d;
