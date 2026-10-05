@@ -254,11 +254,11 @@ function drawPerson(c, x, y, s, look, o = {}) {
   const t = o.t || 0, lw = 3 * s;
   c.save(); c.translate(x, y + (o.bob ? Math.sin(t * 6) * 1.6 * s : 0)); c.scale(o.flip ? -s : s, s);
   const LW = 3;
-  // 腿
-  c.lineCap = 'round'; c.strokeStyle = INK; c.lineWidth = 7;
-  c.beginPath(); c.moveTo(-8, -34); c.lineTo(-9, -4); c.moveTo(8, -34); c.lineTo(9, -4); c.stroke();
-  c.lineWidth = 4; c.strokeStyle = look.pattern === 'overall' ? '#2c5282' : '#555'; c.beginPath(); c.moveTo(-8, -32); c.lineTo(-9, -6); c.moveTo(8, -32); c.lineTo(9, -6); c.stroke();
-  rr(c, -16, -6, 13, 7, 3); inkFill(c, '#333', 2); rr(c, 3, -6, 13, 7, 3); inkFill(c, '#333', 2);
+  // 腿（加粗，少细线腿）
+  c.lineCap = 'round'; c.strokeStyle = INK; c.lineWidth = 10;
+  c.beginPath(); c.moveTo(-9, -36); c.lineTo(-10, -4); c.moveTo(9, -36); c.lineTo(10, -4); c.stroke();
+  c.lineWidth = 6; c.strokeStyle = look.pattern === 'overall' ? '#2c5282' : '#555'; c.beginPath(); c.moveTo(-9, -34); c.lineTo(-10, -6); c.moveTo(9, -34); c.lineTo(10, -6); c.stroke();
+  rr(c, -18, -6, 15, 8, 3); inkFill(c, '#333', 2); rr(c, 3, -6, 15, 8, 3); inkFill(c, '#333', 2);
   // 身体
   c.beginPath(); c.moveTo(-20, -36); c.quadraticCurveTo(-22, -66, -12, -72); c.lineTo(12, -72); c.quadraticCurveTo(22, -66, 20, -36); c.closePath();
   inkFill(c, look.top, LW);
@@ -354,11 +354,18 @@ function avatarURL(id, key) {
   c.translate(56, 186); c.scale(1.15, 1.15); drawHead(c, lookOf(id), { happy:false });
   return (avaCache[k] = o.toDataURL());
 }
+function wearPreviewURL(id) {
+  const eq = wearOf(id); const k = 'wear|' + id + '|' + (eq.clothes||'') + '|' + (eq.hat||'');
+  if (avaCache[k]) return avaCache[k];
+  const o = document.createElement('canvas'); o.width = 140; o.height = 160; const c = o.getContext('2d');
+  c.translate(70, 150); drawPerson(c, 0, 0, 1.15, lookOf(id), { t:0, pose:'wave' });
+  return (avaCache[k] = o.toDataURL());
+}
 
 /* ---------- 每帧：招牌 / 人物 / 特效 / 大客户 ---------- */
 const fx = [], coinsP = [];
 let signAnim = { shop:-1, from:null, to:null, t0:0 }, lastSign = {}, focusT = 0, shake = 0;
-let big = null, nextBigAt = 0, bubble = { who:null, txt:'', until:0 }, nextBubbleAt = 0, mileFx = null;
+let bubble = { who:null, txt:'', until:0 }, nextBubbleAt = 0, mileFx = null;
 function signNow(i) { return state.shops[i].open ? E.signOf(state, i) : { name:'招租中', slogan:'开张 ' + fmt(E.SHOPS[i].open) + ' 金' }; }
 function drawSign(c, i, t) {
   const l = L(), cur = signNow(i), w = W * 0.7, h = l.signH, x = W / 2, y0 = l.signY;
@@ -501,15 +508,45 @@ function render(t) {
     drawStrokeText(g, prev ? '先开上一家店' : '点下面「开张」', W / 2, H * 0.55, 16 * U, '#fff', -0.05);
     drawStrokeText(g, '🔒', W / 2, H * 0.4, 22 * U, '#fff');
   }
-  // 大客户
-  if (big && open) {
-    const bt = t - big.t0, x = W * 0.56 + Math.min(0, (bt - 0.8)) * W * 0.6, y = l.ground + 4 * U;
-    big.x = x; big.y = y - 50 * U; big.r = 46 * U;
-    g.save(); g.globalAlpha = 0.35 + 0.25 * Math.sin(t * 8); g.fillStyle = YELLOW; g.beginPath(); g.arc(x, y - 50 * U, 48 * U, 0, TAU); g.fill(); g.restore();
-    drawPerson(g, x, y, U * 1.1, { skin:'#ffd9b8', hair:'#111', style:'swept', top:'#6a4c93', tie:true, smug:true, glasses:true }, { t, bob:true, pose:'wave' });
-    const left = Math.max(0, CFG.BIG_STAY - bt);
-    drawBubble(g, x, y - 128 * U, '大客户！点我 ×5（' + Math.ceil(left) + '）', 1);
-    drawStrokeText(g, '💰', x + 26 * U, y - 70 * U + Math.sin(t * 5) * 3 * U, 16 * U, '#fff');
+  // 普通客人（只在当前店、经营页）
+  if (open && tab === 'shop') {
+    for (const gu of guests) {
+      if (gu.shop !== i) continue;
+      const gp = guestPos(gu, t);
+      drawPerson(g, gp.x, gp.y, U * 0.85, gu.look, { t, bob:true, pose:gp.pose, flip:gu.flip });
+      // 小道具提示阶段
+      const ph = gu.phases[gu.phase];
+      const ico = i === 0 ? (ph === 'grill' ? '🍢' : ph === 'serve' ? '💰' : '🪑')
+        : i === 1 ? (ph === 'shake' ? '🧋' : ph === 'take' ? '🛍️' : '🧍')
+        : i === 2 ? (ph === 'carry' ? '📚' : ph === 'pay' ? '💰' : '👀')
+        : (ph === 'meet' ? '💼' : ph === 'sign' ? '✍️' : '💻');
+      drawStrokeText(g, ico, gp.x + 18 * U, gp.y - 78 * U, 11 * U, '#fff');
+    }
+  }
+  // 大客户团单（可见进度条）
+  if (order && open && order.shop === i) {
+    const x = W * 0.58, y = l.ground + 4 * U;
+    order.x = x; order.y = y - 52 * U; order.r = 52 * U;
+    g.save(); g.globalAlpha = 0.4 + 0.25 * Math.sin(t * 7); g.fillStyle = YELLOW; g.beginPath(); g.arc(x, y - 52 * U, 54 * U, 0, TAU); g.fill(); g.restore();
+    // 团客：稍大 + 多一人影暗示「团」
+    drawPerson(g, x - 16 * U, y, U * 0.95, { skin:'#ffd9b8', hair:'#111', style:'short', top:'#6a4c93', glasses:true }, { t, bob:true, pose:'wave' });
+    drawPerson(g, x + 14 * U, y, U * 1.05, { skin:'#ffe0c7', hair:'#222', style:'swept', top:'#264653', tie:true, smug:true }, { t, bob:true, pose:'point' });
+    drawBubble(g, x, y - 132 * U, order.meta.name + '（点我加速）', 1);
+    // 进度条
+    const bw = W * 0.42, bh = 12 * U, bx = x - bw / 2, by = y - 18 * U;
+    rr(g, bx, by, bw, bh, 4 * U); inkFill(g, '#fff', 2 * U);
+    g.fillStyle = RED; rr(g, bx + 2, by + 2, Math.max(0, (bw - 4) * order.progress), bh - 4, 3 * U); g.fill();
+    drawStrokeText(g, Math.round(order.progress * 100) + '% · 预计 +' + fmt(order.payout), x, by - 10 * U, 10 * U, YELLOW);
+    drawStrokeText(g, order.meta.emoji || '💰', x + 36 * U, y - 78 * U + Math.sin(t * 5) * 3 * U, 16 * U, '#fff');
+  }
+  // 特殊客户
+  if (special && open && special.shop === i) {
+    const x = W * 0.22, y = l.ground + 4 * U;
+    special.x = x; special.y = y - 50 * U; special.r = 48 * U;
+    g.save(); g.globalAlpha = 0.35 + 0.3 * Math.sin(t * 6); g.fillStyle = '#ff4f9a'; g.beginPath(); g.arc(x, y - 50 * U, 46 * U, 0, TAU); g.fill(); g.restore();
+    drawPerson(g, x, y, U * 1.08, { skin:'#ffe6d0', hair:'#5a189a', style:'bun', top:'#ff4f9a', female:true, pearls:true }, { t, bob:true, pose:'wave', happy:true });
+    drawBubble(g, x, y - 128 * U, '特殊客人！点我', 1);
+    drawStrokeText(g, special.meta.emoji || '✨', x + 24 * U, y - 72 * U, 16 * U, '#fff');
   }
   // 里程碑特效
   if (mileFx && t - mileFx.t0 < 2.2) {
@@ -528,9 +565,27 @@ function render(t) {
   // 飘字 / 金币
   for (let k = fx.length - 1; k >= 0; k--) { const f = fx[k], a = (t - f.t0) / f.life; if (a >= 1) { fx.splice(k, 1); continue; }
     drawStrokeText(g, f.txt, f.x, f.y - a * 36 * U, f.size * (a < 0.15 ? 0.6 + a * 2.7 : 1), f.color, f.rot, 1 - a * a); }
-  for (let k = coinsP.length - 1; k >= 0; k--) { const p = coinsP[k]; p.vy += 600 * U * (1 / 60); p.x += p.vx / 60; p.y += p.vy / 60; p.life -= 1 / 60;
+  for (let k = coinsP.length - 1; k >= 0; k--) {
+    const p = coinsP[k];
+    if (p.fly) {
+      const age = clock - (p.born || clock) - (p.delay || 0);
+      if (age < 0) continue;
+      const u = Math.min(1, age / 0.55);
+      const ee = 1 - Math.pow(1 - u, 3);
+      p.x = p.x + (p.tx - p.x) * 0.18; // eased chase
+      p.y = p.y + (p.ty - p.y) * 0.18;
+      // re-init toward target each frame from stored start — simpler lerp from current
+      const x = (1 - ee) * (p.x) + ee * p.tx;
+      const y = (1 - ee) * (p.y) + ee * p.ty;
+      p.life -= 1 / 60;
+      if (u >= 1 || p.life <= 0) { coinsP.splice(k, 1); continue; }
+      g.save(); g.translate(x, y); g.scale(Math.abs(Math.cos(age * 14)) + 0.25, 1); g.beginPath(); g.arc(0, 0, 5.5 * U, 0, TAU); inkFill(g, YELLOW, 1.5 * U); g.restore();
+      continue;
+    }
+    p.vy += 600 * U * (1 / 60); p.x += p.vx / 60; p.y += p.vy / 60; p.life -= 1 / 60;
     if (p.life <= 0) { coinsP.splice(k, 1); continue; }
-    g.save(); g.translate(p.x, p.y); g.scale(Math.abs(Math.cos(p.life * 10)) + 0.2, 1); g.beginPath(); g.arc(0, 0, 5 * U, 0, TAU); inkFill(g, YELLOW, 1.5 * U); g.restore(); }
+    g.save(); g.translate(p.x, p.y); g.scale(Math.abs(Math.cos(p.life * 10)) + 0.2, 1); g.beginPath(); g.arc(0, 0, 5 * U, 0, TAU); inkFill(g, YELLOW, 1.5 * U); g.restore();
+  }
 }
 function addText(txt, x, y, o = {}) { fx.push({ txt, x, y, t0:clock, life:o.life || 0.9, size:o.size || 15 * U, color:o.color || YELLOW, rot:o.rot || (Math.random() - 0.5) * 0.3 }); if (fx.length > 30) fx.shift(); }
 function burstCoins(x, y, n) { for (let k = 0; k < n; k++) coinsP.push({ x, y, vx:(Math.random() - 0.5) * 260 * U, vy:-(140 + Math.random() * 200) * U, life:0.8 + Math.random() * 0.4 }); if (coinsP.length > 60) coinsP.splice(0, coinsP.length - 60); }
@@ -552,7 +607,8 @@ function tick() {
   const t = now(), gap = (t - state.lastSeen) / 1000;
   if (gap < 0) { if (t > state.maxSeen - CFG.CLOCK_TOLERANCE * 1000) state.lastSeen = t; return; }
   if (gap > 5) { onReturn(); return; }
-  earn(E.onlineRate(state, t) * gap);
+  const gained = E.onlineRate(state, t) * gap;
+  earn(gained); noteVisualIncome(gained);
   state.lastSeen = t; if (t > state.maxSeen) state.maxSeen = t;
 }
 function onReturn() {
@@ -578,21 +634,202 @@ function tapShop(x, y) {
   bumpCoins();
   if (Math.random() < 0.12) { const cid = E.ceoAt(state, i); if (cid) sayLine('c', E.SIGNS[cid][i][1]); }
 }
-/* ---------- 大客户（只在在线时，×5 持续 30 秒，不影响离线） ---------- */
+/* ---------- 营业小舞台：普通客人（只可视化自动收入）+ 大客户团单 + 特殊客户 ---------- */
+const GUEST_LOOKS = [
+  { skin:'#ffe0c7', hair:'#222', style:'short', top:'#ef476f' },
+  { skin:'#ffd9b8', hair:'#6b3e26', style:'bun', top:'#3a86ff', female:true },
+  { skin:'#ffe6d0', hair:'#111', style:'messy', top:'#06d6a0', glasses:true },
+  { skin:'#f6d1b0', hair:'#333', style:'swept', top:'#ffd166' },
+  { skin:'#ffe0c7', hair:'#1b1b1b', style:'twin', top:'#9b5de5', female:true },
+  { skin:'#ffd9b8', hair:'#444', style:'cover', top:'#e63946', hoodie:true },
+];
+const STAGE_PHASES = [
+  ['seat', 'grill', 'serve'],   // 烧烤：落座→翻串→结账
+  ['queue', 'shake', 'take'],   // 奶茶：排队→摇杯→拿走
+  ['browse', 'carry', 'pay'],   // 书店：翻书→抱书→结账
+  ['type', 'meet', 'sign'],     // 科技：敲键盘→谈项目→签约
+];
+let guests = [];           // 普通客人（动画，不另加钱）
+let order = null;          // 大客户团单 {shop,t0,progress,rate,payout,meta,x,y,r}
+let special = null;        // 特殊客户 {shop,t0,meta,x,y,r}
+let nextBigAt = 0, nextSpecialAt = 0;
+let visCoinAcc = 0;        // 已可视化的自动收入累计（用于冒金币，不加钱）
+
 function scheduleBig() { nextBigAt = clock + E.bigInterval(state, rand()); }
-function updateBig() {
-  if (big && clock - big.t0 > CFG.BIG_STAY) big = null;
-  if (!big && clock >= nextBigAt && E.baseRate(state) > 0 && !document.hidden && !modalOpen()) {
-    big = { t0:clock }; sfx('big'); popWord('大客户！'); if (!state.shops[state.cur].open) { big = null; }
-    scheduleBig();
+function scheduleSpecial() { nextSpecialAt = clock + E.specialInterval(state, rand()); }
+
+function spawnGuest(i) {
+  if (guests.filter(g => g.shop === i).length >= 5) return;
+  const phases = STAGE_PHASES[i];
+  guests.push({
+    shop:i, phase:0, phases, t0:clock, dur:1.6 + Math.random() * 1.2,
+    look:GUEST_LOOKS[Math.floor(Math.random() * GUEST_LOOKS.length)],
+    lane:Math.random(), flip:Math.random() < 0.5, paid:false,
+  });
+  if (guests.length > 18) guests.splice(0, guests.length - 18);
+}
+
+function guestPos(g, t) {
+  const l = L(), i = g.shop, p = Math.min(1, (t - g.t0) / g.dur), ph = g.phases[g.phase];
+  const ground = l.ground + 2 * U;
+  // 各店独特路径
+  if (i === 0) { // 落座左→烤炉中→柜台结账
+    const seats = [0.18, 0.28, 0.38];
+    if (ph === 'seat') return { x:W * (0.05 + p * (seats[g.lane * 3 | 0] || 0.22)), y:ground, pose:'wave' };
+    if (ph === 'grill') return { x:W * 0.42 + Math.sin(t * 6) * 2 * U, y:ground - 2 * U, pose:'work' };
+    return { x:W * (0.42 + p * 0.2), y:ground, pose:'point' };
+  }
+  if (i === 1) {
+    if (ph === 'queue') return { x:W * (0.12 + g.lane * 0.08), y:ground - p * 4 * U, pose:'wave' };
+    if (ph === 'shake') return { x:W * 0.36, y:ground, pose:'work' };
+    return { x:W * (0.36 + p * 0.35), y:ground, pose:'point' };
+  }
+  if (i === 2) {
+    if (ph === 'browse') return { x:W * (0.14 + g.lane * 0.12), y:ground - 4 * U, pose:'wave' };
+    if (ph === 'carry') return { x:W * (0.22 + p * 0.2), y:ground, pose:'work' };
+    return { x:W * 0.48, y:ground, pose:'point' };
+  }
+  // tech
+  if (ph === 'type') return { x:W * (0.16 + g.lane * 0.1), y:ground - 6 * U, pose:'work' };
+  if (ph === 'meet') return { x:W * 0.45, y:ground, pose:'wave' };
+  return { x:W * (0.45 + p * 0.2), y:ground, pose:'point' };
+}
+
+function updateGuests(dt) {
+  const i = state.cur;
+  if (!state.shops[i].open || state.shops[i].emp <= 0) { guests = guests.filter(g => g.shop !== i); return; }
+  // 产速越高客人越密（纯表现）
+  const rate = E.shopRate(state, i);
+  if (rate > 0 && Math.random() < Math.min(0.55, 0.08 + rate / Math.max(20, rate + 40)) * dt * 8) spawnGuest(i);
+  for (let k = guests.length - 1; k >= 0; k--) {
+    const g = guests[k]; if (g.shop !== i && g.shop !== state.cur) continue;
+    if (clock - g.t0 < g.dur) continue;
+    if (g.phase < g.phases.length - 1) { g.phase++; g.t0 = clock; g.dur = 1.4 + Math.random() * 1.1; }
+    else {
+      // 结账离场：冒金币 = 可视化自动收入（不加钱）
+      if (!g.paid && g.shop === state.cur && tab === 'shop') {
+        g.paid = true;
+        const pos = guestPos(g, clock);
+        const chunk = Math.max(0.5, E.shopRate(state, g.shop) * 0.35);
+        if (visCoinAcc >= chunk * 0.2) {
+          const show = Math.min(visCoinAcc, chunk);
+          visCoinAcc -= show;
+          addText('+' + fmt(show), pos.x, pos.y - 70 * U, { size:12 * U, color:YELLOW, life:0.7 });
+          burstCoins(pos.x, pos.y - 40 * U, 2);
+        }
+      }
+      guests.splice(k, 1);
+    }
   }
 }
+
+function noteVisualIncome(amt) {
+  // tick 已把钱加上；这里只记「还没冒出来的可视化额度」
+  if (!(amt > 0)) return;
+  visCoinAcc += amt;
+  if (visCoinAcc > E.onlineRate(state, now()) * 8) visCoinAcc = E.onlineRate(state, now()) * 8; // 防堆积
+}
+
+function startOrder(shop) {
+  const meta = E.BIG_ORDERS[shop] || E.BIG_ORDERS[0];
+  const rate = E.rushOnlineRate(state, now());
+  const payout = E.orderPayout(rate);
+  order = { shop, t0:clock, progress:0, rate, payout, meta, x:0, y:0, r:50 * U, sped:0 };
+  sfx('big'); popWord('团单！');
+  if (state.cur === shop && tab === 'shop') {
+    sayLine('e', meta.line, 2.8);
+    addText(meta.name, W / 2, H * 0.38, { size:18 * U, color:RED, life:1.4 });
+  } else toast(E.SHOPS[shop].short + '来了「' + meta.name + '」');
+}
+
+function finishOrder() {
+  if (!order) return;
+  const o = order; order = null;
+  const paid = E.settleOrder(state, o.payout);
+  persist();
+  focusT = 0.55; shake = 0.45; sfx('mile'); popWord('结账！');
+  // 金币成串飞向钱包 + 「团单收入 +X」
+  const tx = W * 0.18, ty = 8 * U;
+  for (let k = 0; k < 12; k++) {
+    const delay = k * 0.045;
+    coinsP.push({ x:o.x || W * 0.55, y:(o.y || H * 0.55) + (Math.random() - 0.5) * 10 * U,
+      vx:0, vy:0, life:1.1 + delay, fly:true, tx, ty, delay, born:clock });
+  }
+  addText('团单收入 +' + fmt(paid), W / 2, H * 0.42, { size:20 * U, color:YELLOW, life:1.8, rot:-0.05 });
+  bumpCoins(); dirty = true;
+  if (state.cur !== o.shop) toast(E.SHOPS[o.shop].short + ' 团单收入 +' + fmt(paid));
+}
+
+function updateBig() {
+  // 推进团单进度（不点也会自动完成）
+  if (order) {
+    const baseSpeed = 1 / CFG.BOOST_SEC; // 30 秒跑满
+    const clickBoost = order.sped > 0 ? 2.8 : 1; // 刚点过则加速一会儿
+    if (order.sped > 0) order.sped -= 1 / 60;
+    order.progress = Math.min(1, order.progress + baseSpeed * clickBoost * (1 / 60));
+    if (order.progress >= 1) finishOrder();
+  }
+  if (!order && clock >= nextBigAt && E.baseRate(state) > 0 && !document.hidden && !modalOpen()) {
+    // 优先当前店，否则找有员工的店
+    let shop = state.cur;
+    if (!(state.shops[shop].open && state.shops[shop].emp > 0)) {
+      shop = [0, 1, 2, 3].find(i => state.shops[i].open && state.shops[i].emp > 0);
+    }
+    if (shop != null) startOrder(shop);
+    scheduleBig();
+  }
+  // 特殊客户
+  if (special && clock - special.t0 > 14) special = null;
+  if (!special && !order && clock >= nextSpecialAt && E.baseRate(state) > 0 && !document.hidden && !modalOpen()) {
+    let shop = state.cur;
+    if (!(state.shops[shop].open && state.shops[shop].emp > 0)) {
+      shop = [0, 1, 2, 3].find(i => state.shops[i].open && state.shops[i].emp > 0);
+    }
+    if (shop != null) {
+      const meta = E.SPECIAL_GUESTS[shop];
+      special = { shop, t0:clock, meta, x:0, y:0, r:48 * U };
+      sfx('big'); popWord('特殊客人！');
+      if (state.cur === shop) addText(meta.name, W / 2, H * 0.36, { size:16 * U, color:'#ff4f9a', life:1.5 });
+      else toast(E.SHOPS[shop].short + '来了特殊客人「' + meta.name + '」');
+    }
+    scheduleSpecial();
+  }
+}
+
 function hitBig(x, y) {
-  if (!big || big.r == null) return false;
-  if (Math.hypot(x - big.x, y - big.y) > big.r * 1.15) return false;
-  big = null; state.boostEnd = now() + CFG.BOOST_SEC * 1000; state.bigCustomers++;
-  focusT = 0.5; shake = 0.4; popWord('×5！'); sfx('mile'); addText('大客户 ×5！', W / 2, H * 0.45, { size:22 * U, color:RED, life:1.4 });
-  burstCoins(W / 2, H * 0.5, 16); persist(); return true;
+  // 点大客户：加快服务（不立刻结算）
+  if (order && order.shop === state.cur && order.r != null) {
+    if (Math.hypot(x - order.x, y - order.y) <= order.r * 1.2) {
+      order.progress = Math.min(1, order.progress + 0.12);
+      order.sped = 0.9;
+      sfx('tap'); popWord('加速！');
+      addText('服务加速！', order.x, order.y - 60 * U, { size:13 * U, color:RED, life:0.7 });
+      if (order.progress >= 1) finishOrder();
+      return true;
+    }
+  }
+  // 点特殊客户：播两格漫画 + 小奖励
+  if (special && special.shop === state.cur && special.r != null) {
+    if (Math.hypot(x - special.x, y - special.y) <= special.r * 1.2) {
+      const sp = special; special = null;
+      const paid = E.settleSpecial(state, sp.shop);
+      persist();
+      showSpecialComic(sp.meta, paid);
+      return true;
+    }
+  }
+  return false;
+}
+
+function showSpecialComic(meta, paid) {
+  sfx('mile'); focusT = 0.4;
+  openModal(`<div class="mbubble">特殊客人！</div><div class="mtitle">${meta.emoji} ${meta.name}</div>
+    <div class="comic two">${meta.panels.map((p, n) => `<div class="panel4"><span class="pn">${n + 1}</span><div class="pchar"><div class="pimg"><img src="${avatarURL(p[0])}" alt=""></div><span class="pe">${p[1]}</span></div><div class="pt">${p[2]}</div></div>`).join('')}</div>
+    <div class="mreward">${coinSm}+${fmt(paid)}</div>
+    <div class="mnote">小奖励：本店 ${CFG.SPECIAL_REWARD_SEC} 秒产量（占位文案，熊大可再换）</div>
+    <button class="buy big" id="mOk">收下</button>`);
+  burstCoins(W / 2, H * 0.5, 10); bumpCoins(); dirty = true;
+  $('#mOk').addEventListener('click', closeModal, { once:true });
 }
 
 /* ---------- 超级装饰的在线效果（只在页面开着时触发，不影响离线） ---------- */
@@ -714,9 +951,10 @@ function renderShop() {
     h += `<div class="card super"><div class="ava sq">${SUPER_ICON[sp.id]}</div><div class="info"><div class="name">${sp.name}<span class="tag match">超级装饰</span></div><div class="desc">${sp.desc}</div></div></div>`; }
   h += `<div class="row-head"><div class="sec-title">店铺</div><div class="buyamt">${[1, 10, 'max'].map(a => `<button data-act="amt" data-arg="${a}" class="${buyAmt === a ? 'on' : ''}">${a === 'max' ? 'MAX' : 'x' + a}</button>`).join('')}</div></div>`;
   h += `<div class="card"><div class="ava sq">${SHOP_ICON[i]}</div><div class="info"><div class="name">${S.short}<span class="lv">Lv.${s.lv}</span></div>
-    <div class="desc">${nm ? `Lv${nm} 收益 ×${E.milestoneMult(nm)}（现 ×${E.milestoneMult(s.lv)}）` : '里程碑全拿下 ×8'}</div>
+    <div class="desc">当前基础产量 <b>${fmt(E.shopBase(i, s.lv))}</b>/秒原料${nm ? ` · 下一里程碑 Lv${nm} → 收益 ×${E.milestoneMult(nm)}` : ' · 里程碑全拿下 ×8'}</div>
     ${nm ? `<div class="mbar"><i style="width:${((s.lv - prevM) / (nm - prevM) * 100).toFixed(0)}%"></i></div>` : ''}
-    <div class="gain">${s.emp > 0 ? '+' + fmt(upGain) + '/秒' : '手点收益提升'}</div></div>
+    <div class="gain ${s.emp > 0 ? '' : 'warn'}">${s.emp > 0 ? '升级后 +' + fmt(upGain) + '/秒' : '还没员工：升级后自动收入仍是 +0/秒（先雇佣）· 手点会变强'}</div>
+    <details class="details-fold"><summary>倍率怎么算</summary>店铺原料 × 员工 ×${E.empMult(s.emp).toFixed(2)} × CEO ×${info.mult.toFixed(2)}${E.hasSuper(state, i) ? ' × 超级装饰 ×' + CFG.SUPER_RATE : ''} = 每秒 <b>${fmt(sr)}</b></details></div>
     ${btn('up', i, '升级' + (k > 1 ? ' ×' + k : ''), upCost)}</div>`;
   h += `<div class="sec-title">员工</div>`;
   if (s.emp <= 0) h += `<div class="card hl">${ava('e' + i)}<div class="info"><div class="name">${S.emp.name}<span class="lv" style="background:#999">未雇</span></div>
@@ -739,7 +977,8 @@ function renderShop() {
 }
 function ceoPost(id) { const s = state.ceos[id]; return s.at >= 0 ? E.signOf(state, s.at).name : '休息中（空着）'; }
 function renderCeo() {
-  let h = `<div class="sec-title">CEO 们（同一时间只管一家）</div>`;
+  let h = `<div class="sec-title">CEO 们（同一时间只管一家）</div>
+    <div class="note" style="margin-top:0">流程：当前任职 → 选目的店 → 双方去向与 $/秒对比 → 确认。确认后换新招牌。</div>`;
   for (const c of E.CEOS) {
     const s = state.ceos[c.id];
     if (!s.unlocked) { h += `<div class="card dim"><div class="ava">🔒</div><div class="info"><div class="name">${c.id === 'rocket' ? '？？？' : c.name}<span class="tag idle">${E.TYPES[c.type]}</span></div><div class="desc">${c.unlock}</div></div></div>`; continue; }
@@ -786,14 +1025,21 @@ function renderCol() {
   const who = wardrobeWho, eq = wearOf(who), whoName = E.CEO_BY_ID[who].name;
   const clothes = ['none', ...E.ITEMS.filter(i => i.type === 'clothes' && own.has(i.id)).map(i => i.id), ...(setDone ? ['c_gold'] : [])];
   const hats = ['none', ...E.ITEMS.filter(i => i.type === 'hat' && own.has(i.id)).map(i => i.id), ...(setDone ? ['h_gold'] : [])];
-  const nameOf = id => id === 'none' ? '默认' : id === 'c_gold' ? '金马甲' : id === 'h_gold' ? '金厨师帽' : E.ITEM_BY_ID[id].name;
-  const cell = (slot, id) => `<button class="item ${((eq[slot] || 'none') === id) ? 'sel' : ''}" data-act="equip" data-arg="${who}:${slot}:${id}">${id === 'none' ? '<span class="ii">🙂</span>' : (itemThumb(id) ? `<img src="${itemThumb(id)}" style="width:44px;height:44px" alt="">` : '')}${nameOf(id)}</button>`;
+  const nameOf = (id, slot) => id === 'none' ? (slot === 'hat' ? '默认帽子' : '默认衣服') : id === 'c_gold' ? '金马甲' : id === 'h_gold' ? '金厨师帽' : E.ITEM_BY_ID[id].name;
+  const cell = (slot, id) => `<button class="item ${((eq[slot] || 'none') === id) ? 'sel' : ''}" data-act="equip" data-arg="${who}:${slot}:${id}">${id === 'none' ? `<span class="ii">${slot === 'hat' ? '🧢' : '👕'}</span>` : (itemThumb(id) ? `<img src="${itemThumb(id)}" style="width:44px;height:44px" alt="">` : '')}${nameOf(id, slot)}</button>`;
+  const clothName = eq.clothes ? nameOf(eq.clothes) : '默认衣服';
+  const hatName = eq.hat ? nameOf(eq.hat) : '默认帽子';
   let h = `<div class="sec-title">CEO 衣橱（穿在 CEO 身上，换店跟着人走）</div>
     <div class="who-row">${ceos.map(c => `<button class="who ${c.id === who ? 'on' : ''}" data-act="wearWho" data-arg="${c.id}">${ava(c.id)}<span>${c.name}</span></button>`).join('')}</div>
-    <div class="note" style="margin-top:0">正在给 <b>${whoName}</b> 换装${state.ceos[who].at >= 0 ? '（现任：' + E.signOf(state, state.ceos[who].at).name + '）' : ''}</div>
+    <div class="wear-preview"><div class="wp-ava" style="border-radius:12px;width:100px;height:114px"><img src="${wearPreviewURL(who)}" alt="" style="transform:none;width:100%;height:100%;object-fit:contain"></div><div class="wp-info">
+      <div class="wp-name">${whoName} 穿搭预览</div>
+      <div class="wp-sub">衣服：<b>${clothName}</b><br>帽子：<b>${hatName}</b>${state.ceos[who].at >= 0 ? '<br>现任：' + E.signOf(state, state.ceos[who].at).name : ''}</div>
+    </div></div>
+    <div class="slot-title">衣服</div>
     <div class="item-grid">${clothes.map(id => cell('clothes', id)).join('')}</div>
+    <div class="slot-title">帽子</div>
     <div class="item-grid">${hats.map(id => cell('hat', id)).join('')}</div>`;
-  if (clothes.length + hats.length <= 2) h += `<div class="note">从盲盒里抽到衣服、帽子后，在这里给 CEO 换上。</div>`;
+  if (clothes.length + hats.length <= 2) h += `<div class="note">从盲盒里抽到衣服、帽子后，在这里给 CEO 换上。两个「默认」分别是衣服和帽子，点选后能看出区别。</div>`;
   const supers = E.SUPER_ITEMS.filter(it => own.has(it.id));
   if (supers.length) { h += `<div class="sec-title">超级装饰（常驻生效）</div>`;
     h += supers.map(it => `<div class="card super"><div class="ava sq">${SUPER_ICON[it.id]}</div><div class="info"><div class="name">${it.name}<span class="tag match">${E.SHOPS[it.shop].short}</span></div><div class="desc">${it.desc}</div></div></div>`).join(''); }
@@ -815,8 +1061,36 @@ function renderTab() {
   const html = tab === 'shop' ? renderShop() : tab === 'ceo' ? renderCeo() : tab === 'gacha' ? renderGacha() : renderCol();
   tabBody.innerHTML = html; dirty = false; refreshDynamic(true);
 }
-function setTab(t) { tab = t; document.querySelectorAll('#bottomNav button').forEach(b => b.classList.toggle('on', b.dataset.tab === t)); $('#panel').scrollTop = 0; renderTab(); }
-function switchShop(i) { if (i < 0 || i > 3) return; state.cur = i; big = big && state.shops[i].open ? big : null; dirty = true; renderTabs(); }
+function setTab(t) {
+  tab = t;
+  document.querySelectorAll('#bottomNav button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+  document.getElementById('app').dataset.tab = t;
+  $('#panel').scrollTop = 0;
+  updateCompactHead();
+  renderTab();
+  resize();
+}
+function updateCompactHead() {
+  const el = $('#compactHead');
+  if (tab === 'shop') { el.classList.add('hidden'); el.innerHTML = ''; return; }
+  el.classList.remove('hidden');
+  if (tab === 'ceo') {
+    let cards = E.CEOS.map(c => {
+      const s = state.ceos[c.id];
+      if (!s.unlocked) return `<div class="ch-card"><div class="ava">🔒</div><b>？？？</b><small>${c.unlock}</small></div>`;
+      const post = s.at >= 0 ? E.signOf(state, s.at).name : '休息中';
+      return `<div class="ch-card">${ava(c.id)}<b>${c.name}</b><small>${post}</small></div>`;
+    }).join('');
+    el.innerHTML = `<div class="ch-title">谁在管哪家店</div><div class="ch-row">${cards}</div>
+      <div class="ch-note">调任：点卡片上的「调任」→ 选目的店 → 看双方去向和全街 $/秒对比 → 确认。目标店有人会变成「交换任职」。</div>`;
+  } else if (tab === 'gacha') {
+    const owned = state.gacha.owned.length, total = E.ITEMS.length;
+    el.innerHTML = `<div class="ch-title">77 收藏盲盒</div><div class="ch-note">已收集 <b>${owned}/${total}</b>（普通 ${E.REGULAR_ITEMS.length} + 超级 ${E.SUPER_ITEMS.length}）。店景在「经营」页；这里专心开盒。</div>`;
+  } else {
+    el.innerHTML = `<div class="ch-title">收藏与穿搭</div><div class="ch-note">衣服 / 帽子分区给 CEO 换装；装饰摆店里；故事卡集齐解锁金牌摊主。</div>`;
+  }
+}
+function switchShop(i) { if (i < 0 || i > 3) return; state.cur = i; dirty = true; renderTabs(); }
 function renderTabs() {
   $('#shopTabs').innerHTML = E.SHOPS.map((S, i) => { const s = state.shops[i];
     const sub = s.open ? (s.emp > 0 ? '+' + fmt(E.shopRate(state, i)) + '/秒' : '未雇员工') : (i === 0 || state.shops[i - 1].open ? fmt(S.open) : '🔒');
@@ -826,10 +1100,10 @@ let lastDyn = 0;
 function refreshDynamic(force) {
   const t = now();
   // 顶部
-  const r = E.onlineRate(state, t), boost = E.boostActive(state, t);
+  const r = E.onlineRate(state, t), busy = !!(order && order.progress < 1);
   const ct = fmt(state.coins); if (coinsEl.textContent !== ct) coinsEl.textContent = ct;
-  const cps = '每秒 +' + fmt(r) + (boost ? '（×5）' : ''); if (cpsEl.textContent !== cps) cpsEl.textContent = cps;
-  $('#boostTag').classList.toggle('hidden', !boost); if (boost) $('#boostSec').textContent = Math.ceil((state.boostEnd - t) / 1000);
+  const cps = '每秒 +' + fmt(r) + (busy ? '（团单服务中）' : ''); if (cpsEl.textContent !== cps) cpsEl.textContent = cps;
+  $('#boostTag').classList.toggle('hidden', !busy); if (busy) $('#boostSec').textContent = Math.round(order.progress * 100);
   const dc = $('#dailyChip'), can = E.canDouble(state, t);
   const dtxt = can ? '今日双倍 ✓' : '双倍 ' + fmtClockMYT(E.nextResetTs(t)) + ' 重置'; if (dc.textContent !== dtxt) dc.textContent = dtxt;
   dc.className = 'chip ' + (can ? 'on' : 'used');
@@ -871,7 +1145,7 @@ function showOffline() {
     <div class="mtitle">大家帮你干了 <b id="offDur">${fmtDur(p.sec)}</b></div>
     ${capped ? `<div class="mnote">（离开了 ${fmtDur(p.gap)}，离线最多算 ${capH} 小时）</div>` : ''}
     <div class="mreward">${coinSm}+<span id="offGain">${fmt(p.amount)}</span></div>
-    <div class="mnote" id="offNote">离线 = 在线每秒收益的 50%，最多 ${capH} 小时${capH > 8 ? '（麻辣服务器 +2 小时）' : ''}；大客户 ×5 只算在线。按你离开时的店铺、员工和 CEO 安排结算。</div>
+    <div class="mnote" id="offNote">离线 = 在线每秒收益的 50%，最多 ${capH} 小时${capH > 8 ? '（麻辣服务器 +2 小时）' : ''}；团单收入只算在线（离开时进行中的团单会取消）。按你离开时的店铺、员工和 CEO 安排结算。</div>
     <div class="mbtns">${can ? `<button class="buy big red" id="claimDouble">今日双倍领取 +${fmt(p.amount * 2)}</button><button class="buy ghost" id="claim">直接领取（双倍留到下次）</button>`
       : `<button class="buy big" id="claim">收下！</button><div class="mnote" style="margin:0">今日双倍已用，${fmtClockMYT(E.nextResetTs(now()))}（马来西亚时间）重置</div>`}</div>`);
   const go = dbl => {
@@ -1043,7 +1317,7 @@ document.addEventListener('gesturestart', e => e.preventDefault());
 let lastTouchEnd = 0;
 document.addEventListener('touchend', e => { const t = Date.now(); if (t - lastTouchEnd < 300 && !e.target.closest('button')) e.preventDefault(); lastTouchEnd = t; }, { passive:false });
 
-function onHide() { if (frozen) return; tick(); state.lastSeen = now(); persist(); audioPause(); }
+function onHide() { if (frozen) return; tick(); if (order) order = null; /* 离线不结算进行中的团单，避免和离线收益纠缠 */ special = null; state.lastSeen = now(); persist(); audioPause(); }
 function onShow() {
   if (frozen) return;
   if (!lockMine()) { freeze(); return; }
@@ -1062,7 +1336,7 @@ function frame(ts) {
   requestAnimationFrame(frame);
   const dt = Math.min(0.1, (ts - lastFrame) / 1000); lastFrame = ts; clock = ts / 1000;
   if (frozen) return;
-  tick(); updateBig(); updateSupers();
+  tick(); updateBig(); updateGuests(dt); updateSupers();
   if (focusT > 0) focusT -= dt; if (shake > 0) shake = Math.max(0, shake - dt * 1.5);
   if (clock > nextBubbleAt) { nextBubbleAt = clock + 9 + Math.random() * 7; const i = state.cur;
     if (state.shops[i].open) { const cid = E.ceoAt(state, i); if (Math.random() < 0.5 && cid) sayLine('c', Math.random() < 0.5 ? E.CEO_BY_ID[cid].line : E.SIGNS[cid][i][1]); else if (state.shops[i].emp > 0) sayLine('e', E.SHOPS[i].emp.line); } }
@@ -1079,7 +1353,7 @@ function boot() {
   const first = !state.taps && !state.totalEarned && state.shops[0].emp === 0;
   const p = E.settleOffline(state, now(), rid);
   persist();
-  scheduleBig(); renderTabs(); setTab('shop');
+  scheduleBig(); scheduleSpecial(); renderTabs(); setTab('shop');
   if (migratedFrom != null) toast('存档已升级到 v' + CFG.SAVE_VERSION + '（新盲盒 + CEO 穿搭，收藏都保留）', 2600);
   if (p && p.rolledBack) toast('检测到手机时间被往回调，这段时间不发离线收益');
   if (first) queueModal(showIntro);
@@ -1092,6 +1366,9 @@ boot();
 
 // 测试/调试钩子（不影响玩家）
 window.__tzz = { E, showComic, get state() { return state; }, set state(v) { state = v; }, persist, onReturn, tapShop, act, setTab, switchShop, renderTab,
-  forceBig() { nextBigAt = 0; big = null; }, forceSupers() { for (const k in superNext) superNext[k] = 0; updateSupers(); renderTab(); }, get big() { return big; }, hitBig, modalOpen, closeModal, get frozen() { return frozen; },
+  forceBig() { nextBigAt = 0; if (order) order = null; }, forceSpecial() { nextSpecialAt = 0; special = null; },
+  forceSupers() { for (const k in superNext) superNext[k] = 0; updateSupers(); renderTab(); },
+  get big() { return order; }, get order() { return order; }, get special() { return special; }, get guests() { return guests; },
+  hitBig, modalOpen, closeModal, get frozen() { return frozen; },
   audioState() { return AU.ctx ? AU.ctx.state : 'none'; }, showPreview, openAssign };
 })();
