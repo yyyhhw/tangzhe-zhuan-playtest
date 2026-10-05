@@ -21,3 +21,5 @@ iPhone 竖屏 Safari 漫画风挂机小游戏。**试玩链接，不是正式上
 
 ## 存档
 预览专用 localStorage 键：`tangzhe-preview-save` / `-bak` / `tangzhe-preview-tab-lock`，与线上 v11 的 `tangzhe-save` 互不影响。
+
+11v：接入 packs 01–10 的 43 件家具（跳过已接入的云朵纱帐床 `furn_s77_cloud_canopy`），商城共 60 件。名称 / 价格 / 豪华度 / 分类 / 占地按 200 件公共资产索引提案（旧版 382094 字节）；图在 `art/furn_<短名>.webp`，宽 = 占地×200（1 格 240），透明边裁掉；地毯透明边补成占地比例、铺满不拉伸；墙饰按 wall_span 只挂墙；其余地上件按图高 / 宽登记 `FURN_UP` 贴底。占地实测改动只有 **花瓣转角沙发 `furn_s77_curved_sectional` 3×3 → 3×2**（宽扁正面图，3×3 会让最上一排空着挡位）。柜架新件都没加 sub（不是书架 / 衣柜），只在「全部柜架」里。`ART_V` 7→8。

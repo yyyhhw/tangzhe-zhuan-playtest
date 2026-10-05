@@ -357,7 +357,7 @@ function avatarURL(id, key) {
   return (avaCache[k] = o.toDataURL());
 }
 // 熊大画的 CEO 头像（图没加载出来就退回画布小人头像）
-const ART_V = '7', PORTRAIT = { c77:1, pearl:1, otaku:1, rocket:1 };
+const ART_V = '8', PORTRAIT = { c77:1, pearl:1, otaku:1, rocket:1 };
 const faceURL = id => PORTRAIT[id] ? `art/face_${id}.webp?v=${ART_V}` : avatarURL(id);
 const bustURL = id => PORTRAIT[id] ? `art/ceo_${id}.webp?v=${ART_V}` : avatarURL(id);
 const faceImg = id => `<img src="${faceURL(id)}"${PORTRAIT[id] ? ` class="art" data-fb="${id}"` : ''} alt="">`;
@@ -1463,6 +1463,9 @@ const FURN_ART = { bed:1, bookshelf:1, wardrobe:1, table:1, fridge:1, sofa:1, ru
 const furnName = fid => fid.replace(/^furn_/, '');
 // 高家具：占地只有底下那排格子，图按「高 / 宽」比例往上伸（盖住后墙），底脚对齐占地底边；值 = 图高 / 图宽（400×600 → 1.5）
 const FURN_UP = { bookshelf: 1.5, wardrobe: 1.5, table: 202 / 400, sofa: 225 / 600, fridge: 512 / 240, plant: 396 / 240, lamp: 468 / 240, tv: 287 / 400, catbed: 166 / 240, rocket_rocket_model: 594 / 240, rocket_meteor_stand: 274 / 240, s77_cloud_canopy: 701 / 600, rocket_capsule_bunk: 186 / 400 };  // +火箭/陨石 1×1 往上伸；云朵床略高；圆顶 2×2 铺满不登记
+// 11v：packs 01–10 的 43 件；地毯（透明边补成占地比例、铺满）和墙饰（贴墙上沿）不登记往上伸，其余地上家具都按图高/宽贴底
+Object.assign(FURN_ART, { s77_quilt_daybed:1, s77_drawer_bed:1, s77_book_nook_bed:1, s77_peg_cubby:1, s77_ladder_shelf:1, s77_basket_cabinet:1, s77_round_corner_chest:1, s77_sewing_cabinet:1, s77_pantry_hutch:1, s77_attic_trunk:1, s77_reading_stool:1, s77_rocking_chair:1, s77_heart_bench:1, s77_folding_tray:1, s77_quilt_ottoman:1, s77_window_bench:1, s77_sewing_desk:1, s77_curved_sectional:1, s77_lantern_stand:1, s77_mushroom_lamp:1, s77_petal_uplight:1, s77_quilt_shade_lamp:1, s77_hearth_light:1, s77_box_fan:1, s77_toaster_cart:1, s77_record_console:1, s77_sewing_machine_stand:1, s77_stove_oven:1, s77_laundry_pair:1, s77_braided_runner:1, s77_patchwork_flower_rug:1, s77_quilt_island_rug:1, s77_embroidery_hoops:1, s77_wood_cuckoo:1, s77_quilt_wall:1, s77_pressed_flower_frame:1, s77_family_silhouette:1, s77_watering_stand:1, s77_knitting_basket:1, s77_olive_planter:1, s77_mini_greenhouse:1, pearl_tea_daybed:1, pearl_pearl_bed:1 });
+Object.assign(FURN_UP, { s77_quilt_daybed: 157 / 600, s77_drawer_bed: 359 / 400, s77_book_nook_bed: 579 / 600, s77_peg_cubby: 431 / 240, s77_ladder_shelf: 539 / 400, s77_basket_cabinet: 330 / 400, s77_round_corner_chest: 426 / 400, s77_sewing_cabinet: 360 / 400, s77_pantry_hutch: 693 / 400, s77_attic_trunk: 321 / 400, s77_reading_stool: 234 / 240, s77_rocking_chair: 249 / 240, s77_heart_bench: 252 / 600, s77_folding_tray: 134 / 240, s77_quilt_ottoman: 224 / 240, s77_window_bench: 140 / 600, s77_sewing_desk: 269 / 400, s77_curved_sectional: 335 / 600, s77_lantern_stand: 255 / 240, s77_mushroom_lamp: 224 / 240, s77_petal_uplight: 647 / 240, s77_quilt_shade_lamp: 301 / 240, s77_hearth_light: 190 / 400, s77_box_fan: 263 / 240, s77_toaster_cart: 235 / 240, s77_record_console: 293 / 400, s77_sewing_machine_stand: 358 / 400, s77_stove_oven: 534 / 400, s77_laundry_pair: 440 / 240, s77_watering_stand: 369 / 240, s77_knitting_basket: 212 / 240, s77_olive_planter: 458 / 240, s77_mini_greenhouse: 475 / 400, pearl_tea_daybed: 156 / 600, pearl_pearl_bed: 382 / 400 });
 const furnTall = fid => !!(FURN_ART[furnName(fid)] && FURN_UP[furnName(fid)]);
 const HOME_ICON = ['🏠', '🏢', '🏰'];
 let homeWho = 'c77', homeSub = 'room', homeMode = 'live', homeSel = null, homeDrag = null;
