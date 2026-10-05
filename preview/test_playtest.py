@@ -336,7 +336,7 @@ with sync_playwright() as p:
     hc = b.new_context(**dev); hp = hc.new_page(); hook(hp, 'home')
     hp.goto(URL); hp.evaluate("localStorage.clear()"); hp.reload(); hp.wait_for_timeout(900); close_modals(hp)
     vv = S(hp, "fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()).then(j=>[j.v, document.querySelector('script[src^=\"app.js\"]').getAttribute('src'), document.querySelector('script[src^=\"economy.js\"]').getAttribute('src'), document.querySelector('link[href^=\"style.css\"]').getAttribute('href')])")
-    check(vv == ['11p', 'app.js?v=11p', 'economy.js?v=11p', 'style.css?v=11p'], f'缓存号统一 v11p：{vv}')
+    check(vv == ['11', 'app.js?v=11', 'economy.js?v=11', 'style.css?v=11'], f'缓存号统一 v11：{vv}')
     hp.evaluate("__tzz.state.coins = 1e6; __tzz.persist()")
     check(S(hp, "__tzz.E.onlineRate(__tzz.state, Date.now())") == 0, '（测试前提）没雇员工 → 每秒 0，金币只会被买东西改变')
     hp.locator('#bottomNav [data-tab="home"]').click(); hp.wait_for_timeout(450)
@@ -478,6 +478,8 @@ with sync_playwright() as p:
     pt = item('furn_painting')
     check(pt is not None and pt.get('surf') == 'wall' and (pt['x'], pt['y']) == (0, 0), f'挂画挂上左上空墙 (0,0)：{pt}')
     check(hp.locator('#wallGrid .furn[data-fid="furn_painting"]').count() == 1 and hp.locator('#roomFloor .furn[data-fid="furn_painting"]').count() == 0, '挂画 DOM 在墙面容器里，不在地板')
+    wg = S(hp, "(()=>{const e=document.querySelector('#wallGrid .furn[data-fid=furn_painting]'), fi=e&&e.querySelector('.fi'), i=e&&e.querySelector('img'), w=document.getElementById('wallGrid').getBoundingClientRect(); if(!e||!fi||!i) return null; const a=e.getBoundingClientRect(), b=fi.getBoundingClientRect(); return {dTop:Math.abs(a.top-w.top), fiTop:Math.abs(b.top-a.top), fiH:Math.abs(b.height-a.height), op:getComputedStyle(i).objectPosition}})()")
+    check(wg and wg['dTop'] < 1.5 and wg['fiTop'] < 1.5 and wg['fiH'] < 1.5 and wg['op'].replace('center', '50%').split()[-1] in ('0%', 'top', '0px'), f'挂画贴墙壁最上面挂：画框顶 = 墙顶（天花板），图顶对齐不居中（{wg}）')
     nb, wb = hp.locator('#roomWall .rw-name').bounding_box(), fbox(True)
     check(nb['x'] >= wb['x'] + wb['width'] * 2 / 6, f"房名牌挪到右上（禁区上），不压左边空墙：牌 x={round(nb['x'])}，空墙右界 {round(wb['x'] + wb['width'] * 2 / 6)}")
     # 墙面拖动换位

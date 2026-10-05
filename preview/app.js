@@ -1474,7 +1474,10 @@ const undoStack = id => homeUndo[id] || (homeUndo[id] = []);
 function pushUndo(u) { const s = undoStack(u.ceo); s.push(u); if (s.length > 60) s.shift(); }
 function furnInner(fid, rot, inRoom) {
   const f = E.FURN_BY_ID[fid], sz = E.furnSize(fid, rot), odd = rot & 1, n = furnName(fid);
-  const st = inRoom && furnTall(fid) ? `left:0;top:auto;bottom:0;width:100%;height:${sz.w * FURN_UP[n] / sz.h * 100}%;transform:none` : `width:${odd ? sz.h / sz.w * 100 : 100}%;height:${odd ? sz.w / sz.h * 100 : 100}%;transform:translate(-50%,-50%) rotate(${rot * 90}deg)`;
+  // 挂画（wall:true）在房间里：顶对齐、贴格子上沿挂（靠天花板），不在格子中间飘；转 90° 的才按中心转
+  const st = inRoom && furnTall(fid) ? `left:0;top:auto;bottom:0;width:100%;height:${sz.w * FURN_UP[n] / sz.h * 100}%;transform:none`
+    : inRoom && f.wall && !odd ? `left:50%;top:0;width:100%;height:100%;transform:translateX(-50%)`
+    : `width:${odd ? sz.h / sz.w * 100 : 100}%;height:${odd ? sz.w / sz.h * 100 : 100}%;transform:translate(-50%,-50%) rotate(${rot * 90}deg)`;
   return `<div class="fi" style="${st}"><span class="fe">${f.emoji}</span>${FURN_ART[n] ? `<img src="art/furn_${n}.webp?v=${ART_V}" data-homefb="1" alt="">` : ''}</div>`;
 }
 document.addEventListener('error', e => { const el = e.target; if (el && el.tagName === 'IMG' && el.dataset && el.dataset.homefb) { const fu = el.closest('.furn'); if (fu) fu.classList.remove('art'); el.remove(); } }, true);

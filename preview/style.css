@@ -362,6 +362,7 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 #wallHl{z-index:5}
 .drag-ghost.tall{background:transparent;border-width:0;box-shadow:none}
 .furn.tall .fi img{object-position:center bottom}
+.furn.wallf .fi img{object-position:center top}  /* 挂画图贴格子上沿挂（墙壁最上面），图比格子扁也不往中间飘 */
 .furn.rug.art .fi img{object-fit:fill}  /* 地毯平铺在地上：图拉满占地格 */
 .furn.rug.art{opacity:1}
 .furn .fn{position:absolute;left:2px;bottom:1px;font-size:9px;font-weight:900;background:rgba(255,255,255,.85);border-radius:3px;padding:0 3px;pointer-events:none;white-space:nowrap}
