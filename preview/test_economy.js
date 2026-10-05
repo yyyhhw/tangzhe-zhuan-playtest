@@ -563,5 +563,67 @@ ok(E.CROSS['rocket@0'].effect === 'bigFreq' && E.CROSS['c77@3'].effect === 'offl
   ok(p1 && p1.y === 1 && p1.x === 1 && loaded.coins === coins0, '存读档后抽屉床位置与金币保持');
 }
 
+
+// 11w 修：异常档恢复——迁移件回退找空位时必须先给「后面还没处理的家具」预留占位；记录顺序互换结果一致；最后全局无重叠
+{
+  const noOverlap = (st, cid) => { const h = st.homes[cid]; return h.placed.every(p => E.canPlace(st, cid, p.fid, p.x, p.y, p.rot, p.uid, p.surf).ok); };
+  const mk = order => {
+    const s = E.newState(T0); s.coins = 99999; s.totalEarned = 99999;
+    const bed = { uid:'u1', fid:'furn_s77_drawer_bed', x:4, y:2, rot:0, surf:'floor' };   // 小屋 6×4：旧 2×3 底=5 已越底（非法旧档）→ 锚定 y=3 仍越界
+    const plant = { uid:'u2', fid:'furn_plant', x:0, y:0, rot:0, surf:'floor' };
+    s.homes.c77.placed = order === 'bedFirst' ? [bed, plant] : [plant, bed];
+    s.homes.c77.next = 3; return s;
+  };
+  const res = {};
+  ['bedFirst', 'plantFirst'].forEach(order => {
+    const s = mk(order); const ow = id => E.furnStats(s, id).owned;
+    const b0 = ow('furn_s77_drawer_bed'), p0 = ow('furn_plant'), c0 = s.coins;
+    const m = E.migrateFootprint11w(s);
+    const h = s.homes.c77, bed = h.placed.find(p => p.uid === 'u1'), plant = h.placed.find(p => p.uid === 'u2');
+    ok(plant && plant.x === 0 && plant.y === 0, order + '：植物原位保留 (0,0)');
+    ok(bed && !(bed.x === 0 && bed.y === 0), order + '：抽屉床回退没抢植物的 (0,0) → ' + (bed ? bed.x + ',' + bed.y : '退仓'));
+    ok(noOverlap(s, 'c77'), order + '：迁移后全局无重叠/越界');
+    ok(ow('furn_s77_drawer_bed') === b0 && ow('furn_plant') === p0 && s.coins === c0, order + '：件数与金币不变');
+    // 下一次读档：植物不能被退仓
+    const loaded = E.migrate(JSON.parse(JSON.stringify(s)), T0).st;
+    const lp = loaded.homes.c77.placed;
+    ok(lp.some(p => p.uid === 'u2' && p.x === 0 && p.y === 0) && lp.some(p => p.uid === 'u1'), order + '：读档后植物和床都还在房里');
+    ok(E.migrateFootprint11w(loaded).skipped, order + '：读档后迁移不再跑');
+    res[order] = bed ? bed.x + ',' + bed.y : 'stored';
+  });
+  ok(res.bedFirst === res.plantFirst, '记录顺序互换结果一致 ' + JSON.stringify(res));
+
+  // 迁移件回退不抢「后面才处理的迁移件」的锚定位：坏床排前，正常摇椅排后锚到 (0,1)
+  const s2 = E.newState(T0);
+  s2.homes.c77.placed = [
+    { uid:'u1', fid:'furn_s77_drawer_bed', x:4, y:2, rot:0, surf:'floor' },
+    { uid:'u2', fid:'furn_s77_rocking_chair', x:0, y:0, rot:0, surf:'floor' },   // 旧 1×2 底=2 → 新 (0,1)
+  ];
+  s2.homes.c77.next = 3;
+  E.migrateFootprint11w(s2);
+  const rc = s2.homes.c77.placed.find(p => p.uid === 'u2');
+  ok(rc && rc.x === 0 && rc.y === 1, '后排迁移件仍拿到自己的底边锚定位 (0,1)');
+  ok(noOverlap(s2, 'c77') && s2.homes.c77.placed.length === 2, '混合迁移件全局无重叠、两件都在房里');
+
+  // 没空位 → 整件退仓，不丢不复制
+  const s3 = E.newState(T0);
+  const fill = []; let n = 1;
+  for (let y = 0; y < 4; y++) for (let x = 0; x < 6; x++) if (!(x >= 4 && y >= 2)) fill.push({ uid:'f' + (n++), fid:'furn_plant', x, y, rot:0, surf:'floor' });
+  s3.homes.c77.placed = [{ uid:'u0', fid:'furn_s77_drawer_bed', x:4, y:1, rot:0, surf:'floor' }].concat(fill); // 旧 2×3 底=4 → 新 (4,2) 合法
+  s3.homes.c77.next = n;
+  const m3 = E.migrateFootprint11w(s3);
+  const bd = s3.homes.c77.placed.find(p => p.uid === 'u0');
+  ok(bd && bd.x === 4 && bd.y === 2 && m3.stored === 0, '满屋时合法锚定位仍可用 (4,1)→(4,2)');
+  const s4 = E.newState(T0);
+  const fill4 = []; let n4 = 1;
+  for (let y = 0; y < 4; y++) for (let x = 0; x < 6; x++) if (!(x === 5 && y === 3)) fill4.push({ uid:'g' + (n4++), fid:'furn_plant', x, y, rot:0, surf:'floor' });
+  s4.homes.c77.placed = [{ uid:'u0', fid:'furn_s77_drawer_bed', x:4, y:2, rot:0, surf:'floor' }].concat(fill4);   // 只剩 1 格空，2×2 床无处可放
+  s4.homes.c77.next = n4;
+  const bdOwned = E.furnStats(s4, 'furn_s77_drawer_bed').owned;
+  const m4 = E.migrateFootprint11w(s4);
+  ok(m4.stored === 1 && !s4.homes.c77.placed.some(p => p.uid === 'u0') && E.furnStats(s4, 'furn_s77_drawer_bed').owned === bdOwned, '越底且无空位 → 床整件退仓，件数不变');
+  ok(s4.homes.c77.placed.filter(p => p.fid === 'furn_plant').length === fill4.length && noOverlap(s4, 'c77'), '退仓时植物一件不少且无重叠');
+}
+
 console.log(`economy tests: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

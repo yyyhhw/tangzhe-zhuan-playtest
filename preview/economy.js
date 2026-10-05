@@ -758,30 +758,56 @@
     furn_s77_quilt_shade_lamp: { ow:1, oh:2 },
   };
   function oldSize11w(ow, oh, rot) { return (rot & 1) ? { w:oh, h:ow } : { w:ow, h:oh }; }
+  // 11w 修：先把「全部未迁移家具」占位预留，再分两轮安排迁移件——①原底边锚定位（只对预留件 + 已定迁移件校验）；
+  // ②锚定失败的才找空位（此时所有锚定件已占好位，不会抢到后面家具的格子）；③最后全局校验，迁移件若仍与任何家具重叠就整件退仓。
+  // 与记录顺序无关：迁移件排在前面还是后面，结果一致。
   function migrateFootprint11w(st) {
     if (st.fpMig11w) return { shifted:0, stored:0, skipped:true };
     let shifted = 0, stored = 0;
     CEOS.forEach(c => {
-      const h = homeOf(st, c.id), keep = [];
-      (h.placed || []).forEach(p => {
+      const h = homeOf(st, c.id), all = (h.placed || []).slice();
+      const isMig = p => !!(FP_OLD_11W[p.fid] && FURN_BY_ID[p.fid]);
+      const fixed = all.filter(p => !isMig(p));
+      const placedMig = new Map();   // uid -> 新记录
+      const pend = [];
+      const tryAt = (fid, x, y, rot, surf, others) => {
+        const saved = h.placed; h.placed = others;
+        const ok = Number.isInteger(x) && Number.isInteger(y) && canPlace(st, c.id, fid, x, y, rot, null, surf).ok;
+        h.placed = saved; return ok;
+      };
+      const freeAt = (fid, rot, surf, others) => { const saved = h.placed; h.placed = others; const sp = findFree(st, c.id, fid, rot, surf); h.placed = saved; return sp; };
+      const occupied = () => fixed.concat(Array.from(placedMig.values()));
+      // ① 锚定
+      all.filter(isMig).forEach(p => {
         const old = FP_OLD_11W[p.fid];
-        if (!old || !FURN_BY_ID[p.fid]) { keep.push(p); return; }
         const rot = Number.isInteger(p.rot) ? p.rot & 3 : 0;
-        const oSz = oldSize11w(old.ow, old.oh, rot);
-        const nSz = furnSize(p.fid, rot);
-        const bottom = p.y + oSz.h;
-        let nx = p.x, ny = bottom - nSz.h;
+        const oSz = oldSize11w(old.ow, old.oh, rot), nSz = furnSize(p.fid, rot);
+        const nx = p.x, ny = p.y + oSz.h - nSz.h;
         const surf = p.surf === 'wall' ? 'wall' : 'floor';
-        const saved = h.placed; h.placed = keep.slice();
-        let spot = (Number.isInteger(nx) && Number.isInteger(ny) && canPlace(st, c.id, p.fid, nx, ny, rot, null, surf).ok) ? { x:nx, y:ny } : null;
-        if (!spot) spot = findFree(st, c.id, p.fid, rot, surf);
-        h.placed = saved;
-        if (spot) {
-          if (spot.x !== p.x || spot.y !== p.y) shifted++;
-          keep.push({ uid:p.uid, fid:p.fid, x:spot.x, y:spot.y, rot, surf });
-        } else { addInv(furnInvOf(st), p.fid, 1); stored++; }
+        if (tryAt(p.fid, nx, ny, rot, surf, occupied())) placedMig.set(p.uid, { uid:p.uid, fid:p.fid, x:nx, y:ny, rot, surf });
+        else pend.push({ p, rot, surf });
       });
-      h.placed = keep;
+      // ② 锚定失败的回退找空位
+      pend.forEach(({ p, rot, surf }) => {
+        const sp = freeAt(p.fid, rot, surf, occupied());
+        if (sp) placedMig.set(p.uid, { uid:p.uid, fid:p.fid, x:sp.x, y:sp.y, rot, surf });
+      });
+      // 按原记录顺序重建；没位的退仓
+      const out = [];
+      all.forEach(p => {
+        if (!isMig(p)) { out.push(p); return; }
+        const q = placedMig.get(p.uid);
+        if (q) out.push(q); else { addInv(furnInvOf(st), p.fid, 1); stored++; }
+      });
+      // ③ 全局校验：迁移件与任何其他家具重叠 → 退仓（兜底，正常不会触发）
+      const drop = new Set();
+      out.forEach(q => {
+        if (!placedMig.has(q.uid)) return;
+        const others = out.filter(o => o !== q && !drop.has(o));
+        if (tryAt(q.fid, q.x, q.y, q.rot, q.surf, others)) { const src = all.find(p => p.uid === q.uid); if (src && (src.x !== q.x || src.y !== q.y)) shifted++; }
+        else { drop.add(q); addInv(furnInvOf(st), q.fid, 1); stored++; }
+      });
+      h.placed = out.filter(q => !drop.has(q));
     });
     st.fpMig11w = 1;
     return { shifted, stored, skipped:false };
