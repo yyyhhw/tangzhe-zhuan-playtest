@@ -206,7 +206,7 @@ ok(E.CROSS['rocket@0'].effect === 'bigFreq' && E.CROSS['c77@3'].effect === 'offl
 // ===== CEO 生活篇：家宅 / 商城 / 摆放（方案 A：公共仓库） =====
 {
   const F = id => E.FURN_BY_ID[id];
-  ok(E.FURNITURE.length === 16 && ['bed','sofa','table','lamp','rug','plant','bookshelf','tv','fridge','wardrobe','painting','catbed','rocket_rocket_model','rocket_meteor_stand','rocket_biosphere_dome','s77_cloud_canopy'].every(n => F('furn_' + n)), '商城 16 件家具，id = furn_<名>');
+  ok(E.FURNITURE.length === 17 && ['bed','sofa','table','lamp','rug','plant','bookshelf','tv','fridge','wardrobe','painting','catbed','rocket_rocket_model','rocket_meteor_stand','rocket_biosphere_dome','s77_cloud_canopy','rocket_capsule_bunk'].every(n => F('furn_' + n)), '商城 17 件家具，id = furn_<名>');
   ok(E.FURNITURE.every(f => f.w >= 1 && f.h >= 1 && f.price > 0 && f.lux > 0), '每件家具都有占地 / 价格 / 豪华度');
   ok(E.HOME_TIERS.map(t => t.name + t.cols + 'x' + t.rows).join() === '小屋6x4,公寓8x5,豪宅10x6', '三档房子：小屋 6×4 → 公寓 8×5 → 豪宅 10×6');
   ok(E.HOME_TIERS[1].cost > E.SHOPS[2].open && E.HOME_TIERS[2].cost > E.SHOPS[3].open, '升级价跟着经营节奏（公寓 > 开书店价，豪宅 > 开科技公司价）');
@@ -407,6 +407,39 @@ ok(E.CROSS['rocket@0'].effect === 'bigFreq' && E.CROSS['c77@3'].effect === 'offl
   ok(E.furnLiveAct('furn_bed') === 'rest' && E.furnLiveAct('furn_s77_cloud_canopy') === 'rest', '旧床 furn_bed、新云朵床都休息');
   ok(E.furnLiveAct('furn_bookshelf') === 'read' && E.furnLiveAct('furn_wardrobe') === 'dress', '书架看书、衣柜换衣不变');
   ok(['furn_sofa', 'furn_rocket_biosphere_dome', 'furn_rocket_rocket_model', 'nope'].every(id => E.furnLiveAct(id) === 'walk'), '非床家具 / 未知 ID 只走过去');
+}
+
+// 舱式单层床：保留索引 ID / 价格 / 豪华度；占地按正面扁图实测改 2×1（索引提案 2×3 会让上面 2 排空着挡位）
+{
+  const id = 'furn_rocket_capsule_bunk', f = E.FURN_BY_ID[id];
+  ok(f && f.name === '舱式单层床' && f.price === 22000 && f.lux === 7 && f.cat === 'bed', '舱式床：原 ID、价格 22000、豪华度 7、床类');
+  ok(f.w === 2 && f.h === 1 && E.furnSize(id, 0).w === 2 && E.furnSize(id, 0).h === 1 && E.furnSize(id, 1).w === 1 && E.furnSize(id, 1).h === 2, '舱式床占地 2×1，转 90° 变 1×2');
+  ok(E.furnLiveAct(id) === 'rest', '舱式床点了休息');
+  const s = E.newState(T0); s.coins = 1e9; E.buyFurniture(s, id); E.buyFurniture(s, id); E.buyFurniture(s, 'furn_table'); E.buyFurniture(s, 'furn_plant');
+  // 边界（小屋 6×4）
+  ok(E.canPlace(s, 'c77', id, 4, 3, 0).ok && E.canPlace(s, 'c77', id, 0, 0, 0).ok, '边界：右下角 (4,3)、左上角 (0,0) 都能放');
+  ok(!E.canPlace(s, 'c77', id, 5, 0, 0).ok && !E.canPlace(s, 'c77', id, 0, 4, 0).ok && !E.canPlace(s, 'c77', id, -1, 0, 0).ok, '边界：出右边 / 出下边 / 出左边都拒绝');
+  ok(E.canPlace(s, 'c77', id, 5, 2, 1).ok && !E.canPlace(s, 'c77', id, 5, 3, 1).ok, '边界：竖放 1×2 在右列 (5,2) 能放，(5,3) 出下边');
+  const a = E.placeItem(s, 'c77', id, 2, 2, 0); ok(a.ok, '摆在 (2,2)');
+  // 空白区域不挡：床上一排、下一排、左右紧贴都能放别的
+  ok(E.canPlace(s, 'c77', 'furn_plant', 2, 1, 0).ok && E.canPlace(s, 'c77', 'furn_plant', 3, 1, 0).ok, '床正上方一排是空地，能放 1×1（不再有隐形墙）');
+  ok(E.canPlace(s, 'c77', 'furn_plant', 2, 3, 0).ok && E.canPlace(s, 'c77', 'furn_plant', 1, 2, 0).ok && E.canPlace(s, 'c77', 'furn_plant', 4, 2, 0).ok, '床下一排、左右紧贴都能放');
+  ok(!E.canPlace(s, 'c77', 'furn_plant', 2, 2, 0).ok && !E.canPlace(s, 'c77', 'furn_plant', 3, 2, 0).ok, '床本身 2 格被占');
+  ok(!E.canPlace(s, 'c77', 'furn_table', 1, 2, 0).ok && !E.canPlace(s, 'c77', id, 3, 2, 0).ok, '和相邻家具重叠时拒绝（桌子压左格 / 第二张床压右格）');
+  const pl = E.placeItem(s, 'c77', 'furn_plant', 2, 1, 0); ok(pl.ok, '真在床正上方摆一盆植物');
+  // 旋转：(2,2) 转成 1×2 会压到上方植物 → 找附近空位
+  const r = E.rotateItem(s, 'c77', a.uid), p = s.homes.c77.placed.find(q => q.uid === a.uid);
+  ok(r.ok && p.rot === 1 && E.canPlace(s, 'c77', id, p.x, p.y, 1, a.uid).ok, '旋转成 1×2，落位合法（' + p.x + ',' + p.y + ' moved=' + r.moved + '）');
+  const r2 = E.rotateItem(s, 'c77', a.uid); ok(r2.ok && p.rot === 2 && E.furnSize(id, p.rot).w === 2, '再转回横放 2×1');
+  ok(E.undoHome(s, r2.undo).ok && p.rot === 1, '撤销旋转');
+  // 回仓
+  const lux0 = E.homeLuxury(s, 'c77'), inv0 = s.furnInv[id] || 0;
+  const sr = E.storeItem(s, 'c77', a.uid);
+  ok(sr.ok && (s.furnInv[id] || 0) === inv0 + 1 && !s.homes.c77.placed.some(q => q.uid === a.uid), '收回仓库：房间里没了，仓库 +1');
+  ok(E.homeLuxury(s, 'c77') < lux0, '收回后豪华度下降');
+  ok(E.canPlace(s, 'c77', 'furn_table', 2, 2, 0).ok, '收回后原位置空出来');
+  ok(E.undoHome(s, sr.undo).ok && s.homes.c77.placed.some(q => q.uid === a.uid), '撤销收回：放回原位');
+  ok(E.furnStats(s, id).owned === 2, '总数始终 2 张（不丢不复制）');
 }
 
 console.log(`economy tests: ${pass} passed, ${fail} failed`);

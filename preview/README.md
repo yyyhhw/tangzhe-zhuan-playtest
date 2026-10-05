@@ -17,5 +17,7 @@ iPhone 竖屏 Safari 漫画风挂机小游戏。**试玩链接，不是正式上
 
 11t：生活模式点家具改按类别 / 能力触发（bed 类休息、书架看书、衣柜换衣），新云朵纱帐床也能休息；旧床回归通过。
 
+11u：接入舱式单层床 `furn_rocket_capsule_bunk`（原 ID / 价格 22000 / 豪华度 7 不变）。索引占地提案 2×3 实测改 **2×1**：图是正面扁图，2×3 会让上面 2 排空着挡位；2×1 与沙发 3×1 同样贴底显示。图暂用 819×546 缩小版裁成 400 宽 webp，原图到了直接替换 `art/furn_rocket_capsule_bunk.webp`，不改代码。竖放 1×2 时图会缩得较小（和沙发竖放一样，没有侧视图）。
+
 ## 存档
 预览专用 localStorage 键：`tangzhe-preview-save` / `-bak` / `tangzhe-preview-tab-lock`，与线上 v11 的 `tangzhe-save` 互不影响。

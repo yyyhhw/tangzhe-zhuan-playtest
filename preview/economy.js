@@ -526,6 +526,7 @@
     { id:'furn_rocket_rocket_model',   name:'分段火箭模型', emoji:'🚀', color:'#6c757d', w:1, h:1, price:6500,   lux:4,  cat:'plant' },
     { id:'furn_rocket_meteor_stand',   name:'悬架陨石展座', emoji:'☄️', color:'#adb5bd', w:1, h:1, price:32000,  lux:7,  cat:'plant' },
     { id:'furn_rocket_biosphere_dome', name:'生态圆顶花园', emoji:'🪴', color:'#52b788', w:2, h:2, price:125000, lux:16, cat:'plant' },
+    { id:'furn_rocket_capsule_bunk',   name:'舱式单层床',   emoji:'🛏️', color:'#8d99ae', w:2, h:1, price:22000,  lux:7,  cat:'bed' },  // 索引提案 2×3；正面扁图实测改 2×1（同沙发 3×1），免得上面 2 排空着挡位
     { id:'furn_s77_cloud_canopy',      name:'云朵纱帐床',   emoji:'🛏️', color:'#e9ecef', w:3, h:3, price:18000,  lux:7,  cat:'bed' },
   ];
   const FURN_BY_ID = {}; FURNITURE.forEach(f => FURN_BY_ID[f.id] = f);

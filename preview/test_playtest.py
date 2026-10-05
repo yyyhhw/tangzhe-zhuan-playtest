@@ -527,6 +527,51 @@ with sync_playwright() as p:
         hp.evaluate(f"(()=>{{const s=__tzz.state,E=__tzz.E,h=s.homes.c77,i=h.placed.findIndex(p=>p.uid==='{cb['uid']}'); h.placed.splice(i,1); s.furnInv.furn_s77_cloud_canopy=0; delete s.furnInv.furn_s77_cloud_canopy; __tzz.renderTab();}})()"); hp.wait_for_timeout(200)
     else:
         check(False, f'摆新云朵床失败 {cb}')
+    # 舱式单层床 2×1（索引提案 2×3 实测改小）：画面贴在占地里、上一排不挡、旋转 / 收回 / 休息都正常
+    snapH = S(hp, "JSON.stringify(__tzz.state.homes.c77)"); snapI = S(hp, "JSON.stringify(__tzz.state.furnInv)")
+    cap = S(hp, """(()=>{const s=__tzz.state,E=__tzz.E,id='furn_rocket_capsule_bunk',h=s.homes.c77,T=E.homeTier(h.lv); s.coins+=E.FURN_BY_ID[id].price; const b=E.buyFurniture(s,id); if(!b.ok) return {ok:false,why:b.why};
+      const pick=()=>{for(let y=1;y<T.rows;y++)for(let x=0;x+2<=T.cols;x++) if(E.canPlace(s,'c77',id,x,y,0).ok&&E.canPlace(s,'c77','furn_plant',x,y-1,0).ok&&E.canPlace(s,'c77','furn_plant',x+1,y-1,0).ok) return {x,y}; return null;};
+      let sp=pick(), stored=0; while(!sp&&h.placed.length){ const q=h.placed.find(p=>p.surf!=='wall'&&p.fid!=='furn_bed'); if(!q) break; E.storeItem(s,'c77',q.uid); stored++; sp=pick(); }
+      if(!sp) return {ok:false,why:'没空位'}; const r=E.placeItem(s,'c77',id,sp.x,sp.y,0); __tzz.renderTab(); return {ok:!!r.ok,uid:r.uid,x:sp.x,y:sp.y,cols:T.cols,rows:T.rows,stored};})()""")
+    hp.wait_for_timeout(500)
+    if cap.get('ok'):
+        sel = f'#roomFloor .furn[data-uid="{cap["uid"]}"]'
+        def geo():
+            return S(hp, f"""(()=>{{const fl=document.querySelector('#roomFloor').getBoundingClientRect(),el=document.querySelector('{sel}'); if(!el) return null; const r=el.getBoundingClientRect(),im=el.querySelector('img'),ir=im?im.getBoundingClientRect():null;
+              return {{cw:fl.width/{cap['cols']},ch:fl.height/{cap['rows']},w:r.width,h:r.height,top:r.top,bot:r.bottom,l:r.left,rt:r.right,img:im?{{ok:im.complete&&im.naturalWidth>0,nw:im.naturalWidth,t:ir.top,b:ir.bottom,l:ir.left,r:ir.right}}:null,tall:el.classList.contains('tall'),art:el.classList.contains('art'),flTop:fl.top,flLeft:fl.left}};}})()""")
+        g = geo()
+        check(g and abs(g['w'] - 2 * g['cw']) < 2 and abs(g['h'] - g['ch']) < 2, f'舱式床在房间里占 2×1 格（{g and round(g["w"])}×{g and round(g["h"])}px，格 {g and round(g["cw"])}×{g and round(g["ch"])}）')
+        check(g and g['img'] and g['img']['ok'] and g['img']['nw'] == 400 and g['art'] and g['tall'], f'舱式床图加载成功（400 宽 webp）{g and g["img"]}')
+        check(g and g['img'] and abs(g['img']['b'] - g['bot']) < 2 and g['img']['t'] >= g['top'] - 2 and g['img']['l'] >= g['l'] - 1 and g['img']['r'] <= g['rt'] + 1, '舱式床图底脚贴占地底边，整张图都在占地 2×1 里面（不伸出去盖别的格）')
+        above = S(hp, f"""(()=>{{const fl=document.querySelector('#roomFloor').getBoundingClientRect(),cw=fl.width/{cap['cols']},ch=fl.height/{cap['rows']}; return [0,1].map(k=>{{const e=document.elementFromPoint(fl.left+({cap['x']}+k+0.5)*cw, fl.top+({cap['y']}-0.5)*ch); const f=e&&e.closest('.furn'); return f?f.dataset.uid:null;}});}})()""")
+        check(cap['uid'] not in above, f'床正上方一排点下去不是床（没有空白挡位）{above}')
+        pa = S(hp, f"(()=>{{const s=__tzz.state,E=__tzz.E; s.coins+=E.FURN_BY_ID.furn_plant.price; E.buyFurniture(s,'furn_plant'); const r=E.placeItem(s,'c77','furn_plant',{cap['x']},{cap['y']}-1,0); __tzz.renderTab(); return r.ok;}})()")
+        check(pa, '床正上方那格能真摆一盆植物')
+        hp.wait_for_timeout(300)
+        hp.locator(sel).click(); hp.wait_for_timeout(700)
+        ac4 = S(hp, "(()=>{const a=__tzz.homeActor.c77; return {act:a.act,line:!!a.line};})()")
+        check(ac4['act'] == 'rest' and ac4['line'], f'点舱式床：休息 + 台词 {ac4}')
+        hp.screenshot(path=f'{SHOTS}/07d_capsule_rest.png')
+        hp.locator('.mode-tabs [data-arg="decor"]').click(); hp.wait_for_timeout(300)
+        hp.locator(sel).click(); hp.wait_for_timeout(250)
+        hp.locator(f'[data-act="homeRot"][data-arg="{cap["uid"]}"]').click(); hp.wait_for_timeout(400)
+        pr = S(hp, f"(()=>{{const s=__tzz.state,E=__tzz.E,p=s.homes.c77.placed.find(q=>q.uid==='{cap['uid']}'); return p?{{rot:p.rot,x:p.x,y:p.y,ok:E.canPlace(s,'c77',p.fid,p.x,p.y,p.rot,p.uid).ok}}:null;}})()")
+        g2 = geo()
+        check(pr and pr['rot'] == 1 and pr['ok'] and g2 and abs(g2['w'] - g2['cw']) < 2 and abs(g2['h'] - 2 * g2['ch']) < 2, f'点「旋转」：变 1×2、位置合法、不压植物 {pr}')
+        check(g2 and g2['img'] and g2['img']['l'] >= g2['l'] - 1 and g2['img']['r'] <= g2['rt'] + 1 and g2['img']['b'] <= g2['bot'] + 2, '竖放后图仍在占地里')
+        hp.screenshot(path=f'{SHOTS}/07e_capsule_rot.png')
+        hp.locator(sel).click(); hp.wait_for_timeout(250)
+        n0 = S(hp, "__tzz.state.furnInv.furn_rocket_capsule_bunk||0")
+        st_btn = hp.locator(f'[data-act="homeStore"][data-arg="{cap["uid"]}"]')
+        if st_btn.count() == 0:
+            hp.locator(sel).click(); hp.wait_for_timeout(250)
+        hp.locator(f'[data-act="homeStore"][data-arg="{cap["uid"]}"]').click(); hp.wait_for_timeout(400)
+        gone = S(hp, f"!__tzz.state.homes.c77.placed.some(q=>q.uid==='{cap['uid']}') && !document.querySelector('{sel}')")
+        check(gone and S(hp, "__tzz.state.furnInv.furn_rocket_capsule_bunk||0") == n0 + 1, f'点「收回」：房间里没了，仓库 +1（{n0}→{S(hp, "__tzz.state.furnInv.furn_rocket_capsule_bunk||0")}）')
+        hp.evaluate(f"(()=>{{__tzz.state.homes.c77=JSON.parse({json.dumps(snapH)}); __tzz.state.furnInv=JSON.parse({json.dumps(snapI)}); __tzz.renderTab();}})()")
+        hp.locator('.mode-tabs [data-arg="live"]').click(); hp.wait_for_timeout(250)
+    else:
+        check(False, f'摆舱式床失败 {cap}')
     hp.locator('.mode-tabs [data-arg="decor"]').click(); hp.wait_for_timeout(250)
     view(); hp.locator('#roomFloor .furn[data-fid="furn_sofa"]').click(); hp.wait_for_timeout(2200)
     view(); hp.wait_for_timeout(200)
