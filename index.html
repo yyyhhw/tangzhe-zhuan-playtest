@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="躺着也能赚">
+<meta name="theme-color" content="#f7f1e3">
+<meta name="format-detection" content="telephone=no">
+<title>躺着也能赚（试玩版）</title>
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="style.css?v=2">
+</head>
+<body>
+<div id="app">
+  <header id="top">
+    <div class="title-row">
+      <h1 class="logo"><span class="l1">躺着</span><span class="l2">也能赚</span></h1>
+      <button id="dailyChip" class="chip" aria-label="每日双倍"></button>
+      <button id="mute" class="icon-btn" aria-label="声音开关">♪</button>
+    </div>
+    <div class="money">
+      <div class="coin-ico" aria-hidden="true"><span>赚</span></div>
+      <div class="money-main">
+        <div id="coins">0</div>
+        <div id="cps">每秒 +0</div>
+      </div>
+      <div id="boostTag" class="boost-tag hidden">大客户 ×5 <b id="boostSec">30</b>s</div>
+      <div class="sfx-word" id="sfxWord">叮</div>
+    </div>
+  </header>
+
+  <section id="stage"><canvas id="scene"></canvas></section>
+  <nav id="shopTabs" aria-label="切换店铺"></nav>
+  <div id="goal"><div class="goal-txt" id="goalTxt"></div><div class="goal-bar"><i id="goalBar"></i></div></div>
+
+  <section id="panel">
+    <div id="tabBody"></div>
+  </section>
+  <nav id="bottomNav">
+    <button data-tab="shop" class="on"><span class="ni">🏪</span>经营</button>
+    <button data-tab="ceo"><span class="ni">👔</span>CEO</button>
+    <button data-tab="gacha"><span class="ni">🎁</span>盲盒</button>
+    <button data-tab="col"><span class="ni">📒</span>收藏</button>
+  </nav>
+</div>
+
+<div id="modal" class="modal hidden" role="dialog" aria-modal="true"><div class="burst"></div><div class="mpanel" id="mpanel"></div></div>
+<div id="sheet" class="sheet hidden" role="dialog" aria-modal="true"><div class="sheet-bg"></div><div class="sheet-panel" id="sheetPanel"></div></div>
+<div id="lockOverlay" class="lock hidden">
+  <div class="lock-card">
+    <div class="lock-ico">📱</div>
+    <div class="lock-title">游戏已在别的页面打开</div>
+    <div class="lock-txt">为了防止重复领钱，同一时间只能在一个页面玩。</div>
+    <button id="lockResume" class="buy big">在这里继续玩</button>
+  </div>
+</div>
+<div id="toast" class="hidden"></div>
+<script src="economy.js?v=2"></script>
+<script src="app.js?v=2"></script>
+</body>
+</html>
