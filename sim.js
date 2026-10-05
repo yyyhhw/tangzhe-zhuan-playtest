@@ -51,7 +51,7 @@ function buyStep(st, log, t) {
   }
 }
 function run(mode, days = 14) {
-  const st = E.newState(0); const ev = {}; let tOnline = 0, nextBig = 150, gachaStart = null, gachaDone = null, gachaSpent = 0;
+  const st = E.newState(0); const ev = {}; let tOnline = 0, nextBig = 150, gachaStart = null, gachaDone = null, gachaSpent = 0, superFirst = null, superAll = null;
   const log = (t, what, i) => { const k = what + i; if (!(k in ev)) ev[k] = t; };
   let t = 0, lastLeave = null, doubleDay = -1; const daily = [];
   for (let d = 0; d < days; d++) {
@@ -74,14 +74,14 @@ function run(mode, days = 14) {
         if (process.env.TRACE && d === 0 && s % 60 === 0 && h === 9) console.log('min', s/60, 'coins', Math.round(st.coins), 'rate', E.baseRate(st).toFixed(1), 'tap', E.tapValue(st,0), st.shops.map(x=>x.lv+'/'+x.emp).join(' '), E.CEOS.map(c=>st.ceos[c.id].lv).join('/'));
         if (E.gachaUnlocked(st)) {   // 盲盒：金币 > 单价×3 时抽（留出升级钱）
           if (gachaStart == null) gachaStart = t;
-          const gp = E.gachaPrice(st); if (st.gacha.owned.length < 16 && st.coins > gp * 3) { E.gachaDraw(st, rnd()); gachaSpent += gp; if (st.gacha.owned.length === 16) gachaDone = t; }
+          const gp = E.gachaPrice(st); if (!E.gachaComplete(st) && st.coins > gp * 3) { const g = E.gachaDraw(st, rnd()); gachaSpent += gp; if (g.super && superFirst == null) superFirst = t; if (g.super && E.SUPER_ITEMS.every(x => st.gacha.owned.includes(x.id))) superAll = t; if (E.gachaComplete(st)) gachaDone = t; }
         }
       }
       lastLeave = t;
     }
     daily.push({ d:d + 1, rate:E.baseRate(st), lv:st.shops.map(x => x.lv + '/' + x.emp).join(' '), ceo:E.CEOS.map(c => st.ceos[c.id].unlocked ? st.ceos[c.id].lv : '-').join('/'), box:st.gacha.owned.length });
   }
-  return { ev, st, gachaStart, gachaDone, daily, gachaSpent };
+  return { ev, st, gachaStart, gachaDone, daily, gachaSpent, superFirst, superAll };
 }
 const fmtT = s => { if (s == null) return '—'; const d = Math.floor(s / 86400), h = (s % 86400) / 3600; return `第${d + 1}天 ${String(Math.floor(h)).padStart(2,'0')}:${String(Math.floor((h % 1) * 60)).padStart(2,'0')}`; };
 const fromStart = (s, t0) => s == null ? '—' : ((s - t0) < 3600 ? ((s - t0) / 60).toFixed(1) + ' 分钟' : fmtT(s));
@@ -99,8 +99,9 @@ if (require.main === module && process.env.SIM_JSON) {
     console.log(' 开漫画书店 / 阿宅加入:', fmtT(e.open2), '| 雇阿页', fmtT(e.hire2));
     console.log(' 开科技公司          :', fmtT(e.open3), '| 雇小栈（盲盒开放）', fmtT(e.hire3));
     console.log(' ' + E.ROCKET_NAME.name + '加入(科技Lv25):', fmtT(e.ceo_rocket));
-    console.log(' 盲盒 16 件集齐      :', fmtT(r.gachaDone), r.gachaDone && r.gachaStart != null ? '（开放后 ' + ((r.gachaDone - r.gachaStart) / 3600).toFixed(1) + ' 小时）' : '');
-    if (process.env.DAILY || m.startsWith('普通')) for (const x of r.daily) console.log(`   第${x.d}天末 产速 ${fmtN(x.rate)}/秒  店Lv/员工Lv ${x.lv}  CEO ${x.ceo}  盲盒 ${x.box}/16`);
+    console.log(' 第一件超级装饰      :', fmtT(r.superFirst), '| 4 件超级集齐', fmtT(r.superAll));
+    console.log(' 盲盒 ' + E.ITEMS.length + ' 件集齐      :', fmtT(r.gachaDone), r.gachaDone && r.gachaStart != null ? '（开放后 ' + ((r.gachaDone - r.gachaStart) / 3600).toFixed(1) + ' 小时）' : '');
+    if (process.env.DAILY || m.startsWith('普通')) for (const x of r.daily) console.log(`   第${x.d}天末 产速 ${fmtN(x.rate)}/秒  店Lv/员工Lv ${x.lv}  CEO ${x.ceo}  盲盒 ${x.box}/${E.ITEMS.length}`);
   }
 }
 module.exports = { run, MODES };

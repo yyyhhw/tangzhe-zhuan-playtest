@@ -93,28 +93,63 @@ let s4 = E.newState(T0); s4.coins = 1e12; E.hireEmp(s4, 0); [1, 2, 3].forEach(i 
 E.assignCeo(s4, 'c77', 3); const r4 = E.baseRate(s4);
 near(E.computeOffline(s4, T0 + 20 * 3600e3).effSec, 10 * 3600, '麻辣服务器：离线按 10h 封顶');
 near(E.computeOffline(s4, T0 + 20 * 3600e3).amount, r4 * 0.5 * 36000, '离线按离开时的 CEO 安排');
-// 盲盒：16 抽不重复，集齐后不扣钱
+// 盲盒 v2：36 件不重复（32 普通 + 4 超级），超级 10% + 15 抽保底，集齐后不扣钱
 let s5 = E.newState(T0); s5.coins = 1e12; E.hireEmp(s5, 0); [1, 2, 3].forEach(i => { E.openShop(s5, i); E.hireEmp(s5, i); });
-const seen = new Set(); let odds = [];
-for (let k = 0; k < 16; k++) { odds.push(E.gachaOdds(s5)); const g = E.gachaDraw(s5, Math.random()); ok(g.ok && !seen.has(g.item.id), '第' + (k + 1) + '抽是新物品'); seen.add(g.item.id); }
-near(odds[0], 1 / 16, '初始概率 6.25%'); near(odds[15], 1, '最后一抽 100%');
-const cAfter = s5.coins; const g17 = E.gachaDraw(s5, 0.5);
-ok(!g17.ok && g17.complete && s5.coins === cAfter, '集齐后不能再买、不扣金币');
-ok(E.cardsComplete(s5), '4 张故事卡集齐');
+ok(E.ITEMS.length === 36 && E.REGULAR_ITEMS.length === 32 && E.SUPER_ITEMS.length === 4, '奖池 32 普通 + 4 超级');
+ok(['clothes', 'hat', 'decor', 'card'].every(t => E.ITEMS.filter(i => i.type === t).length === 8), '衣服/帽子/装饰/故事卡各 8');
+ok(new Set(E.ITEMS.map(i => i.id)).size === 36, '物品 id 不重复');
+ok(E.SUPER_ITEMS.map(i => i.shop).join() === '0,1,2,3' && E.SUPER_ITEMS.map(i => i.name).join() === '熊猫食神,珍珠喷泉,次元传送门,人造太阳反应堆', '每店一件超级装饰');
+const o0 = E.gachaOdds(s5); near(o0.superP, 0.1, '超级装饰 10%'); near(o0.perSuper, 0.025, '每件超级 2.5%'); near(o0.perReg, 0.9 / 32, '每件普通 0.9/32'); ok(o0.pityLeft === 15, '保底剩 15 抽');
+const seen = new Set(); let maxGap = 0, gap = 0, supersAt = [];
+for (let k = 0; k < 36; k++) { const g = E.gachaDraw(s5, Math.random()); ok(g.ok && !seen.has(g.item.id), '第' + (k + 1) + '抽是新物品'); seen.add(g.item.id);
+  if (g.super) { supersAt.push(k + 1); gap = 0; } else { gap++; if (E.gachaOdds(s5).remSuper) maxGap = Math.max(maxGap, gap); } }
+ok(maxGap <= 14, '保底：连续不出超级 ≤ 14 抽 (' + maxGap + ')');
+ok(supersAt.length === 4, '4 件超级装饰都抽到');
+const cAfter = s5.coins; const g37 = E.gachaDraw(s5, 0.5);
+ok(!g37.ok && g37.complete && s5.coins === cAfter, '集齐后不能再买、不扣金币');
+ok(E.cardsComplete(s5), '8 张故事卡集齐');
+// 保底精确：rnd 一直很大（=不出超级）时第 15 抽必出
+{ let sp = E.newState(T0); sp.coins = 1e12; E.hireEmp(sp, 0); [1, 2, 3].forEach(i => { E.openShop(sp, i); E.hireEmp(sp, i); });
+  const kinds = []; for (let k = 0; k < 15; k++) kinds.push(E.gachaDraw(sp, 0.999).super);
+  ok(kinds.slice(0, 14).every(x => !x) && kinds[14] === true, '第 15 抽保底必出超级'); ok(sp.gacha.pity === 0, '出超级后保底重置');
+  ok(E.gachaDraw(sp, 0.05).super === true, 'rnd<10% 出超级'); ok(sp.gacha.last.odds.startsWith('超级 10%'), '结果写明概率');
+  // 普通抽完后只出超级
+  let sq = E.cloneState(sp); sq.gacha.owned = E.REGULAR_ITEMS.map(i => i.id); sq.gacha.pity = 0; near(E.gachaOdds(sq).superP, 1, '普通抽完 → 100% 超级');
+  let sr = E.cloneState(sp); sr.gacha.owned = E.SUPER_ITEMS.map(i => i.id); near(E.gachaOdds(sr).superP, 0, '超级抽完 → 只出普通'); ok(E.gachaOdds(sr).pityLeft === null, '超级抽完不显示保底'); }
 let s6 = E.newState(T0); s6.coins = 1e12; ok(!E.gachaDraw(s6, 0.1).ok && s6.coins === 1e12, '未开放不扣钱');
-// 盲盒/外观不加产速
-let s7 = E.cloneState(s5); s7.gacha.owned = []; near(E.baseRate(s7), E.baseRate(s5), '收藏品不影响产速');
+// 普通收藏不加产速；超级装饰本店 ×1.3
+{ let a = E.cloneState(s5); a.gacha.owned = E.REGULAR_ITEMS.map(i => i.id); let b = E.cloneState(a); b.gacha.owned = [];
+  near(E.baseRate(a), E.baseRate(b), '普通收藏不影响产速');
+  let c = E.cloneState(b); c.gacha.owned = ['s_sun']; near(E.shopRate(c, 3), E.shopRate(b, 3) * 1.3, '人造太阳：科技 ×1.3'); near(E.shopRate(c, 0), E.shopRate(b, 0), '只加本店');
+  near(E.offlineRate(c), E.offlineRate(b) + E.shopRate(b, 3) * 0.3 * 0.5, '超级装饰离线也算');
+  // 暴击：概率和倍率分开
+  near(E.critChance(b, 0, T0), 0.12, '默认暴击 12%'); ok(E.critMult(b, 0, T0) === 5, '默认倍率 ×5');
+  let d = E.cloneState(b); d.gacha.owned = ['s_panda']; near(E.critChance(d, 0, T0), 0.3, '熊猫食神：烧烤暴击 30%'); near(E.critChance(d, 1, T0), 0.12, '熊猫只管烧烤摊'); ok(E.critMult(d, 0, T0) === 5, '熊猫不改倍率');
+  // 珍珠喷泉：爆单 20 秒 奶茶 ×3 + 必暴击，只算在线
+  let f = E.cloneState(b); f.gacha.owned = ['s_fountain']; const base1 = E.onlineRate(f, T0); E.startRush(f, 'tea', T0);
+  near(E.onlineRate(f, T0 + 1000), base1 + E.shopRate(f, 1) * 2, '爆单：奶茶店 ×3'); near(E.critChance(f, 1, T0 + 1000), 1, '爆单期间手点必暴击');
+  near(E.onlineRate(f, T0 + 21000), base1, '20 秒后结束'); near(E.offlineRate(f), E.baseRate(f) * 0.5, '爆单不进离线');
+  // 人造太阳：超频 30 秒 科技 ×3 + 暴击倍率 ×10
+  E.startRush(c, 'tech', T0); near(E.onlineRate(c, T0 + 1000), E.baseRate(c) + E.shopRate(c, 3) * 2, '超频：科技 ×3'); ok(E.critMult(c, 3, T0 + 1000) === 10 && E.critMult(c, 3, T0 + 31000) === 5, '超频暴击倍率 ×10，结束恢复');
+  let q = E.cloneState(b); q.gacha.owned = ['s_portal']; near(E.portalReward(q), E.shopRate(q, 2) * 90, '次元传送门：书店 90 秒产量'); near(E.portalReward(b), 0, '没传送门不给');
+  // 没有超级装饰时 rush 字段无效
+  E.startRush(b, 'tea', T0); near(E.onlineRate(b, T0 + 1000), E.baseRate(b), '没喷泉不爆单'); }
+// v2 → v3：全局穿搭归 77，旧收藏保留
+{ const v2 = { v:2, coins:5, shops:[{ open:true, lv:3, emp:1 }], gacha:{ owned:['c_panda', 'h_chili', 'k_1'], draws:3 }, equip:{ clothes:'c_panda', hat:'h_chili' } };
+  const mm = E.migrate(v2, T0); ok(mm.st.v === 3 && mm.st.wear.c77.clothes === 'c_panda' && mm.st.wear.c77.hat === 'h_chili' && !mm.st.wear.pearl.clothes, 'v2 穿搭 → 77');
+  ok(mm.st.gacha.owned.length === 3 && mm.st.gacha.pity === 0 && !('equip' in mm.st), '旧收藏保留、保底从 0 开始');
+  const bw = E.migrate({ v:3, wear:{ c77:{ clothes:'h_chili', hat:'bogus' } } }, T0); ok(bw.st.wear.c77.clothes === null && bw.st.wear.c77.hat === null, '非法穿搭被清掉'); }
 // 存档迁移 v1 → v2
 const v1 = { v:1, coins:1234, shops:[{ open:true, lv:12, hired:true }, { open:true, lv:3, hired:false }, { open:false, lv:0, hired:false }, { open:false, lv:0, hired:false }],
   gacha:{ owned:['k_1', 'k_1', 'bogus'], draws:1 }, lastSeen:T0 - 1000, maxSeen:T0 - 1000, claimLog:[] };
 const m = E.migrate(v1, T0);
-ok(m.from === 1 && m.st.v === 2, '迁移 v1→v2');
+ok(m.from === 1 && m.st.v === 3, '迁移 v1→v3');
 ok(m.st.shops[0].emp === 1 && m.st.shops[1].emp === 0 && m.st.shops[0].lv === 12, '伙伴→员工 Lv1');
 ok(m.st.ceos.c77.at === 0 && m.st.ceos.pearl.unlocked && m.st.ceos.pearl.at === 1 && !m.st.ceos.otaku.unlocked, '迁移后 CEO 按开店解锁就位');
 ok(m.st.gacha.owned.length === 1, '盲盒去重 + 过滤无效 id');
 const bad = E.migrate({ v:2, ceos:{ c77:{ unlocked:true, at:2, lv:3 }, pearl:{ unlocked:true, at:0, lv:1 } }, shops:[{ open:true, lv:1, emp:0 }] }, T0);
 ok(bad.st.ceos.c77.at === -1 && bad.st.ceos.pearl.at === 0, '非法 CEO 位置被修正（不在未开张的店）');
-ok(E.migrate('garbage', T0).st.v === 2, '坏档 → 新档');
+ok(E.migrate('garbage', T0).st.v === 3, '坏档 → 新档');
 // 熊大文案定稿
 const SG = k => E.SIGNS[k].map(x => x[0]).join('／');
 ok(SG('c77') === '77烧烤店／七分糖七分拽／摆龙门阵书局／巴适不死机', '77 四块招牌');
@@ -138,5 +173,32 @@ ok(E.CROSS['rocket@0'].effect === 'bigFreq' && E.CROSS['c77@3'].effect === 'offl
 // 离线收益按离开时阵容：settleOffline 在任何操作前结算
 { const s3 = E.cloneState(st); s3.lastSeen = s3.maxSeen = T0 + 2e9 - 3600e3; const rate = E.baseRate(s3);
   const o = E.settleOffline(s3, T0 + 2e9); ok(o && o.amount > 0, '离线收益已结算'); }
+
+// ===== 营业小舞台：团单对账（不和自动收入双算） =====
+{
+  let s = E.newState(T0); s.coins = 1e6; E.hireEmp(s, 0); s.shops[0].lv = 10;
+  const rate = E.onlineRate(s, T0);
+  ok(rate > 0 && E.boostActive(s, T0) === false, '在线产速 > 0，且不再有持续 ×5');
+  near(E.orderPayout(rate), rate * (E.CFG.BOOST_MULT - 1) * E.CFG.BOOST_SEC, '团单收入 = 旧 30 秒 ×5 多出来的部分');
+  // 模拟服务 30 秒：自动收入照常 + 结束一次性结算 = 旧版 ×5×30s 总收益
+  const c0 = s.coins;
+  const auto = rate * E.CFG.BOOST_SEC;
+  s.coins += auto; s.totalEarned += auto;
+  const paid = E.settleOrder(s, E.orderPayout(rate));
+  near(s.coins - c0, rate * E.CFG.BOOST_MULT * E.CFG.BOOST_SEC, '总收益 = 旧 ×5 持续 30 秒（自动 + 团单）');
+  near(paid, rate * 4 * 30, 'settleOrder 只发「多出来的」那笔');
+  ok(s.bigCustomers === 1, '大客户计数 +1');
+  // 双算防护：服务期间 onlineRate 不加 ×5；再 settle 同一笔不会自动发生（调用方负责）
+  near(E.onlineRate(s, T0), rate, '服务中自动收入不加 ×5（不双算）');
+  ok(E.tapReward(s, 0, T0, 0.99).value === E.tapValue(s, 0), '手点也不再吃大客户 ×5');
+  // 离线仍不含团单
+  s.boostEnd = T0 + 999999; // 即便旧档写了也不影响
+  near(E.computeOffline(s, T0 + 3600e3).amount, E.baseRate(s) * 0.5 * 3600, '离线不含团单/×5');
+  ok(E.BIG_ORDERS.length === 4 && E.SPECIAL_GUESTS.length === 4, '每店 1 个大客户 + 1 个特殊客户占位');
+  ok(E.SPECIAL_GUESTS.every((g, i) => g.shop === i && g.panels.length === 2), '特殊客户两格漫画占位');
+  const sp = E.specialReward(s, 0); near(sp, E.shopRate(s, 0) * E.CFG.SPECIAL_REWARD_SEC, '特殊客户奖励 = 本店 60 秒产量');
+  const c1 = s.coins; const spPaid = E.settleSpecial(s, 0);
+  near(spPaid, sp, 'settleSpecial 入账'); near(s.coins - c1, sp, '特殊客户不另加自动收入'); ok(s.specialCustomers === 1, '特殊客户计数');
+}
 console.log(`economy tests: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -12,7 +12,7 @@
 <title>躺着也能赚（试玩版）</title>
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="style.css?v=2">
+<link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
 <div id="app">
@@ -28,12 +28,13 @@
         <div id="coins">0</div>
         <div id="cps">每秒 +0</div>
       </div>
-      <div id="boostTag" class="boost-tag hidden">大客户 ×5 <b id="boostSec">30</b>s</div>
+      <div id="boostTag" class="boost-tag hidden">团单服务中 <b id="boostSec">0</b>%</div>
       <div class="sfx-word" id="sfxWord">叮</div>
     </div>
   </header>
 
   <section id="stage"><canvas id="scene"></canvas></section>
+  <div id="compactHead" class="hidden" aria-live="polite"></div>
   <nav id="shopTabs" aria-label="切换店铺"></nav>
   <div id="goal"><div class="goal-txt" id="goalTxt"></div><div class="goal-bar"><i id="goalBar"></i></div></div>
 
@@ -59,7 +60,7 @@
   </div>
 </div>
 <div id="toast" class="hidden"></div>
-<script src="economy.js?v=2"></script>
-<script src="app.js?v=2"></script>
+<script src="economy.js?v=3"></script>
+<script src="app.js?v=3"></script>
 </body>
 </html>

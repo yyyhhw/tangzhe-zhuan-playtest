@@ -7,7 +7,7 @@
 
   /* ================= 可调参数（数值都在这里） ================= */
   const CFG = {
-    SAVE_VERSION: 2,
+    SAVE_VERSION: 3,
     UP_GROWTH: 1.33,            // 店铺升级价 = 基础价 × 1.33^等级
     EMP_GROWTH: 2.5,            // 员工升级价成长（每级 ×2.5）
     EMP_COST_K: 1,              // 员工 Lv1→2 价格 = 雇佣价 × 1
@@ -25,10 +25,12 @@
     TZ_OFFSET_MIN: 480,         // 每日双倍按马来西亚时间（UTC+8）计算，不跟手机时区走
     DAY_RESET_HOUR: 5,          // 早上 5 点重置
     CLOCK_TOLERANCE: 120,       // 系统时间回拨容忍（秒）
-    BOOST_MULT: 5,              // 大客户 ×5（只管在线那 30 秒）
-    BOOST_SEC: 30,
+    BOOST_MULT: 5,              // 团单额外倍率：一次性结算 = 产速 × (MULT-1) × SEC（对账=旧 ×5 多出来的部分）
+    BOOST_SEC: 30,              // 团单默认服务时长（秒）；点大客户可加快
     BIG_MIN: 120, BIG_MAX: 240, // 大客户每 2~4 分钟来一次（在线）
-    BIG_STAY: 12,               // 出现后 12 秒内要点到
+    BIG_STAY: 12,               // 兼容旧存档字段，已不用（团单自动开始服务）
+    SPECIAL_MIN: 420, SPECIAL_MAX: 720, // 特殊客户每 7~12 分钟来一次（在线）
+    SPECIAL_REWARD_SEC: 60,     // 特殊客户小奖励：本店 60 秒产量
     BIG_FREQ_ROCKET_BBQ: 0.5,   // 跨行事件「火箭烤炉」：间隔 ×0.5
     CRIT_CHANCE: 0.12, CRIT_MULT: 5,
     TAP_FRAC: 0.35,             // 手点一次 ≈ 该店（含 CEO 加成）每秒基础产量的 35%
@@ -37,7 +39,14 @@
     AZHAI_BONUS_MIN: 500,
     ROCKET_UNLOCK_LV: 25,       // 科技公司 Lv25 解锁火箭老板
     GACHA_PRICE: 200000,        // 盲盒单价（可调；熊大候选 20 万）
-    GACHA_GROWTH: 1,            // 每开一个涨价倍数（1 = 固定价；模拟器对比见 sim.js）
+    GACHA_GROWTH: 1,            // 每开一个涨价倍数（1 = 固定价；杨总 15:19 定：就 20 万一个）
+    SUPER_P: 0.10,              // 每抽出超级装饰的概率（还有没抽到的超级装饰时）
+    SUPER_PITY: 15,             // 保底：连续 14 抽没出超级装饰，第 15 抽必出
+    SUPER_RATE: 1.3,            // 超级装饰：本店产量常驻 ×1.3（离线也算）
+    PANDA_CRIT: 0.30,           // 熊猫食神：烧烤摊手点暴击概率 12% → 30%
+    FOUNTAIN_EVERY: 180, FOUNTAIN_SEC: 20, FOUNTAIN_MULT: 3,   // 珍珠喷泉：每 3 分钟连续爆单 20 秒，奶茶店 ×3、手点必暴击
+    PORTAL_EVERY: 240, PORTAL_SEC: 90,                         // 次元传送门：每 4 分钟送书店 90 秒产量
+    SUN_EVERY: 300, SUN_SEC: 30, SUN_MULT: 3, SUN_CRIT_MULT: 10, // 人造太阳反应堆：每 5 分钟超频 30 秒，科技 ×3、暴击倍率 ×10
   };
 
   /* ===== 火箭老板：名字只在这一处配置（公开上架前再评估真名/肖像权） ===== */
@@ -102,6 +111,26 @@
   function empMult(e) { return e > 0 ? 1 + CFG.EMP_LV_BONUS * (e - 1) : 0; }
   function shopBase(i, lv) { return lv > 0 ? SHOPS[i].rate * lv * milestoneMult(lv) : 0; }
 
+  /* ===== 超级装饰（每店一件，只能从盲盒抽到；效果常驻，不用摆放） ===== */
+  const SUPER_OF_SHOP = ['s_panda', 's_fountain', 's_portal', 's_sun'];
+  function hasSuper(st, i) { return !!(st.gacha && st.gacha.owned && st.gacha.owned.indexOf(SUPER_OF_SHOP[i]) >= 0); }
+  function superMult(st, i) { return hasSuper(st, i) ? CFG.SUPER_RATE : 1; }
+  const RUSH_SEC = { tea:'FOUNTAIN_SEC', tech:'SUN_SEC' };
+  function rushActive(st, k, now) { const e = st.rush && st.rush[k]; return !!e && e > now && e - now <= CFG[RUSH_SEC[k]] * 1000 + 1000; }
+  function rushMult(st, i, now) {
+    if (i === 1 && hasSuper(st, 1) && rushActive(st, 'tea', now)) return CFG.FOUNTAIN_MULT;
+    if (i === 3 && hasSuper(st, 3) && rushActive(st, 'tech', now)) return CFG.SUN_MULT;
+    return 1;
+  }
+  function startRush(st, k, now) { if (!st.rush) st.rush = { tea:0, tech:0 }; st.rush[k] = now + CFG[RUSH_SEC[k]] * 1000; }
+  function critChance(st, i, now) {
+    if (i === 1 && hasSuper(st, 1) && rushActive(st, 'tea', now)) return 1;
+    if (i === 0 && hasSuper(st, 0)) return CFG.PANDA_CRIT;
+    return CFG.CRIT_CHANCE;
+  }
+  function critMult(st, i, now) { return i === 3 && hasSuper(st, 3) && rushActive(st, 'tech', now) ? CFG.SUN_CRIT_MULT : CFG.CRIT_MULT; }
+  function portalReward(st) { return hasSuper(st, 2) ? shopRate(st, 2) * CFG.PORTAL_SEC : 0; }
+
   function ceoAt(st, i) { for (const c of CEOS) { const s = st.ceos[c.id]; if (s && s.unlocked && s.at === i) return c.id; } return null; }
   function ceoInfo(st, i) {
     const id = ceoAt(st, i);
@@ -112,12 +141,25 @@
   }
   function shopRate(st, i) {
     const s = st.shops[i]; if (!s || !s.open || s.emp <= 0) return 0;
-    return shopBase(i, s.lv) * empMult(s.emp) * ceoInfo(st, i).mult;
+    return shopBase(i, s.lv) * empMult(s.emp) * ceoInfo(st, i).mult * superMult(st, i);
   }
   function baseRate(st) { let r = 0; for (let i = 0; i < SHOPS.length; i++) r += shopRate(st, i); return r; }
-  function boostActive(st, now) { return st.boostEnd > now && st.boostEnd - now <= CFG.BOOST_SEC * 1000 + 1000; }
-  function onlineRate(st, now) { return baseRate(st) * (boostActive(st, now) ? CFG.BOOST_MULT : 1); }
+  // 旧版「×5 持续 30 秒」已废弃；保留 boostActive 只为读旧档不报错，永远按未激活算
+  function boostActive(st, now) { return false; }
+  function rushOnlineRate(st, now) {
+    let r = 0; for (let i = 0; i < SHOPS.length; i++) r += shopRate(st, i) * rushMult(st, i, now);
+    return r;
+  }
+  function onlineRate(st, now) { return rushOnlineRate(st, now); }
   function offlineRate(st) { return baseRate(st) * CFG.OFFLINE_RATE; }
+  // 团单一次性收入 = 旧「30 秒 ×5」多出来的部分（产速 ×4 ×30），总收益与旧版一致、不会和自动收入算两次
+  function orderPayout(rate) { return Math.max(0, rate) * (CFG.BOOST_MULT - 1) * CFG.BOOST_SEC; }
+  function settleOrder(st, payout) {
+    const amt = Math.max(0, payout); if (!(amt > 0)) return 0;
+    st.coins += amt; st.totalEarned += amt; st.bigCustomers = (st.bigCustomers || 0) + 1;
+    st.boostEnd = 0; // 清掉旧档可能残留的 ×5
+    return amt;
+  }
 
   /* ===== 跨行效果 ===== */
   function crossActive(st, key) { const [id, shop] = key.split('@'); const s = st.ceos[id]; return !!(s && s.unlocked && s.at === Number(shop)); }
@@ -130,9 +172,8 @@
     return v * tapMult(st, i);
   }
   function tapReward(st, i, now, rnd) {
-    const crit = rnd < CFG.CRIT_CHANCE;
-    let v = tapValue(st, i) * (crit ? CFG.CRIT_MULT : 1);
-    if (boostActive(st, now)) v *= CFG.BOOST_MULT;
+    const crit = rnd < critChance(st, i, now);
+    const v = tapValue(st, i) * (crit ? critMult(st, i, now) : 1);
     return { value:v, crit };
   }
 
@@ -289,44 +330,108 @@
     return { ok:true, amount:amt, doubled:dbl, sec:p.sec };
   }
 
-  /* ================= 盲盒：16 项不重复收藏盒（熊大卡池） ================= */
+
+  /* ================= 大客户团单 / 特殊客户（名字台词熊大可再换；id 别动） ================= */
+  const BIG_ORDERS = [
+    { shop:0, name:'旅游团包场', line:'整桌都要！微辣多加签！', emoji:'🚌' },
+    { shop:1, name:'公司团建奶茶', line:'五十杯七分糖，马上要！', emoji:'🏢' },
+    { shop:2, name:'同人展采购团', line:'这套全要，再加周边！', emoji:'📚' },
+    { shop:3, name:'甲方验收团', line:'签字！打款！今晚上线！', emoji:'📝' },
+  ];
+  // 每店 1 个特殊客户占位：两格漫画 + 本店 SPECIAL_REWARD_SEC 秒产量
+  const SPECIAL_GUESTS = [
+    { id:'sp0', shop:0, name:'夜游食神（占位）', emoji:'🐼',
+      panels:[['c77','🍢','（占位）神秘客人点了传说中的竹笋串。'], ['e0','✨','阿炭：（占位）这单，香气能飘三条街。']] },
+    { id:'sp1', shop:1, name:'珍珠鉴赏家（占位）', emoji:'🧋',
+      panels:[['pearl','🔍','（占位）客人掏出放大镜数珍珠。'], ['e1','🥤','小满：（占位）一颗都不能少，这单我包了。']] },
+    { id:'sp2', shop:2, name:'连载催更侠（占位）', emoji:'📖',
+      panels:[['otaku','✏️','（占位）催更侠把收银台画成下一话预告。'], ['e2','📚','阿页：（占位）案件没破，先把书结了。']] },
+    { id:'sp3', shop:3, name:'火星投资人（占位）', emoji:'🚀',
+      panels:[['rocket','💼','（占位）投资人说：先把服务器送到火星。'], ['e3','💻','小栈：（占位）代码能重构，合同不能拖。']] },
+  ];
+  function specialReward(st, shop) { return shopRate(st, shop) * CFG.SPECIAL_REWARD_SEC; }
+  function settleSpecial(st, shop) {
+    const amt = specialReward(st, shop); if (!(amt > 0)) { st.specialCustomers = (st.specialCustomers || 0) + 1; return 0; }
+    st.coins += amt; st.totalEarned += amt; st.specialCustomers = (st.specialCustomers || 0) + 1; return amt;
+  }
+  function specialInterval(st, rnd) { return CFG.SPECIAL_MIN + (CFG.SPECIAL_MAX - CFG.SPECIAL_MIN) * rnd; }
+
+  /* ================= 盲盒 v2：32 件普通收藏 + 4 件超级装饰，不重复（杨总 15:19 / 熊大方向） ================= */
+  // 名字是凤雏先补的占位，熊大可以换（只改 name / text，id 别动，存档靠 id）
   const ITEMS = [
     { id:'c_apron',  type:'clothes', name:'红油围裙' },
     { id:'c_flower', type:'clothes', name:'安逸花衬衫' },
     { id:'c_work',   type:'clothes', name:'串串工装' },
     { id:'c_panda',  type:'clothes', name:'熊猫睡衣' },
+    { id:'c_qipao',  type:'clothes', name:'珍珠小旗袍' },
+    { id:'c_hoodie', type:'clothes', name:'连载中卫衣' },
+    { id:'c_space',  type:'clothes', name:'小火箭宇航服' },
+    { id:'c_suit',   type:'clothes', name:'摸鱼西装' },
     { id:'h_chili',  type:'hat', name:'辣椒头巾' },
     { id:'h_bamboo', type:'hat', name:'小竹斗笠' },
     { id:'h_flame',  type:'hat', name:'火焰鸭舌帽' },
     { id:'h_panda',  type:'hat', name:'熊猫耳帽' },
+    { id:'h_boba',   type:'hat', name:'奶茶杯帽' },
+    { id:'h_beret',  type:'hat', name:'漫画家贝雷帽' },
+    { id:'h_helmet', type:'hat', name:'太空头盔' },
+    { id:'h_crown',  type:'hat', name:'招财小王冠' },
     { id:'d_stool',  type:'decor', name:'竹编小椅' },
     { id:'d_lights', type:'decor', name:'辣椒串灯' },
     { id:'d_neon',   type:'decor', name:'77霓虹牌' },
     { id:'d_board',  type:'decor', name:'龙门阵黑板' },
+    { id:'d_balloon',type:'decor', name:'珍珠气球' },
+    { id:'d_poster', type:'decor', name:'热血连载海报' },
+    { id:'d_cat',    type:'decor', name:'招财猫' },
+    { id:'d_plant',  type:'decor', name:'摸鱼绿萝' },
     { id:'k_1', type:'card', name:'第一把炭',     text:'招牌还没挂稳，香味已经拐过街角，替77招呼客人。' },
     { id:'k_2', type:'card', name:'微辣是哪个微', text:'客人说只要一点辣。77认真点头，先把凉茶放得稳稳当当。' },
     { id:'k_3', type:'card', name:'熊猫监工',     text:'熊猫只盯着竹笋串。77宣布：今天的质检老师，专门负责素菜。' },
     { id:'k_4', type:'card', name:'收摊月亮',     text:'大家围着最后几串摆龙门阵，月亮也像迟到的客人。' },
+    { id:'k_5', type:'card', name:'一颗都不能少', text:'珍珠姐数珍珠比数钱还认真，多出来的一颗，也要追出门还给客人。' },
+    { id:'k_6', type:'card', name:'名场面',       text:'阿宅店长把收银台画成漫画格，客人排队像在等下一话更新。' },
+    { id:'k_7', type:'card', name:'发射倒计时',   text:'火箭老板喊完三、二、一，起飞的只有门口那串气球。' },
+    { id:'k_8', type:'card', name:'一条街的灯',   text:'四家店同时亮灯那晚，77说：今天的龙门阵，摆一整条街。' },
+    { id:'s_panda',    type:'super', shop:0, name:'熊猫食神',       desc:'抱着竹笋串营业：烧烤摊产量 +30%，手点暴击概率 12% → 30%' },
+    { id:'s_fountain', type:'super', shop:1, name:'珍珠喷泉',       desc:'奶茶店产量 +30%；在线每 3 分钟连续爆单 20 秒：奶茶店产量 ×3、手点必暴击' },
+    { id:'s_portal',   type:'super', shop:2, name:'次元传送门',     desc:'漫画书店产量 +30%；在线每 4 分钟漫画角色客串，送书店 90 秒产量的大订单' },
+    { id:'s_sun',      type:'super', shop:3, name:'人造太阳反应堆', desc:'科技公司产量 +30%；在线每 5 分钟超频 30 秒：科技公司产量 ×3、暴击倍率 ×5 → ×10' },
   ];
   const ITEM_BY_ID = {}; ITEMS.forEach(it => ITEM_BY_ID[it.id] = it);
-  const SET_REWARD = { id:'gold', name:'金牌摊主', clothes:'c_gold', hat:'h_gold', desc:'集齐 4 张故事卡解锁：金马甲 + 金厨师帽' };
+  const REGULAR_ITEMS = ITEMS.filter(it => it.type !== 'super'), SUPER_ITEMS = ITEMS.filter(it => it.type === 'super');
+  const CARD_COUNT = ITEMS.filter(it => it.type === 'card').length;
+  const SET_REWARD = { id:'gold', name:'金牌摊主', clothes:'c_gold', hat:'h_gold', desc:'集齐 ' + CARD_COUNT + ' 张故事卡解锁：金马甲 + 金厨师帽' };
   function gachaUnlocked(st) { return !!(st.shops[3] && st.shops[3].open && st.shops[3].emp > 0); }
   function gachaRemaining(st) { const own = new Set(st.gacha.owned); return ITEMS.filter(it => !own.has(it.id)); }
-  function gachaOdds(st) { const n = gachaRemaining(st).length; return n ? 1 / n : 0; }
+  function gachaComplete(st) { return gachaRemaining(st).length === 0; }
+  // 当前这一抽的概率：普通 / 超级分开算，带保底
+  function gachaOdds(st) {
+    const rem = gachaRemaining(st), rs = rem.filter(it => it.type === 'super'), rr = rem.filter(it => it.type !== 'super');
+    const pity = st.gacha.pity || 0, pityLeft = Math.max(1, CFG.SUPER_PITY - pity);
+    let sp = !rs.length ? 0 : !rr.length ? 1 : pityLeft <= 1 ? 1 : CFG.SUPER_P;
+    return { superP:sp, regP:rem.length ? 1 - sp : 0, perSuper:rs.length ? sp / rs.length : 0, perReg:rr.length ? (1 - sp) / rr.length : 0,
+      remSuper:rs.length, remReg:rr.length, pityLeft:rs.length ? pityLeft : null, guaranteed:rs.length > 0 && sp === 1 };
+  }
   function gachaPrice(st) { return Math.round(CFG.GACHA_PRICE * Math.pow(CFG.GACHA_GROWTH, st.gacha.owned.length)); }
   function cardsComplete(st) { const own = new Set(st.gacha.owned); return ITEMS.filter(i => i.type === 'card').every(i => own.has(i.id)); }
-  // 抽一次：校验 → 扣币 → 从未收集物品等概率抽 → 入库（都改在 st 上，调用方一次性保存，动画只播 st.gacha.last）
+  const pct = x => (x * 100 >= 10 || x === 0 ? (x * 100).toFixed(0) : (x * 100).toFixed(1)) + '%';
+  // 抽一次：校验 → 扣币 → 先定「普通/超级」再在没收集的里等概率抽 → 入库（都改在 st 上，调用方一次性保存，动画只播 st.gacha.last）
   function gachaDraw(st, rnd, price) {
     price = price == null ? gachaPrice(st) : price;
     if (!gachaUnlocked(st)) return { ok:false, why:'摸鱼科技公司雇到员工后开放' };
     const rem = gachaRemaining(st);
     if (!rem.length) return { ok:false, why:'已集齐', complete:true };
     if (st.coins < price) return { ok:false, why:'金币不够' };
-    const pick = rem[Math.min(rem.length - 1, Math.floor(rnd * rem.length))];
+    const o = gachaOdds(st), isSuper = rnd < o.superP;
+    const pool = rem.filter(it => (it.type === 'super') === isSuper);
+    const u = isSuper ? rnd / o.superP : (rnd - o.superP) / (1 - o.superP);
+    const pick = pool[Math.min(pool.length - 1, Math.max(0, Math.floor(u * pool.length)))];
     st.coins -= price; st.gacha.owned.push(pick.id); st.gacha.draws++;
+    st.gacha.pity = isSuper ? 0 : (st.gacha.pity || 0) + 1;
     const setDone = pick.type === 'card' && cardsComplete(st);
-    st.gacha.last = { id:pick.id, n:st.gacha.draws, odds:'1/' + rem.length, setDone, seen:false };
-    return { ok:true, item:pick, cost:price, oddsBefore:1 / rem.length, setDone };
+    const odds = isSuper ? (o.guaranteed && o.superP === 1 && o.remReg ? '保底必出超级装饰 · 这件 1/' + pool.length : '超级 ' + pct(o.superP) + ' · 这件 1/' + pool.length)
+                         : '普通 ' + pct(o.regP) + ' · 这件 1/' + pool.length;
+    st.gacha.last = { id:pick.id, n:st.gacha.draws, odds, setDone, seen:false, super:isSuper };
+    return { ok:true, item:pick, cost:price, super:isSuper, odds:o, setDone };
   }
 
   /* ================= 存档：新建 / 版本迁移 ================= */
@@ -335,14 +440,14 @@
       v:CFG.SAVE_VERSION, rev:0, coins:0, totalEarned:0,
       shops:SHOPS.map((_, i) => ({ open:i === 0, lv:i === 0 ? 1 : 0, emp:0 })),
       ceos:{}, crossSeen:{},
-      taps:0, crits:0, bigCustomers:0, boostEnd:0,
+      taps:0, crits:0, bigCustomers:0, specialCustomers:0, boostEnd:0,
       lastSeen:now, maxSeen:now, created:now,
       pending:null, dailyDoubleDay:null, claimLog:[],
-      gacha:{ owned:[], draws:0, last:null },
-      equip:{ clothes:null, hat:null }, decorHidden:[],
+      gacha:{ owned:[], draws:0, pity:0, last:null },
+      wear:{}, decorHidden:[], rush:{ tea:0, tech:0 },
       ach:{}, muted:false, cur:0,
     };
-    CEOS.forEach(c => st.ceos[c.id] = { unlocked:false, lv:1, at:-1 });
+    CEOS.forEach(c => { st.ceos[c.id] = { unlocked:false, lv:1, at:-1 }; st.wear[c.id] = { clothes:null, hat:null }; });
     checkUnlocks(st);
     return st;
   }
@@ -370,12 +475,22 @@
       if (s.at >= 0) taken[s.at] = true; });
     checkUnlocks(st);
     st.gacha = raw.gacha && Array.isArray(raw.gacha.owned)
-      ? { owned:[...new Set(raw.gacha.owned.filter(id => ITEM_BY_ID[id]))], draws:num(raw.gacha.draws, 0), last:raw.gacha.last || null }
-      : { owned:[], draws:0, last:null };
+      ? { owned:[...new Set(raw.gacha.owned.filter(id => ITEM_BY_ID[id]))], draws:num(raw.gacha.draws, 0), pity:Math.max(0, Math.floor(num(raw.gacha.pity, 0))), last:raw.gacha.last || null }
+      : { owned:[], draws:0, pity:0, last:null };
+    if (st.gacha.last && !ITEM_BY_ID[st.gacha.last.id]) st.gacha.last = null;
     st.claimLog = Array.isArray(raw.claimLog) ? raw.claimLog.slice(-20) : [];
     st.crossSeen = raw.crossSeen && typeof raw.crossSeen === 'object' ? raw.crossSeen : {};
-    st.equip = raw.equip || { clothes:null, hat:null };
+    // 穿搭跟着 CEO 走：v2 的全局 equip 归给 77
+    const okWear = (slot, id) => id == null ? null : (id === 'c_gold' || id === 'h_gold' || (ITEM_BY_ID[id] && ITEM_BY_ID[id].type === slot)) ? id : null;
+    st.wear = {};
+    CEOS.forEach(c => { const w = (raw.wear && raw.wear[c.id]) || (c.id === 'c77' && raw.equip) || {};
+      st.wear[c.id] = { clothes:okWear('clothes', w.clothes), hat:okWear('hat', w.hat) }; });
+    delete st.equip;
+    st.rush = { tea:0, tech:0 };
     st.decorHidden = Array.isArray(raw.decorHidden) ? raw.decorHidden : [];
+    st.bigCustomers = Math.max(0, Math.floor(num(raw.bigCustomers, 0)));
+    st.specialCustomers = Math.max(0, Math.floor(num(raw.specialCustomers, 0)));
+    st.boostEnd = 0; // 团单改为一次性结算，旧档残留的 ×5 清掉
     st.lastSeen = num(raw.lastSeen, now); st.maxSeen = Math.max(num(raw.maxSeen, 0), st.lastSeen);
     st.rev = num(raw.rev, 0);
     delete st.hired;
@@ -396,14 +511,16 @@
     if (!S[3].open) return { text:'攒钱开摸鱼科技公司', cur:c, need:SHOPS[3].open };
     if (S[3].emp <= 0) return { text:'给科技公司雇员工小栈（盲盒开放）', cur:c, need:SHOPS[3].hire };
     if (S[3].lv < CFG.ROCKET_UNLOCK_LV) return { text:'科技公司冲 Lv25：' + ROCKET_NAME.name + '加入', cur:S[3].lv, need:CFG.ROCKET_UNLOCK_LV, lv:true };
-    if (st.gacha.owned.length < ITEMS.length) return { text:'盲盒收集 16 件', cur:st.gacha.owned.length, need:ITEMS.length, count:true };
+    if (st.gacha.owned.length < ITEMS.length) return { text:'盲盒收集 ' + ITEMS.length + ' 件', cur:st.gacha.owned.length, need:ITEMS.length, count:true };
     for (const i of [0, 1, 2, 3]) if (S[i].lv < 50) return { text:SHOPS[i].short + ' 冲 Lv50：收益×8', cur:S[i].lv, need:50, lv:true };
     return { text:'躺着也能赚，老板你赢麻了！', cur:1, need:1 };
   }
 
-  return { CFG, ROCKET_NAME, TYPES, SHOPS, CEOS, CEO_BY_ID, SIGNS, CROSS, ITEMS, ITEM_BY_ID, SET_REWARD, MILESTONES,
+  return { CFG, ROCKET_NAME, TYPES, SHOPS, CEOS, CEO_BY_ID, SIGNS, CROSS, ITEMS, ITEM_BY_ID, REGULAR_ITEMS, SUPER_ITEMS, CARD_COUNT, SET_REWARD, MILESTONES,
+    SUPER_OF_SHOP, hasSuper, superMult, rushActive, rushMult, startRush, critChance, critMult, portalReward, gachaComplete,
     milestoneMult, nextMilestone, upgradeCost, bulkUpgradeCost, empCost, ceoCost, empMult, shopBase,
-    ceoAt, ceoInfo, shopRate, baseRate, onlineRate, offlineRate, boostActive,
+    ceoAt, ceoInfo, shopRate, baseRate, onlineRate, offlineRate, rushOnlineRate, boostActive, orderPayout, settleOrder,
+    BIG_ORDERS, SPECIAL_GUESTS, specialReward, settleSpecial, specialInterval,
     crossKey, crossActive, offlineCap, bigInterval, tapMult, tapValue, tapReward,
     checkUnlocks, assignCeo, assignCeoWithPayout, creditOnline, previewAssign, signOf, cloneState,
     canOpen, openShop, hireEmp, upgradeEmp, upgradeCeo, upgradeShop,

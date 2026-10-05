@@ -1,4 +1,4 @@
-/* 躺着也能赚 v1（试玩版）— 四家店 · CEO + 员工 · 离线 · 每日双倍 · 不重复盲盒 */
+/* 躺着也能赚 v1（试玩版）— 四家店 · CEO + 员工 · 离线 · 每日双倍 · 不重复盲盒（32 普通 + 4 超级装饰）· CEO 穿搭 */
 (() => {
 'use strict';
 const E = window.Economy, CFG = E.CFG;
@@ -154,11 +154,17 @@ const CLOTHES = {
   c_work:   { top:'#3a6ea5', apron:null, pattern:'overall' },
   c_panda:  { top:'#ffffff', apron:null, pattern:'panda' },
   c_gold:   { top:'#ffffff', apron:null, pattern:'goldvest' },
+  c_qipao:  { top:'#9b5de5', apron:null, pattern:'qipao' },
+  c_hoodie: { top:'#2a9d8f', apron:null, pattern:'manga' },
+  c_space:  { top:'#e9ecef', apron:null, pattern:'space' },
+  c_suit:   { top:'#264653', apron:null, pattern:'suit' },
 };
+// 穿搭跟着 CEO 走：每位 CEO 有自己的衣服 / 帽子（state.wear[id]）
+function wearOf(id) { return (state.wear && state.wear[id]) || {}; }
 function lookOf(id) {
-  const base = LOOKS[id]; if (id !== 'c77') return base;
-  const L = Object.assign({}, base), eq = state.equip || {};
-  if (eq.clothes && CLOTHES[eq.clothes]) Object.assign(L, CLOTHES[eq.clothes]);
+  const base = LOOKS[id]; if (!E.CEO_BY_ID[id]) return base;
+  const L = Object.assign({}, base), eq = wearOf(id);
+  if (eq.clothes && CLOTHES[eq.clothes]) Object.assign(L, CLOTHES[eq.clothes], { rocketLogo:false, hood:false, tie:false, tag:id === 'c77' ? base.tag : null });
   if (eq.hat) L.hat = eq.hat;
   return L;
 }
@@ -259,6 +265,10 @@ function drawPerson(c, x, y, s, look, o = {}) {
   if (look.pattern === 'flower') { c.fillStyle = RED; for (const [px, py] of [[-10, -62], [6, -55], [-4, -45], [12, -66], [-14, -44], [10, -42]]) { c.beginPath(); c.arc(px, py, 2.6, 0, TAU); c.fill(); } }
   if (look.pattern === 'panda') { c.fillStyle = INK; c.beginPath(); c.ellipse(-9, -52, 6, 8, 0.3, 0, TAU); c.fill(); c.beginPath(); c.ellipse(10, -46, 5, 7, -0.3, 0, TAU); c.fill(); }
   if (look.pattern === 'overall') { rr(c, -12, -58, 24, 22, 2); inkFill(c, '#2c5282', 2); c.strokeStyle = '#d2691e'; c.lineWidth = 2; c.beginPath(); c.moveTo(6, -56); c.lineTo(10, -66); c.stroke(); }
+  if (look.pattern === 'qipao') { c.strokeStyle = '#fff'; c.lineWidth = 2; c.beginPath(); c.moveTo(-6, -70); c.quadraticCurveTo(4, -64, 10, -66); c.stroke(); c.fillStyle = '#fff'; for (const [px, py] of [[-8, -56], [8, -50], [-4, -42], [10, -60]]) { c.beginPath(); c.arc(px, py, 2.2, 0, TAU); c.fill(); } c.fillStyle = '#ffd23f'; c.beginPath(); c.arc(4, -64, 2, 0, TAU); c.fill(); }
+  if (look.pattern === 'manga') { rr(c, -10, -62, 20, 15, 4); inkFill(c, '#fff', 1.8); c.fillStyle = INK; c.font = '900 11px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('！', 0, -54); c.strokeStyle = INK; c.lineWidth = 1.5; c.beginPath(); c.moveTo(-6, -36); c.lineTo(-6, -44); c.moveTo(6, -36); c.lineTo(6, -44); c.stroke(); }
+  if (look.pattern === 'space') { c.fillStyle = '#ff6b35'; c.fillRect(-19, -50, 38, 5); c.strokeStyle = INK; c.lineWidth = 1.5; c.strokeRect(-19, -50, 38, 5); rr(c, -14, -66, 10, 8, 2); inkFill(c, '#118ab2', 1.5); c.fillStyle = RED; c.beginPath(); c.arc(9, -62, 3, 0, TAU); c.fill(); }
+  if (look.pattern === 'suit') { c.beginPath(); c.moveTo(-8, -72); c.lineTo(0, -52); c.lineTo(8, -72); c.closePath(); inkFill(c, '#fff', 1.8); c.beginPath(); c.moveTo(0, -70); c.lineTo(-2.5, -62); c.lineTo(0, -52); c.lineTo(2.5, -62); c.closePath(); inkFill(c, RED, 1.2); c.fillStyle = '#fff'; c.fillRect(10, -64, 5, 3); }
   if (look.pattern === 'goldvest') { c.beginPath(); c.moveTo(-18, -38); c.lineTo(-13, -70); c.lineTo(-3, -50); c.lineTo(-3, -38); c.closePath(); inkFill(c, '#e9b824', 2); c.beginPath(); c.moveTo(18, -38); c.lineTo(13, -70); c.lineTo(3, -50); c.lineTo(3, -38); c.closePath(); inkFill(c, '#e9b824', 2); }
   if (look.apron) { c.beginPath(); c.moveTo(-12, -60); c.lineTo(12, -60); c.lineTo(15, -36); c.lineTo(-15, -36); c.closePath(); inkFill(c, look.apron, 2);
     if (look.pattern === 'oil') { c.fillStyle = '#ffb703'; c.beginPath(); c.arc(-5, -48, 2, 0, TAU); c.arc(5, -43, 1.6, 0, TAU); c.fill(); }
@@ -326,6 +336,14 @@ function drawHat(c, id, hy) {
   if (id === 'h_flame') { c.fillStyle = '#222'; c.beginPath(); c.arc(0, hy - 10, 20, Math.PI, 0); c.closePath(); c.fill(); c.stroke(); c.beginPath(); c.moveTo(12, hy - 10); c.lineTo(32, hy - 8); c.lineTo(14, hy - 4); c.closePath(); c.fill(); c.stroke();
     c.fillStyle = '#ff6b35'; c.beginPath(); c.moveTo(-8, hy - 12); c.quadraticCurveTo(-6, hy - 26, 0, hy - 30); c.quadraticCurveTo(2, hy - 20, 8, hy - 24); c.quadraticCurveTo(8, hy - 14, 4, hy - 12); c.closePath(); c.fill(); c.lineWidth = 1.5; c.stroke(); }
   if (id === 'h_panda') { c.fillStyle = INK; c.beginPath(); c.arc(-15, hy - 17, 7.5, 0, TAU); c.arc(15, hy - 17, 7.5, 0, TAU); c.fill(); c.fillStyle = '#fff'; c.beginPath(); c.arc(0, hy - 10, 20, Math.PI * 1.15, Math.PI * 1.85); c.lineTo(0, hy - 12); c.closePath(); c.fill(); c.stroke(); }
+  if (id === 'h_boba') { c.fillStyle = '#f6e7d7'; c.beginPath(); c.moveTo(-14, hy - 14); c.lineTo(14, hy - 14); c.lineTo(11, hy - 40); c.lineTo(-11, hy - 40); c.closePath(); c.fill(); c.stroke(); rr(c, -13, hy - 44, 26, 5, 2); c.fillStyle = '#ff8fc7'; c.fill(); c.stroke();
+    c.fillStyle = '#3d2c2e'; for (let k = 0; k < 5; k++) { c.beginPath(); c.arc(-8 + k * 4, hy - 19, 2, 0, TAU); c.fill(); } c.lineWidth = 3; c.beginPath(); c.moveTo(4, hy - 44); c.lineTo(9, hy - 56); c.stroke(); }
+  if (id === 'h_beret') { c.fillStyle = '#e63946'; c.beginPath(); c.ellipse(-2, hy - 17, 23, 9, -0.15, 0, TAU); c.fill(); c.stroke(); c.lineWidth = 2.5; c.beginPath(); c.moveTo(-2, hy - 26); c.lineTo(0, hy - 32); c.stroke();
+    c.fillStyle = INK; c.save(); c.translate(17, hy - 20); c.rotate(0.9); c.fillRect(-1.5, -10, 3, 14); c.restore(); }
+  if (id === 'h_helmet') { c.save(); c.fillStyle = 'rgba(160,220,255,.35)'; c.beginPath(); c.arc(0, hy, 27, 0, TAU); c.fill(); c.lineWidth = 3; c.stroke(); c.strokeStyle = '#fff'; c.lineWidth = 3; c.beginPath(); c.arc(0, hy, 21, Math.PI * 1.15, Math.PI * 1.4); c.stroke(); c.restore();
+    c.fillStyle = '#ff6b35'; rr(c, -8, hy - 33, 16, 6, 2); c.fill(); c.stroke(); }
+  if (id === 'h_crown') { c.fillStyle = YELLOW; c.beginPath(); c.moveTo(-16, hy - 14); c.lineTo(-18, hy - 34); c.lineTo(-8, hy - 24); c.lineTo(0, hy - 38); c.lineTo(8, hy - 24); c.lineTo(18, hy - 34); c.lineTo(16, hy - 14); c.closePath(); c.fill(); c.stroke();
+    c.fillStyle = RED; c.beginPath(); c.arc(0, hy - 20, 3, 0, TAU); c.fill(); c.fillStyle = '#06d6a0'; c.beginPath(); c.arc(-10, hy - 18, 2.2, 0, TAU); c.arc(10, hy - 18, 2.2, 0, TAU); c.fill(); }
   if (id === 'h_gold') { c.fillStyle = '#ffd23f'; rr(c, -15, hy - 30, 30, 16, 3); c.fill(); c.stroke(); c.beginPath(); c.arc(-9, hy - 32, 8, 0, TAU); c.arc(0, hy - 36, 9, 0, TAU); c.arc(9, hy - 32, 8, 0, TAU); c.fill(); c.stroke(); c.fillStyle = '#fff8'; c.fillRect(-10, hy - 26, 4, 8); }
 }
 // 头像（缓存成图片给卡片用）
@@ -375,8 +393,40 @@ function drawAwning(c, i, t) {
       c.shadowColor = '#ff3b3b'; c.shadowBlur = (Math.sin(t * 4 + k) > 0 ? 8 : 2) * U; c.fillStyle = '#e5383b'; c.beginPath(); c.ellipse(0, 4 * U, 2.6 * U, 6 * U, 0, 0, TAU); c.fill(); c.restore(); }
   }
 }
+function emo(c, ch, x, y, size, glow) {
+  c.save(); c.font = `${size}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`; c.textAlign = 'center'; c.textBaseline = 'bottom';
+  if (glow) { c.shadowColor = glow; c.shadowBlur = 14 * U; } c.fillText(ch, x, y); c.restore();
+}
+const SUPER_ICON = { s_panda:'🐼', s_fountain:'⛲', s_portal:'🌀', s_sun:'☀️' };
+function drawSuper(c, i, t) {
+  const id = E.SUPER_OF_SHOP[i]; if (!E.hasSuper(state, i)) return;
+  const l = L(), x = W * 0.585, y = l.ground + 2 * U, ms = now();
+  const hot = (i === 1 && E.rushActive(state, 'tea', ms)) || (i === 3 && E.rushActive(state, 'tech', ms));
+  const pulse = 0.5 + 0.5 * Math.sin(t * (hot ? 9 : 3));
+  c.save(); c.globalAlpha = 0.25 + 0.25 * pulse; c.fillStyle = hot ? '#ff4f9a' : YELLOW; c.beginPath(); c.ellipse(x, y - 22 * U, 30 * U, 30 * U, 0, 0, TAU); c.fill(); c.restore();
+  // 底座
+  rr(c, x - 22 * U, y - 8 * U, 44 * U, 8 * U, 2 * U); inkFill(c, '#ffd23f', 2 * U);
+  const bob = Math.sin(t * 2.4) * 2 * U, sz = 38 * U;
+  if (i === 2) { c.save(); c.translate(x, y - 30 * U); c.rotate(t * 2); emo(c, '🌀', 0, sz / 2, sz); c.restore(); }
+  else emo(c, SUPER_ICON[id], x, y - 6 * U + bob, sz, hot ? '#ff4f9a' : '#fff3a0');
+  if (i === 0) emo(c, '🍢', x + 17 * U, y - 16 * U + bob, 16 * U);
+  if (i === 1 && hot) for (let k = 0; k < 6; k++) { const p = (t * 1.6 + k / 6) % 1; c.fillStyle = '#3d2c2e'; c.beginPath(); c.arc(x + Math.sin(k * 2.1) * 26 * U * p, y - 40 * U - p * 40 * U + p * p * 50 * U, 3 * U, 0, TAU); c.fill(); }
+  if (i === 3 && hot) { c.save(); c.globalAlpha = 0.12 + 0.08 * pulse; c.fillStyle = '#fff3a0'; c.fillRect(0, 0, W, H); c.restore(); }
+}
+function drawRushBanner(c, i, t) {
+  const ms = now(); let txt = null, end = 0;
+  if (i === 1 && E.hasSuper(state, 1) && E.rushActive(state, 'tea', ms)) { txt = '珍珠喷泉 · 连续爆单 ×' + CFG.FOUNTAIN_MULT + ' · 手点必暴击'; end = state.rush.tea; }
+  if (i === 3 && E.hasSuper(state, 3) && E.rushActive(state, 'tech', ms)) { txt = '人造太阳 · 超频 ×' + CFG.SUN_MULT + ' · 暴击 ×' + CFG.SUN_CRIT_MULT; end = state.rush.tech; }
+  if (!txt) return;
+  const l = L(); drawStrokeText(c, txt + '（' + Math.ceil((end - ms) / 1000) + '）', W / 2, l.awnY + l.awnH * 1.9, 12 * U, '#ff4f9a', -0.03);
+}
 function drawDecorFront(c, i, t) {
   const l = L();
+  if (decorOn('d_balloon')) { const by = l.awnY + l.awnH * 2.4 + Math.sin(t * 1.8) * 3 * U; c.strokeStyle = INK; c.lineWidth = 1.2 * U; c.beginPath(); c.moveTo(W * 0.075, by); c.lineTo(W * 0.085, by + 30 * U); c.stroke(); emo(c, '🎈', W * 0.075, by + 2 * U, 22 * U); }
+  if (decorOn('d_poster')) { c.save(); c.translate(W * 0.9, l.counterY - 4 * U); c.rotate(0.06); rr(c, -16 * U, -24 * U, 32 * U, 40 * U, 2 * U); inkFill(c, '#fff', 2 * U);
+    c.fillStyle = RED; c.font = `900 ${9 * U}px sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('热血', 0, -12 * U); c.fillStyle = INK; c.fillText('连载', 0, 0); c.fillStyle = '#ffd23f'; c.fillRect(-12 * U, 8 * U, 24 * U, 4 * U); c.restore(); }
+  if (decorOn('d_cat')) emo(c, '🐱', W * 0.66, l.counterY - 3 * U + (Math.sin(t * 5) > 0.9 ? -2 * U : 0), 18 * U);
+  if (decorOn('d_plant')) emo(c, '🪴', W * 0.955, l.ground + 4 * U, 22 * U);
   if (decorOn('d_board')) { // 龙门阵黑板
     const x = W * 0.1, y = l.ground; c.strokeStyle = INK; c.lineWidth = 2.5 * U; c.beginPath(); c.moveTo(x - 14 * U, y); c.lineTo(x - 4 * U, y - 46 * U); c.moveTo(x + 14 * U, y); c.lineTo(x + 4 * U, y - 46 * U); c.stroke();
     rr(c, x - 17 * U, y - 46 * U, 34 * U, 30 * U, 3 * U); inkFill(c, '#2d3a2e', 2.5 * U);
@@ -429,6 +479,8 @@ function render(t) {
     if (i === 0 && state.shops[0].emp > 0) for (let k = 0; k < 3; k++) { const p = (t * 0.5 + k / 3) % 1; g.save(); g.globalAlpha = 0.5 * (1 - p); g.fillStyle = '#fff'; g.strokeStyle = INK; g.lineWidth = 1.2 * U;
       g.beginPath(); g.arc(W * (0.2 + k * 0.1) + Math.sin(t * 2 + k) * 5 * U, l.counterY - 20 * U - p * 50 * U, (5 + p * 9) * U, 0, TAU); g.fill(); g.stroke(); g.restore(); }
     drawDecorFront(g, i, t);
+    drawSuper(g, i, t);
+    drawRushBanner(g, i, t);
     // CEO
     const cid = E.ceoAt(state, i), cp = ceoPos();
     if (cid) {
@@ -543,6 +595,35 @@ function hitBig(x, y) {
   burstCoins(W / 2, H * 0.5, 16); persist(); return true;
 }
 
+/* ---------- 超级装饰的在线效果（只在页面开着时触发，不影响离线） ---------- */
+const superNext = { tea:null, book:null, tech:null };
+function superAnnounce(i, word, msg, amt) {
+  if (state.cur === i && tab !== 'col') { popWord(word); focusT = 0.5; shake = 0.3; addText(msg, W / 2, H * 0.42, { size:16 * U, color:'#ff4f9a', life:1.8, rot:-0.04 }); if (amt) burstCoins(W * 0.585, H * 0.7, 14); }
+  else toast(msg, 2400);
+  sfx('mile');
+}
+function updateSupers() {
+  if (document.hidden || frozen) return;
+  const t = now(); let changed = false;
+  const every = { tea:CFG.FOUNTAIN_EVERY, book:CFG.PORTAL_EVERY, tech:CFG.SUN_EVERY }, shop = { tea:1, book:2, tech:3 };
+  for (const k of ['tea', 'book', 'tech']) {
+    const i = shop[k];
+    if (!E.hasSuper(state, i)) { superNext[k] = null; continue; }
+    if (superNext[k] == null) { superNext[k] = clock + every[k]; continue; }
+    if (clock < superNext[k]) continue;
+    superNext[k] = clock + every[k];
+    if (!(state.shops[i].emp > 0)) continue;
+    if (k === 'tea') { E.startRush(state, 'tea', t); superAnnounce(1, '爆单！', '珍珠喷泉：连续爆单 ' + CFG.FOUNTAIN_SEC + ' 秒！'); }
+    else if (k === 'tech') { E.startRush(state, 'tech', t); superAnnounce(3, '超频！', '人造太阳：超频 ' + CFG.SUN_SEC + ' 秒！'); }
+    else { const amt = E.portalReward(state); earn(amt); superAnnounce(2, '客串！', '次元传送门：漫画角色客串，大订单 +' + fmt(amt), amt); }
+    changed = true;
+  }
+  // 爆单 / 超频开始或结束时刷新店铺页的暴击显示
+  const key = E.rushActive(state, 'tea', t) + '|' + E.rushActive(state, 'tech', t);
+  if (key !== updateSupers.key) { updateSupers.key = key; dirty = true; }
+  if (changed) { dirty = true; persist(); }
+}
+
 /* ---------- 购买 ---------- */
 function afterBuy(btn, msg) { sfx('buy'); popWord('叮！'); bumpCoins(); dirty = true; persist(); if (btn) { const c = btn.closest('.card'); if (c) { c.classList.remove('flash'); void c.offsetWidth; c.classList.add('flash'); } } if (msg) toast(msg); }
 function failBuy(btn, why) { sfx('no'); shakeEl(btn); toast(why === '金币不够' ? '金币不够，躺一会儿再来' : why); }
@@ -574,19 +655,20 @@ function act(a, arg, btn) {
     case 'amt': buyAmt = arg === 'max' ? 'max' : +arg; dirty = true; break;
     case 'comic': return showComic(arg, false);
     case 'draw': return doGacha(btn);
-    case 'equip': { const [slot, id] = arg.split(':'); state.equip[slot] = id === 'none' ? null : id; persist(); dirty = true; avaCacheClear(); sfx('buy'); break; }
+    case 'equip': { const [who, slot, id] = arg.split(':'); if (!state.wear[who]) state.wear[who] = { clothes:null, hat:null }; state.wear[who][slot] = id === 'none' ? null : id; persist(); dirty = true; avaCacheClear(); sfx('buy'); break; }
+    case 'wearWho': wardrobeWho = arg; dirty = true; break;
     case 'decor': { const h = state.decorHidden || (state.decorHidden = []); const k = h.indexOf(arg); if (k >= 0) h.splice(k, 1); else h.push(arg); persist(); dirty = true; bgKey = ''; break; }
     case 'card': return showCard(arg);
     case 'reset': return confirmReset();
     case 'goShop': switchShop(+arg); setTab('shop'); break;
   }
 }
-function avaCacheClear() { for (const k of Object.keys(avaCache)) if (k.startsWith('c77')) delete avaCache[k]; }
+function avaCacheClear() { for (const k of Object.keys(avaCache)) delete avaCache[k]; }
 
 /* ================= 界面：标签页 ================= */
 const SHOP_ICON = ['🍢', '🧋', '📚', '💻'], TAB_NAME = ['烧烤摊', '奶茶店', '漫画店', '科技'];
-const DECOR_ICON = { d_stool:'🪑', d_lights:'🌶️', d_neon:'🏮', d_board:'🪧' };
-const TYPE_LABEL = { clothes:'衣服', hat:'帽子', decor:'装饰', card:'故事卡' };
+const DECOR_ICON = { d_stool:'🪑', d_lights:'🌶️', d_neon:'🏮', d_board:'🪧', d_balloon:'🎈', d_poster:'📰', d_cat:'🐱', d_plant:'🪴' };
+const TYPE_LABEL = { clothes:'衣服', hat:'帽子', decor:'装饰', card:'故事卡', super:'超级装饰' };
 const thumbCache = {};
 function itemThumb(id) {
   if (thumbCache[id]) return thumbCache[id];
@@ -599,10 +681,11 @@ function itemThumb(id) {
 function itemIcon(id) {
   const it = E.ITEM_BY_ID[id];
   if (it && it.type === 'decor') return `<span class="ii">${DECOR_ICON[id]}</span>`;
+  if (it && it.type === 'super') return `<span class="ii">${SUPER_ICON[id]}</span>`;
   if (it && it.type === 'card') return `<span class="ii">📜</span>`;
   const u = itemThumb(id); return u ? `<img src="${u}" alt="" style="width:44px;height:44px">` : '<span class="ii">❓</span>';
 }
-const ava = (id, cls = '') => `<div class="ava ${cls}"><img src="${avatarURL(id, JSON.stringify(id === 'c77' ? state.equip : ''))}" alt=""></div>`;
+const ava = (id, cls = '') => `<div class="ava ${cls}"><img src="${avatarURL(id, JSON.stringify(E.CEO_BY_ID[id] ? wearOf(id) : ''))}" alt=""></div>`;
 const btn = (act, arg, label, cost, extra = '') => `<button class="buy ${extra}" data-act="${act}" data-arg="${arg}" ${cost != null ? `data-cost="${cost}"` : ''}>${label}${cost != null ? `<small>${fmt(cost)}</small>` : ''}</button>`;
 function rateDelta(fn) { const c = E.cloneState(state); fn(c); return E.baseRate(c) - E.baseRate(state); }
 function ceoTags(i) {
@@ -624,8 +707,11 @@ function renderShop() {
   const k = shopUpgradeCount(i), upCost = E.bulkUpgradeCost(i, s.lv, k);
   const upGain = rateDelta(c => { c.shops[i].lv += k; });
   let h = `<div class="summary">「${sign.name}」每秒 <b style="color:var(--red)">+${fmt(sr)}</b>${s.emp > 0
-      ? `<br>店铺 ${fmt(E.shopBase(i, s.lv))} × 员工 ×${E.empMult(s.emp).toFixed(2)} × CEO ×${info.mult.toFixed(2)}`
-      : '<br>还没员工：不会自动赚钱（可以点画面手动赚）'}</div>`;
+      ? `<br>店铺 ${fmt(E.shopBase(i, s.lv))} × 员工 ×${E.empMult(s.emp).toFixed(2)} × CEO ×${info.mult.toFixed(2)}${E.hasSuper(state, i) ? ` × 超级装饰 ×${CFG.SUPER_RATE}` : ''}`
+      : '<br>还没员工：不会自动赚钱（可以点画面手动赚）'}
+    <div class="critline"><span>手点暴击概率 <b>${Math.round(E.critChance(state, i, now()) * 100)}%</b></span><span>暴击倍率 <b>×${E.critMult(state, i, now())}</b></span></div></div>`;
+  if (E.hasSuper(state, i)) { const sp = E.ITEM_BY_ID[E.SUPER_OF_SHOP[i]];
+    h += `<div class="card super"><div class="ava sq">${SUPER_ICON[sp.id]}</div><div class="info"><div class="name">${sp.name}<span class="tag match">超级装饰</span></div><div class="desc">${sp.desc}</div></div></div>`; }
   h += `<div class="row-head"><div class="sec-title">店铺</div><div class="buyamt">${[1, 10, 'max'].map(a => `<button data-act="amt" data-arg="${a}" class="${buyAmt === a ? 'on' : ''}">${a === 'max' ? 'MAX' : 'x' + a}</button>`).join('')}</div></div>`;
   h += `<div class="card"><div class="ava sq">${SHOP_ICON[i]}</div><div class="info"><div class="name">${S.short}<span class="lv">Lv.${s.lv}</span></div>
     <div class="desc">${nm ? `Lv${nm} 收益 ×${E.milestoneMult(nm)}（现 ×${E.milestoneMult(s.lv)}）` : '里程碑全拿下 ×8'}</div>
@@ -672,39 +758,55 @@ function renderCeo() {
   return h;
 }
 function renderGacha() {
-  const owned = state.gacha.owned.length, total = E.ITEMS.length, rem = total - owned, unlocked = E.gachaUnlocked(state), price = E.gachaPrice(state);
+  const owned = state.gacha.owned.length, total = E.ITEMS.length, rem = total - owned, unlocked = E.gachaUnlocked(state), price = E.gachaPrice(state), o = E.gachaOdds(state);
   const box = `<svg viewBox="0 0 84 84"><rect x="10" y="30" width="64" height="46" rx="4" fill="${unlocked ? '#ffd23f' : '#ccc'}" stroke="#141414" stroke-width="4"/><rect x="6" y="20" width="72" height="16" rx="3" fill="${unlocked ? '#e63946' : '#aaa'}" stroke="#141414" stroke-width="4"/><rect x="36" y="20" width="12" height="56" fill="#fff" stroke="#141414" stroke-width="3"/><path d="M42 20 C30 4 18 10 26 20 M42 20 C54 4 66 10 58 20" fill="none" stroke="#141414" stroke-width="4"/><text x="42" y="64" font-size="18" font-weight="900" text-anchor="middle" fill="#141414">${unlocked ? '?' : '🔒'}</text></svg>`;
+  const P = x => (x * 100 >= 10 || x === 0 ? (x * 100).toFixed(0) : (x * 100).toFixed(1)) + '%';
+  const ownS = E.SUPER_ITEMS.filter(it => state.gacha.owned.includes(it.id)).length, ownR = owned - ownS;
   let h = `<div class="sec-title">77 收藏盲盒</div>`;
   if (!unlocked) {
     h += `<div class="box-hero"><div class="box-ico">${box}</div><div class="info"><div class="name">还没开放</div><div class="desc">摸鱼科技公司雇到员工后开放。<br>只花游戏金币，不卖真钱。</div></div></div>`;
   } else {
     h += `<div class="box-hero"><div class="box-ico" id="boxIco">${box}</div><div class="info"><div class="name">已收集 ${owned}/${total}</div>
-      <div class="desc">${rem ? `下一个：剩下 ${rem} 件<b>每件 1/${rem}</b>（${(100 / rem).toFixed(2)}%），必出新的` : '16 件全收集！'}</div>
+      <div class="desc">${rem ? `下一抽：<b>超级装饰 ${P(o.superP)}</b>${o.remSuper ? `（每件 ${P(o.perSuper)}）` : ''} · 普通收藏 ${P(o.regP)}${o.remReg ? `（每件 ${P(o.perReg)}）` : ''}<br>${o.remSuper ? (o.guaranteed ? '<b style="color:var(--red)">这一抽必出超级装饰！</b>' : `保底：再 <b>${o.pityLeft}</b> 抽内必出超级装饰`) : '超级装饰已集齐'}` : `${total} 件全收集！`}</div>
       <div style="margin-top:6px">${rem ? btn('draw', '', '开一个', price, 'red') : '<button class="buy no" disabled>已集齐</button>'}</div></div></div>`;
   }
-  h += `<div class="item-grid">${E.ITEMS.map(it => { const has = state.gacha.owned.includes(it.id);
+  h += `<div class="sec-title">超级装饰 ${ownS}/${E.SUPER_ITEMS.length}（每店一件，只能抽到）</div>`;
+  h += E.SUPER_ITEMS.map(it => { const has = state.gacha.owned.includes(it.id);
+    return `<div class="card super ${has ? '' : 'dim'}"><div class="ava sq">${has ? SUPER_ICON[it.id] : '❓'}</div><div class="info"><div class="name">${it.name}<span class="tag ${has ? 'match' : 'idle'}">${E.SHOPS[it.shop].short}</span></div><div class="desc">${it.desc}</div></div></div>`; }).join('');
+  h += `<div class="sec-title">普通收藏 ${ownR}/${E.REGULAR_ITEMS.length}</div>`;
+  h += `<div class="item-grid">${E.REGULAR_ITEMS.map(it => { const has = state.gacha.owned.includes(it.id);
     return `<div class="item ${has ? '' : 'no'}"><span class="t">${TYPE_LABEL[it.type]}</span>${itemIcon(it.id)}${has ? it.name : '？？？'}</div>`; }).join('')}</div>`;
-  h += `<div class="note">规则：不重复收藏盒，共 16 件（衣服 4 / 帽子 4 / 装饰 4 / 故事卡 4）。从<b>还没收集的</b>里等概率抽，初始每件 6.25%，之后每件 1/剩余数；每抽必得新物品，最多 16 抽集齐，集齐后不能再买、不扣金币。收藏品只是好看，<b>不加产速</b>，不抽也能正常开店升级。单价 ${fmt(CFG.GACHA_PRICE)}（试玩参数）。</div>`;
+  h += `<div class="note">规则：不重复收藏盒，共 ${total} 件：普通收藏 ${E.REGULAR_ITEMS.length} 件（衣服 8 / 帽子 8 / 装饰 8 / 故事卡 8）+ 超级装饰 ${E.SUPER_ITEMS.length} 件。每抽先定类别：<b>超级装饰 ${P(CFG.SUPER_P)}</b>、普通收藏 ${P(1 - CFG.SUPER_P)}，再从该类<b>还没收集的</b>里等概率抽；连续 ${CFG.SUPER_PITY - 1} 抽没出超级装饰，第 ${CFG.SUPER_PITY} 抽必出。某一类抽完了，就只出另一类。每抽必得新物品，最多 ${total} 抽集齐，集齐后不能再买、不扣金币。普通收藏只是好看，<b>不加产速</b>；超级装饰加本店产量和专属效果，但不抽也能正常开齐店铺。单价 ${fmt(CFG.GACHA_PRICE)}。</div>`;
   return h;
 }
+let wardrobeWho = 'c77';
 function renderCol() {
-  const own = new Set(state.gacha.owned), setDone = E.cardsComplete(state), eq = state.equip;
+  const own = new Set(state.gacha.owned), setDone = E.cardsComplete(state);
+  const ceos = E.CEOS.filter(c => state.ceos[c.id].unlocked); if (!ceos.some(c => c.id === wardrobeWho)) wardrobeWho = 'c77';
+  const who = wardrobeWho, eq = wearOf(who), whoName = E.CEO_BY_ID[who].name;
   const clothes = ['none', ...E.ITEMS.filter(i => i.type === 'clothes' && own.has(i.id)).map(i => i.id), ...(setDone ? ['c_gold'] : [])];
   const hats = ['none', ...E.ITEMS.filter(i => i.type === 'hat' && own.has(i.id)).map(i => i.id), ...(setDone ? ['h_gold'] : [])];
   const nameOf = id => id === 'none' ? '默认' : id === 'c_gold' ? '金马甲' : id === 'h_gold' ? '金厨师帽' : E.ITEM_BY_ID[id].name;
-  const cell = (slot, id) => `<button class="item ${((eq[slot] || 'none') === id) ? 'sel' : ''}" data-act="equip" data-arg="${slot}:${id}">${id === 'none' ? '<span class="ii">🙂</span>' : (itemThumb(id) ? `<img src="${itemThumb(id)}" style="width:44px;height:44px" alt="">` : '')}${nameOf(id)}</button>`;
-  let h = `<div class="sec-title">77 的衣橱</div><div class="item-grid">${clothes.map(id => cell('clothes', id)).join('')}</div>
+  const cell = (slot, id) => `<button class="item ${((eq[slot] || 'none') === id) ? 'sel' : ''}" data-act="equip" data-arg="${who}:${slot}:${id}">${id === 'none' ? '<span class="ii">🙂</span>' : (itemThumb(id) ? `<img src="${itemThumb(id)}" style="width:44px;height:44px" alt="">` : '')}${nameOf(id)}</button>`;
+  let h = `<div class="sec-title">CEO 衣橱（穿在 CEO 身上，换店跟着人走）</div>
+    <div class="who-row">${ceos.map(c => `<button class="who ${c.id === who ? 'on' : ''}" data-act="wearWho" data-arg="${c.id}">${ava(c.id)}<span>${c.name}</span></button>`).join('')}</div>
+    <div class="note" style="margin-top:0">正在给 <b>${whoName}</b> 换装${state.ceos[who].at >= 0 ? '（现任：' + E.signOf(state, state.ceos[who].at).name + '）' : ''}</div>
+    <div class="item-grid">${clothes.map(id => cell('clothes', id)).join('')}</div>
     <div class="item-grid">${hats.map(id => cell('hat', id)).join('')}</div>`;
-  if (clothes.length + hats.length <= 2) h += `<div class="note">从盲盒里抽到衣服、帽子后，在这里给 77 换上。</div>`;
+  if (clothes.length + hats.length <= 2) h += `<div class="note">从盲盒里抽到衣服、帽子后，在这里给 CEO 换上。</div>`;
+  const supers = E.SUPER_ITEMS.filter(it => own.has(it.id));
+  if (supers.length) { h += `<div class="sec-title">超级装饰（常驻生效）</div>`;
+    h += supers.map(it => `<div class="card super"><div class="ava sq">${SUPER_ICON[it.id]}</div><div class="info"><div class="name">${it.name}<span class="tag match">${E.SHOPS[it.shop].short}</span></div><div class="desc">${it.desc}</div></div></div>`).join(''); }
   h += `<div class="sec-title">店铺装饰</div>`;
   const decors = E.ITEMS.filter(i => i.type === 'decor');
   h += decors.map(d => own.has(d.id)
     ? `<div class="card"><div class="ava sq">${DECOR_ICON[d.id]}</div><div class="info"><div class="name">${d.name}</div><div class="desc">摆在每家店门口（不加产速）</div></div><button class="toggle ${decorOn(d.id) ? 'on' : ''}" data-act="decor" data-arg="${d.id}">${decorOn(d.id) ? '摆着' : '收起'}</button></div>`
     : `<div class="card dim"><div class="ava sq">❓</div><div class="info"><div class="name">？？？</div><div class="desc">盲盒里抽</div></div></div>`).join('');
-  h += `<div class="sec-title">故事卡图鉴 ${E.ITEMS.filter(i => i.type === 'card' && own.has(i.id)).length}/4</div>`;
-  h += E.ITEMS.filter(i => i.type === 'card').map((c, k) => own.has(c.id)
+  const cards = E.ITEMS.filter(i => i.type === 'card');
+  h += `<div class="sec-title">故事卡图鉴 ${cards.filter(c => own.has(c.id)).length}/${cards.length}</div>`;
+  h += cards.map((c, k) => own.has(c.id)
     ? `<div class="story"><b>${k + 1}. ${c.name}</b><p>${c.text}</p></div>` : `<div class="story no"><b>${k + 1}. ？？？</b><p>还没收集</p></div>`).join('');
-  h += `<div class="note">${setDone ? '✅ 已集齐 4 张故事卡：解锁专属外观「金牌摊主」（金马甲 + 金厨师帽），在衣橱里换上。' : '集齐 4 张故事卡，解锁专属外观「金牌摊主」（金马甲 + 金厨师帽）。'}</div>`;
+  h += `<div class="note">${setDone ? `✅ 已集齐 ${cards.length} 张故事卡：解锁专属外观「金牌摊主」（金马甲 + 金厨师帽），在衣橱里给任意 CEO 换上。` : `集齐 ${cards.length} 张故事卡，解锁专属外观「金牌摊主」（金马甲 + 金厨师帽）。`}</div>`;
   h += `<div class="sec-title">设置</div><div class="card"><div class="info"><div class="name">存档</div><div class="desc">版本 v${state.v} · 自动保存在本机浏览器 · 每日双倍按马来西亚时间早上 5 点重置</div></div>
     <button class="buy ghost" data-act="reset" data-arg="">重新开始</button></div><div class="note">试玩版 · 只花游戏金币，没有任何真钱购买。</div>`;
   return h;
@@ -739,7 +841,7 @@ function refreshDynamic(force) {
   $('#goalBar').style.width = Math.min(100, gl.cur / gl.need * 100).toFixed(0) + '%';
   renderTabs();
   // 底部提醒点
-  const gdot = E.gachaUnlocked(state) && state.gacha.owned.length < 16 && state.coins >= E.gachaPrice(state);
+  const gdot = E.gachaUnlocked(state) && !E.gachaComplete(state) && state.coins >= E.gachaPrice(state);
   const nb = document.querySelector('#bottomNav [data-tab="gacha"]'); const has = !!nb.querySelector('.dot');
   if (gdot && !has) nb.insertAdjacentHTML('beforeend', '<i class="dot"></i>'); if (!gdot && has) nb.querySelector('.dot').remove();
   const cdot = E.CEOS.some(c => state.ceos[c.id].unlocked && state.ceos[c.id].at === -1);
@@ -868,7 +970,7 @@ function showCeoJoin(id) {
   $('#mOk').addEventListener('click', () => { closeModal(); dirty = true; }, { once:true });
 }
 function showGachaOpen() {
-  openModal(`<div class="mbubble">新玩法开放！</div><div class="mtitle">77 收藏盲盒</div><div class="mnote">16 件不重复：衣服、帽子、店铺装饰、故事卡。每抽必出新的，概率公开。只花游戏金币，不加产速，不抽也照样开店升级。</div>
+  openModal(`<div class="mbubble">新玩法开放！</div><div class="mtitle">77 收藏盲盒</div><div class="mnote">${E.ITEMS.length} 件不重复：衣服、帽子（给 CEO 穿）、店铺装饰、故事卡，还有 4 件<b>超级装饰</b>（每店一件，加产量和专属效果）。每抽必出新的，概率和保底公开。只花游戏金币，不抽也照样开店升级。</div>
     <div class="mbtns two"><button class="buy ghost" id="mNo">等会儿</button><button class="buy red" id="mGo">去看看</button></div>`);
   $('#mNo').addEventListener('click', closeModal, { once:true });
   $('#mGo').addEventListener('click', () => { closeModal(); setTab('gacha'); }, { once:true });
@@ -885,17 +987,20 @@ function doGacha(b) {
 }
 function showReveal(resumed) {
   const last = state.gacha.last; if (!last) return;
-  const it = E.ITEM_BY_ID[last.id]; sfx('reveal'); popWord('开！');
-  openModal(`<div class="mbubble">${resumed ? '上次开盒的结果' : '开盒！'}</div>
-    <div style="display:flex;justify-content:center;margin:4px 0"><div class="item" style="width:110px;font-size:14px">${itemIcon(it.id)}<b>${it.name}</b></div></div>
+  const it = E.ITEM_BY_ID[last.id]; if (!it) return; const sup = it.type === 'super', total = E.ITEMS.length, done = E.gachaComplete(state);
+  sfx(sup ? 'mile' : 'reveal'); popWord(sup ? '超级！' : '开！'); if (sup) { focusT = 0.8; shake = 0.5; }
+  const note = it.type === 'card' ? '“' + it.text + '”<br>' : it.type === 'decor' ? '已经摆进店里（收藏页可收起）<br>' : sup ? `<b>${it.desc}</b><br>已经放进${E.SHOPS[it.shop].name}，常驻生效<br>` : '去收藏页给 CEO 换上<br>';
+  openModal(`<div class="mbubble">${resumed ? '上次开盒的结果' : sup ? '✨ 超级装饰！✨' : '开盒！'}</div>
+    <div style="display:flex;justify-content:center;margin:4px 0"><div class="item ${sup ? 'superpop' : ''}" style="width:110px;font-size:14px">${itemIcon(it.id)}<b>${it.name}</b></div></div>
     <div class="mtitle">${TYPE_LABEL[it.type]}：${it.name}</div>
-    <div class="mnote">${it.type === 'card' ? '“' + it.text + '”<br>' : it.type === 'decor' ? '已经摆进店里（收藏页可收起）<br>' : '去收藏页给 77 换上<br>'}本次概率 ${last.odds} · 已收集 ${state.gacha.owned.length}/16</div>
-    ${last.setDone ? `<div class="pv-tags"><div>🎉 集齐 4 张故事卡！解锁专属外观「${E.SET_REWARD.name}」（金马甲 + 金厨师帽）</div></div>` : ''}
-    <div class="mbtns two"><button class="buy ghost" id="mOk">收下</button>${state.gacha.owned.length < 16 && !resumed ? `<button class="buy red" id="mAgain">再开一个 · ${fmt(E.gachaPrice(state))}</button>` : `<button class="buy" id="mCol">去收藏页</button>`}</div>`);
+    <div class="mnote">${note}本次概率：${last.odds} · 已收集 ${state.gacha.owned.length}/${total}</div>
+    ${last.setDone ? `<div class="pv-tags"><div>🎉 集齐 ${E.CARD_COUNT} 张故事卡！解锁专属外观「${E.SET_REWARD.name}」（金马甲 + 金厨师帽）</div></div>` : ''}
+    <div class="mbtns two"><button class="buy ghost" id="mOk">收下</button>${!done && !resumed ? `<button class="buy red" id="mAgain">再开一个 · ${fmt(E.gachaPrice(state))}</button>` : sup ? `<button class="buy" id="mGoShop">去看看</button>` : `<button class="buy" id="mCol">去收藏页</button>`}</div>`);
   last.seen = true; persist(); bgKey = ''; dirty = true;
   $('#mOk').addEventListener('click', closeModal, { once:true });
   const ag = $('#mAgain'); if (ag) ag.addEventListener('click', () => { closeModal(); doGacha(ag); }, { once:true });
   const mc = $('#mCol'); if (mc) mc.addEventListener('click', () => { closeModal(); setTab('col'); }, { once:true });
+  const ms = $('#mGoShop'); if (ms) ms.addEventListener('click', () => { closeModal(); switchShop(it.shop); setTab('shop'); }, { once:true });
 }
 function showCard(id) { const it = E.ITEM_BY_ID[id]; openModal(`<div class="mtitle">${it.name}</div><div class="mnote">${it.text}</div><button class="buy big" id="mOk">好</button>`); $('#mOk').addEventListener('click', closeModal, { once:true }); }
 function confirmReset() {
@@ -957,7 +1062,7 @@ function frame(ts) {
   requestAnimationFrame(frame);
   const dt = Math.min(0.1, (ts - lastFrame) / 1000); lastFrame = ts; clock = ts / 1000;
   if (frozen) return;
-  tick(); updateBig();
+  tick(); updateBig(); updateSupers();
   if (focusT > 0) focusT -= dt; if (shake > 0) shake = Math.max(0, shake - dt * 1.5);
   if (clock > nextBubbleAt) { nextBubbleAt = clock + 9 + Math.random() * 7; const i = state.cur;
     if (state.shops[i].open) { const cid = E.ceoAt(state, i); if (Math.random() < 0.5 && cid) sayLine('c', Math.random() < 0.5 ? E.CEO_BY_ID[cid].line : E.SIGNS[cid][i][1]); else if (state.shops[i].emp > 0) sayLine('e', E.SHOPS[i].emp.line); } }
@@ -975,7 +1080,7 @@ function boot() {
   const p = E.settleOffline(state, now(), rid);
   persist();
   scheduleBig(); renderTabs(); setTab('shop');
-  if (migratedFrom != null) toast('存档已升级到 v' + CFG.SAVE_VERSION + '（CEO + 员工）', 2600);
+  if (migratedFrom != null) toast('存档已升级到 v' + CFG.SAVE_VERSION + '（新盲盒 + CEO 穿搭，收藏都保留）', 2600);
   if (p && p.rolledBack) toast('检测到手机时间被往回调，这段时间不发离线收益');
   if (first) queueModal(showIntro);
   if (state.pending) queueModal(showOffline);
@@ -987,6 +1092,6 @@ boot();
 
 // 测试/调试钩子（不影响玩家）
 window.__tzz = { E, showComic, get state() { return state; }, set state(v) { state = v; }, persist, onReturn, tapShop, act, setTab, switchShop, renderTab,
-  forceBig() { nextBigAt = 0; big = null; }, get big() { return big; }, hitBig, modalOpen, closeModal, get frozen() { return frozen; },
+  forceBig() { nextBigAt = 0; big = null; }, forceSupers() { for (const k in superNext) superNext[k] = 0; updateSupers(); renderTab(); }, get big() { return big; }, hitBig, modalOpen, closeModal, get frozen() { return frozen; },
   audioState() { return AU.ctx ? AU.ctx.state : 'none'; }, showPreview, openAssign };
 })();

@@ -236,3 +236,50 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
   .summary{font-size:11px;padding:3px 7px;margin-bottom:6px}
 }
 @media (max-width:360px){ .logo{font-size:19px} .chip{padding:0 6px;font-size:11px} .buy{min-width:78px} }
+/* 盲盒 v2：超级装饰 / 暴击显示 / CEO 衣橱 */
+.critline{display:flex;gap:6px;margin-top:3px;flex-wrap:wrap}
+.critline span{background:#fff0f5;border:1.5px solid var(--ink);border-radius:4px;padding:0 6px;font-size:11px}
+.critline b{color:var(--red)}
+.card.super{background:linear-gradient(135deg,#fff6cf,#ffe0ef);box-shadow:4px 4px 0 var(--pink)}
+.card.super .ava{background:#fff}
+.card.super .ava.sq{font-size:30px;display:flex;align-items:center;justify-content:center}
+.card.super.dim{background:#f2eee4;box-shadow:none}
+.who-row{display:flex;gap:8px;overflow-x:auto;margin:2px 0 6px;padding-bottom:2px}
+.who{flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:2px;background:#fff;border:2.5px solid var(--ink);border-radius:10px;padding:4px 6px;font-size:11px;font-weight:900;min-width:64px;min-height:44px}
+.who .ava{width:40px;height:40px}
+.who.on{background:var(--yellow);box-shadow:3px 3px 0 var(--ink)}
+.item.superpop{background:linear-gradient(135deg,#fff3a0,#ffc2dd);animation:superpop .9s ease-out}
+@keyframes superpop{0%{transform:scale(.3) rotate(-20deg)}60%{transform:scale(1.15) rotate(6deg)}100%{transform:scale(1) rotate(0)}}
+@media (prefers-reduced-motion:reduce){.item.superpop{animation:none}}
+
+/* ===== 布局：店景只留在经营页；其他页紧凑页头 ===== */
+#app:not([data-tab="shop"]) #stage{display:none}
+#app:not([data-tab="shop"]) #shopTabs{display:none}
+#app:not([data-tab="shop"]) #goal{display:none}
+#compactHead{flex:0 0 auto;background:#fff;border:3px solid var(--ink);border-radius:8px;box-shadow:3px 3px 0 var(--ink);padding:8px 10px;margin-bottom:8px}
+#compactHead.hidden{display:none!important}
+#compactHead .ch-title{font-weight:900;font-size:14px;margin-bottom:6px}
+#compactHead .ch-row{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+#compactHead .ch-card{flex:0 0 auto;min-width:72px;border:2px solid var(--ink);border-radius:8px;background:#fffdf7;padding:4px 6px;text-align:center;font-size:11px;font-weight:800;line-height:1.25}
+#compactHead .ch-card .ava{width:36px;height:36px;margin:0 auto 2px}
+#compactHead .ch-card b{display:block;font-size:12px}
+#compactHead .ch-card small{color:#666;font-weight:700}
+#compactHead .ch-note{font-size:11px;color:#666;margin-top:6px;line-height:1.4}
+
+/* 衣橱分区 */
+.slot-title{font-size:12px;font-weight:900;margin:8px 0 4px;display:flex;align-items:center;gap:6px}
+.slot-title::before{content:"";width:8px;height:8px;background:var(--red);border:1.5px solid var(--ink);border-radius:2px}
+.wear-preview{display:flex;align-items:center;gap:12px;background:#fff;border:3px solid var(--ink);border-radius:10px;box-shadow:3px 3px 0 var(--ink);padding:8px 10px;margin-bottom:8px}
+.wear-preview .wp-ava{width:88px;height:88px;border:2.5px solid var(--ink);border-radius:50%;overflow:hidden;background:#fff;flex:0 0 auto}
+.wear-preview .wp-ava img{width:100%;height:100%;display:block;transform:scale(1.7);transform-origin:50% 70%}
+.wear-preview .wp-info{flex:1;min-width:0;text-align:left}
+.wear-preview .wp-name{font-weight:900;font-size:15px}
+.wear-preview .wp-sub{font-size:12px;color:#555;margin-top:2px}
+
+/* 升级卡更突出等级 / 增量 / 原因 */
+.card .gain.warn{color:#9a3412;background:#fff3cd;border:1.5px dashed var(--ink);border-radius:4px;padding:2px 6px;display:inline-block}
+.details-fold{font-size:11px;color:#666;margin-top:4px}
+.details-fold summary{cursor:pointer;font-weight:800;color:#444}
+
+/* 团单进度条（画在 canvas 上为主；DOM 备用） */
+.order-hud{position:absolute;left:8px;right:8px;bottom:8px;z-index:3;pointer-events:none}
