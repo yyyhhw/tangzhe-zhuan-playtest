@@ -1348,16 +1348,19 @@ function showIntro() {
 // 房间底图：art/home_<ceo>_<lv>.webp（ceo=c77/pearl/otaku/rocket，lv=1/2/3），例 { c77_1:1 }
 // 底图规格：宽 = 列数×200px，高 = (2 + 行数)×200px；上面 2 格高是后墙，下面是地板格，平行投影无消失点。Lv1 6×4 → 1200×1200，墙地分界 y=400
 const HOME_ART = { c77_1: 1, pearl_1: 1, otaku_1: 1, rocket_1: 1 };  // 熊大四位 CEO 的 Lv1（原图墙 / 地板在踢脚线底边处分开，分别缩放到 1200×400 + 1200×800）
-const FURN_ART = { bed:1 };  // 熊大小床 400×600 透明底。家具：art/furn_<bed|sofa|table|lamp|rug|plant|bookshelf|tv|fridge|wardrobe|painting|catbed>.webp，例 { bed:1 }
+const FURN_ART = { bed:1, bookshelf:1, wardrobe:1 };  // 熊大小床 / 书架 / 衣柜 400×600 透明底。家具：art/furn_<bed|sofa|table|lamp|rug|plant|bookshelf|tv|fridge|wardrobe|painting|catbed>.webp，例 { bed:1 }
 const furnName = fid => fid.replace(/^furn_/, '');
+// 高家具：占地只有底下那排格子，图按「高 / 宽」比例往上伸（盖住后墙），底脚对齐占地底边；值 = 图高 / 图宽（400×600 → 1.5）
+const FURN_UP = { bookshelf: 1.5, wardrobe: 1.5 };
+const furnTall = fid => !!(FURN_ART[furnName(fid)] && FURN_UP[furnName(fid)]);
 const HOME_ICON = ['🏠', '🏢', '🏰'];
 let homeWho = 'c77', homeSub = 'room', homeSel = null, homeDrag = null;
 const homeUndo = {}; // 每位 CEO 一条撤销栈（只在本次打开有效，不存档）
 const undoStack = id => homeUndo[id] || (homeUndo[id] = []);
 function pushUndo(u) { const s = undoStack(u.ceo); s.push(u); if (s.length > 60) s.shift(); }
-function furnInner(fid, rot) {
+function furnInner(fid, rot, inRoom) {
   const f = E.FURN_BY_ID[fid], sz = E.furnSize(fid, rot), odd = rot & 1, n = furnName(fid);
-  const st = `width:${odd ? sz.h / sz.w * 100 : 100}%;height:${odd ? sz.w / sz.h * 100 : 100}%;transform:translate(-50%,-50%) rotate(${rot * 90}deg)`;
+  const st = inRoom && furnTall(fid) ? `left:0;top:auto;bottom:0;width:100%;height:${sz.w * FURN_UP[n] / sz.h * 100}%;transform:none` : `width:${odd ? sz.h / sz.w * 100 : 100}%;height:${odd ? sz.w / sz.h * 100 : 100}%;transform:translate(-50%,-50%) rotate(${rot * 90}deg)`;
   return `<div class="fi" style="${st}"><span class="fe">${f.emoji}</span>${FURN_ART[n] ? `<img src="art/furn_${n}.webp?v=${ART_V}" data-homefb="1" alt="">` : ''}</div>`;
 }
 document.addEventListener('error', e => { const el = e.target; if (el && el.tagName === 'IMG' && el.dataset && el.dataset.homefb) { const fu = el.closest('.furn'); if (fu) fu.classList.remove('art'); el.remove(); } }, true);
@@ -1386,9 +1389,11 @@ function renderRoom() {
     <div class="desc">${T.cols}×${T.rows} 格 · 豪华度 <b class="lux" id="homeLux">${lux}</b>（家具 ${lux - T.bonus} + 房型 ${T.bonus}）</div>
     <div class="gain">${next ? `升级 → ${next.name} ${next.cols}×${next.rows} 格，房型豪华 +${next.bonus}` : '已经是最高档豪宅'}</div></div>
     ${next ? btn('homeUp', id, '升级', next.cost) : '<button class="buy no" disabled>顶级</button>'}</div>`;
-  const items = H.placed.slice().sort((a, b) => (E.FURN_BY_ID[a.fid].layer === 'rug' ? 0 : 1) - (E.FURN_BY_ID[b.fid].layer === 'rug' ? 0 : 1)).map(p => {
+  const isRug = p => E.FURN_BY_ID[p.fid].layer === 'rug' ? 0 : 1, footY = p => p.y + E.furnSize(p.fid, p.rot).h;
+  // 前后遮挡：地毯垫最底；其余按底脚所在行排，靠前（底脚更低）的盖住后面的
+  const items = H.placed.slice().sort((a, b) => isRug(a) - isRug(b) || footY(a) - footY(b) || a.x - b.x).map(p => {
     const f = E.FURN_BY_ID[p.fid], sz = E.furnSize(p.fid, p.rot);
-    return `<div class="furn ${f.layer === 'rug' ? 'rug' : ''} ${FURN_ART[furnName(p.fid)] ? 'art' : ''} ${p.uid === homeSel ? 'sel' : ''}" data-uid="${p.uid}" data-fid="${p.fid}" style="left:${p.x / T.cols * 100}%;top:${p.y / T.rows * 100}%;width:${sz.w / T.cols * 100}%;height:${sz.h / T.rows * 100}%;--fc:${f.color}">${furnInner(p.fid, p.rot)}<b class="fn">${f.name}</b></div>`;
+    return `<div class="furn ${f.layer === 'rug' ? 'rug' : ''} ${FURN_ART[furnName(p.fid)] ? 'art' : ''} ${furnTall(p.fid) ? 'tall' : ''} ${p.uid === homeSel ? 'sel' : ''}" data-uid="${p.uid}" data-fid="${p.fid}" style="left:${p.x / T.cols * 100}%;top:${p.y / T.rows * 100}%;width:${sz.w / T.cols * 100}%;height:${sz.h / T.rows * 100}%;--fc:${f.color}">${furnInner(p.fid, p.rot, true)}<b class="fn">${f.name}</b></div>`;
   }).join('');
   const artKey = `${id}_${H.lv}`, hasArt = !!HOME_ART[artKey];
   h += `<div class="room tier-${T.id}${hasArt ? ' has-art' : ''}" id="room" data-tier="${T.id}" style="--cols:${T.cols};--rows:${T.rows};--wall:${T.wall};--floor:${T.floor};--trim:${T.trim}">
@@ -1510,8 +1515,8 @@ function homeAutoScroll(d) {
 function homeDragAt(d) {
   const c = homeCellAt(d.px, d.py, d.fid, d.rot, d.offX, d.offY); if (!c) return;
   if (!d.moved) { d.moved = true; homeSel = null;
-    const g = document.createElement('div'); g.className = 'furn drag-ghost' + (E.FURN_BY_ID[d.fid].layer === 'rug' ? ' rug' : '');
-    g.style.cssText = `width:${d.w * c.cw}px;height:${d.h * c.ch}px;--fc:${E.FURN_BY_ID[d.fid].color}`; g.innerHTML = furnInner(d.fid, d.rot);
+    const g = document.createElement('div'); g.className = 'furn drag-ghost' + (E.FURN_BY_ID[d.fid].layer === 'rug' ? ' rug' : '') + (furnTall(d.fid) ? ' tall' : '');
+    g.style.cssText = `width:${d.w * c.cw}px;height:${d.h * c.ch}px;--fc:${E.FURN_BY_ID[d.fid].color}`; g.innerHTML = furnInner(d.fid, d.rot, true);
     document.body.appendChild(g); d.ghost = g; if (d.src === 'room') d.el.classList.add('lifting'); }
   d.ghost.style.left = (d.px - d.offX * c.cw) + 'px'; d.ghost.style.top = (d.py - d.offY * c.ch) + 'px';
   const hl = $('#roomHl'); d.cell = c.inside ? c : null;
@@ -1632,5 +1637,5 @@ window.__tzz = { E, showComic, showCeoJoin, get state() { return state; }, set s
   get big() { return order; }, get order() { return order; }, get special() { return special; }, get guests() { return guests; },
   hitBig, modalOpen, closeModal, get frozen() { return frozen; },
   audioState() { return AU.ctx ? AU.ctx.state : 'none'; }, showPreview, openAssign, JOB_ART, jobShown, jobURL, showJobArt,
-  HOME_ART, FURN_ART, homeAct, get homeWho() { return homeWho; }, get homeSub() { return homeSub; }, get homeSel() { return homeSel; }, get homeDrag() { return homeDrag; }, homeUndo, resize, get canvasSize() { return { W, H }; } };
+  HOME_ART, FURN_ART, FURN_UP, homeAct, get homeWho() { return homeWho; }, get homeSub() { return homeSub; }, get homeSel() { return homeSel; }, get homeDrag() { return homeDrag; }, homeUndo, resize, get canvasSize() { return { W, H }; } };
 })();
