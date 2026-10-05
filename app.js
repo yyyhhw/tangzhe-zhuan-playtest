@@ -930,6 +930,7 @@ function act(a, arg, btn) {
     case 'card': return showCard(arg);
     case 'reset': return confirmReset();
     case 'goShop': switchShop(+arg); setTab('shop'); break;
+    default: if (a.indexOf('home') === 0) return homeAct(a, arg, btn);
   }
 }
 function avaCacheClear() { for (const k of Object.keys(avaCache)) delete avaCache[k]; }
@@ -1101,11 +1102,16 @@ function renderCol() {
   return h;
 }
 function renderTab() {
-  const html = tab === 'shop' ? renderShop() : tab === 'ceo' ? renderCeo() : tab === 'gacha' ? renderGacha() : renderCol();
+  if (tab === 'home' && homeDrag) return; // 家宅拖动中不重画（dirty 留着，松手后再画）
+  const html = tab === 'shop' ? renderShop() : tab === 'ceo' ? renderCeo() : tab === 'gacha' ? renderGacha() : tab === 'home' ? renderHome() : renderCol();
   tabBody.innerHTML = html; dirty = false; updateCompactHead(); refreshDynamic(true); // 顶部「谁在管哪家店」跟着一起刷新（调任/交换/新 CEO 后两处同步）
 }
 function setTab(t) {
+  const prev = tab;
+  if (prev === 'home' && homeDrag) homeEnd();
   tab = t;
+  if (t === 'home' && prev !== 'home') { homeSub = 'room'; homeSel = null; }
+  if (prev !== t && (t === 'home' || prev === 'home')) pageFlip(t === 'home' ? 'next' : 'prev'); // 像翻书：经营 ⇄ 家宅
   document.querySelectorAll('#bottomNav button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   document.getElementById('app').dataset.tab = t;
   $('#panel').scrollTop = 0;
@@ -1126,6 +1132,8 @@ function updateCompactHead() {
     }).join('');
     el.innerHTML = `<div class="ch-title">谁在管哪家店</div><div class="ch-row">${cards}</div>
       <div class="ch-note">调任：点卡片上的「调任」→ 选目的店 → 看双方去向和全街 $/秒对比 → 确认。目标店有人会变成「交换任职」。</div>`;
+  } else if (tab === 'home') {
+    el.innerHTML = `<div class="ch-title">CEO 生活篇 · ${homeSub === 'mall' ? '商城' : '家宅'}</div><div class="ch-note">和经营共用金币。家具进公共仓库，四家都能摆；一件同时只在一家。移动 / 旋转 / 收回 / 撤销不花钱。</div>`;
   } else if (tab === 'gacha') {
     const owned = state.gacha.owned.length, total = E.ITEMS.length;
     el.innerHTML = `<div class="ch-title">77 收藏盲盒</div><div class="ch-note">已收集 <b>${owned}/${total}</b>（普通 ${E.REGULAR_ITEMS.length} + 超级 ${E.SUPER_ITEMS.length}）。店景在「经营」页；这里专心开盒。</div>`;
@@ -1164,6 +1172,8 @@ function refreshDynamic(force) {
   const cdot = E.CEOS.some(c => state.ceos[c.id].unlocked && state.ceos[c.id].at === -1);
   const cb = document.querySelector('#bottomNav [data-tab="ceo"]'); const hc = !!cb.querySelector('.dot');
   if (cdot && !hc) cb.insertAdjacentHTML('beforeend', '<i class="dot"></i>'); if (!cdot && hc) cb.querySelector('.dot').remove();
+  const mb = document.getElementById('mallBal'); if (mb) mb.textContent = fmt(state.coins);
+  const hl = document.getElementById('homeLux'); if (hl && homeWho) hl.textContent = E.homeLuxury(state, homeWho);
 }
 
 /* ================= 弹窗 ================= */
@@ -1334,6 +1344,197 @@ function showIntro() {
   $('#mOk').addEventListener('click', () => { audioUnlock(); closeModal(); sayLine('c', '巴适得很，串串烤起走！', 3); }, { once:true });
 }
 
+/* ================= CEO 生活篇：家宅 / 商城 / 摆放（像翻书：经营 → 家宅 → 商城） ================= */
+// 存档：state.furnInv={fid:数量} 公共仓库；state.homes[ceoId]={ lv, placed:[{uid,fid,x,y,rot}], next }；一件同时只在一家
+// 美术：画师的图转成 webp 后放 art/，在下面两张表里登记一张就用一张；没登记 / 加载失败 → 用色块 + emoji 占位
+const HOME_ART = {};  // 房间底图：art/home_<hut|apt|villa>.webp，例 { hut:1 }
+const FURN_ART = {};  // 家具：art/furn_<bed|sofa|table|lamp|rug|plant|bookshelf|tv|fridge|wardrobe|painting|catbed>.webp，例 { bed:1 }
+const furnName = fid => fid.replace(/^furn_/, '');
+const HOME_ICON = ['🏠', '🏢', '🏰'];
+let homeWho = 'c77', homeSub = 'room', homeSel = null, homeDrag = null;
+const homeUndo = {}; // 每位 CEO 一条撤销栈（只在本次打开有效，不存档）
+const undoStack = id => homeUndo[id] || (homeUndo[id] = []);
+function pushUndo(u) { const s = undoStack(u.ceo); s.push(u); if (s.length > 60) s.shift(); }
+function furnInner(fid, rot) {
+  const f = E.FURN_BY_ID[fid], sz = E.furnSize(fid, rot), odd = rot & 1, n = furnName(fid);
+  const st = `width:${odd ? sz.h / sz.w * 100 : 100}%;height:${odd ? sz.w / sz.h * 100 : 100}%;transform:translate(-50%,-50%) rotate(${rot * 90}deg)`;
+  return `<div class="fi" style="${st}"><span class="fe">${f.emoji}</span>${FURN_ART[n] ? `<img src="art/furn_${n}.webp?v=${ART_V}" data-homefb="1" alt="">` : ''}</div>`;
+}
+document.addEventListener('error', e => { const el = e.target; if (el && el.tagName === 'IMG' && el.dataset && el.dataset.homefb) el.remove(); }, true);
+function homeBook(sub) {
+  return `<div class="book-tabs" role="tablist"><button data-act="homeGo" data-arg="shop">📖 经营</button><button class="${sub === 'room' ? 'on' : ''}" data-act="homeSub" data-arg="room">🏠 家宅</button><button class="${sub === 'mall' ? 'on' : ''}" data-act="homeSub" data-arg="mall">🛒 商城</button></div>`;
+}
+function homeWhoRow() {
+  return `<div class="who-row home-who">${E.CEOS.map(c => { const open = E.homeOpen(state, c.id);
+    return `<button class="who ${c.id === homeWho ? 'on' : ''} ${open ? '' : 'locked'}" data-act="homeWho" data-arg="${c.id}">${open ? ava(c.id) : '<div class="ava">🔒</div>'}<span>${open || c.id !== 'rocket' ? c.name : '？？？'}</span></button>`; }).join('')}</div>`;
+}
+function homeLocked() {
+  const c = E.CEO_BY_ID[homeWho];
+  return `<div class="card dim home-lock"><div class="ava">🔒</div><div class="info"><div class="name">${c.id === 'rocket' ? '？？？' : c.name} 的家还没开放</div><div class="desc">${c.unlock}，加入后就有自己的小屋。</div></div></div>`;
+}
+function renderHome() {
+  if (!E.CEO_BY_ID[homeWho]) homeWho = 'c77';
+  let h = homeBook(homeSub) + homeWhoRow();
+  if (!E.homeOpen(state, homeWho)) return h + homeLocked();
+  return h + (homeSub === 'mall' ? renderMall() : renderRoom());
+}
+function renderRoom() {
+  const id = homeWho, c = E.CEO_BY_ID[id], H = E.homeOf(state, id), T = E.homeTier(H.lv), lux = E.homeLuxury(state, id);
+  if (homeSel && !H.placed.some(p => p.uid === homeSel)) homeSel = null;
+  const next = H.lv < E.HOME_MAX ? E.HOME_TIERS[H.lv] : null, sel = homeSel && H.placed.find(p => p.uid === homeSel);
+  let h = `<div class="card home-card"><div class="ava sq">${HOME_ICON[H.lv - 1]}</div><div class="info"><div class="name">${c.name} 的${T.name}<span class="lv">Lv.${H.lv}</span></div>
+    <div class="desc">${T.cols}×${T.rows} 格 · 豪华度 <b class="lux" id="homeLux">${lux}</b>（家具 ${lux - T.bonus} + 房型 ${T.bonus}）</div>
+    <div class="gain">${next ? `升级 → ${next.name} ${next.cols}×${next.rows} 格，房型豪华 +${next.bonus}` : '已经是最高档豪宅'}</div></div>
+    ${next ? btn('homeUp', id, '升级', next.cost) : '<button class="buy no" disabled>顶级</button>'}</div>`;
+  const items = H.placed.slice().sort((a, b) => (E.FURN_BY_ID[a.fid].layer === 'rug' ? 0 : 1) - (E.FURN_BY_ID[b.fid].layer === 'rug' ? 0 : 1)).map(p => {
+    const f = E.FURN_BY_ID[p.fid], sz = E.furnSize(p.fid, p.rot);
+    return `<div class="furn ${f.layer === 'rug' ? 'rug' : ''} ${p.uid === homeSel ? 'sel' : ''}" data-uid="${p.uid}" data-fid="${p.fid}" style="left:${p.x / T.cols * 100}%;top:${p.y / T.rows * 100}%;width:${sz.w / T.cols * 100}%;height:${sz.h / T.rows * 100}%;--fc:${f.color}">${furnInner(p.fid, p.rot)}<b class="fn">${f.name}</b></div>`;
+  }).join('');
+  h += `<div class="room tier-${T.id}" id="room" data-tier="${T.id}" style="--cols:${T.cols};--rows:${T.rows};--wall:${T.wall};--floor:${T.floor};--trim:${T.trim}">
+    ${HOME_ART[T.id] ? `<img class="room-art" src="art/home_${T.id}.webp?v=${ART_V}" data-homefb="1" alt="">` : ''}
+    <div class="room-wall"><span class="rw-deco">${T.id === 'hut' ? '🪟' : T.id === 'apt' ? '🪟 🪟' : '✨🕯️✨'}</span><span class="rw-name">${c.name}的${T.name}</span></div>
+    <div class="room-floor" id="roomFloor">${items}<div class="room-hl hidden" id="roomHl"></div></div></div>`;
+  const st = undoStack(id);
+  h += `<div class="room-tools">${sel ? `<span class="rt-sel">已选：<b>${E.FURN_BY_ID[sel.fid].name}</b></span><button class="buy alt" data-act="homeRot" data-arg="${sel.uid}">↻ 旋转</button><button class="buy alt" data-act="homeStore" data-arg="${sel.uid}">📦 收回</button>`
+    : '<span class="rt-sel">点家具选中：旋转 / 收回；按住拖动换位置</span>'}
+    <button class="buy alt" data-act="homeUndo" data-arg="${id}" ${st.length ? '' : 'disabled'}>↶ 撤销${st.length ? ' ' + st.length : ''}</button></div>`;
+  const inv = Object.entries(E.furnInvOf(state)).filter(([, n]) => n > 0);
+  h += `<div class="row-head"><div class="sec-title">公共家具仓库</div><button class="buy alt mall-go" data-act="homeSub" data-arg="mall">🛒 去商城</button></div>`;
+  h += inv.length ? `<div class="inv-grid">${inv.map(([fid, n]) => { const f = E.FURN_BY_ID[fid], stt = E.furnStats(state, fid);
+      const where = stt.where.length ? stt.where.map(w => w.name).join('、') : '';
+      return `<div class="inv-item" data-fid="${fid}" style="--fc:${f.color}"><span class="ie">${f.emoji}</span><b>${f.name}</b><small>${f.w}×${f.h}${where ? ' · 另有在 '+where : ''}</small><i>×${n}</i></div>`; }).join('')}</div>
+      <div class="note">按住仓库家具拖进 ${c.name} 的房间（绿=能放，红=重叠/出界）；轻点自动找空位。收回后可搬到别家。移动 / 旋转 / 收回 / 撤销都不花钱；想几家同时有就多买几件。</div>`
+    : `<div class="note">仓库空空。去商城买家具（进公共仓库），再拖进 ${c.name} 的房间摆。一件同时只在一家；想四家都有就买四件。</div>`;
+  return h;
+}
+function renderMall() {
+  const c = E.CEO_BY_ID[homeWho];
+  let h = `<div class="mall-head"><div>公共仓库 · 现看 <b>${c.name}</b> 的家</div><div>余额 ${coinSm}<b id="mallBal">${fmt(state.coins)}</b></div></div><div class="mall-list">`;
+  h += E.FURNITURE.map(f => { const stt = E.furnStats(state, f.id);
+    const where = stt.where.length ? stt.where.map(w => w.name).join('、') : '未摆出';
+    return `<div class="card mall-card" data-fid="${f.id}"><div class="ava sq furn-ico" style="--fc:${f.color}">${furnInner(f.id, 0)}</div><div class="info"><div class="name">${f.name}<span class="tag match">豪华 +${f.lux}</span></div>
+      <div class="desc">占地 ${f.w}×${f.h} 格${f.layer === 'rug' ? ' · 可垫在家具下' : ''}${f.wall ? ' · 挂后墙' : ''}<br>已拥有 ${stt.owned}（摆出 ${stt.placed} / 仓库 ${stt.warehouse}）<br>摆在：${where}</div></div>${btn('homeBuy', f.id, '购买', f.price)}</div>`; }).join('');
+  h += `</div><div class="note">商城只花游戏金币，和经营共用一个钱包。家具进公共仓库；一件同时只在一家，想多家都有就多买。家具只加豪华度，不加产速、不影响开店。</div>`;
+  return h;
+}
+function confirmHomeBuy(fid) {
+  const f = E.FURN_BY_ID[fid], stt = E.furnStats(state, fid), bal = state.coins, can = bal >= f.price;
+  openModal(`<div class="mbubble">商城 · 公共仓库</div><div class="buy-prev"><div class="furn-ico big" style="--fc:${f.color}">${furnInner(fid, 0)}</div></div>
+    <div class="mtitle">${f.name}（${f.w}×${f.h} 格 · 豪华 +${f.lux}）</div>
+    <table class="pv-table"><tr><td>价格</td><td>${fmt(f.price)}</td></tr><tr><td>当前余额</td><td>${fmt(bal)}</td></tr><tr><td>已有</td><td>${stt.owned}（摆出 ${stt.placed} / 仓库 ${stt.warehouse}）</td></tr><tr class="total"><td>买后余额</td><td class="${can ? '' : 'down'}">${can ? fmt(bal - f.price) : '还差 ' + fmt(f.price - bal)}</td></tr></table>
+    <div class="mnote">买了进公共仓库，四家都能摆；一件同时只在一家。摆放 / 移动 / 收回 / 搬去别家都不花钱。</div>
+    <div class="mbtns two"><button class="buy ghost" id="mNo">再想想</button><button class="buy red" id="hbYes" ${can ? '' : 'disabled'}>${can ? '确认购买' : '金币不够'}</button></div>`, false);
+  $('#mNo').addEventListener('click', closeModal, { once:true });
+  $('#hbYes').addEventListener('click', () => {
+    const r = atomic(() => E.buyFurniture(state, fid)); closeModal();
+    if (!r.ok) { if (r.why !== 'saveFailed') failBuy(null, r.why); return; }
+    afterBuy(null, `${f.name} 已进公共仓库（仓库 ${r.count} 件）`);
+  }, { once:true });
+}
+function confirmHomeUp(id) {
+  const H = E.homeOf(state, id), c = E.CEO_BY_ID[id]; if (H.lv >= E.HOME_MAX) return;
+  const T = E.homeTier(H.lv), N = E.HOME_TIERS[H.lv], bal = state.coins, can = bal >= N.cost;
+  openModal(`<div class="mbubble">房子升级</div><div class="mtitle">${c.name}：${T.name} → ${N.name}</div>
+    <div class="mnote">${T.cols}×${T.rows} 格 → <b>${N.cols}×${N.rows} 格</b>，房型豪华 ${T.bonus} → ${N.bonus}。摆好的家具原位保留。</div>
+    <table class="pv-table"><tr><td>价格</td><td>${fmt(N.cost)}</td></tr><tr><td>当前余额</td><td>${fmt(bal)}</td></tr><tr class="total"><td>升级后余额</td><td class="${can ? '' : 'down'}">${can ? fmt(bal - N.cost) : '还差 ' + fmt(N.cost - bal)}</td></tr></table>
+    <div class="mbtns two"><button class="buy ghost" id="mNo">再想想</button><button class="buy red" id="huYes" ${can ? '' : 'disabled'}>${can ? '确认升级' : '金币不够'}</button></div>`, false);
+  $('#mNo').addEventListener('click', closeModal, { once:true });
+  $('#huYes').addEventListener('click', () => {
+    const r = atomic(() => E.upgradeHome(state, id)); closeModal();
+    if (!r.ok) { if (r.why !== 'saveFailed') failBuy(null, r.why); return; }
+    afterBuy(null, `${c.name} 搬进${r.tier.name}啦！${r.tier.cols}×${r.tier.rows} 格`); sfx('mile');
+  }, { once:true });
+}
+function homeCommit(r, msg) {
+  if (!r.ok) { sfx('no'); if (!r.same) toast(r.why); return false; }
+  if (r.undo) pushUndo(r.undo);
+  persist(); sfx('tap'); if (msg) toast(msg); dirty = true; return true;
+}
+function homeAutoPlace(fid) {
+  for (const rot of [0, 1]) { const at = E.findFree(state, homeWho, fid, rot);
+    if (at) { const r = E.placeItem(state, homeWho, fid, at.x, at.y, rot); if (homeCommit(r)) homeSel = r.uid; return; } }
+  sfx('no'); toast('房间放不下了：先收回点东西，或者升级房子');
+}
+function homeAct(a, arg, b) {
+  switch (a) {
+    case 'homeGo': return setTab(arg);
+    case 'homeSub': if (homeSub !== arg) { homeSub = arg; homeSel = null; pageFlip(arg === 'mall' ? 'next' : 'prev'); $('#panel').scrollTop = 0; sfx('swoosh'); } dirty = true; return;
+    case 'homeWho': if (homeWho !== arg) { homeWho = arg; homeSel = null; sfx('tap'); } if (!E.homeOpen(state, arg)) toast('这位 CEO 还没加入'); dirty = true; return;
+    case 'homeUp': return confirmHomeUp(arg);
+    case 'homeBuy': return confirmHomeBuy(arg);
+    case 'homeRot': { const r = E.rotateItem(state, homeWho, arg); homeCommit(r, r.ok && r.moved ? '转好了（挪了一点才放得下）' : null); return; }
+    case 'homeStore': { const r = E.storeItem(state, homeWho, arg); if (homeCommit(r, r.ok ? E.FURN_BY_ID[r.undo.item.fid].name + ' 收回仓库' : null)) homeSel = null; return; }
+    case 'homeUndo': { const st = undoStack(arg), u = st.pop(); const r = E.undoHome(state, u); if (r.ok) { persist(); sfx('swoosh'); toast('撤销了一步'); } else { sfx('no'); toast(r.why); } homeSel = null; dirty = true; return; }
+  }
+}
+// ---- 拖动（pointer 事件：iPhone 触摸 / 鼠标通用；拖动中禁止页面滚动、暂停重画） ----
+function homeCellAt(px, py, fid, rot, offX, offY) {
+  const fl = $('#roomFloor'); if (!fl) return null;
+  const r = fl.getBoundingClientRect(), T = E.homeTier(E.homeOf(state, homeWho).lv), cw = r.width / T.cols, ch = r.height / T.rows;
+  const inside = px >= r.left - cw * 0.5 && px <= r.right + cw * 0.5 && py >= r.top - ch * 0.5 && py <= r.bottom + ch * 0.5;
+  return { inside, x:Math.round((px - r.left) / cw - offX), y:Math.round((py - r.top) / ch - offY), cw, ch, T };
+}
+function homeDown(e) {
+  if (tab !== 'home' || homeSub !== 'room' || frozen || homeDrag) return;
+  const fEl = e.target.closest('#roomFloor .furn'), iEl = e.target.closest('.inv-item');
+  if (!fEl && !iEl) { if (homeSel && e.target.closest('#roomFloor')) { homeSel = null; dirty = true; } return; }
+  if (e.button > 0) return;
+  e.preventDefault(); audioUnlock();
+  const H = E.homeOf(state, homeWho), fl = $('#roomFloor'), fr = fl.getBoundingClientRect(), T = E.homeTier(H.lv);
+  const cw = fr.width / T.cols, ch = fr.height / T.rows;
+  let d;
+  if (fEl) { const p = H.placed.find(q => q.uid === fEl.dataset.uid); if (!p) return; const sz = E.furnSize(p.fid, p.rot);
+    d = { src:'room', uid:p.uid, fid:p.fid, rot:p.rot, w:sz.w, h:sz.h, offX:(e.clientX - fr.left) / cw - p.x, offY:(e.clientY - fr.top) / ch - p.y, el:fEl }; }
+  else { const fid = iEl.dataset.fid, sz = E.furnSize(fid, 0); d = { src:'inv', uid:null, fid, rot:0, w:sz.w, h:sz.h, offX:sz.w / 2, offY:sz.h / 2, el:iEl }; }
+  homeDrag = Object.assign(d, { id:e.pointerId, sx:e.clientX, sy:e.clientY, moved:false, ghost:null, cell:null });
+  try { d.el.setPointerCapture(e.pointerId); } catch (x) {}
+  window.addEventListener('pointermove', homeMove, { passive:false });
+  window.addEventListener('pointerup', homeUp); window.addEventListener('pointercancel', homeCancel);
+}
+function homeMove(e) {
+  const d = homeDrag; if (!d || e.pointerId !== d.id) return;
+  e.preventDefault();
+  if (!d.moved && Math.hypot(e.clientX - d.sx, e.clientY - d.sy) < 7) return;
+  const c = homeCellAt(e.clientX, e.clientY, d.fid, d.rot, d.offX, d.offY); if (!c) return;
+  if (!d.moved) { d.moved = true; homeSel = null;
+    const g = document.createElement('div'); g.className = 'furn drag-ghost' + (E.FURN_BY_ID[d.fid].layer === 'rug' ? ' rug' : '');
+    g.style.cssText = `width:${d.w * c.cw}px;height:${d.h * c.ch}px;--fc:${E.FURN_BY_ID[d.fid].color}`; g.innerHTML = furnInner(d.fid, d.rot);
+    document.body.appendChild(g); d.ghost = g; if (d.src === 'room') d.el.classList.add('lifting'); }
+  d.ghost.style.left = (e.clientX - d.offX * c.cw) + 'px'; d.ghost.style.top = (e.clientY - d.offY * c.ch) + 'px';
+  const hl = $('#roomHl'); d.cell = c.inside ? c : null;
+  if (!c.inside) { hl.classList.add('hidden'); d.ghost.classList.remove('ok', 'bad'); return; }
+  const v = E.canPlace(state, homeWho, d.fid, c.x, c.y, d.rot, d.uid); d.valid = v;
+  const cx = Math.max(-d.w + 1, Math.min(c.T.cols - 1, c.x)), cy = Math.max(-d.h + 1, Math.min(c.T.rows - 1, c.y));
+  hl.style.cssText = `left:${cx / c.T.cols * 100}%;top:${cy / c.T.rows * 100}%;width:${d.w / c.T.cols * 100}%;height:${d.h / c.T.rows * 100}%`;
+  hl.className = 'room-hl ' + (v.ok ? 'ok' : 'bad'); d.ghost.classList.toggle('ok', v.ok); d.ghost.classList.toggle('bad', !v.ok);
+}
+function homeEnd() {
+  const d = homeDrag; homeDrag = null;
+  window.removeEventListener('pointermove', homeMove); window.removeEventListener('pointerup', homeUp); window.removeEventListener('pointercancel', homeCancel);
+  if (d && d.ghost) d.ghost.remove();
+  return d;
+}
+function homeUp(e) {
+  const d = homeDrag; if (!d || e.pointerId !== d.id) return;
+  if (d.moved) homeMove(e);
+  homeEnd();
+  if (!d.moved) {   // 轻点：家具 → 选中/取消；仓库 → 自动找空位
+    if (d.src === 'room') { homeSel = homeSel === d.uid ? null : d.uid; sfx('tap'); }
+    else homeAutoPlace(d.fid);
+  } else if (!d.cell) { sfx('no'); toast(d.src === 'inv' ? '拖到房间的格子里才能放' : '拖出房间了，放回原位'); }
+  else if (!d.valid || !d.valid.ok) { sfx('no'); toast((d.valid && d.valid.why) || '放不下'); }
+  else if (d.src === 'inv') { const r = E.placeItem(state, homeWho, d.fid, d.cell.x, d.cell.y, d.rot); if (homeCommit(r)) homeSel = r.uid; }
+  else { homeCommit(E.moveItem(state, homeWho, d.uid, d.cell.x, d.cell.y)); homeSel = d.uid; }
+  dirty = true; renderTab();
+}
+function homeCancel(e) { const d = homeDrag; if (!d || e.pointerId !== d.id) return; homeEnd(); dirty = true; renderTab(); }
+tabBody.addEventListener('pointerdown', homeDown);
+document.addEventListener('touchmove', e => { if (homeDrag) e.preventDefault(); }, { passive:false });
+function pageFlip(dir) {
+  ['#panel', '#compactHead'].forEach(s => { const el = $(s); if (!el) return; el.classList.remove('flip-next', 'flip-prev'); void el.offsetWidth; el.classList.add('flip-' + dir); });
+  clearTimeout(pageFlip.t); pageFlip.t = setTimeout(() => ['#panel', '#compactHead'].forEach(s => { const el = $(s); if (el) el.classList.remove('flip-next', 'flip-prev'); }), 500);
+}
+
 /* ================= 输入 / 循环 / 启动 ================= */
 const ptr = {};
 cv.addEventListener('pointerdown', e => { audioUnlock(); const r = cv.getBoundingClientRect(); ptr[e.pointerId] = { x:e.clientX - r.left, y:e.clientY - r.top, t:clock }; });
@@ -1416,5 +1617,6 @@ window.__tzz = { E, showComic, showCeoJoin, get state() { return state; }, set s
   forceSupers() { for (const k in superNext) superNext[k] = 0; updateSupers(); renderTab(); },
   get big() { return order; }, get order() { return order; }, get special() { return special; }, get guests() { return guests; },
   hitBig, modalOpen, closeModal, get frozen() { return frozen; },
-  audioState() { return AU.ctx ? AU.ctx.state : 'none'; }, showPreview, openAssign, JOB_ART, jobShown, jobURL, showJobArt };
+  audioState() { return AU.ctx ? AU.ctx.state : 'none'; }, showPreview, openAssign, JOB_ART, jobShown, jobURL, showJobArt,
+  HOME_ART, FURN_ART, homeAct, get homeWho() { return homeWho; }, get homeSub() { return homeSub; }, get homeSel() { return homeSel; }, get homeDrag() { return homeDrag; }, homeUndo, resize, get canvasSize() { return { W, H }; } };
 })();

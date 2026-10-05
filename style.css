@@ -302,3 +302,75 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 .job-hint{font-size:10px;color:#6b5b4b}
 .job-big{display:flex;justify-content:center;margin:6px 0}
 .job-big img{width:min(78vw,340px);aspect-ratio:1;object-fit:cover;border:3px solid var(--ink);border-radius:16px;background:#fbf4e6}
+
+/* ===== CEO 生活篇：家宅 / 商城（翻书） ===== */
+#bottomNav button{min-width:0}
+.book-tabs{display:flex;gap:0;margin:0 0 8px;border:3px solid var(--ink);border-radius:10px;overflow:hidden;box-shadow:3px 3px 0 var(--ink);background:#fff}
+.book-tabs button{flex:1;min-height:40px;border:0;border-left:2.5px solid var(--ink);background:#fff;font-weight:900;font-size:13px}
+.book-tabs button:first-child{border-left:0;background:#f2eee4}
+.book-tabs button.on{background:var(--yellow)}
+.home-who .who.locked{opacity:.55}
+.home-card .ava.sq{font-size:30px}
+.home-card .lux{color:var(--red);font-size:14px}
+.room{position:relative;border:3.5px solid var(--ink);border-radius:6px;box-shadow:5px 5px 0 var(--ink);overflow:hidden;margin:2px 4px 10px 0;background:var(--wall)}
+.room-art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:0;pointer-events:none}
+.room-wall{position:relative;z-index:1;height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;border-bottom:5px solid var(--trim);
+  background:radial-gradient(rgba(20,20,20,.12) 1.1px,transparent 1.5px) 0 0/7px 7px,var(--wall)}
+.room-wall .rw-deco{font-size:22px}
+.room-wall .rw-name{font-size:11px;font-weight:900;background:#fff;border:2px solid var(--ink);border-radius:4px;padding:1px 6px;transform:rotate(-2deg)}
+.room-floor{position:relative;z-index:1;aspect-ratio:var(--cols)/var(--rows);touch-action:none;
+  background-image:linear-gradient(to right,rgba(20,20,20,.22) 1.5px,transparent 1.5px),linear-gradient(to bottom,rgba(20,20,20,.22) 1.5px,transparent 1.5px);
+  background-size:calc(100% / var(--cols)) calc(100% / var(--rows));background-color:var(--floor)}
+.room.tier-hut .room-floor{background-image:linear-gradient(to right,rgba(20,20,20,.22) 1.5px,transparent 1.5px),linear-gradient(to bottom,rgba(20,20,20,.22) 1.5px,transparent 1.5px),
+  repeating-linear-gradient(to bottom,transparent 0 9px,rgba(120,70,30,.18) 9px 10px)}
+.room.tier-hut .room-floor{background-size:calc(100% / var(--cols)) calc(100% / var(--rows)),calc(100% / var(--cols)) calc(100% / var(--rows)),auto}
+.room.tier-apt .room-wall{background:repeating-linear-gradient(90deg,var(--wall) 0 14px,#d4e6fb 14px 16px)}
+.room.tier-apt .room-floor{background-image:linear-gradient(to right,rgba(20,20,20,.22) 1.5px,transparent 1.5px),linear-gradient(to bottom,rgba(20,20,20,.22) 1.5px,transparent 1.5px),
+  conic-gradient(rgba(255,255,255,.35) 25%,transparent 0 50%,rgba(255,255,255,.35) 0 75%,transparent 0)}
+.room.tier-apt .room-floor{background-size:calc(100% / var(--cols)) calc(100% / var(--rows)),calc(100% / var(--cols)) calc(100% / var(--rows)),calc(200% / var(--cols)) calc(200% / var(--rows))}
+.room.tier-villa{border-color:#6b4f00;box-shadow:5px 5px 0 var(--ink),inset 0 0 0 3px #ffd23f}
+.room.tier-villa .room-wall{background:linear-gradient(180deg,#fff8dc,var(--wall));border-bottom:6px double var(--trim)}
+.room.tier-villa .room-floor{background-image:linear-gradient(to right,rgba(120,90,0,.28) 1.5px,transparent 1.5px),linear-gradient(to bottom,rgba(120,90,0,.28) 1.5px,transparent 1.5px),
+  linear-gradient(135deg,rgba(255,255,255,.45),transparent 40%,rgba(255,255,255,.3) 60%,transparent)}
+.room.tier-villa .room-floor{background-size:calc(100% / var(--cols)) calc(100% / var(--rows)),calc(100% / var(--cols)) calc(100% / var(--rows)),100% 100%}
+.furn{position:absolute;z-index:2;border:2.5px solid var(--ink);border-radius:6px;background:var(--fc);box-shadow:2px 2px 0 rgba(20,20,20,.55);overflow:hidden;touch-action:none;cursor:grab}
+.furn.rug{z-index:1;opacity:.85;border-style:dashed;box-shadow:none;border-radius:10px}
+.furn.sel{z-index:4;outline:3px solid var(--red);outline-offset:1px;animation:furnsel .9s ease-in-out infinite alternate}
+@keyframes furnsel{to{outline-color:var(--yellow)}}
+.furn.lifting{opacity:.3}
+.furn .fi{position:absolute;left:50%;top:50%;display:grid;place-items:center;pointer-events:none}
+.furn .fi .fe,.furn-ico .fi .fe{font-size:min(26px,7vw);line-height:1}
+.furn .fi img,.furn-ico .fi img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.furn .fn{position:absolute;left:2px;bottom:1px;font-size:9px;font-weight:900;background:rgba(255,255,255,.85);border-radius:3px;padding:0 3px;pointer-events:none;white-space:nowrap}
+.drag-ghost{position:fixed;z-index:70;pointer-events:none;opacity:.85;transform:scale(1.05);box-shadow:4px 6px 0 rgba(20,20,20,.4)}
+.drag-ghost.ok{outline:3px solid var(--green)}
+.drag-ghost.bad{outline:3px solid var(--red)}
+.room-hl{position:absolute;z-index:3;border:3px dashed var(--ink);border-radius:6px;pointer-events:none}
+.room-hl.ok{background:rgba(31,157,85,.35);border-color:var(--green)}
+.room-hl.bad{background:rgba(230,57,70,.35);border-color:var(--red)}
+.room-tools{display:flex;align-items:center;gap:6px;margin:0 4px 10px 0;flex-wrap:wrap}
+.room-tools .rt-sel{flex:1 1 120px;font-size:11.5px;font-weight:800;color:#555;min-width:0}
+.room-tools .buy{min-width:64px;min-height:40px;font-size:13px}
+.room-tools .buy[disabled]{opacity:.4}
+.mall-go{min-height:36px!important;font-size:12px!important;margin-bottom:6px}
+.inv-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:6px}
+.inv-item{position:relative;aspect-ratio:1/1.05;border:2.5px solid var(--ink);border-radius:8px;background:linear-gradient(#fff 55%,var(--fc));box-shadow:2px 2px 0 var(--ink);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;touch-action:none;cursor:grab}
+.inv-item .ie{font-size:26px;line-height:1.1;pointer-events:none}
+.inv-item b,.inv-item small{pointer-events:none}
+.inv-item small{font-size:9.5px;color:#555}
+.inv-item i{position:absolute;top:-7px;right:-6px;font-style:normal;font-weight:900;font-size:11px;background:var(--red);color:#fff;border:2px solid var(--ink);border-radius:10px;padding:0 5px}
+.mall-head{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;font-weight:800;background:#fff;border:2px dashed var(--ink);border-radius:6px;padding:4px 8px;margin-bottom:8px}
+.mall-head .coin-ico.sm{width:22px;height:22px;margin-right:3px}
+.mall-head .coin-ico.sm span{font-size:10px}
+.furn-ico{position:relative;background:var(--fc)!important;overflow:hidden}
+.furn-ico .fi{position:absolute;left:50%;top:50%;display:grid;place-items:center}
+.furn-ico.big{width:84px;height:84px;border:3px solid var(--ink);border-radius:12px;margin:2px auto 6px}
+.furn-ico.big .fi .fe{font-size:42px}
+.buy-prev{display:flex;justify-content:center}
+/* 翻页动画：经营 → 家宅 → 商城 往后翻，回去往前翻 */
+@keyframes flipNext{0%{transform:perspective(1100px) rotateY(-75deg);opacity:.15}100%{transform:none;opacity:1}}
+@keyframes flipPrev{0%{transform:perspective(1100px) rotateY(75deg);opacity:.15}100%{transform:none;opacity:1}}
+.flip-next{transform-origin:left center;animation:flipNext .38s cubic-bezier(.2,.8,.3,1)}
+.flip-prev{transform-origin:right center;animation:flipPrev .38s cubic-bezier(.2,.8,.3,1)}
+@media (prefers-reduced-motion:reduce){.flip-next,.flip-prev,.furn.sel{animation:none}}

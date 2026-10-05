@@ -200,5 +200,107 @@ ok(E.CROSS['rocket@0'].effect === 'bigFreq' && E.CROSS['c77@3'].effect === 'offl
   const c1 = s.coins; const spPaid = E.settleSpecial(s, 0);
   near(spPaid, sp, 'settleSpecial 入账'); near(s.coins - c1, sp, '特殊客户不另加自动收入'); ok(s.specialCustomers === 1, '特殊客户计数');
 }
+
+// ===== CEO 生活篇：家宅 / 商城 / 摆放（方案 A：公共仓库） =====
+{
+  const F = id => E.FURN_BY_ID[id];
+  ok(E.FURNITURE.length === 12 && ['bed','sofa','table','lamp','rug','plant','bookshelf','tv','fridge','wardrobe','painting','catbed'].every(n => F('furn_' + n)), '商城 12 件家具，id = furn_<名>');
+  ok(E.FURNITURE.every(f => f.w >= 1 && f.h >= 1 && f.price > 0 && f.lux > 0), '每件家具都有占地 / 价格 / 豪华度');
+  ok(E.HOME_TIERS.map(t => t.name + t.cols + 'x' + t.rows).join() === '小屋6x4,公寓8x5,豪宅10x6', '三档房子：小屋 6×4 → 公寓 8×5 → 豪宅 10×6');
+  ok(E.HOME_TIERS[1].cost > E.SHOPS[2].open && E.HOME_TIERS[2].cost > E.SHOPS[3].open, '升级价跟着经营节奏（公寓 > 开书店价，豪宅 > 开科技公司价）');
+  let s = E.newState(T0);
+  ok(E.CEOS.every(c => s.homes[c.id] && s.homes[c.id].lv === 1 && s.homes[c.id].placed.length === 0) && Object.keys(s.furnInv).length === 0, '新档：4 间空小屋 + 空公共仓库');
+  ok(E.homeOpen(s, 'c77') && !E.homeOpen(s, 'pearl'), '只有已加入的 CEO 能进自家房间摆放');
+  // 买：扣金币进公共仓库；钱不够不能买
+  s.coins = 100; let r = E.buyFurniture(s, 'furn_bed');
+  ok(!r.ok && r.why === '金币不够' && s.coins === 100 && !s.furnInv.furn_bed, '金币不够买不了，不扣钱');
+  s.coins = 100000;
+  r = E.buyFurniture(s, 'furn_bed'); ok(r.ok && s.coins === 100000 - F('furn_bed').price && s.furnInv.furn_bed === 1, '买床：扣 ' + F('furn_bed').price + '，进公共仓库');
+  E.buyFurniture(s, 'furn_sofa'); E.buyFurniture(s, 'furn_rug'); E.buyFurniture(s, 'furn_painting'); E.buyFurniture(s, 'furn_lamp');
+  const paid = s.coins;
+  // 摆 / 移 / 转 / 收 / 撤销：都不碰金币
+  r = E.placeItem(s, 'c77', 'furn_bed', 0, 1, 0);
+  ok(r.ok && s.homes.c77.placed.length === 1 && !s.furnInv.furn_bed, '把床从仓库摆进 77 房间');
+  const bed = r.uid, U = [r.undo];
+  ok(!E.placeItem(s, 'c77', 'furn_sofa', 1, 1, 0).ok, '重叠被拒');
+  ok(!E.placeItem(s, 'c77', 'furn_sofa', 4, 0, 0).ok && E.canPlace(s, 'c77', 'furn_sofa', 4, 0, 0).why === '超出房间了', '出界被拒（6 格宽放不下 x=4 的 3 格沙发）');
+  ok(!E.placeItem(s, 'c77', 'furn_sofa', 0, -1, 0).ok && !E.placeItem(s, 'c77', 'furn_bed', 0, 0, 0).ok, '负坐标 / 仓库里没有 都被拒');
+  ok(E.placeItem(s, 'c77', 'furn_rug', 0, 2, 0).ok, '地毯可以垫在床下（不同层）');
+  ok(!E.canPlace(s, 'c77', 'furn_painting', 3, 2, 0).ok && E.placeItem(s, 'c77', 'furn_painting', 3, 0, 0).ok, '挂画只能靠后墙（第一排）');
+  r = E.placeItem(s, 'c77', 'furn_sofa', 3, 3, 0); ok(r.ok, '沙发摆在空位'); const sofa = r.uid; U.push(r.undo);
+  r = E.moveItem(s, 'c77', sofa, 1, 1); ok(!r.ok && s.homes.c77.placed.find(p => p.uid === sofa).x === 3, '移动到重叠位置被拒，原地不动');
+  r = E.moveItem(s, 'c77', sofa, 2, 2); ok(r.ok && s.homes.c77.placed.find(p => p.uid === sofa).y === 2, '移动沙发'); U.push(r.undo);
+  ok(!E.moveItem(s, 'c77', sofa, 4, 2).ok, '移动出界被拒');
+  r = E.rotateItem(s, 'c77', bed); const bp = s.homes.c77.placed.find(p => p.uid === bed), bs = E.furnSize('furn_bed', bp.rot);
+  ok(r.ok && bp.rot === 1 && bs.w === 3 && bs.h === 2 && E.canPlace(s, 'c77', 'furn_bed', bp.x, bp.y, bp.rot, bed).ok, '旋转 90°：宽高互换后仍然放得下');
+  U.push(r.undo);
+  r = E.storeItem(s, 'c77', sofa); ok(r.ok && s.furnInv.furn_sofa === 1 && !s.homes.c77.placed.some(p => p.uid === sofa), '收回沙发 → 回公共仓库'); U.push(r.undo);
+  ok(s.coins === paid, '摆放 / 移动 / 旋转 / 收回 都不花金币');
+  ok(E.undoHome(s, U.pop()).ok && s.homes.c77.placed.some(p => p.uid === sofa) && !s.furnInv.furn_sofa, '撤销收回：沙发回到原位');
+  ok(E.undoHome(s, U.pop()).ok && s.homes.c77.placed.find(p => p.uid === bed).rot === 0, '撤销旋转');
+  ok(E.undoHome(s, U.pop()).ok && s.homes.c77.placed.find(p => p.uid === sofa).y === 3, '撤销移动');
+  ok(E.undoHome(s, U.pop()).ok && s.furnInv.furn_sofa === 1 && !s.homes.c77.placed.some(p => p.uid === sofa), '撤销摆放：回仓库');
+  ok(s.coins === paid && !E.undoHome(s, null).ok, '撤销也不碰金币；没东西可撤时提示');
+  const lux = E.homeLuxury(s, 'c77');
+  ok(lux === E.HOME_TIERS[0].bonus + s.homes.c77.placed.reduce((a, p) => a + F(p.fid).lux, 0) && lux > 0, '豪华度 = 摆出来的家具之和 + 房型加成');
+  ok(E.invCount(s) >= 1 && E.furnStats(s, 'furn_sofa').warehouse === 1 && E.furnStats(s, 'furn_sofa').placed === 0, '仓库里的不算豪华度；furnStats 分得清摆出/仓库');
+  // 升级：格子变大，原来的家具都还合法
+  s.coins = 10; ok(!E.upgradeHome(s, 'c77').ok && s.homes.c77.lv === 1, '钱不够升不了房');
+  s.coins = 1e9; const pl = JSON.stringify(s.homes.c77.placed);
+  r = E.upgradeHome(s, 'c77'); ok(r.ok && s.homes.c77.lv === 2 && s.coins === 1e9 - E.HOME_TIERS[1].cost && E.homeTier(2).cols === 8, '升级公寓：扣钱、8×5');
+  ok(JSON.stringify(s.homes.c77.placed) === pl && s.homes.c77.placed.every(p => E.canPlace(s, 'c77', p.fid, p.x, p.y, p.rot, p.uid).ok), '升级后家具位置不变、都还合法');
+  ok(E.canPlace(s, 'c77', 'furn_sofa', 5, 4, 0).ok, '公寓更大：小屋放不下的位置现在能放');
+  ok(E.homeLuxury(s, 'c77') === lux + E.HOME_TIERS[1].bonus, '升级加房型豪华度');
+  E.upgradeHome(s, 'c77'); ok(s.homes.c77.lv === 3 && !E.upgradeHome(s, 'c77').ok && E.homeUpgradeCost(s, 'c77') === null, '豪宅是顶级');
+  // 公共仓库：收回后可搬到别家；一件同时只在一家；多买才能多家同展
+  s.shops[1].open = true; s.shops[1].lv = 1; E.checkUnlocks(s);
+  const h77 = JSON.stringify(s.homes.c77), hp = JSON.stringify(s.homes.pearl);
+  ok(E.assignCeo(s, 'c77', 1).ok && JSON.stringify(s.homes.c77) === h77 && JSON.stringify(s.homes.pearl) === hp, '调任 / 交换任职不改任何人的家');
+  // 仓库里还有沙发：直接摆进珍珠姐家（不扣钱）
+  const coinsBeforeMove = s.coins;
+  ok(s.furnInv.furn_sofa === 1, '沙发还在公共仓库');
+  r = E.placeItem(s, 'pearl', 'furn_sofa', 0, 0, 0);
+  ok(r.ok && s.homes.pearl.placed.some(p => p.fid === 'furn_sofa') && !s.furnInv.furn_sofa && !s.homes.c77.placed.some(p => p.fid === 'furn_sofa'), '同件沙发只能摆在一家：77 没有、珍珠姐有');
+  ok(s.coins === coinsBeforeMove, '搬家（仓库→珍珠姐）不扣金币');
+  const stSofa = E.furnStats(s, 'furn_sofa');
+  ok(stSofa.owned === 1 && stSofa.placed === 1 && stSofa.warehouse === 0 && stSofa.where[0].ceo === 'pearl', 'furnStats：已拥有 1（摆出 1 / 仓库 0）摆在珍珠姐');
+  // 收回再摆回 77
+  const sofaUid = s.homes.pearl.placed.find(p => p.fid === 'furn_sofa').uid;
+  ok(E.storeItem(s, 'pearl', sofaUid).ok && s.furnInv.furn_sofa === 1 && !s.homes.pearl.placed.some(p => p.fid === 'furn_sofa'), '收回珍珠姐的沙发 → 公共仓库');
+  ok(E.placeItem(s, 'c77', 'furn_sofa', 0, 0, 0).ok && s.homes.c77.placed.some(p => p.fid === 'furn_sofa') && s.coins === coinsBeforeMove, '再摆回 77：仍不扣钱');
+  // 想两家都有沙发：再买一件
+  const cBuy = s.coins; E.buyFurniture(s, 'furn_sofa');
+  ok(s.furnInv.furn_sofa === 1 && s.coins === cBuy - F('furn_sofa').price, '再买一件沙发进仓库');
+  ok(E.placeItem(s, 'pearl', 'furn_sofa', 1, 1, 0).ok, '第二件可摆珍珠姐家');
+  const st2 = E.furnStats(s, 'furn_sofa');
+  ok(st2.owned === 2 && st2.placed === 2 && st2.warehouse === 0 && st2.where.map(w => w.ceo).sort().join() === 'c77,pearl', '两件沙发：77 + 珍珠姐各一件');
+  // 家宅不加产速
+  const rateA = E.baseRate(s); const s2 = E.cloneState(s); s2.homes = E.normHomes(null); s2.furnInv = {}; ok(E.baseRate(s2) === rateA, '家宅不加产速');
+  // 存档往返 + 旧档迁移
+  const rt = E.migrate(JSON.parse(JSON.stringify(s)), T0).st;
+  ok(JSON.stringify(rt.homes) === JSON.stringify(s.homes) && JSON.stringify(rt.furnInv) === JSON.stringify(s.furnInv) && rt.coins === s.coins, '存档往返：家宅 / 公共仓库 / 摆放原样读回');
+  const old = E.migrate({ v:3, coins:500, shops:[{ open:true, lv:3, emp:1 }], ceos:{ c77:{ unlocked:true, lv:2, at:0 } } }, T0);
+  ok(old.st.v === E.CFG.SAVE_VERSION && E.CEOS.every(c => old.st.homes[c.id].lv === 1 && old.st.homes[c.id].placed.length === 0) && Object.keys(old.st.furnInv).length === 0 && old.st.coins === 500, '旧档没有 homes → 每人补空小屋 + 空仓库，金币不变');
+  ok(E.migrate({ v:1, coins:1, shops:[{ open:true, lv:2, hired:true }] }, T0).st.homes.c77.lv === 1, 'v1 旧档也补家宅');
+  // 旧版 per-CEO inv 合并进公共仓库
+  const legacy = E.migrate({ v:3, coins:9, homes:{ c77:{ lv:1, inv:{ furn_lamp:2 }, placed:[{ uid:'u1', fid:'furn_plant', x:0, y:0, rot:0 }] }, pearl:{ lv:1, inv:{ furn_lamp:1, furn_tv:1 }, placed:[] } } }, T0).st;
+  ok(legacy.furnInv.furn_lamp === 3 && legacy.furnInv.furn_tv === 1 && legacy.homes.c77.placed.length === 1 && !legacy.homes.c77.inv && !legacy.homes.pearl.inv, '旧 per-CEO 仓库合并进 furnInv，placed 保留，homes.inv 清掉');
+  const dirty = E.migrate({ v:3, furnInv:{ furn_bed:2, bogus:3, furn_tv:-1 }, homes:{ c77:{ lv:99, inv:{ furn_sofa:1 }, placed:[
+    { uid:'u1', fid:'furn_sofa', x:0, y:0, rot:0 }, { uid:'u2', fid:'furn_sofa', x:1, y:0, rot:0 }, { uid:'u3', fid:'furn_bed', x:20, y:0, rot:0 }, { uid:'u4', fid:'nope', x:0, y:3 } ] }, pearl:'坏' } }, T0).st;
+  const dh = dirty.homes.c77;
+  ok(dh.lv === 3 && dirty.furnInv.furn_bed === 3 && !dirty.furnInv.bogus && !dirty.furnInv.furn_tv && dirty.furnInv.furn_sofa === 2 && dh.placed.length === 1 && dh.placed[0].uid === 'u1' && dh.next >= 4, '坏档整理：等级封顶，越界/重叠退回公共仓库不丢，未知家具丢掉');
+  ok(dirty.homes.pearl.lv === 1 && dirty.homes.rocket.placed.length === 0, '坏掉的家宅数据 → 默认小屋');
+  ok(E.placeItem(Object.assign(dirty, {}), 'c77', 'furn_bed', 0, 1, 0).uid !== 'u1', '新摆的家具 uid 不和旧的撞');
+  // 双花金币：只有买 / 升级房扣钱；place/move/store/undo 前后金币不变
+  const s3 = E.newState(T0); s3.coins = 50000;
+  const c0 = s3.coins; E.buyFurniture(s3, 'furn_table'); const c1 = s3.coins;
+  ok(c1 === c0 - F('furn_table').price, '买桌子扣一次');
+  const pr = E.placeItem(s3, 'c77', 'furn_table', 0, 0, 0); ok(pr.ok && s3.coins === c1, '摆放不扣');
+  const mr = E.moveItem(s3, 'c77', pr.uid, 2, 1); ok(mr.ok && s3.coins === c1, '移动不扣');
+  const sr = E.storeItem(s3, 'c77', pr.uid); ok(sr.ok && s3.coins === c1, '收回不扣');
+  ok(E.undoHome(s3, sr.undo).ok && s3.coins === c1, '撤销收回不扣');
+  ok(E.undoHome(s3, mr.undo).ok && s3.coins === c1, '撤销移动不扣');
+  ok(E.undoHome(s3, pr.undo).ok && s3.coins === c1 && s3.furnInv.furn_table === 1, '撤销摆放不扣、回仓库');
+}
 console.log(`economy tests: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

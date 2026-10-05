@@ -434,6 +434,187 @@
     return { ok:true, item:pick, cost:price, super:isSuper, odds:o, setDone };
   }
 
+  const num = (x, d) => (typeof x === 'number' && isFinite(x)) ? x : d;
+  /* ================= CEO 生活篇：家宅 / 商城 / 摆放（和经营共用金币；不加产速、不影响开店） ================= */
+  // 方案 A（杨总定）：四家共用一个家具仓库 state.furnInv = {fid:数量}
+  // 每件实例同一时间只摆在一家：state.homes[ceoId] = { lv, placed:[{uid,fid,x,y,rot}], next }
+  // 收回 → 回公共仓库 → 可搬到别家；想四家都有就买四件。只有买家具 / 升级房子花金币。
+  // 名字/价格/豪华度可调；id 别动（存档靠 id，美术按 art/furn_<名>.webp）
+  const HOME_TIERS = [
+    { id:'hut',   name:'小屋', cols:6,  rows:4, cost:0,       bonus:0,  wall:'#f6e7cf', floor:'#d9b38c', trim:'#8d5524' },
+    { id:'apt',   name:'公寓', cols:8,  rows:5, cost:80000,   bonus:10, wall:'#e3f0ff', floor:'#c9d6e3', trim:'#3a86ff' },
+    { id:'villa', name:'豪宅', cols:10, rows:6, cost:6000000, bonus:30, wall:'#fff3c4', floor:'#e9d5a8', trim:'#b8860b' },
+  ];
+  // w×h = 占地（格），rot 为奇数时宽高互换；layer:'rug' 地毯可以垫在家具下面（地毯之间不能叠）；wall:true 挂画只能靠后墙（第一排）
+  const FURNITURE = [
+    { id:'furn_rug',       name:'地毯', emoji:'🟥', color:'#e76f51', w:3, h:2, price:300,   lux:3,  layer:'rug' },
+    { id:'furn_plant',     name:'绿植', emoji:'🪴', color:'#52b788', w:1, h:1, price:500,   lux:2 },
+    { id:'furn_lamp',      name:'台灯', emoji:'💡', color:'#ffd23f', w:1, h:1, price:800,   lux:3 },
+    { id:'furn_table',     name:'桌子', emoji:'🪵', color:'#b08968', w:2, h:2, price:1500,  lux:5 },
+    { id:'furn_painting',  name:'挂画', emoji:'🖼️', color:'#9b5de5', w:2, h:1, price:2500,  lux:8,  wall:true },
+    { id:'furn_catbed',    name:'猫窝', emoji:'🐱', color:'#f4a261', w:1, h:1, price:3000,  lux:6 },
+    { id:'furn_sofa',      name:'沙发', emoji:'🛋️', color:'#ef476f', w:3, h:1, price:6000,  lux:12 },
+    { id:'furn_bookshelf', name:'书架', emoji:'📚', color:'#8d6e63', w:2, h:1, price:8000,  lux:10 },
+    { id:'furn_bed',       name:'床',   emoji:'🛏️', color:'#90caf9', w:2, h:3, price:12000, lux:15 },
+    { id:'furn_wardrobe',  name:'衣柜', emoji:'🚪', color:'#a1887f', w:2, h:1, price:15000, lux:14 },
+    { id:'furn_fridge',    name:'冰箱', emoji:'🧊', color:'#bde0fe', w:1, h:1, price:20000, lux:18 },
+    { id:'furn_tv',        name:'电视', emoji:'📺', color:'#264653', w:2, h:1, price:30000, lux:25 },
+  ];
+  const FURN_BY_ID = {}; FURNITURE.forEach(f => FURN_BY_ID[f.id] = f);
+  const HOME_MAX = HOME_TIERS.length;
+  function newHome() { return { lv:1, placed:[], next:1 }; }
+  function homeTier(lv) { return HOME_TIERS[Math.max(1, Math.min(HOME_MAX, lv | 0)) - 1]; }
+  function homeOf(st, id) {
+    if (!st.homes) st.homes = {};
+    if (!st.homes[id]) st.homes[id] = newHome();
+    // 清理旧版 per-CEO 仓库字段（迁到 furnInv 后不再使用）
+    if (st.homes[id].inv) delete st.homes[id].inv;
+    return st.homes[id];
+  }
+  function furnInvOf(st) {
+    if (!st.furnInv || typeof st.furnInv !== 'object') st.furnInv = {};
+    return st.furnInv;
+  }
+  function addInv(inv, fid, n) {
+    const k = Math.floor(num(n, 0)); if (!FURN_BY_ID[fid] || k <= 0) return;
+    inv[fid] = (inv[fid] || 0) + k;
+  }
+  function takeInv(inv, fid) {
+    if (!(inv[fid] > 0)) return false;
+    inv[fid]--; if (inv[fid] <= 0) delete inv[fid]; return true;
+  }
+  function homeOpen(st, id) { return !!(CEO_BY_ID[id] && st.ceos[id] && st.ceos[id].unlocked); }
+  function furnSize(fid, rot) { const f = FURN_BY_ID[fid]; return (rot & 1) ? { w:f.h, h:f.w } : { w:f.w, h:f.h }; }
+  const boxOverlap = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+  // 能不能摆在 (x,y)：不出界、不和别的家具重叠（地毯例外）、挂画只能靠后墙；ignoreUid = 正在移动/旋转的那件
+  function canPlace(st, id, fid, x, y, rot, ignoreUid) {
+    const f = FURN_BY_ID[fid]; if (!f) return { ok:false, why:'没有这件家具' };
+    const h = homeOf(st, id), T = homeTier(h.lv), sz = furnSize(fid, rot || 0);
+    if (!Number.isInteger(x) || !Number.isInteger(y)) return { ok:false, why:'位置不对' };
+    if (x < 0 || y < 0 || x + sz.w > T.cols || y + sz.h > T.rows) return { ok:false, why:'超出房间了' };
+    if (f.wall && y !== 0) return { ok:false, why:f.name + '要挂在后墙（第一排）' };
+    const me = { x, y, w:sz.w, h:sz.h }, rug = f.layer === 'rug';
+    for (const p of h.placed) {
+      if (p.uid === ignoreUid) continue;
+      const pf = FURN_BY_ID[p.fid]; if (!pf) continue;
+      if ((pf.layer === 'rug') !== rug) continue;           // 地毯和普通家具不同层，可以叠
+      const ps = furnSize(p.fid, p.rot);
+      if (boxOverlap(me, { x:p.x, y:p.y, w:ps.w, h:ps.h })) return { ok:false, why:'和' + pf.name + '重叠了' };
+    }
+    return { ok:true };
+  }
+  function findFree(st, id, fid, rot) {
+    const T = homeTier(homeOf(st, id).lv);
+    for (let y = 0; y < T.rows; y++) for (let x = 0; x < T.cols; x++) if (canPlace(st, id, fid, x, y, rot || 0).ok) return { x, y };
+    return null;
+  }
+  function homeUpgradeCost(st, id) { const h = homeOf(st, id); return h.lv >= HOME_MAX ? null : HOME_TIERS[h.lv].cost; }
+  // 下面这些都直接改 st；只有「买家具 / 升级房子」花金币，摆放/移动/旋转/收回/撤销永远不碰金币
+  function buyFurniture(st, fid) {
+    const f = FURN_BY_ID[fid]; if (!f) return { ok:false, why:'没有这件家具' };
+    if (st.coins < f.price) return { ok:false, why:'金币不够' };
+    const inv = furnInvOf(st); st.coins -= f.price; addInv(inv, fid, 1);
+    return { ok:true, cost:f.price, count:inv[fid] };
+  }
+  function upgradeHome(st, id) {
+    if (!homeOpen(st, id)) return { ok:false, why:'这位 CEO 还没加入' };
+    const h = homeOf(st, id); if (h.lv >= HOME_MAX) return { ok:false, why:'已经是' + homeTier(h.lv).name + '了' };
+    const c = HOME_TIERS[h.lv].cost; if (st.coins < c) return { ok:false, why:'金币不够' };
+    st.coins -= c; h.lv++;   // 格子只会变大、坐标不动，原来摆好的家具都还合法
+    return { ok:true, cost:c, lv:h.lv, tier:homeTier(h.lv) };
+  }
+  function placeItem(st, id, fid, x, y, rot) {
+    rot = (rot | 0) & 3;
+    if (!homeOpen(st, id)) return { ok:false, why:'这位 CEO 还没加入' };
+    const inv = furnInvOf(st); if (!(inv[fid] > 0)) return { ok:false, why:'仓库里没有' + (FURN_BY_ID[fid] ? FURN_BY_ID[fid].name : '这件') };
+    const c = canPlace(st, id, fid, x, y, rot); if (!c.ok) return c;
+    const h = homeOf(st, id), uid = 'u' + (h.next++);
+    takeInv(inv, fid); h.placed.push({ uid, fid, x, y, rot });
+    return { ok:true, uid, undo:{ type:'place', ceo:id, uid } };
+  }
+  function itemOf(h, uid) { return h.placed.find(p => p.uid === uid) || null; }
+  function moveItem(st, id, uid, x, y) {
+    const h = homeOf(st, id), p = itemOf(h, uid); if (!p) return { ok:false, why:'找不到这件家具' };
+    if (p.x === x && p.y === y) return { ok:false, why:'没动', same:true };
+    const c = canPlace(st, id, p.fid, x, y, p.rot, uid); if (!c.ok) return c;
+    const undo = { type:'pose', ceo:id, uid, x:p.x, y:p.y, rot:p.rot };
+    p.x = x; p.y = y; return { ok:true, undo };
+  }
+  // 原地转 90°（宽高互换）；放不下就在附近找个最近的空位，再放不下就不转
+  function rotateItem(st, id, uid) {
+    const h = homeOf(st, id), p = itemOf(h, uid); if (!p) return { ok:false, why:'找不到这件家具' };
+    const nr = (p.rot + 1) & 3;
+    let best = null;
+    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+      const x = p.x + dx, y = p.y + dy;
+      if (!canPlace(st, id, p.fid, x, y, nr, uid).ok) continue;
+      const d = Math.abs(dx) + Math.abs(dy); if (!best || d < best.d) best = { x, y, d };
+    }
+    if (!best) return { ok:false, why:'转不开：旁边没空位' };
+    const undo = { type:'pose', ceo:id, uid, x:p.x, y:p.y, rot:p.rot };
+    p.x = best.x; p.y = best.y; p.rot = nr;
+    return { ok:true, undo, moved:best.d > 0 };
+  }
+  function storeItem(st, id, uid) {
+    const h = homeOf(st, id), k = h.placed.findIndex(p => p.uid === uid); if (k < 0) return { ok:false, why:'找不到这件家具' };
+    const p = h.placed[k]; h.placed.splice(k, 1); addInv(furnInvOf(st), p.fid, 1);
+    return { ok:true, undo:{ type:'store', ceo:id, item:{ uid:p.uid, fid:p.fid, x:p.x, y:p.y, rot:p.rot } } };
+  }
+  // 撤销一步摆放操作（摆上/移动/旋转/收回）；不碰金币，不撤销购买
+  function undoHome(st, u) {
+    if (!u) return { ok:false, why:'没有可以撤销的' };
+    const h = homeOf(st, u.ceo), inv = furnInvOf(st);
+    if (u.type === 'place') { const k = h.placed.findIndex(p => p.uid === u.uid); if (k < 0) return { ok:false, why:'已经不在房间里' };
+      const p = h.placed[k]; h.placed.splice(k, 1); addInv(inv, p.fid, 1); return { ok:true }; }
+    if (u.type === 'pose') { const p = itemOf(h, u.uid); if (!p) return { ok:false, why:'已经不在房间里' };
+      if (!canPlace(st, u.ceo, p.fid, u.x, u.y, u.rot, u.uid).ok) return { ok:false, why:'原位置被占了' };
+      p.x = u.x; p.y = u.y; p.rot = u.rot; return { ok:true }; }
+    if (u.type === 'store') { const it = u.item; if (!(inv[it.fid] > 0)) return { ok:false, why:'仓库里已经没有了' };
+      if (!canPlace(st, u.ceo, it.fid, it.x, it.y, it.rot).ok) return { ok:false, why:'原位置被占了' };
+      takeInv(inv, it.fid); h.placed.push(Object.assign({}, it)); return { ok:true }; }
+    return { ok:false, why:'未知操作' };
+  }
+  function homeLuxury(st, id) {
+    const h = homeOf(st, id); let s = homeTier(h.lv).bonus;
+    for (const p of h.placed) if (FURN_BY_ID[p.fid]) s += FURN_BY_ID[p.fid].lux;
+    return s;
+  }
+  function invCount(st) { return Object.values(furnInvOf(st)).reduce((a, b) => a + b, 0); }
+  // 商城展示：已拥有 N（摆出 X / 仓库 Y）+ 摆在谁家
+  function furnStats(st, fid) {
+    const warehouse = (furnInvOf(st)[fid] || 0);
+    const where = [];
+    CEOS.forEach(c => {
+      const h = st.homes && st.homes[c.id]; if (!h) return;
+      (h.placed || []).forEach(p => { if (p.fid === fid) where.push({ ceo:c.id, name:c.name, uid:p.uid, x:p.x, y:p.y }); });
+    });
+    return { owned:warehouse + where.length, placed:where.length, warehouse, where };
+  }
+  // 读档整理：缺的补默认；坏家具/越界/重叠退回公共仓库（不丢）；旧版 per-CEO inv 合并进 furnInv
+  function normHomeBundle(rawHomes, rawInv) {
+    const inv = {};
+    if (rawInv && typeof rawInv === 'object') for (const [fid, n] of Object.entries(rawInv)) addInv(inv, fid, n);
+    const out = {};
+    CEOS.forEach(c => {
+      const o = rawHomes && typeof rawHomes === 'object' && rawHomes[c.id] && typeof rawHomes[c.id] === 'object' ? rawHomes[c.id] : {};
+      // 旧版仓库（按 CEO）→ 并入公共仓库
+      if (o.inv && typeof o.inv === 'object') for (const [fid, n] of Object.entries(o.inv)) addInv(inv, fid, n);
+      const h = { lv:Math.max(1, Math.min(HOME_MAX, Math.floor(num(o.lv, 1)))), placed:[], next:Math.max(1, Math.floor(num(o.next, 1))) };
+      const tmp = { homes:{ [c.id]:h }, ceos:{ [c.id]:{ unlocked:true } }, furnInv:{} }, seen = {};
+      (Array.isArray(o.placed) ? o.placed : []).forEach(p => {
+        if (!p || !FURN_BY_ID[p.fid]) return;
+        const rot = Number.isInteger(p.rot) ? p.rot & 3 : 0, uid = typeof p.uid === 'string' && p.uid && !seen[p.uid] ? p.uid : 'u' + (h.next++);
+        if (Number.isInteger(p.x) && Number.isInteger(p.y) && canPlace(tmp, c.id, p.fid, p.x, p.y, rot).ok) { h.placed.push({ uid, fid:p.fid, x:p.x, y:p.y, rot }); seen[uid] = true; }
+        else addInv(inv, p.fid, 1);
+        const m = /^u(\d+)$/.exec(uid); if (m) h.next = Math.max(h.next, +m[1] + 1);
+      });
+      out[c.id] = h;
+    });
+    return { homes:out, furnInv:inv };
+  }
+  function normHomes(raw) { return normHomeBundle(raw, null).homes; }
+  function normFurnInv(rawInv, rawHomes) { return normHomeBundle(rawHomes, rawInv).furnInv; }
+
   /* ================= 存档：新建 / 版本迁移 ================= */
   function newState(now) {
     const st = {
@@ -446,12 +627,12 @@
       gacha:{ owned:[], draws:0, pity:0, last:null },
       wear:{}, decorHidden:[], rush:{ tea:0, tech:0 },
       ach:{}, muted:false, cur:0,
+      homes:normHomes(null), furnInv:{},
     };
     CEOS.forEach(c => { st.ceos[c.id] = { unlocked:false, lv:1, at:-1 }; st.wear[c.id] = { clothes:null, hat:null }; });
     checkUnlocks(st);
     return st;
   }
-  const num = (x, d) => (typeof x === 'number' && isFinite(x)) ? x : d;
   // 任意旧档 → 当前版本。v1 = 定稿前「伙伴」版（shops[i].hired），v2 = CEO+员工
   function migrate(raw, now) {
     const base = newState(now);
@@ -492,6 +673,8 @@
     st.specialCustomers = Math.max(0, Math.floor(num(raw.specialCustomers, 0)));
     st.boostEnd = 0; // 团单改为一次性结算，旧档残留的 ×5 清掉
     st.lastSeen = num(raw.lastSeen, now); st.maxSeen = Math.max(num(raw.maxSeen, 0), st.lastSeen);
+    const hb = normHomeBundle(raw.homes, raw.furnInv); // CEO 生活篇：公共仓库 + 每家摆放；旧 per-CEO inv 自动并入
+    st.homes = hb.homes; st.furnInv = hb.furnInv;
     st.rev = num(raw.rev, 0);
     delete st.hired;
     st.v = CFG.SAVE_VERSION;
@@ -525,5 +708,7 @@
     checkUnlocks, assignCeo, assignCeoWithPayout, creditOnline, previewAssign, signOf, cloneState,
     canOpen, openShop, hireEmp, upgradeEmp, upgradeCeo, upgradeShop,
     dayKey, nextResetTs, clockRolledBack, computeOffline, settleOffline, canDouble, claimOffline,
-    gachaUnlocked, gachaRemaining, gachaOdds, gachaPrice, gachaDraw, cardsComplete, newState, migrate, nextGoal };
+    gachaUnlocked, gachaRemaining, gachaOdds, gachaPrice, gachaDraw, cardsComplete, newState, migrate, nextGoal,
+    HOME_TIERS, HOME_MAX, FURNITURE, FURN_BY_ID, newHome, homeTier, homeOf, furnInvOf, homeOpen, furnSize, canPlace, findFree, homeUpgradeCost,
+    buyFurniture, upgradeHome, placeItem, moveItem, rotateItem, storeItem, undoHome, homeLuxury, invCount, furnStats, normHomes, normFurnInv, normHomeBundle };
 });
