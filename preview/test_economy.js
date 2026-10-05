@@ -206,7 +206,7 @@ ok(E.CROSS['rocket@0'].effect === 'bigFreq' && E.CROSS['c77@3'].effect === 'offl
 // ===== CEO 生活篇：家宅 / 商城 / 摆放（方案 A：公共仓库） =====
 {
   const F = id => E.FURN_BY_ID[id];
-  ok(E.FURNITURE.length === 12 && ['bed','sofa','table','lamp','rug','plant','bookshelf','tv','fridge','wardrobe','painting','catbed'].every(n => F('furn_' + n)), '商城 12 件家具，id = furn_<名>');
+  ok(E.FURNITURE.length === 16 && ['bed','sofa','table','lamp','rug','plant','bookshelf','tv','fridge','wardrobe','painting','catbed','rocket_rocket_model','rocket_meteor_stand','rocket_biosphere_dome','s77_cloud_canopy'].every(n => F('furn_' + n)), '商城 16 件家具，id = furn_<名>');
   ok(E.FURNITURE.every(f => f.w >= 1 && f.h >= 1 && f.price > 0 && f.lux > 0), '每件家具都有占地 / 价格 / 豪华度');
   ok(E.HOME_TIERS.map(t => t.name + t.cols + 'x' + t.rows).join() === '小屋6x4,公寓8x5,豪宅10x6', '三档房子：小屋 6×4 → 公寓 8×5 → 豪宅 10×6');
   ok(E.HOME_TIERS[1].cost > E.SHOPS[2].open && E.HOME_TIERS[2].cost > E.SHOPS[3].open, '升级价跟着经营节奏（公寓 > 开书店价，豪宅 > 开科技公司价）');

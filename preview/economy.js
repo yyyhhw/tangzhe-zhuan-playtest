@@ -523,6 +523,10 @@
     { id:'furn_wardrobe',  name:'衣柜', emoji:'🚪', color:'#a1887f', w:2, h:1, price:15000, lux:14, cat:'cabinet', sub:'wardrobe' },
     { id:'furn_fridge',    name:'冰箱', emoji:'🧊', color:'#bde0fe', w:1, h:1, price:20000, lux:18, cat:'appliance' },
     { id:'furn_tv',        name:'电视', emoji:'📺', color:'#264653', w:2, h:1, price:30000, lux:25, cat:'appliance' },
+    { id:'furn_rocket_rocket_model',   name:'分段火箭模型', emoji:'🚀', color:'#6c757d', w:1, h:1, price:6500,   lux:4,  cat:'plant' },
+    { id:'furn_rocket_meteor_stand',   name:'悬架陨石展座', emoji:'☄️', color:'#adb5bd', w:1, h:1, price:32000,  lux:7,  cat:'plant' },
+    { id:'furn_rocket_biosphere_dome', name:'生态圆顶花园', emoji:'🪴', color:'#52b788', w:2, h:2, price:125000, lux:16, cat:'plant' },
+    { id:'furn_s77_cloud_canopy',      name:'云朵纱帐床',   emoji:'🛏️', color:'#e9ecef', w:3, h:3, price:18000,  lux:7,  cat:'bed' },
   ];
   const FURN_BY_ID = {}; FURNITURE.forEach(f => FURN_BY_ID[f.id] = f);
   const HOME_MAX = HOME_TIERS.length;
