@@ -1,4 +1,4 @@
-# 宠物原型 p1（preview/pet/）
+# 宠物原型 p2（preview/pet/）
 
 独立页面：一只暖棕白小狗在房间里自己过日子。和正式游戏完全隔离：
 - 只用自己的存档键 `tangzhe-pet-proto`；不读不写 `tangzhe-save` / `tangzhe-preview-save`；不接经济，收益加成 0。
@@ -18,6 +18,10 @@ python3 -m http.server 49761 --bind 127.0.0.1   # 仓库根目录
 /workspace/.pwvenv/bin/python preview/pet/test_pet_e2e.py http://127.0.0.1:49761/preview/pet/index.html
 ```
 URL 参数：`?fresh=1` 不读存档；`?seed=N` 固定随机；`?debug=1` 画路径 + 显示精力；`?art=atlas` 把占位帧烘成图集再按 cell 画（自测换真图那条路）。
+
+## p2 修复（熊大 p1 复核）
+- 叼着球被摸：先安全放球（在你面前就算送回）再被摸；任何计划被打断后嘴里还叼着球，下一个自主计划先原地放下，不会一直叼着、不用呼唤也能再抛。
+- 读档精力只认有限数值，合法的 0 保留为 0（以前 `数值 || 70` 把 0 当缺失），再单独加离线休息；0 精力读档后是累的、会去休息。
 
 ## 已知限制 / 下一步
 - 美术是占位（程序画），等真图集；动作节奏按占位时长调的。

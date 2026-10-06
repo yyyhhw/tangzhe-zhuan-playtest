@@ -257,6 +257,46 @@ section('14. 离线 / 存档');
   ok(w2.items.find(p => p.uid === 'f13').x === 8 && w2.items.find(p => p.uid === 'f13').y === 6, '搬过的家具位置存档恢复');
   ok(w2.dog.affinity === 40, '亲密不会低于起始 40'); }
 
+section('14b. 回归：叼球中抚摸 / 0 精力读档（熊大 p1 复核）');
+for (const how of ['tap', 'button']) for (const seed of [5, 21, 33]) {
+  const w = world(seed); PE.throwBall(w);
+  let n = 0; while (w.ball.state !== 'carried' && n++ < 60 * 30) PE.update(w, H);
+  ok(w.ball.state === 'carried', `[${how}/${seed}] 先叼起球`);
+  run(w, 0.4); const r = PE.pet(w, how); ok(r.ok && !r.absorbed, `[${how}/${seed}] 叼球中抚摸被接受`);
+  let droppedAt = null, pettedAfter = false;
+  const rr2 = run(w, 30, (w) => { if (droppedAt == null && w.ball.state !== 'carried') droppedAt = w.t; if (droppedAt != null && w.dog.anim.name === 'petted') pettedAfter = true; });
+  ok(droppedAt != null, `[${how}/${seed}] 抚摸前自动放球（不留永远叼着）`);
+  ok(pettedAfter, `[${how}/${seed}] 放球后照样被摸`);
+  ok(clean(rr2), `[${how}/${seed}] 放球 / 抚摸过程不穿家具不瞬移`);
+  run(w, 150);
+  ok(w.ball.state !== 'carried' && !w.dog.carrying, `[${how}/${seed}] 180 秒后球不在嘴里`);
+  ok(PE.circleFree(w, w.ball.x, w.ball.y, C.BALL_R), `[${how}/${seed}] 球放在空地上（不在家具里）`);
+  const t2 = PE.throwBall(w); ok(t2.ok, `[${how}/${seed}] 不用呼唤就能再抛 ${JSON.stringify(t2)}`);
+  let again = 0; run(w, 40, (w) => { if (w.ball.state === 'carried') again = 1; return !again; });
+  ok(again === 1, `[${how}/${seed}] 再抛后还能追到并叼起`);
+}
+{ // 兜底：任何打断（如过不去）后还叼着球，下一个自主计划先放球
+  const w = world(7); PE.throwBall(w); let n = 0; while (w.ball.state !== 'carried' && n++ < 60 * 30) PE.update(w, H);
+  w.dog.plan = []; w.dog.step = null; run(w, 6);
+  ok(w.ball.state !== 'carried', '计划被清空时叼着的球也会被自动放下'); }
+for (const [elapsedMs, asleep] of [[0, false], [0, true], [500, false]]) {
+  const w = world(23); run(w, 5); const s = PE.serialize(w, 1000); s.dog.energy = 0; s.dog.asleep = asleep; s.dog.tired = false;
+  const w2 = world(23); const r = PE.restore(w2, s, 1000 + elapsedMs);
+  const want = Math.min(100, C.SLEEP_GAIN * elapsedMs / 1000);
+  ok(Math.abs(w2.dog.energy - want) < 1e-9, `0 精力即时读档（离线 ${elapsedMs}ms，睡着=${asleep}）保留 0 + 离线休息 → ${w2.dog.energy}（不是 70）`);
+  ok(w2.dog.tired === true, '0 精力读档后是累的');
+  run(w2, 8); ok(w2.dog.activity === 'rest', `0 精力读档后会去休息（现在 ${w2.dog.activity}）`);
+}
+{ const w = world(23); const s = PE.serialize(w, 1000); s.dog.energy = 0;
+  const w2 = world(23); PE.restore(w2, s, 61_000); ok(Math.abs(w2.dog.energy - 48) < 1e-6, `0 精力离线 60 秒 → 0 + 0.8×60 = 48（${w2.dog.energy}）`); }
+for (const [bad, why] of [[undefined, '缺失'], [null, 'null'], ['abc', '字符串'], [NaN, 'NaN'], [Infinity, '无穷']]) {
+  const w = world(24); const s = PE.serialize(w, 1000); s.dog.energy = bad; const w2 = world(24); PE.restore(w2, s, 1000);
+  ok(w2.dog.energy === C.ENERGY0, `精力${why} → 默认 70（${w2.dog.energy}）`); }
+{ const w = world(24); const s = PE.serialize(w, 1000); s.dog.energy = 150; const w2 = world(24); PE.restore(w2, s, 1000); ok(w2.dog.energy === 100, '精力超范围夹到 100');
+  s.dog.energy = -5; const w3 = world(24); PE.restore(w3, s, 1000); ok(w3.dog.energy === 0, '负精力夹到 0'); }
+{ const w = world(25); run(w, 3); w.dog.energy = 0; const s = JSON.parse(JSON.stringify(PE.serialize(w, 5000)));
+  const w2 = world(25); PE.restore(w2, s, 5000); ok(w2.dog.energy === 0, '真实 serialize → JSON → restore 链路：0 精力保持 0'); }
+
 section('15. 压力：40 个种子 × 4 分钟，随机搬家具 + 扔球');
 { let stuckWorlds = 0, worst = 0, bad = 0, guard = 0; let lcg = 987654321; const R = () => ((lcg = (Math.imul(lcg, 1103515245) + 12345) >>> 0) / 4294967296);
   for (let seed = 1; seed <= 40; seed++) {

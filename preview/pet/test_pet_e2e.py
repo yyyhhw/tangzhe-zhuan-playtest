@@ -1,4 +1,4 @@
-# 宠物原型 p1 — 手机端端到端测试（WebKit = iPhone Safari 内核）
+# 宠物原型 p2 — 手机端端到端测试（WebKit = iPhone Safari 内核）
 # 用法：在仓库根目录起静态服务（python3 -m http.server 49761），再 /workspace/.pwvenv/bin/python preview/pet/test_pet_e2e.py [URL]
 import sys, os, json
 from playwright.sync_api import sync_playwright
@@ -128,6 +128,25 @@ with sync_playwright() as p:
             keys = pg.evaluate("Object.keys(localStorage).sort()")
             check(keys == ['tangzhe-pet-proto', 'tangzhe-save'] and pg.evaluate("localStorage.getItem('tangzhe-save')") == '{"sentinel":1}', f'只写自己的键 {KEY}，正式存档 tangzhe-save 原样没动')
             check(sn['incomeBonus'] == 0, '收益加成 0')
+            # 回归（熊大 p1 复核）：叼球中点小狗抚摸 → 自动放球 → 不用呼唤就能再抛
+            pg.evaluate("(() => { const w = __pet.w; w.dog.plan = []; w.dog.step = null; w.dog.activity = 'idle'; w.dog.tired = false; w.dog.energy = 90; w.dog.petCdUntil = 0; })()")
+            pg.tap('#bBall')
+            rc = pg.evaluate("""() => { const P = __pet, w = P.w; for (let i = 0; i < 40 * 60; i++) { P.PE.update(w, 1 / 60); if (w.ball.state === 'carried') break; } P.advance(0.3); return w.ball.state; }""")
+            check(rc == 'carried', '回归：先叼起球')
+            pt = pg.evaluate("__pet.screenOf(__pet.w.dog.x, __pet.w.dog.y - 0.4)"); pg.touchscreen.tap(pt['x'], pt['y'])
+            r = pg.evaluate(STEP_JS, [20, None])
+            st = pg.evaluate("({ ball: __pet.w.ball.state, carrying: __pet.w.dog.carrying, dis: document.getElementById('bBall').disabled })")
+            check(st['ball'] != 'carried' and not st['carrying'] and not st['dis'] and r['overlap'] == 0 and r['teleport'] == 0, f'回归：叼球中抚摸 → 自动放球，抛球按钮可点（{st}）')
+            pg.tap('#bBall'); r = pg.evaluate(STEP_JS, [1.0, None])
+            check(pg.evaluate("__pet.w.ball.state") in ('air', 'roll', 'floor', 'carried') and pg.evaluate("__pet.w.dog.activity") == 'fetch', '回归：不用呼唤直接再抛，小狗去追')
+            # 回归：0 精力存档即时读档 → 仍是 0（不变成 70）
+            pg.evaluate("sessionStorage.setItem('tz_e0', '1')")
+            ctx.add_init_script(f"""(() => {{ if (sessionStorage.getItem('tz_e0') !== '1') return; sessionStorage.setItem('tz_e0', '2');
+              const s = JSON.parse(localStorage.getItem('{KEY}')); s.savedAt = Date.now(); s.dog.energy = 0; s.dog.asleep = false; s.dog.tired = false; localStorage.setItem('{KEY}', JSON.stringify(s)); }})()""")
+            pg.reload(); pg.wait_for_function("document.body.dataset.ready==='1'"); pg.evaluate("__pet.manual(true)")
+            pg.wait_for_function("__pet.imagesReady().ok === __pet.imagesReady().total", timeout=15000)
+            e0 = pg.evaluate("({ e: __pet.w.dog.energy, tired: __pet.w.dog.tired, flag: sessionStorage.getItem('tz_e0') })")
+            check(e0['flag'] == '2' and e0['e'] < 0.5 and e0['tired'], f'回归：0 精力即时读档保留 0（{e0["e"]:.3f}，累={e0["tired"]}）')
         check(not errs, '控制台 0 报错 / 0 警告 / 0 坏请求' + ('' if not errs else '：' + '；'.join(errs[:4])))
         ctx.close()
     # 换真图集那条路：把占位帧烘成 2048×1024 图集再按 cell 画

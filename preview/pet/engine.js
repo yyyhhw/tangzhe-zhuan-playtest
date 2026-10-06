@@ -234,6 +234,8 @@
   // 自己待着时挑下一件事：按个性 + 精力加权，最近做过的降权（让它像在「有目的地过日子」）
   function choose(w) {
     const d = w.dog, P = CFG.PERSONALITY;
+    // 兜底：计划被打断（抚摸 / 过不去 / 其他）后嘴里还叼着球 → 先原地放下，绝不留下「一直叼着」
+    if (w.ball.state === 'carried') { setPlan(w, 'dropBall', dropHereSteps('嘴里还叼着球，先放下')); return; }
     if (d.tired || d.energy < CFG.TIRED) { d.tired = true; setPlan(w, 'rest', restPlan(w, 'tired')); return; }
     const opts = [];
     const add = (kind, wt, build) => { if (wt > 0) opts.push({ kind, wt, build }); };
@@ -452,6 +454,10 @@
   function dropBallSteps() {
     return [faceStep('S'), { k: 'anim', action: 'drop_ball', label: '把球放你面前', onEvent: (w, e) => { if (e === 'ball_drop') dropBall(w); } }];
   }
+  // 原地放球（不走去你面前）：放球动作 + 兜底 fn（动作被打断 / 没触发事件也一定放下）
+  function dropHereSteps(label) {
+    return [{ k: 'anim', action: 'drop_ball', label: label || '把球放下', onEvent: (w, e) => { if (e === 'ball_drop') dropBall(w); } }, { k: 'fn', fn: dropBall }];
+  }
   function dropBall(w) {
     const b = w.ball, d = w.dog; if (b.state !== 'carried') return;
     const v = DIRV[d.dir]; let p = { x: d.x + v[0] * 0.38, y: d.y + v[1] * 0.38 };
@@ -480,8 +486,10 @@
     const busy = d.activity === 'petted' || w.t < d.petCdUntil;
     if (busy) { w.stats.petAbsorbed++; fx(w, 'heart'); return { ok: true, absorbed: true }; }
     if (sleeping(w)) { w.stats.petAbsorbed++; d.petCdUntil = w.t + CFG.PET_CD * 2; gainAffinity(w, 'pet'); fx(w, 'heart'); d.label = '睡着了，摸摸它，尾巴动了动'; return { ok: true, asleep: true }; }
-    const steps = [];
-    if (how === 'button' && dist(d, callSpot(w)) > 1.2) steps.push(...inPlace('attention', { toward: callSpot(w), label: '听到你要摸它' }), { k: 'goto', to: callSpot(w), speed: 'walk', label: '凑过来让你摸' });
+    const steps = [], carrying = w.ball.state === 'carried';
+    if (how === 'button' && dist(d, callSpot(w)) > 1.2) steps.push(...inPlace('attention', { toward: callSpot(w), label: '听到你要摸它' }), { k: 'goto', to: callSpot(w), speed: 'walk', label: carrying ? '叼着球凑过来让你摸' : '凑过来让你摸' });
+    // 叼着球被摸：先安全放球（在你面前就算送回），再被摸；摸完球在地上，可以再抛
+    if (carrying) steps.push(...(dist(d, callSpot(w)) <= 1.2 || how === 'button' ? [...dropBallSteps(), { k: 'fn', fn: dropBall }] : dropHereSteps('先把球放下')));
     steps.push(faceStep(null), { k: 'anim', clip: 'petted', label: '被摸得眯起眼' }, { k: 'fn', fn: (w) => gainAffinity(w, 'pet') }, { k: 'wait', dur: 0.6, label: '蹭蹭你' });
     setPlan(w, 'petted', steps);
     return { ok: true };
@@ -574,7 +582,8 @@
     d.affinity = Math.max(CFG.AFF0, Math.floor(s.dog.affinity || CFG.AFF0));
     d.lastGain = typeof s.dog.lastGain === 'number' ? s.dog.lastGain : -1e9;
     d.lastEat = typeof s.dog.lastEat === 'number' ? s.dog.lastEat : -1e9;
-    const e0 = clamp(+s.dog.energy || CFG.ENERGY0, 0, 100);
+    // 只认有限数值：合法的 0 保留为 0（不当成缺失）；缺失 / 非数字 / NaN / 无穷 才用默认 70。离线休息另算
+    const e0 = typeof s.dog.energy === 'number' && Number.isFinite(s.dog.energy) ? clamp(s.dog.energy, 0, 100) : CFG.ENERGY0;
     d.energy = Math.min(100, e0 + CFG.SLEEP_GAIN * elapsed);
     d.carrying = false; d.z = 0; d.plan = []; d.step = null;
     const bed = interactSpot(w, 'pet_bed');
@@ -585,7 +594,7 @@
       setPlan(w, 'rest', [{ k: 'sleep', label: '在窝里睡着（你不在时自己休息了）' }, { k: 'anim', clip: 'getup', label: '你回来了，伸懒腰起来' }, { k: 'fn', fn: (w) => { w.dog.tired = false; } }]);
     } else {
       const p = nearestFreePoint(w, { x: +s.dog.x, y: +s.dog.y }, CFG.R, 4) || nearestFreePoint(w, callSpot(w), CFG.R, 4);
-      d.x = p.x; d.y = p.y; d.dir = ['E', 'W', 'N', 'S'].includes(s.dog.dir) ? s.dog.dir : 'S'; d.tired = !!s.dog.tired && d.energy < CFG.RESTED;
+      d.x = p.x; d.y = p.y; d.dir = ['E', 'W', 'N', 'S'].includes(s.dog.dir) ? s.dog.dir : 'S'; d.tired = (!!s.dog.tired || d.energy < CFG.TIRED) && d.energy < CFG.RESTED;
       setPlan(w, 'idle', [{ k: 'wait', dur: 1, label: '你回来了' }]);
     }
     d.step = d.plan.shift(); startStep(w, d.step);   // 回来第一帧就是安全姿势（窝里睡 / 站着），不等下一帧
