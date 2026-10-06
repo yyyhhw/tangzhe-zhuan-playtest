@@ -1221,11 +1221,23 @@ with sync_playwright() as p:
     zp.goto(URL); zp.evaluate("localStorage.clear()"); zp.reload(); zp.wait_for_timeout(800); close_modals(zp)
     hl3 = S(zp, "Promise.all(" + json.dumps([[k, v[1], v[2]] for k, v in WB12B2.items()]) + ".map(([k,w,h])=>new Promise(r=>{ if(!__tzz.HOME_ART[k]) return r(k+' 没登记'); const im=new Image(); im.onload=()=>r(im.naturalWidth===w&&im.naturalHeight===h?null:k+' 尺寸 '+im.naturalWidth+'×'+im.naturalHeight); im.onerror=()=>r(k+' 加载失败'); im.src='art/home_'+k+'.webp';}))).then(a=>a.filter(Boolean))")
     check(hl3 == [], f'12b2 阿宅 / 火箭老板 Lv2/Lv3 底图都登记、加载成功、尺寸对（公寓 1600×1400、豪宅 2000×1600）{hl3}')
-    a77 = S(zp, "Promise.all([['ceo_c77',480],['face_c77',192]].map(([n,w])=>new Promise(r=>{const im=new Image(); im.onload=()=>r(im.naturalWidth===w&&im.naturalHeight===w?null:n+' '+im.naturalWidth+'×'+im.naturalHeight); im.onerror=()=>r(n+' 加载失败'); im.src='art/'+n+'.webp?v=12b2';}))).then(a=>a.filter(Boolean))")
-    check(a77 == [], f'12b2 77 漫画新全身 ceo_c77 480×480、头像 face_c77 192×192 都能加载 {a77}')
+    a77 = S(zp, "Promise.all([['ceo_c77',480],['face_c77',192]].map(([n,w])=>new Promise(r=>{const im=new Image(); im.onload=()=>r(im.naturalWidth===w&&im.naturalHeight===w?null:n+' '+im.naturalWidth+'×'+im.naturalHeight); im.onerror=()=>r(n+' 加载失败'); im.src='art/'+n+'.webp?v='+(n==='face_c77'?'12d2':'12b2');}))).then(a=>a.filter(Boolean))")
+    check(a77 == [], f'12b2 77 漫画新全身 ceo_c77 480×480、头像 face_c77 192×192（12d2 换回原版）都能加载 {a77}')
     zp.locator('#bottomNav [data-tab="ceo"]').click(); zp.wait_for_timeout(500)
     srcs = S(zp, "[...document.querySelectorAll('img')].map(i=>i.getAttribute('src')||'').filter(s=>/_c77\\.webp/.test(s))")
-    check(srcs and all(s.endswith('?v=12b2') for s in srcs) and any('face_c77' in s for s in srcs), f'12b2 CEO 页 77 的图都带新缓存号 ?v=12b2（换了图，不吃旧缓存）{srcs[:3]}')
+    check(srcs and all(s.endswith('?v=12d2') if 'face_c77' in s else s.endswith('?v=12b2') for s in srcs) and any('face_c77' in s for s in srcs) and any('ceo_c77' in s for s in srcs), f'12b2/12d2 CEO 页 77：头像带单图缓存号 ?v=12d2（换回原版）、全身仍 ?v=12b2 {srcs[:4]}')
+    # 12d2：服务器上的头像字节 = 72323b4^ 原版，全身 = 72323b4 新版（线上跑就是核对线上文件）
+    import hashlib, urllib.request
+    _base = URL.split('?')[0].rsplit('/', 1)[0]
+    def _sha(n, v):
+        for _ in range(3):
+            try: return hashlib.sha256(urllib.request.urlopen(f'{_base}/art/{n}.webp?v={v}', timeout=30).read()).hexdigest()
+            except Exception as e: _err = e
+        return 'ERR ' + str(_err)
+    fs_, cs_ = _sha('face_c77', '12d2'), _sha('ceo_c77', '12b2')
+    check(fs_ == '020bcc1fba97f778e96841d71c29174ab4ee8af7075a927a3e1322d73dd81342' and cs_ == '0233b7ed158ee38ec7c34d6dc411b29bb5685b46bab6161f535f10837212a2c4', f'12d2 站上 face_c77.webp = 72323b4^ 原版（{fs_[:12]}）、ceo_c77.webp = 72323b4 新版（{cs_[:12]}）')
+    fsrc = S(zp, "(()=>{const i=[...document.querySelectorAll('img')].find(i=>/face_c77/.test(i.getAttribute('src')||'')); return i ? {ok:i.complete && i.naturalWidth===192, src:i.getAttribute('src')} : null})()")
+    check(fsrc and fsrc['ok'], f'12d2 CEO 页 77 头像图片实际加载成功（192×192）{fsrc}')
     S(zp, "(()=>{const s=__tzz.state; s.ceos.otaku.unlocked=true; s.ceos.rocket.unlocked=true; s.coins=1e9; __tzz.persist();})()")
     zp.locator('#bottomNav [data-tab="home"]').click(); zp.wait_for_timeout(500); close_modals(zp)
     for key, (nb, W, H) in WB12B2.items():

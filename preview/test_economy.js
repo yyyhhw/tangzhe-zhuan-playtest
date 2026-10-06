@@ -902,5 +902,24 @@ ok(E.CROSS['rocket@0'].effect === 'bigFreq' && E.CROSS['c77@3'].effect === 'offl
   }
 }
 
+// 12d2：77 头像换回 12b2（72323b4）之前的原版，全身图保留 12b2 漫画新版；头像单图缓存号已更新
+{
+  const fs = require('fs'), path = require('path');
+  const sha = f => require('crypto').createHash('sha256').update(fs.readFileSync(path.join(__dirname, 'art', f))).digest('hex');
+  const FACE_OLD = '020bcc1fba97f778e96841d71c29174ab4ee8af7075a927a3e1322d73dd81342';   // = git show 72323b4^:preview/art/face_c77.webp
+  const CEO_NEW = '0233b7ed158ee38ec7c34d6dc411b29bb5685b46bab6161f535f10837212a2c4';    // = git show 72323b4:preview/art/ceo_c77.webp
+  ok(sha('face_c77.webp') === FACE_OLD, '12d2 face_c77.webp 的 SHA256 = 72323b4^ 原版（' + sha('face_c77.webp').slice(0, 12) + '）');
+  ok(sha('ceo_c77.webp') === CEO_NEW, '12d2 ceo_c77.webp 的 SHA256 = 72323b4 漫画新版（' + sha('ceo_c77.webp').slice(0, 12) + '）');
+  try {   // 有 git 时再对一次仓库历史（防止常量抄错）
+    const cp = require('child_process'), g = r => require('crypto').createHash('sha256').update(cp.execFileSync('git', ['show', r], { cwd:__dirname, stdio:['ignore', 'pipe', 'ignore'] })).digest('hex');
+    ok(g('72323b4^:preview/art/face_c77.webp') === FACE_OLD && g('72323b4:preview/art/ceo_c77.webp') === CEO_NEW, '12d2 两个 SHA 常量和 git 历史（72323b4^ / 72323b4）一致');
+  } catch (e) { console.log('  （没有 git 历史，跳过 SHA 常量复核）'); }
+  const appSrc2 = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8'), one = appSrc2.match(/const ART_ONE = \{([^}]*)\}/), artv = (appSrc2.match(/const ART_V = '([^']+)'/) || [])[1];
+  const fv = one && (one[1].match(/face_c77\s*:\s*'([^']+)'/) || [])[1], cv = one && (one[1].match(/ceo_c77\s*:\s*'([^']+)'/) || [])[1];
+  ok(fv && fv !== '12b2' && fv !== artv, '12d2 face_c77 单图缓存号已更新（' + fv + '，不再是 12b2 / ART_V ' + artv + '）');
+  ok(!cv && artv === '12b2', '12d2 ceo_c77 和其他图仍走 ART_V 12b2（不回退、不动整体缓存号）');
+  ok(/faceURL = id => [^\n]*artV\('face_' \+ id\)/.test(appSrc2), '12d2 faceURL 用单图缓存号');
+}
+
 console.log(`economy tests: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

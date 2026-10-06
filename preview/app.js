@@ -429,8 +429,11 @@ function avatarURL(id, key) {
 }
 // 熊大画的 CEO 头像（图没加载出来就退回画布小人头像）；12b2 起 77 的 ceo_c77 / face_c77 是漫画新版，换了图所以 ART_V 跟着换
 const ART_V = '12b2', PORTRAIT = { c77:1, pearl:1, otaku:1, rocket:1 };
-const faceURL = id => PORTRAIT[id] ? `art/face_${id}.webp?v=${ART_V}` : avatarURL(id);
-const bustURL = id => PORTRAIT[id] ? `art/ceo_${id}.webp?v=${ART_V}` : avatarURL(id);
+// 12d2：单图缓存号——只换一张图时只改这张，不动整体 ART_V。77 头像 face_c77 换回 12b2 之前的原版（杨总 19:30 / 熊大 19:34），全身 ceo_c77 保留漫画新版
+const ART_ONE = { face_c77:'12d2' };
+const artV = n => ART_ONE[n] || ART_V;
+const faceURL = id => PORTRAIT[id] ? `art/face_${id}.webp?v=${artV('face_' + id)}` : avatarURL(id);
+const bustURL = id => PORTRAIT[id] ? `art/ceo_${id}.webp?v=${artV('ceo_' + id)}` : avatarURL(id);
 const faceImg = id => `<img src="${faceURL(id)}"${PORTRAIT[id] ? ` class="art" data-fb="${id}"` : ''} alt="">`;
 const bustImg = id => `<img src="${bustURL(id)}"${PORTRAIT[id] ? ` class="art" data-fb="${id}"` : ''} alt="">`;
 // CEO×店铺 任职形象（16 张）：本行用 ceo_<id>.webp，其余放 art/job_<id>_<店id>.webp，交过来一张在 JOB_ART 里登记一张
