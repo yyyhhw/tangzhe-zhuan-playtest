@@ -1,5 +1,6 @@
 # 预览 13a：烧烤摊店铺页「打僵尸」入口 + 当前 CEO 上场（方案 1：每家店一个小游戏，烧烤摊 = 打僵尸）
 # Playwright WebKit：iPhone SE / SE3 375x667 / iPhone 15
+# 13c 另验：父页开局登记 zbRun → 中途调岗结算仍按开局 CEO、同一 result 重发不双结
 # 验：① zb:'state' 带 ceo（77 在烧烤摊 → 'c77'；别的 CEO 在烧烤摊 → 那人；没人 → null）② 没 CEO 时入口写「先派 CEO」，点了打开烧烤摊的派 CEO 选单，派完入口跟着变
 #    ③ 开局锁人：这局中途调任（经营页再发新 ceo）不换人，结算回传开局那位；下一局才换 ④ 只有烧烤摊有入口 ⑤ state.zombie 原样（不挪到 CEO 名下、不加字段）、不加存档键
 #    ⑥ v12（350eab7 真代码）老档 77 调去别家 → 13a 读档逐项一致、入口显示现任；v13（根目录 5a27148 真代码）带打僵尸进度的老档 → 13a 往返一致
@@ -83,25 +84,48 @@ with sync_playwright() as p:
         check(S(pg, "__tzz.state.cur === 1 && !document.querySelector('.zb-card') && !document.querySelector('[data-act=zombie],[data-act=zbAssign]')"), f'{dn} 奶茶店页没有打僵尸入口（其他三家以后各有自己的游戏）')
         shop0(pg); pg.locator('.zb-card [data-act=zombie]').tap(); f = zframe(pg)
         check(f is not None and S(f, "__zb.ceo") == 'c77', f'{dn} 点「去打」打开小游戏，zb:state 里 ceo = c77（{f and S(f, "__zb.ceo")}）')
-        S(f, "__zb.start('level', 1)"); g0 = S(f, "__zb.G && __zb.G.ceo"); finish(f); pg.wait_for_timeout(350)
-        check(g0 == 'c77' and S(pg, "__tzz.zbLastCeo") == 'c77' and S(pg, "__tzz.state.zombie.cleared") == 1, f'{dn} 77 打满第 1 关：开局锁 c77、结算回传 ceo=c77、通关记进 state.zombie')
+        S(f, "__zb.start('level', 1)"); pg.wait_for_timeout(200)
+        g0 = S(f, "__zb.G && __zb.G.ceo"); r0 = S(pg, "(()=>{const r=__tzz.zbRun; return r && {ceoId:r.ceoId, settled:!!r.settled, runId:r.runId};})()")
+        check(g0 == 'c77' and r0 and r0['ceoId'] == 'c77' and not r0['settled'] and r0['runId'] == S(f, "__zb.G.runId"),
+              f'{dn} 13c 开局：小游戏锁 c77，父页 zbRun 已登记同 runId、未结算 {r0}')
+        finish(f); pg.wait_for_timeout(350)
+        check(g0 == 'c77' and S(pg, "__tzz.zbLastCeo") == 'c77' and S(pg, "__tzz.state.zombie.cleared") == 1 and S(pg, "__tzz.zbRun && __tzz.zbRun.settled"),
+              f'{dn} 77 打满第 1 关：开局锁 c77、结算回传 ceo=c77、通关记进 state.zombie、zbRun.settled')
         # ③ 开局锁人：这局中途把珍珠姐调来烧烤摊
-        S(f, "__zb.start('level', 2)")
+        S(f, "__zb.start('level', 2)"); pg.wait_for_timeout(200)
         S(pg, "(()=>{const s=__tzz.state; __tzz.E.assignCeo(s,'pearl',0); __tzz.persist(); __tzz.zbReply();})()"); pg.wait_for_timeout(250)
         mid = S(f, "({host: __zb.ceo, run: __zb.G.ceo, over: __zb.G.over})")
         check(mid['host'] == 'pearl' and mid['run'] == 'c77' and not mid['over'], f'{dn} 中途调任：经营页新发 ceo=pearl，这局仍锁 c77 {mid}')
         finish(f); pg.wait_for_timeout(350)
         check(S(pg, "__tzz.zbLastCeo") == 'c77' and S(pg, "__tzz.state.zombie.cleared") == 2 and S(f, "document.getElementById('resTitle').textContent").startswith('第 2 关通关'),
               f'{dn} 中途调任那局结算：回传 ceo=c77、第 2 关照样记上（关卡进度共用）')
+        # 13c（熊大 06:33 第 1 条）：父页开局登记 zbRun；结算只认这份；同一结果重发不双结
+        run = S(pg, "(()=>{const r=__tzz.zbRun; return r && {runId:r.runId, ceoId:r.ceoId, settled:!!r.settled};})()")
+        check(run and run['ceoId'] == 'c77' and run['settled'] and isinstance(run['runId'], str) and len(run['runId']) >= 6,
+              f'{dn} 13c 父页 zbRun：开局登记 c77 且已 settled {run}')
+        before = S(pg, "({c: __tzz.state.zombie.cleared, coins: __tzz.state.coins, last: __tzz.zbLastCeo})")
+        S(f, "(()=>{const g=__zb.G; __zb.send({zb:'result', mode:g.mode, n:g.n, win:true, t:999, kills:99, ceo:g.ceo, runId:g.runId});})()")
+        pg.wait_for_timeout(300)
+        after = S(pg, "({c: __tzz.state.zombie.cleared, coins: __tzz.state.coins, last: __tzz.zbLastCeo, settled: !!(__tzz.zbRun&&__tzz.zbRun.settled)})")
+        check(after['c'] == before['c'] == 2 and after['coins'] == before['coins'] and after['last'] == 'c77' and after['settled'],
+              f'{dn} 13c 同一结果重发不双结：cleared 仍 2、金币不变、仍 settled {before}→{after}')
+        # 伪造：换 ceo / 换 runId / 不带 runId → 父页拒收（本局已 settled 时即使对得上也拒）
+        S(f, "__zb.send({zb:'result', mode:'level', n:3, win:true, t:999, kills:1, ceo:'pearl', runId: __zb.G.runId})"); pg.wait_for_timeout(200)
+        check(S(pg, "__tzz.state.zombie.cleared") == 2 and S(pg, "__tzz.zbLastCeo") == 'c77', f'{dn} 13c settled 后伪造下一关 result 不进档')
         f.locator('#againBtn').tap(); pg.wait_for_timeout(150)
+        # 下一局开局：父页重新登记（现任已是 pearl）
+        run2 = S(pg, "(()=>{const r=__tzz.zbRun; return r && {runId:r.runId, ceoId:r.ceoId, settled:!!r.settled};})()")
         check(S(f, "__zb.G && __zb.G.n === 3 && __zb.G.ceo") == 'pearl', f'{dn} 下一局才换人：第 3 关上场 pearl')
+        check(run2 and run2['ceoId'] == 'pearl' and not run2['settled'] and run2['runId'] != run['runId'],
+              f'{dn} 13c 下一局父页重新登记 pearl（新 runId）{run2}')
         S(f, "__zb.setPause(true)"); S(f, "document.getElementById('quitBtn').click()"); pg.wait_for_timeout(300)
         check(S(pg, "__tzz.zbLastCeo") == 'pearl', f'{dn} 珍珠姐那局结算回传 ceo=pearl')
         # 伪造 / 缺省回传：只认真 CEO id，不影响进度校验
         for bad in ["'__proto__'", "'constructor'", "123", "null"]:
             S(f, f"__zb.send({{zb:'result',mode:'level',n:3,win:false,t:1,kills:1,ceo:{bad}}})")
         S(f, "__zb.send({zb:'result',mode:'level',n:3,win:false,t:2,kills:2})"); pg.wait_for_timeout(300)
-        check(S(pg, "__tzz.zbLastCeo") is None and S(pg, "__tzz.state.zombie.cleared") == 2, f'{dn} 回传 ceo 伪造（__proto__ / constructor / 数字 / null / 不带）→ 记 null，进度照常按规则（仍 2 关）')
+        # 13c：伪造 ceo / 缺 runId 的 result 一律拒收，zbLastCeo 保持上一局成功结算的 pearl，进度仍 2
+        check(S(pg, "__tzz.zbLastCeo") == 'pearl' and S(pg, "__tzz.state.zombie.cleared") == 2, f'{dn} 回传 ceo 伪造（__proto__ / constructor / 数字 / null / 不带）→ 拒收，zbLastCeo 仍 pearl，进度仍 2 关')
         S(f, "__zb.send({zb:'result',mode:'level',n:9,win:true,t:999,ceo:'pearl'})"); pg.wait_for_timeout(250)
         check(S(pg, "__tzz.state.zombie.cleared") == 2, f'{dn} 带合法 ceo 的跳关结果照样不认（ceo 不是通行证）')
         S(f, "__zb.send({zb:'close'})"); pg.wait_for_timeout(250)
@@ -195,5 +219,5 @@ with sync_playwright() as p:
     check(back['zombie']['cleared'] == 3 and set(back.keys()) == set(w.keys()) and back['ceos'] == w['ceos'], 'v13 代码回退后还能继续打、写档（通关 3），字段集合不变')
     check(not errs, f'回退演练无 JS 报错 {errs[:2]}'); c.close()
     b.close()
-print(f'\n13a shop entry: {passes[0]} passed, {len(fails)} failed')
+print(f'\n13a/13c shop entry: {passes[0]} passed, {len(fails)} failed')
 sys.exit(1 if fails else 0)

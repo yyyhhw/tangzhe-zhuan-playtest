@@ -36,6 +36,7 @@ let port = null;
 let lastSent = null;
 const host = m => { lastSent = m; if (port) port.postMessage(m); };
 // 13a 上场角色：嵌入 = 经营页 zb:'state' 的 ceo（烧烤摊现任 CEO，null = 没人）；原型页 = ?ceo=，默认 77。开局锁进 G.ceo，结算回传
+// 13c：开局发 zb:'start'（runId），父页登记本局 CEO；结算带 runId + G.ceo，父页只认开局那份记录
 const canPlay = () => !!proto.ceo;
 const skilled = id => ZB.PLAYABLE.includes(id);
 const Wallet = {
@@ -54,6 +55,16 @@ function onState(d) {
   if (firstSync) { firstSync = false; selLv = Math.min(MAX_LV, proto.cleared + 1); }
   $('#trainNote').textContent = d.why || (proto.blocked ? '存档异常或已在别的页面打开，暂时不能花金币。' : '和经营共用金币：训练只花钱，打僵尸本身不产金币。');
   renderTrain();
+  // 13c：父页开局回执——ok 时锁定权威 ceo / runId；失败则回到菜单（父页没登记成功）
+  if (d.ack === 'start' && G && !G.over) {
+    if (d.ok === false) {
+      cancelAnimationFrame(raf); G = null; paused = false;
+      $('#trainNote').textContent = d.why || '开局登记失败';
+      renderTrain(); show('#menu'); draw(); return;
+    }
+    if (typeof d.runId === 'string' && d.runId) G.runId = d.runId;
+    if (ZB.CEO_IDS.includes(d.ceo)) G.ceo = d.ceo;
+  }
   if (d.ack === 'result' && G && G.over && G.wait) { G.wait = false; G.why = d.why || ''; renderResult(); }
 }
 function fmt(n) {
@@ -584,16 +595,23 @@ $('#train').addEventListener('click', e => {
   renderTrain();
 });
 function show(id) { for (const s of ['#menu', '#pause', '#result']) $(s).classList.toggle('hidden', s !== id); $('#hud').classList.toggle('hidden', id === '#menu'); }
+function newRunId() {
+  try { if (crypto && crypto.getRandomValues) return Array.from(crypto.getRandomValues(new Uint32Array(3))).map(x => x.toString(36)).join(''); } catch (e) {}
+  return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
 function start(mode, n) {
   if (!canPlay()) return false;
   if (mode === 'endless' && proto.cleared < MAX_LV) return false;
   if (mode !== 'endless') { mode = 'level'; n = Math.min(Math.max(1, Math.floor(fin(n, selLv))), Math.min(MAX_LV, proto.cleared + 1)); selLv = n; }
-  resize(); G = newRun(mode, n); paused = false; joy.on = false; show(null); hud(); last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop); }
+  resize(); G = newRun(mode, n); G.runId = newRunId();
+  // 13c：嵌入模式先向父页登记本局（父页确认现任 CEO）；回执在 onState(ack:'start') 里写入权威 ceo / runId
+  if (EMBED) host({ zb: 'start', runId: G.runId, mode: G.mode, n: G.n, ceo: G.ceo });
+  paused = false; joy.on = false; show(null); hud(); last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop); return true; }
 function end(win) {
   G.over = true; G.win = win; joy.on = false; G.prevBest = proto.endBest.t; G.why = '';
   if (EMBED) {
-    // 经营页是唯一写档方：等它回执（ack:'result'）后再按权威进度显示通关 / 解锁，存档失败不报喜
-    G.wait = true; host({ zb: 'result', mode: G.mode, n: G.n, win, t: G.t, kills: G.kills, ceo: G.ceo });
+    // 经营页是唯一写档方：等它回执（ack:'result'）后再按权威进度显示通关 / 解锁，存档失败不报喜；带上开局 runId 供父页对照
+    G.wait = true; host({ zb: 'result', mode: G.mode, n: G.n, win, t: G.t, kills: G.kills, ceo: G.ceo, runId: G.runId });
   } else {
     proto.best = Math.max(proto.best, G.kills);
     if (G.mode === 'endless') { if (G.t > proto.endBest.t) proto.endBest = { t: G.t, kills: G.kills }; }

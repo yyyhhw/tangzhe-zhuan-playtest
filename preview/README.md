@@ -82,3 +82,5 @@ iPhone 竖屏 Safari 漫画风挂机小游戏。**试玩链接，不是正式上
 - **⑤ 统一交易入口** `E.transact(st, { price, apply, save, blocked })`：扣费 → 改状态 → 写前校验 → 落盘，任一步失败整档原地回滚，返回 `{ ok, why, stage, cost, result }`（stage：blocked / pay / apply / validate / save）。只读（坏档 / 余额异常）读出的状态自动拒绝（`E.isBlocked`）。跨页写档 `E.commitSave(localStorage, 主档键, 备份键, st)`：只读拒绝 → 写前 validState + checkSave → 存储里 rev 更新就拒绝 → 当前主档结构坏就拒绝（不覆盖原文）→ 先把当前好主档写进 `-bak`（失败整次放弃）→ rev+1 写主档。宠物买狗、打僵尸训练扣费都用 `E.transact` + `E.commitSave`（或页内 `persist()`）；主页面跳转用 `goPage(url)`：先 `persist()`，存不上 / 只读就不跳。
 - **⑥ 已确认的取舍不变**：1e15 < 余额 ≤ MAX_SAFE 的旧档保留、能花不涨；超安全整数的存档保留原文、不加恢复按钮（结构坏且没备份的只读档同样不加）；MAX 买不起显示下一级价格并置灰；累计收入到安全上限停涨、已有超界值不裁。
 - **测试**：`test_coin_safety.js` 新增第 12 段（结构坏 41 种、主档缺失 × 备份状态、`commitSave` 备份 / 主档写失败、`transact` 各阶段回滚、打僵尸 / 宠物跨页链路）；`test_coin_e2e.py` 新增第 10 / 11 段（用 `Storage.prototype.setItem` 抛异常模拟主档 / 备份写失败，主页面每条改状态路径各测主档失败 + 备份失败 + 恢复后成功；结构坏主档 / 主档缺失三机型读档）。原「没有主档 → 新游戏（不拿备份顶上）」一条按第 ② 条改成「没有主档也没有备份 → 新游戏」。
+## 13c
+熊大 06:33 第 1 条：父页开局登记 `zbRun`（runId / ceoId），结算只认这份、同一局只结一次；中途调岗不误伤。缓存号 13c，打僵尸子页 z7。根目录不动。

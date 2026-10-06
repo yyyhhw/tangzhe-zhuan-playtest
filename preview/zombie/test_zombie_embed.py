@@ -75,8 +75,10 @@ with sync_playwright() as p:
         S(f, "__zb.send({zb:'buy',id:'hp'})"); pg.wait_for_timeout(300)
         S(f, "__zb.send({zb:'result',mode:'level',n:2,win:true,t:999})"); pg.wait_for_timeout(300)
         mf = main_st(pg); S(pg, "Storage.prototype.setItem = window.__ls; 0"); nf = S(f, "document.getElementById('trainNote').textContent")
-        check(mf['coins'] == before['coins'] and mf['z']['lv']['hp'] == 0 and mf['z']['cleared'] == 1 and mf['saved'] == before['saved'] and S(f, "__zb.proto.lv.hp") == 0 and '存档失败' in nf,
-              f'{dn} 写盘失败：训练不扣金币、不升级，通关不记，存档原样，提示「{nf}」')
+        check(mf['coins'] == before['coins'] and mf['z']['lv']['hp'] == 0 and mf['z']['cleared'] == 1 and mf['saved'] == before['saved'] and S(f, "__zb.proto.lv.hp") == 0,
+              f'{dn} 写盘失败：训练不扣金币、不升级，通关不记，存档原样（提示「{nf}」）')
+        # 13c：未开局登记的裸 result 不算进度（父页要 zbRun）；提示里带「未开局」或买失败留下的「存档失败」都可
+        check(('存档失败' in nf) or ('未开局' in nf) or ('对不上' in nf) or ('已经结算' in nf), f'{dn} 写盘失败 / 未登记 result 有提示「{nf}」')
         # 返回经营
         S(pg, "__tzz.state.coins = 5e10; __tzz.persist()")
         f.locator('#menuBtn').tap() if S(f, "!document.getElementById('result').classList.contains('hidden')") else None
@@ -139,17 +141,30 @@ with sync_playwright() as p:
         pg.goto(URL); pg.wait_for_function("window.__tzz && __tzz.state"); S(pg, "__tzz.closeModal && __tzz.closeModal(); __tzz.openZombie()"); f = zframe(pg)
         st = lambda ceo: S(f, f"__zb.onState({{zb:'state', coins:__zb.proto.coins, z:__zb.proto, blocked:false, ceo:{ceo}}})")
         hv = lambda: S(f, "({h: document.getElementById('heroName').textContent, n: document.getElementById('heroNote').textContent, s: document.getElementById('startBtn').disabled, st: __zb.start('level', 1), g: !!__zb.G})")
-        st('null'); hn = hv(); st("'otaku'"); hp_ = hv(); S(f, "__zb.setPause(true); document.getElementById('quitBtn').click()"); pg.wait_for_timeout(300); ps = S(f, "__zb.lastSent"); S(f, "document.getElementById('menuBtn').click()"); st("'hacker'"); hx = hv()
+        # 13c：父页开局登记用烧烤摊现任；注入 ceo 开打前先把对应人派到店上，避免 ack 把 G.ceo 改回别人
+        def appoint(who):
+            # 开齐四店并解锁四位 CEO，再调任（否则 pearl/otaku 还没加入）
+            S(pg, """(()=>{const s=__tzz.state,E=__tzz.E; s.coins=Math.max(s.coins,5e10); for(let i=0;i<4;i++){if(!s.shops[i].open)E.openShop(s,i); if(!s.shops[i].emp)E.hireEmp(s,i);} E.checkUnlocks(s); __tzz.persist();})()""")
+            if who is None:
+                S(pg, "(()=>{const s=__tzz.state,E=__tzz.E,id=E.ceoAt(s,0); if(id)E.assignCeo(s,id,-1); __tzz.persist(); __tzz.zbReply();})()")
+            else:
+                S(pg, f"(()=>{{const s=__tzz.state,E=__tzz.E; E.assignCeo(s,{who!r},0); __tzz.persist(); __tzz.zbReply();}})()")
+        appoint(None); st('null'); hn = hv()
+        appoint('otaku'); st("'otaku'"); hp_ = hv(); pg.wait_for_timeout(200); S(f, "__zb.setPause(true); document.getElementById('quitBtn').click()"); pg.wait_for_timeout(300); ps = S(f, "__zb.lastSent"); S(f, "document.getElementById('menuBtn').click()"); st("'hacker'"); hx = hv()
         check('派' in hn['n'] and hn['s'] and hn['st'] is False and not hn['g'], f'{dn} ceo=null：提示派 CEO、开不了局 {hn}')
         check(hp_['h'] == '阿宅店长 打僵尸' and '本局由 阿宅店长' in hp_['n'] and not hp_['s'] and hp_['g'], f'{dn} ceo=otaku：阿宅上场，可以开打 {hp_}')
-        check(ps and ps.get('ceo') == 'otaku', f'{dn} 阿宅这局结算回传 ceo=otaku {ps}')
+        check(ps and ps.get('ceo') == 'otaku' and ps.get('runId') and S(pg, "__tzz.zbLastCeo") == 'otaku', f'{dn} 阿宅这局结算回传 ceo=otaku（父页 zbRun 对照通过）{ps}')
         check(hx['s'] and hx['st'] is False, f'{dn} ceo 非法值按没人在任处理 {hx}')
-        st("'c77'"); S(f, "__zb.start('level', 1)"); st("'pearl'"); pg.wait_for_timeout(200)
+        appoint('c77'); st("'c77'"); S(f, "__zb.start('level', 1)"); pg.wait_for_timeout(200); st("'pearl'"); pg.wait_for_timeout(200)
         lk = S(f, "({g: __zb.G && __zb.G.ceo, over: __zb.G && __zb.G.over})")
+        runCeo = S(pg, "__tzz.zbRun && __tzz.zbRun.ceoId")
+        # 父页中途把珍珠姐派来：zbReply 更新 proto，但本局 G.ceo / zbRun 仍是开局的 c77
+        S(pg, "(()=>{__tzz.E.assignCeo(__tzz.state,'pearl',0); __tzz.persist(); __tzz.zbReply();})()"); pg.wait_for_timeout(200)
         S(f, "__zb.setPause(true); document.getElementById('quitBtn').click()"); pg.wait_for_timeout(300); ls = S(f, "__zb.lastSent")
-        check(lk['g'] == 'c77' and not lk['over'] and ls and ls.get('zb') == 'result' and ls.get('ceo') == 'c77', f'{dn} 开打锁定 77：中途在任变珍珠姐也不换人，结算回传 ceo=c77 {lk} {ls}')
-        S(f, "document.getElementById('menuBtn').click()"); S(f, "__zb.onState({zb:'state', coins:__zb.proto.coins, z:__zb.proto, blocked:false})"); ho = hv()
-        S(f, "__zb.setPause(true); document.getElementById('quitBtn').click()"); pg.wait_for_timeout(300); lo = S(f, "__zb.lastSent"); S(f, "document.getElementById('menuBtn').click()"); st('null'); hn2 = hv()
+        check(lk['g'] == 'c77' and runCeo == 'c77' and not lk['over'] and ls and ls.get('zb') == 'result' and ls.get('ceo') == 'c77' and S(pg, "__tzz.zbLastCeo") == 'c77',
+              f'{dn} 开打锁定 77：中途在任变珍珠姐也不换人，结算回传 ceo=c77 {lk} run={runCeo} {ls}')
+        S(f, "document.getElementById('menuBtn').click()"); appoint('c77'); S(f, "__zb.onState({zb:'state', coins:__zb.proto.coins, z:__zb.proto, blocked:false})"); ho = hv(); pg.wait_for_timeout(200)
+        S(f, "__zb.setPause(true); document.getElementById('quitBtn').click()"); pg.wait_for_timeout(300); lo = S(f, "__zb.lastSent"); S(f, "document.getElementById('menuBtn').click()"); appoint(None); st('null'); hn2 = hv()
         check(ho['h'] == '77 打僵尸' and not ho['s'] and ho['g'] and lo and lo.get('ceo') == 'c77', f'{dn} 老经营页不带 ceo 字段：按 77 上场，可以开局，结算回传 c77 {ho} {lo}')
         check(hn2['s'] and hn2['st'] is False, f'{dn} 之后再收到显式 ceo=null：仍按没人在任，开不了局 {hn2}')
         S(f, "__zb.send({zb:'close'})"); pg.wait_for_timeout(200)

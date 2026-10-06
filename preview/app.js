@@ -3,7 +3,8 @@
 'use strict';
 const E = window.Economy, CFG = E.CFG;
 const ZB = window.ZBCore; var zbOpen = false, zbPort = null;
-const ZB_SHOP = 0; var zbLastCeo = null;   // 13a：打僵尸属于烧烤摊（店 0）；zbLastCeo = 最近一局结算回传的上场 CEO（只在内存，不写档）
+const ZB_SHOP = 0; var zbLastCeo = null, zbRun = null;   // 13a：打僵尸 = 烧烤摊（店 0）；zbLastCeo = 最近一次成功结算的上场 CEO（只在内存）
+// 13c：zbRun = 父页开局登记 { runId, ceoId, startedAt, settled }——结算只认这份记录、同一局只结一次；中途调岗不要求仍在任
 const SAVE_KEY = 'tangzhe-preview-save', BAK_KEY = 'tangzhe-preview-save-bak', LOCK_KEY = 'tangzhe-preview-tab-lock';
 // 12b2 测试房间：只有网址带 ?test=homes 才进；整局放在内存里，不读、不写任何 localStorage（真存档 / 备份 / 多标签锁都不碰），刷新就重置
 // &lv=3 → 四家都是豪宅，默认四家都是公寓
@@ -2203,7 +2204,8 @@ window.__tzz = { TEST_MODE, TEST_LV, SAVE_KEY, BAK_KEY, get saveBlocked() { retu
 function zbState() { return (state.zombie = ZB.norm(state.zombie)); }
 /* 13a 店铺入口 + 当前 CEO（方案 1：每家店一个小游戏，烧烤摊 = 打僵尸）：
    谁是烧烤摊现任 CEO 谁上场（E.ceoAt(state, 0)）；四项训练、关卡、首通记录都还在 state.zombie，算店里的共享设备，不挪到任何 CEO 名下、不新增存档字段。
-   zb:'state' 带 ceo（烧烤摊现任 CEO id，没有 = null）；小游戏开局时锁定这个人，结算回传 ceo，经营页只校验 / 记在内存里，不写档。 */
+   zb:'state' 带 ceo（烧烤摊现任 CEO id，没有 = null）。
+   13c（熊大 06:33 第 1 条）：真正开局时小游戏发 zb:'start'，父页确认当时在任 CEO 并登记 zbRun（内存）；结算对照 zbRun（ceo / runId 对上、只结一次），中途调岗不误伤；回菜单再开局会重新登记。 */
 function zbCeo() { return E.ceoAt(state, ZB_SHOP); }
 function zbCard() {
   const id = zbCeo(), cleared = ZB.norm(state.zombie).cleared;
@@ -2225,27 +2227,43 @@ function openZombie() {
     const ch = new MessageChannel(); zbPort = ch.port1; zbPort.onmessage = e => zbMsg(e.data);
     f.contentWindow.postMessage({ zb:'port' }, location.origin, [ch.port2]); zbReply();
   };
-  f.src = 'zombie/?embed=1&v=13b'; $('#zbOverlay').classList.remove('hidden'); audioPause();
+  f.src = 'zombie/?embed=1&v=13c'; $('#zbOverlay').classList.remove('hidden'); audioPause();
 }
 function closeZombie() {
-  if (!zbOpen) return; zbOpen = false; if (zbPort) { zbPort.close(); zbPort = null; }
+  if (!zbOpen) return; zbOpen = false; zbRun = null; if (zbPort) { zbPort.close(); zbPort = null; }
   $('#zbOverlay').classList.add('hidden'); $('#zbFrame').src = 'about:blank'; dirty = true; audioResume();
 }
 function zbMsg(d) {
   if (!zbOpen || !d || typeof d !== 'object') return;
   if (d.zb === 'close') return closeZombie();
   if (d.zb === 'hello') return zbReply();
+  // 13c：真正开局——确认烧烤摊现任 CEO，生成本局记录（内存）；菜单打开后再调岗，下一次开局会走这里重新确认
+  if (d.zb === 'start') {
+    const ack = { ack:'start' }, ceo = zbCeo();
+    if (!ceo) { zbRun = null; return zbReply('烧烤摊没有 CEO，没法开局', Object.assign(ack, { ok:false })); }
+    if (zbBlocked()) { zbRun = null; return zbReply(frozen ? '游戏已在别的页面打开，没法开局' : '存档异常（只读模式），没法开局', Object.assign(ack, { ok:false })); }
+    const runId = (typeof d.runId === 'string' && d.runId.length >= 6 && d.runId.length <= 80) ? d.runId : rid();
+    zbRun = { runId, ceoId: ceo, startedAt: now(), settled: false };   // 权威是父页此刻的在任，不看小游戏自报的 ceo
+    return zbReply('', Object.assign(ack, { ok:true, runId: zbRun.runId, ceo: zbRun.ceoId }));
+  }
   if (d.zb === 'result') {
     const ack = { ack:'result' };
-    zbLastCeo = typeof d.ceo === 'string' && Object.prototype.hasOwnProperty.call(E.CEO_BY_ID, d.ceo) ? d.ceo : null;   // 13a：回传的上场 CEO 只认真 CEO id，不影响进度结算、不写档
+    // 13c：只认开局登记的那份 zbRun——ceo / runId 对上、同一局只结一次；不要求结算时此人仍在任（中途调岗不误伤）
+    if (!zbRun) return zbReply(zbBlocked() ? (frozen ? '游戏已在别的页面打开，这局进度没记上' : '存档异常（只读模式），这局进度没记上') : '本局未开局登记，进度没记上', ack);
+    if (zbRun.settled) return zbReply('这局已经结算过了', ack);
+    if (d.runId !== zbRun.runId || d.ceo !== zbRun.ceoId) return zbReply('本局角色对不上，进度没记上', ack);
     if (zbBlocked()) return zbReply(frozen ? '游戏已在别的页面打开，这局进度没记上' : '存档异常（只读模式），这局进度没记上', ack);
     const r = txn(st => {
       const z = st.zombie = ZB.norm(st.zombie), before = JSON.stringify(z);
       if (!ZB.applyResult(z, d)) return { ok:false, why:'invalid' };
       return JSON.stringify(z) === before ? { ok:false, why:'same' } : { ok:true };
     }, 0, '这局进度没记上');
-    if (r.ok) { dirty = true; return zbReply('', ack); }
-    if (r.stage === 'apply') return zbReply(r.why === 'invalid' ? '这局结果无效，没记上' : '', ack);
+    if (r.ok) { zbRun.settled = true; zbLastCeo = zbRun.ceoId; dirty = true; return zbReply('', ack); }
+    if (r.stage === 'apply') {
+      // why:'same' = 进度没变（比如重复通同一关）——仍算这局已处理，避免同消息再刷
+      if (r.why === 'same') { zbRun.settled = true; zbLastCeo = zbRun.ceoId; }
+      return zbReply(r.why === 'invalid' ? '这局结果无效，没记上' : '', ack);
+    }
     dirty = true;
     return zbReply('存档失败，这局进度没记上', ack);
   }
@@ -2264,5 +2282,5 @@ function zbMsg(d) {
     return zbReply(r.stage === 'pay' || r.stage === 'apply' ? r.why : '存档失败，没扣金币');
   }
 }
-Object.defineProperties(window.__tzz, { openZombie:{ value:openZombie }, closeZombie:{ value:closeZombie }, zbOpen:{ get:() => zbOpen }, zbCeo:{ value:zbCeo }, zbLastCeo:{ get:() => zbLastCeo }, openAssignTo:{ value:openAssignTo }, zbReply:{ value:zbReply } });
+Object.defineProperties(window.__tzz, { openZombie:{ value:openZombie }, closeZombie:{ value:closeZombie }, zbOpen:{ get:() => zbOpen }, zbCeo:{ value:zbCeo }, zbLastCeo:{ get:() => zbLastCeo }, zbRun:{ get:() => zbRun }, openAssignTo:{ value:openAssignTo }, zbReply:{ value:zbReply } });
 })();
