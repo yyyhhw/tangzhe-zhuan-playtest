@@ -130,7 +130,7 @@
   function drawFrame(ctx, m, clipName, frameIdx) {
     const c = m.clips[clipName], f = c.frames[frameIdx], n = c.frames.length;
     ctx.save();
-    if (c.dir === 'N') drawN(ctx, clipName, frameIdx, n, f.mouth);
+    if (c.dir === 'N') drawN(ctx, clipName, frameIdx, n, f.mouth || [128, 112]);   // p5：真图北向 mouth 为 null（被挡），占位兜底画法用默认头位
     else if (c.dir === 'S') drawS(ctx, clipName, frameIdx, n, f.mouth);
     else drawE(ctx, clipName, frameIdx, n, f.mouth);
     ctx.restore();

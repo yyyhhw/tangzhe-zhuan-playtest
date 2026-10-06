@@ -1,8 +1,8 @@
 {
  "schema": "tangzhe-pet-art/1",
- "name": "暖棕白小狗（占位）",
- "placeholder": true,
- "note": "占位：程序绘制的小狗。真美术到位时把 placeholder 改成 false、atlas.image 指向 2048×1024 图集，帧序 / 时长 / 锚点按实际改，逻辑代码不用动。",
+ "name": "暖棕白小狗（熊大 v3 候选图）",
+ "placeholder": false,
+ "note": "p5：熊大 v3 候选包（home-transfer-20261006 3fb4756 batch3_puppy，native zip sha256 40fe9351…）烘成的图集。仍是候选：嘴巴点是目测 / 推算，N 向嘴巴被挡（null），落地点近似。重新生成：tools/build_atlas.py + tools/gen_manifest_v3.py。",
  "source": {
   "frameSize": [
    256,
@@ -21,10 +21,10 @@
    64,
    104
   ],
-  "displayTiles": 1.8
+  "displayTiles": 1.15
  },
  "atlas": {
-  "image": null,
+  "image": "puppy_atlas_v3.webp",
   "size": [
    2048,
    1024
@@ -51,16 +51,16 @@
  },
  "body": {
   "E": [
-   46,
-   217
+   26,
+   252
   ],
   "N": [
-   92,
-   164
+   78,
+   178
   ],
   "S": [
-   88,
-   169
+   46,
+   206
   ]
  },
  "clips": {
@@ -73,49 +73,55 @@
      "cell": 0,
      "ms": 220,
      "mouth": [
-      196,
-      150
-     ]
+      230.3,
+      101.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 1,
      "ms": 200,
      "mouth": [
-      196,
-      151
-     ]
+      226.3,
+      99.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 2,
      "ms": 200,
      "mouth": [
-      196,
-      151
-     ]
+      228.3,
+      101.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 3,
      "ms": 220,
      "mouth": [
-      196,
-      150
-     ]
+      230.3,
+      101.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 4,
      "ms": 200,
      "mouth": [
-      196,
-      149
-     ]
+      230.3,
+      101.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 5,
      "ms": 200,
      "mouth": [
-      196,
-      149
-     ]
+      226.3,
+      99.3
+     ],
+     "mouthSrc": "noseTip"
     }
    ]
   },
@@ -127,34 +133,26 @@
     {
      "cell": 6,
      "ms": 240,
-     "mouth": [
-      128,
-      112
-     ]
+     "mouth": null,
+     "mouthHidden": true
     },
     {
      "cell": 7,
      "ms": 240,
-     "mouth": [
-      128,
-      112
-     ]
+     "mouth": null,
+     "mouthHidden": true
     },
     {
      "cell": 8,
      "ms": 240,
-     "mouth": [
-      128,
-      112
-     ]
+     "mouth": null,
+     "mouthHidden": true
     },
     {
      "cell": 9,
      "ms": 240,
-     "mouth": [
-      128,
-      112
-     ]
+     "mouth": null,
+     "mouthHidden": true
     }
    ]
   },
@@ -168,32 +166,36 @@
      "ms": 240,
      "mouth": [
       128,
-      162
-     ]
+      112
+     ],
+     "mouthSrc": "idleS"
     },
     {
      "cell": 11,
      "ms": 240,
      "mouth": [
       128,
-      163
-     ]
+      112
+     ],
+     "mouthSrc": "idleS"
     },
     {
      "cell": 12,
      "ms": 240,
      "mouth": [
       128,
-      162
-     ]
+      112
+     ],
+     "mouthSrc": "idleS"
     },
     {
      "cell": 13,
      "ms": 240,
      "mouth": [
       128,
-      161
-     ]
+      112
+     ],
+     "mouthSrc": "idleS"
     }
    ]
   },
@@ -206,65 +208,73 @@
      "cell": 14,
      "ms": 100,
      "mouth": [
-      198,
-      150
-     ]
+      224.8,
+      101.3
+     ],
+     "mouthSrc": "sidecar"
     },
     {
      "cell": 15,
      "ms": 100,
      "mouth": [
-      198,
-      151
-     ]
+      222.1,
+      101.3
+     ],
+     "mouthSrc": "sidecar"
     },
     {
      "cell": 16,
      "ms": 100,
      "mouth": [
-      198,
-      152
-     ]
+      220.7,
+      99.4
+     ],
+     "mouthSrc": "sidecar"
     },
     {
      "cell": 17,
      "ms": 100,
      "mouth": [
-      198,
-      151
-     ]
+      219.9,
+      100.8
+     ],
+     "mouthSrc": "sidecar"
     },
     {
      "cell": 18,
      "ms": 100,
      "mouth": [
-      198,
-      150
-     ]
+      224.8,
+      103.8
+     ],
+     "mouthSrc": "sidecar"
     },
     {
      "cell": 19,
      "ms": 100,
      "mouth": [
-      198,
-      149
-     ]
+      222.6,
+      102.3
+     ],
+     "mouthSrc": "sidecar"
     },
     {
      "cell": 20,
      "ms": 100,
      "mouth": [
-      198,
-      148
-     ]
+      220.7,
+      102.8
+     ],
+     "mouthSrc": "sidecar"
     },
     {
      "cell": 21,
      "ms": 100,
      "mouth": [
-      198,
-      149
-     ]
+      220.4,
+      102.3
+     ],
+     "mouthSrc": "sidecar"
     }
    ]
   },
@@ -276,66 +286,50 @@
     {
      "cell": 22,
      "ms": 100,
-     "mouth": [
-      128,
-      112
-     ]
+     "mouth": null,
+     "mouthHidden": true
     },
     {
      "cell": 23,
      "ms": 100,
-     "mouth": [
-      128,
-      113
-     ]
+     "mouth": null,
+     "mouthHidden": true
     },
     {
      "cell": 24,
      "ms": 100,
-     "mouth": [
-      128,
-      114
-     ]
+     "mouth": null,
+     "mouthHidden": true
     },
     {
      "cell": 25,
      "ms": 100,
-     "mouth": [
-      128,
-      113
-     ]
+     "mouth": null,
+     "mouthHidden": true
     },
     {
      "cell": 26,
      "ms": 100,
-     "mouth": [
-      128,
-      112
-     ]
+     "mouth": null,
+     "mouthHidden": true
     },
     {
      "cell": 27,
      "ms": 100,
-     "mouth": [
-      128,
-      111
-     ]
+     "mouth": null,
+     "mouthHidden": true
     },
     {
      "cell": 28,
      "ms": 100,
-     "mouth": [
-      128,
-      110
-     ]
+     "mouth": null,
+     "mouthHidden": true
     },
     {
      "cell": 29,
      "ms": 100,
-     "mouth": [
-      128,
-      111
-     ]
+     "mouth": null,
+     "mouthHidden": true
     }
    ]
   },
@@ -348,65 +342,73 @@
      "cell": 30,
      "ms": 100,
      "mouth": [
-      128,
-      162
-     ]
+      128.0,
+      112.0
+     ],
+     "mouthSrc": "sidecar"
     },
     {
      "cell": 31,
      "ms": 100,
      "mouth": [
-      128,
-      163
-     ]
+      127.8,
+      111.0
+     ],
+     "mouthSrc": "sidecar"
     },
     {
      "cell": 32,
      "ms": 100,
      "mouth": [
-      128,
-      164
-     ]
+      128.2,
+      111.5
+     ],
+     "mouthSrc": "sidecar"
     },
     {
      "cell": 33,
      "ms": 100,
      "mouth": [
-      128,
-      163
-     ]
+      128.0,
+      112.0
+     ],
+     "mouthSrc": "sidecar"
     },
     {
      "cell": 34,
      "ms": 100,
      "mouth": [
-      128,
-      162
-     ]
+      128.9,
+      111.0
+     ],
+     "mouthSrc": "sidecar"
     },
     {
      "cell": 35,
      "ms": 100,
      "mouth": [
-      128,
-      161
-     ]
+      128.2,
+      111.0
+     ],
+     "mouthSrc": "sidecar"
     },
     {
      "cell": 36,
      "ms": 100,
      "mouth": [
-      128,
-      160
-     ]
+      128.5,
+      113.8
+     ],
+     "mouthSrc": "sidecar"
     },
     {
      "cell": 37,
      "ms": 100,
      "mouth": [
-      128,
-      161
-     ]
+      128.5,
+      111.0
+     ],
+     "mouthSrc": "sidecar"
     }
    ]
   },
@@ -419,49 +421,55 @@
      "cell": 38,
      "ms": 70,
      "mouth": [
-      204,
-      154
-     ]
+      234.4,
+      108.9
+     ],
+     "mouthSrc": "sidecar"
     },
     {
      "cell": 39,
      "ms": 70,
      "mouth": [
-      204,
-      157
-     ]
+      233.9,
+      107.5
+     ],
+     "mouthSrc": "sidecar"
     },
     {
      "cell": 40,
      "ms": 70,
      "mouth": [
-      204,
-      157
-     ]
+      233.9,
+      108.0
+     ],
+     "mouthSrc": "sidecar"
     },
     {
      "cell": 41,
      "ms": 70,
      "mouth": [
-      204,
-      154
-     ]
+      233.2,
+      109.8
+     ],
+     "mouthSrc": "sidecar"
     },
     {
      "cell": 42,
      "ms": 70,
      "mouth": [
-      204,
-      151
-     ]
+      233.5,
+      108.4
+     ],
+     "mouthSrc": "sidecar"
     },
     {
      "cell": 43,
      "ms": 70,
      "mouth": [
-      204,
-      151
-     ]
+      233.2,
+      108.9
+     ],
+     "mouthSrc": "sidecar"
     }
    ]
   },
@@ -473,50 +481,38 @@
     {
      "cell": 44,
      "ms": 70,
-     "mouth": [
-      128,
-      114
-     ]
+     "mouth": null,
+     "mouthHidden": true
     },
     {
      "cell": 45,
      "ms": 70,
-     "mouth": [
-      128,
-      117
-     ]
+     "mouth": null,
+     "mouthHidden": true
     },
     {
      "cell": 46,
      "ms": 70,
-     "mouth": [
-      128,
-      117
-     ]
+     "mouth": null,
+     "mouthHidden": true
     },
     {
      "cell": 47,
      "ms": 70,
-     "mouth": [
-      128,
-      114
-     ]
+     "mouth": null,
+     "mouthHidden": true
     },
     {
      "cell": 48,
      "ms": 70,
-     "mouth": [
-      128,
-      111
-     ]
+     "mouth": null,
+     "mouthHidden": true
     },
     {
      "cell": 49,
      "ms": 70,
-     "mouth": [
-      128,
-      111
-     ]
+     "mouth": null,
+     "mouthHidden": true
     }
    ]
   },
@@ -529,49 +525,55 @@
      "cell": 50,
      "ms": 70,
      "mouth": [
-      128,
-      164
-     ]
+      126.9,
+      112.0
+     ],
+     "mouthSrc": "sidecar"
     },
     {
      "cell": 51,
      "ms": 70,
      "mouth": [
-      128,
-      167
-     ]
+      128.2,
+      112.0
+     ],
+     "mouthSrc": "sidecar"
     },
     {
      "cell": 52,
      "ms": 70,
      "mouth": [
-      128,
-      167
-     ]
+      127.3,
+      112.7
+     ],
+     "mouthSrc": "sidecar"
     },
     {
      "cell": 53,
      "ms": 70,
      "mouth": [
-      128,
-      164
-     ]
+      127.5,
+      113.0
+     ],
+     "mouthSrc": "sidecar"
     },
     {
      "cell": 54,
      "ms": 70,
      "mouth": [
-      128,
-      161
-     ]
+      127.3,
+      113.0
+     ],
+     "mouthSrc": "sidecar"
     },
     {
      "cell": 55,
      "ms": 70,
      "mouth": [
-      128,
-      161
-     ]
+      127.5,
+      113.4
+     ],
+     "mouthSrc": "sidecar"
     }
    ]
   },
@@ -584,33 +586,37 @@
      "cell": 56,
      "ms": 110,
      "mouth": [
-      196,
-      150
-     ]
+      232.3,
+      99.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 57,
      "ms": 150,
      "mouth": [
-      194,
-      146
-     ]
+      228.3,
+      89.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 58,
      "ms": 420,
      "mouth": [
-      190,
-      142
-     ]
+      226.3,
+      87.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 59,
      "ms": 200,
      "mouth": [
-      192,
-      146
-     ]
+      230.3,
+      99.3
+     ],
+     "mouthSrc": "noseTip"
     }
    ]
   },
@@ -623,49 +629,55 @@
      "cell": 60,
      "ms": 180,
      "mouth": [
-      196,
-      156
-     ]
+      244.3,
+      103.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 61,
      "ms": 180,
      "mouth": [
-      194,
-      174
-     ]
+      240.3,
+      123.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 62,
      "ms": 180,
      "mouth": [
-      192,
-      190
-     ]
+      234.3,
+      155.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 63,
      "ms": 180,
      "mouth": [
-      192,
-      196
-     ]
+      236.3,
+      157.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 64,
      "ms": 180,
      "mouth": [
-      192,
-      192
-     ]
+      244.3,
+      131.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 65,
      "ms": 180,
      "mouth": [
-      194,
-      180
-     ]
+      242.3,
+      101.3
+     ],
+     "mouthSrc": "noseTip"
     }
    ]
   },
@@ -678,67 +690,76 @@
      "cell": 66,
      "ms": 70,
      "mouth": [
-      198,
-      148
-     ]
+      234.3,
+      101.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 67,
      "ms": 70,
      "mouth": [
-      198,
-      148
-     ]
+      222.3,
+      121.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 68,
      "ms": 70,
      "mouth": [
-      198,
-      148
-     ]
+      210.3,
+      99.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 69,
      "ms": 70,
      "mouth": [
-      198,
-      148
-     ]
+      216.3,
+      105.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 70,
      "ms": 70,
      "mouth": [
-      198,
-      148
-     ]
+      224.3,
+      113.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 71,
      "ms": 70,
      "mouth": [
-      198,
-      148
-     ]
+      212.3,
+      115.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 72,
      "ms": 70,
      "mouth": [
-      198,
-      148
-     ]
+      224.3,
+      131.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 73,
      "ms": 70,
      "mouth": [
-      198,
-      148
-     ]
+      220.3,
+      105.3
+     ],
+     "mouthSrc": "noseTip"
     }
-   ]
+   ],
+   "bakedLift": true
   },
   "play": {
    "dir": "E",
@@ -749,65 +770,73 @@
      "cell": 74,
      "ms": 110,
      "mouth": [
-      200,
-      186
-     ]
+      220.3,
+      99.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 75,
      "ms": 110,
      "mouth": [
-      200,
-      190
-     ]
+      210.3,
+      133.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 76,
      "ms": 110,
      "mouth": [
-      200,
-      186
-     ]
+      208.3,
+      143.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 77,
      "ms": 110,
      "mouth": [
-      198,
-      176
-     ]
+      198.3,
+      129.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 78,
      "ms": 110,
      "mouth": [
-      198,
-      168
-     ]
+      214.3,
+      103.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 79,
      "ms": 110,
      "mouth": [
-      198,
-      176
-     ]
+      206.3,
+      99.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 80,
      "ms": 110,
      "mouth": [
-      200,
-      186
-     ]
+      210.3,
+      91.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 81,
      "ms": 110,
      "mouth": [
-      200,
-      190
-     ]
+      220.3,
+      97.3
+     ],
+     "mouthSrc": "noseTip"
     }
    ]
   },
@@ -820,49 +849,55 @@
      "cell": 82,
      "ms": 420,
      "mouth": [
-      184,
-      194
-     ]
+      212.3,
+      179.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 83,
      "ms": 420,
      "mouth": [
-      184,
-      194
-     ]
+      210.3,
+      179.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 84,
      "ms": 420,
      "mouth": [
-      184,
-      194
-     ]
+      212.3,
+      179.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 85,
      "ms": 420,
      "mouth": [
-      184,
-      194
-     ]
+      210.3,
+      179.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 86,
      "ms": 420,
      "mouth": [
-      184,
-      194
-     ]
+      210.3,
+      179.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 87,
      "ms": 420,
      "mouth": [
-      184,
-      194
-     ]
+      210.3,
+      179.3
+     ],
+     "mouthSrc": "noseTip"
     }
    ]
   },
@@ -875,49 +910,55 @@
      "cell": 88,
      "ms": 170,
      "mouth": [
-      194,
-      170
-     ]
+      234.3,
+      99.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 89,
      "ms": 170,
      "mouth": [
-      192,
-      192
-     ]
+      230.3,
+      121.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 90,
      "ms": 170,
      "mouth": [
-      192,
-      198
-     ]
+      226.3,
+      161.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 91,
      "ms": 170,
      "mouth": [
-      192,
-      196
-     ]
+      238.3,
+      159.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 92,
      "ms": 170,
      "mouth": [
-      192,
-      198
-     ]
+      232.3,
+      91.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 93,
      "ms": 170,
      "mouth": [
-      194,
-      190
-     ]
+      234.3,
+      99.3
+     ],
+     "mouthSrc": "noseTip"
     }
    ]
   },
@@ -930,49 +971,55 @@
      "cell": 94,
      "ms": 180,
      "mouth": [
-      196,
-      150
-     ]
+      234.3,
+      99.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 95,
      "ms": 180,
      "mouth": [
-      196,
-      148
-     ]
+      224.3,
+      89.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 96,
      "ms": 180,
      "mouth": [
-      196,
-      146
-     ]
+      228.3,
+      93.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 97,
      "ms": 180,
      "mouth": [
-      196,
-      146
-     ]
+      230.3,
+      83.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 98,
      "ms": 180,
      "mouth": [
-      196,
-      148
-     ]
+      228.3,
+      87.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 99,
      "ms": 180,
      "mouth": [
-      196,
-      150
-     ]
+      234.3,
+      99.3
+     ],
+     "mouthSrc": "noseTip"
     }
    ]
   },
@@ -985,33 +1032,37 @@
      "cell": 100,
      "ms": 200,
      "mouth": [
-      196,
-      152
-     ]
+      224.3,
+      103.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 101,
      "ms": 200,
      "mouth": [
-      194,
-      166
-     ]
+      222.3,
+      157.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 102,
      "ms": 200,
      "mouth": [
-      190,
-      180
-     ]
+      222.3,
+      173.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 103,
      "ms": 200,
      "mouth": [
-      184,
-      192
-     ]
+      208.3,
+      179.3
+     ],
+     "mouthSrc": "noseTip"
     }
    ]
   },
@@ -1024,33 +1075,37 @@
      "cell": 104,
      "ms": 180,
      "mouth": [
-      184,
-      192
-     ]
+      216.3,
+      179.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 105,
      "ms": 180,
      "mouth": [
-      190,
-      178
-     ]
+      222.3,
+      169.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 106,
      "ms": 180,
      "mouth": [
-      194,
-      162
-     ]
+      222.3,
+      119.3
+     ],
+     "mouthSrc": "noseTip"
     },
     {
      "cell": 107,
      "ms": 180,
      "mouth": [
-      196,
-      150
-     ]
+      218.3,
+      103.3
+     ],
+     "mouthSrc": "noseTip"
     }
    ]
   }

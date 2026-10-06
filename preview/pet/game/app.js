@@ -1,9 +1,13 @@
 /* 躺着也能赚 v1（试玩版）— 四家店 · CEO + 员工 · 离线 · 每日双倍 · 不重复盲盒（32 普通 + 4 超级装饰）· CEO 穿搭 */
-/* 宠物 p4 副本：基于预览 12c2 的 app.js，只加小狗钩子（搜「宠物 p4」）；存档键不变，小狗只占 state.pet 一个字段 */
+/* 宠物 p5 副本：基于预览 12d2 的 app.js，只加小狗钩子（搜「宠物 p4」）；存档键不变，小狗只占 state.pet 一个字段 */
 (() => {
 'use strict';
 const E = window.Economy, CFG = E.CFG;
 const SAVE_KEY = 'tangzhe-preview-save', BAK_KEY = 'tangzhe-preview-save-bak', LOCK_KEY = 'tangzhe-preview-tab-lock';
+// 12b2 测试房间：只有网址带 ?test=homes 才进；整局放在内存里，不读、不写任何 localStorage（真存档 / 备份 / 多标签锁都不碰），刷新就重置
+// &lv=3 → 四家都是豪宅，默认四家都是公寓
+const TEST_Q = (() => { try { return new URLSearchParams(location.search); } catch (e) { return null; } })();
+const TEST_MODE = !!(TEST_Q && TEST_Q.get('test') === 'homes'), TEST_LV = TEST_Q && TEST_Q.get('lv') === '3' ? 3 : 2;
 const INK = '#141414', PAPER = '#f7f1e3', RED = '#e63946', YELLOW = '#ffd23f', TAU = Math.PI * 2;
 const $ = s => document.querySelector(s);
 const now = () => Date.now();
@@ -13,20 +17,29 @@ const rand = () => { if (crypto && crypto.getRandomValues) return crypto.getRand
 /* ================= 存档（版本号 + 多标签防重复） ================= */
 const TAB = rid();
 let frozen = false, state, migratedFrom = null, loadWallMig = { moved:0, stored:0 };
+// 12d 金币安全：读档走 E.loadSave（主档坏 → 完整备份 BAK_KEY；都坏 → saveBlocked：只在内存里玩，绝不覆盖原档）；写档前 E.validState 校验
+let loadInfo = { source:'new', bad:[] }, saveBlocked = false, lastGood = null;
+function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
 function loadState() {
-  let raw = null;
-  try { raw = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch (e) { raw = null; }
-  if (raw && raw.v !== CFG.SAVE_VERSION) { try { localStorage.setItem(BAK_KEY + '-v' + (raw.v || 0), JSON.stringify(raw)); } catch (e) {} }
-  const m = E.migrate(raw, now());
-  if (window.PetGame) PetGame.norm(m.st, E);   // 宠物 p4：没有 pet 字段 = 没买，旧档原样
+  if (TEST_MODE) { loadWallMig = { moved:0, stored:0 }; migratedFrom = null; return E.testHomesState(now(), TEST_LV); }
+  const m = E.loadSave(lsGet(SAVE_KEY), lsGet(BAK_KEY), now()), raw = m.raw;
+  loadInfo = { source:m.source, bad:m.bad || [], badPending:!!m.badPending, unsafe:!!m.unsafe, bakOk:!!m.bakOk, bakCoins:m.bakCoins, rawCoins:m.raw && m.raw.coins };
+  if (raw && raw.v !== CFG.SAVE_VERSION && m.source !== 'broken' && !m.blocked) { try { localStorage.setItem(BAK_KEY + '-v' + (raw.v || 0), JSON.stringify(raw)); } catch (e) {} }
   loadWallMig = m.wall || { moved:0, stored:0 };
-  migratedFrom = raw ? (raw.v !== CFG.SAVE_VERSION ? (raw.v || 0) : null) : null;
+  migratedFrom = raw && m.source !== 'broken' && !m.blocked ? (raw.v !== CFG.SAVE_VERSION ? (raw.v || 0) : null) : null;
+  if (m.source === 'bak') m.st.rev = Math.max(m.st.rev || 0, m.mainRev || 0);   // 从备份恢复：rev 不低于坏主档，免得多标签锁误判
+  if (m.blocked) saveBlocked = true;
+  if (window.PetGame) PetGame.norm(m.st, E);   // 宠物 p4：没有 pet 字段 = 没买，旧档原样
   return m.st;
 }
-function storedRev() { try { const r = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); return r ? (r.rev || 0) : -1; } catch (e) { return -1; } }
+function storedRev() { if (TEST_MODE) return -1; try { const r = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); return r ? (r.rev || 0) : -1; } catch (e) { return -1; } }
 // 保存 = 先确认没有别的页面写过（rev 比我新就冻结本页），再整份原子写入
 function persist() {
   if (frozen) return false;
+  if (TEST_MODE) { state.rev++; return true; }   // 测试房间：只在内存里，永远不写真存档
+  if (saveBlocked) { state.rev++; return true; } // 12d：坏档且没有可用备份 → 只在内存里玩，原档一个字节都不改
+  const bad = E.validState(state);                // 12d：写档前校验（金币 / 等级 / 待领取收益），坏了不写、恢复上一份好档
+  if (bad.length) { restoreGood(bad); return false; }
   const sr = storedRev();
   if (sr > state.rev) { freeze(); return false; }
   const t = now();
@@ -34,8 +47,17 @@ function persist() {
   state.maxSeen = Math.max(state.maxSeen || 0, state.lastSeen);
   petBeforePersist();   // 宠物 p4：小狗状态写进 state.pet.eng（同一份存档）
   state.rev++;
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); return true; }
+  const json = JSON.stringify(state);
+  // 完整备份：把上一份通过校验的主档整份挪到 BAK_KEY（README 里已有的 -bak 键，不新增键），再写新主档
+  try { const prev = localStorage.getItem(SAVE_KEY); if (prev && prev !== json) { let ok = false; try { ok = !E.checkSave(JSON.parse(prev)).length; } catch (e) {} if (ok) localStorage.setItem(BAK_KEY, prev); } } catch (e) {}
+  try { localStorage.setItem(SAVE_KEY, json); lastGood = json; return true; }
   catch (e) { state.rev--; toast('存档失败：浏览器存储不可用（无痕模式？）'); return false; }
+}
+// 内存里出现坏值（NaN / ∞ / 负数 / 非数字）：不写盘，整档回到上一次成功写入的样子
+function restoreGood(bad) {
+  if (lastGood) { try { state = JSON.parse(lastGood); E.normWallet(state); } catch (e) {} }
+  dirty = true;
+  toast('金币数据异常（' + bad.slice(0, 3).join('、') + '），没有存档，已回到上一次存档', 3200);
 }
 // 关键操作（领钱、开盲盒）：失败就回滚内存，保证「扣钱/入账/记录」要么一起成功要么都没发生
 function atomic(fn) {
@@ -45,14 +67,14 @@ function atomic(fn) {
   if (!persist()) { state = JSON.parse(snap); return { ok:false, why:'saveFailed' }; }
   return res;
 }
-function claimLock() { try { localStorage.setItem(LOCK_KEY, JSON.stringify({ tab:TAB, t:now() })); } catch (e) {} }
-function lockMine() { try { const v = JSON.parse(localStorage.getItem(LOCK_KEY) || 'null'); return !v || v.tab === TAB; } catch (e) { return true; } }
+function claimLock() { if (TEST_MODE) return; try { localStorage.setItem(LOCK_KEY, JSON.stringify({ tab:TAB, t:now() })); } catch (e) {} }
+function lockMine() { if (TEST_MODE) return true; try { const v = JSON.parse(localStorage.getItem(LOCK_KEY) || 'null'); return !v || v.tab === TAB; } catch (e) { return true; } }
 function freeze() {
   if (frozen) return; frozen = true;
   $('#lockOverlay').classList.remove('hidden'); audioPause();
 }
 window.addEventListener('storage', e => {
-  if (frozen) return;
+  if (frozen || TEST_MODE) return;
   if (e.key === LOCK_KEY && e.newValue) { try { if (JSON.parse(e.newValue).tab !== TAB) freeze(); } catch (x) {} }
   if (e.key === SAVE_KEY && e.newValue) { try { if ((JSON.parse(e.newValue).rev || 0) > state.rev) freeze(); } catch (x) {} }
 });
@@ -146,7 +168,8 @@ const SHOP_STYLE = [
 ];
 const LOOKS = {
   // 12c1：四位 CEO 店内小人沿用熊大立绘的发型 / 配饰 / 主色（77 高马尾+粉蝴蝶结+红 T 棕围裙；珍珠姐及颌卷发+珍珠发夹+薄荷衬衫杏色围裙；阿宅乱发+圆眼镜+藏青连帽衫；火箭老板背头+黑西装+火箭胸针）
-  c77:    { skin:'#ffe0c7', hair:'#3a2418', style:'pony', bow:'#ff8fab', top:'#d93a32', short:true, apron:'#7a4a2e', female:true, tag:'77' },
+  // 12b3：77 换熊大漫画新形象后（12b2 头像 / 立绘），店内小人配色同步：粉蝴蝶结高马尾 + 红 T + 粉围裙 + 深棕长裤 + 棕靴（取色自 ceo77_fullbody_comic_v1）
+  c77:    { skin:'#ffe0c7', hair:'#4a2c22', style:'pony', bow:'#f4837a', top:'#e84d3c', short:true, apron:'#f0a08e', pants:'#4a2f26', shoe:'#835233', female:true, tag:'77' },
   pearl:  { skin:'#ffe0c7', hair:'#7a4a2a', style:'wavy', pin:true, top:'#bfe3c4', apron:'#e3a35f', female:true, lips:true },
   otaku:  { skin:'#ffe6d0', hair:'#1e1e1e', style:'messy', glasses:true, top:'#25335c', hood:true },
   rocket: { skin:'#ffe0c7', hair:'#5a3a26', style:'swept', top:'#2b2b2b', inner:'#141414', lapel:true, rocketLogo:true, smug:true },
@@ -171,7 +194,7 @@ function wearOf(id) { return (state.wear && state.wear[id]) || {}; }
 function lookOf(id) {
   const base = LOOKS[id]; if (!E.CEO_BY_ID[id]) return base;
   const L = Object.assign({}, base), eq = wearOf(id);
-  if (eq.clothes && CLOTHES[eq.clothes]) Object.assign(L, CLOTHES[eq.clothes], { rocketLogo:false, hood:false, tie:false, inner:null, lapel:false, short:false, tag:id === 'c77' ? base.tag : null });
+  if (eq.clothes && CLOTHES[eq.clothes]) Object.assign(L, CLOTHES[eq.clothes], { rocketLogo:false, hood:false, tie:false, inner:null, lapel:false, short:false, pants:null, tag:id === 'c77' ? base.tag : null });   // 12b3：换衣服时裤子回到衣服自己的默认色（背带裤蓝 / 深灰），不沿用 77 的深棕长裤
   if (eq.hat) L.hat = eq.hat;
   return L;
 }
@@ -407,10 +430,13 @@ function avatarURL(id, key) {
   c.translate(56, 186); c.scale(1.15, 1.15); drawHead(c, lookOf(id), { happy:false });
   return (avaCache[k] = o.toDataURL());
 }
-// 熊大画的 CEO 头像（图没加载出来就退回画布小人头像）
-const ART_V = '11', PORTRAIT = { c77:1, pearl:1, otaku:1, rocket:1 };
-const faceURL = id => PORTRAIT[id] ? `../../art/face_${id}.webp?v=${ART_V}` : avatarURL(id);
-const bustURL = id => PORTRAIT[id] ? `../../art/ceo_${id}.webp?v=${ART_V}` : avatarURL(id);
+// 熊大画的 CEO 头像（图没加载出来就退回画布小人头像）；12b2 起 77 的 ceo_c77 / face_c77 是漫画新版，换了图所以 ART_V 跟着换
+const ART_V = '12b2', PORTRAIT = { c77:1, pearl:1, otaku:1, rocket:1 };
+// 12d2：单图缓存号——只换一张图时只改这张，不动整体 ART_V。77 头像 face_c77 换回 12b2 之前的原版（杨总 19:30 / 熊大 19:34），全身 ceo_c77 保留漫画新版
+const ART_ONE = { face_c77:'12d2' };
+const artV = n => ART_ONE[n] || ART_V;
+const faceURL = id => PORTRAIT[id] ? `../../art/face_${id}.webp?v=${artV('face_' + id)}` : avatarURL(id);
+const bustURL = id => PORTRAIT[id] ? `../../art/ceo_${id}.webp?v=${artV('ceo_' + id)}` : avatarURL(id);
 const faceImg = id => `<img src="${faceURL(id)}"${PORTRAIT[id] ? ` class="art" data-fb="${id}"` : ''} alt="">`;
 const bustImg = id => `<img src="${bustURL(id)}"${PORTRAIT[id] ? ` class="art" data-fb="${id}"` : ''} alt="">`;
 // CEO×店铺 任职形象（16 张）：本行用 ceo_<id>.webp，其余放 art/job_<id>_<店id>.webp，交过来一张在 JOB_ART 里登记一张
@@ -687,7 +713,10 @@ function burstCoins(x, y, n) { for (let k = 0; k < n; k++) coinsP.push({ x, y, v
 let clock = 0; // 秒（performance）
 const coinsEl = $('#coins'), cpsEl = $('#cps'), tabBody = $('#tabBody'), toastEl = $('#toast'), sfxWord = $('#sfxWord');
 let tab = 'shop', buyAmt = 1, dirty = true;
-function earn(v) { state.coins += v; state.totalEarned += v; }
+// 12d：所有入账走 E.addCoins（坏值拒绝、到上限停住、旧档超上限不再增长）；返回实际到账
+let capWarned = false;
+function earn(v) { const r = E.addCoins(state, v); if (r.capped) capNote(); return r.ok ? r.added : 0; }
+function capNote() { if (capWarned) return; capWarned = true; toast('金币到上限 ' + fmt(CFG.COIN_CAP) + '：先花掉一些，收益才会继续进账', 3200); }
 function popWord(w) { sfxWord.textContent = w; sfxWord.classList.remove('pop'); void sfxWord.offsetWidth; sfxWord.classList.add('pop'); }
 function bumpCoins() { coinsEl.classList.remove('bump'); void coinsEl.offsetWidth; coinsEl.classList.add('bump'); }
 let toastTimer = 0;
@@ -700,8 +729,8 @@ function tick() {
   const t = now(), gap = (t - state.lastSeen) / 1000;
   if (gap < 0) { if (t > state.maxSeen - CFG.CLOCK_TOLERANCE * 1000) state.lastSeen = t; return; }
   if (gap > 5) { onReturn(); return; }
-  const gained = E.onlineRate(state, t) * gap;
-  earn(gained); noteVisualIncome(gained);
+  const gained = earn(E.onlineRate(state, t) * gap);
+  noteVisualIncome(gained);
   state.lastSeen = t; if (t > state.maxSeen) state.maxSeen = t;
 }
 function onReturn() {
@@ -927,6 +956,7 @@ function finishOrder() {
   if (!order) return;
   const o = order; order = null;
   const paid = E.settleOrder(state, o.payout);
+  if (E.overCap(state)) capNote();
   persist();
   focusT = 0.55; shake = 0.45; sfx('mile'); popWord('结账！');
   // 金币成串飞向钱包 + 「团单收入 +X」
@@ -1046,13 +1076,12 @@ function updateSupers() {
 function afterBuy(btn, msg) { sfx('buy'); popWord('叮！'); bumpCoins(); dirty = true; persist(); if (btn) { const c = btn.closest('.card'); if (c) { c.classList.remove('flash'); void c.offsetWidth; c.classList.add('flash'); } } if (msg) toast(msg); }
 function failBuy(btn, why) { sfx('no'); shakeEl(btn); toast(why === '金币不够' ? '金币不够，躺一会儿再来' : why); }
 function handleUnlocks(list) { (list || []).forEach(id => queueModal(() => showCeoJoin(id))); }
-function shopUpgradeCount(i) {
-  const s = state.shops[i]; if (buyAmt !== 'max') return buyAmt;
-  let k = 0, c = 0; while (k < 200) { const n = E.upgradeCost(i, s.lv + k); if (c + n > state.coins) break; c += n; k++; } return Math.max(1, k);
-}
+// 12d：x1 / x10 / MAX 都不超过店铺等级上限（满级返回 0）；MAX 最多循环 CFG.MAX_BUY_STEPS 次
+function shopUpgradeCount(i) { return E.shopBuyCount(state, i, buyAmt); }
 function doUpgradeShop(i, btn) {
-  const k = shopUpgradeCount(i), cost = E.bulkUpgradeCost(i, state.shops[i].lv, k);
-  if (state.coins < cost) return failBuy(btn, '金币不够');
+  const k = shopUpgradeCount(i); if (!k) return failBuy(btn, E.shopMaxed(state, i) ? '已满级' : E.walletOk(state) ? '金币不够' : '金币数据异常');   // 12d1：MAX 一级都买不起 → 0
+  const cost = E.bulkUpgradeCost(i, state.shops[i].lv, k);
+  if (!(E.balance(state) >= cost)) return failBuy(btn, E.walletOk(state) ? '金币不够' : '金币数据异常');
   let best = null, unlocked = [];
   for (let j = 0; j < k; j++) { const r = E.upgradeShop(state, i); if (!r.ok) break; if (r.milestone) best = r; if (r.unlocked) unlocked.push(...r.unlocked); }
   afterBuy(btn);
@@ -1096,7 +1125,7 @@ const thumbCache = {};
 function itemThumb(id) {
   if (thumbCache[id]) return thumbCache[id];
   const it = E.ITEM_BY_ID[id] || {}, o = document.createElement('canvas'); o.width = o.height = 96; const c = o.getContext('2d');
-  if (it.type === 'clothes' || id === 'c_gold') { c.translate(48, 108); c.scale(0.85, 0.85); drawPerson(c, 0, 0, 1, Object.assign({}, LOOKS.c77, CLOTHES[id], { bow:null }), {}); }
+  if (it.type === 'clothes' || id === 'c_gold') { c.translate(48, 108); c.scale(0.85, 0.85); drawPerson(c, 0, 0, 1, Object.assign({}, LOOKS.c77, CLOTHES[id], { bow:null, pants:null }), {}); }
   else if (it.type === 'hat' || id === 'h_gold') { c.translate(48, 150); c.scale(1.05, 1.05); drawHead(c, Object.assign({}, LOOKS.c77, { hat:id }), {}); }
   else return null;
   return (thumbCache[id] = o.toDataURL());
@@ -1146,7 +1175,7 @@ function renderShop() {
   }
   const info = E.ceoInfo(state, i), sr = E.shopRate(state, i), sign = E.signOf(state, i);
   const nm = E.nextMilestone(s.lv), prevM = [0, 10, 25, 50].filter(m => m <= s.lv).pop() || 0;
-  const k = shopUpgradeCount(i), upCost = E.bulkUpgradeCost(i, s.lv, k);
+  const shopTop = E.shopMaxed(state, i), k0 = shopUpgradeCount(i), k = shopTop ? 0 : Math.max(1, k0), upCost = E.bulkUpgradeCost(i, s.lv, k);   // 12d1：MAX 买不起时按钮显示下一级的价格并置灰（不再显示 0 元）
   const upGain = rateDelta(c => { c.shops[i].lv += k; });
   let h = `<div class="summary">「${sign.name}」每秒 <b style="color:var(--red)">+${fmt(sr)}</b>${s.emp > 0
       ? `<br>店铺 ${fmt(E.shopBase(i, s.lv))} × 员工 ×${E.empMult(s.emp).toFixed(2)} × CEO ×${info.mult.toFixed(2)}${E.hasSuper(state, i) ? ` × 超级装饰 ×${CFG.SUPER_RATE}` : ''}`
@@ -1158,22 +1187,22 @@ function renderShop() {
   h += `<div class="card"><div class="ava sq">${SHOP_ICON[i]}</div><div class="info"><div class="name">${S.short}<span class="lv">Lv.${s.lv}</span></div>
     <div class="desc">当前基础产量 <b>${fmt(E.shopBase(i, s.lv))}</b>/秒原料${nm ? ` · 下一里程碑 Lv${nm} → 收益 ×${E.milestoneMult(nm)}` : ' · 里程碑全拿下 ×8'}</div>
     ${nm ? `<div class="mbar"><i style="width:${((s.lv - prevM) / (nm - prevM) * 100).toFixed(0)}%"></i></div>` : ''}
-    <div class="gain ${s.emp > 0 ? '' : 'warn'}">${s.emp > 0 ? '升级后 +' + fmt(upGain) + '/秒' : '还没员工：升级后自动收入仍是 +0/秒（先雇佣）· 手点会变强'}</div>
+    <div class="gain ${s.emp > 0 || shopTop ? '' : 'warn'}">${shopTop ? `已满级（店铺最高 Lv${E.shopMaxLv(i)}）` : s.emp > 0 ? '升级后 +' + fmt(upGain) + '/秒' : '还没员工：升级后自动收入仍是 +0/秒（先雇佣）· 手点会变强'}</div>
     <details class="details-fold"><summary>倍率怎么算</summary>店铺原料 × 员工 ×${E.empMult(s.emp).toFixed(2)} × CEO ×${info.mult.toFixed(2)}${E.hasSuper(state, i) ? ' × 超级装饰 ×' + CFG.SUPER_RATE : ''} = 每秒 <b>${fmt(sr)}</b></details></div>
-    ${btn('up', i, '升级' + (k > 1 ? ' ×' + k : ''), upCost)}</div>`;
+    ${shopTop ? '<button class="buy no" disabled data-max="shop">满级</button>' : btn('up', i, '升级' + (k > 1 ? ' ×' + k : ''), upCost)}</div>`;
   h += `<div class="sec-title">员工</div>`;
   if (s.emp <= 0) h += `<div class="card hl">${ava('e' + i)}<div class="info"><div class="name">${S.emp.name}<span class="lv" style="background:#999">未雇</span></div>
     <div class="desc one">“${S.emp.line}”</div><div class="gain">雇了才自动赚：+${fmt(rateDelta(c => { c.shops[i].emp = 1; }))}/秒</div></div>${btn('hire', i, '雇佣', S.hire)}</div>`;
   else h += `<div class="card">${ava('e' + i)}<div class="info"><div class="name">${S.emp.name}<span class="lv">Lv.${s.emp}</span></div>
-    <div class="desc one">“${S.emp.line}”</div><div class="gain">${s.emp >= CFG.EMP_MAX ? '已满级' : `速度 +${CFG.EMP_LV_BONUS * 100}% → +${fmt(rateDelta(c => { c.shops[i].emp++; }))}/秒`}</div></div>
-    ${s.emp >= CFG.EMP_MAX ? '<button class="buy no" disabled>满级</button>' : btn('emp', i, '升级', E.empCost(i, s.emp))}</div>`;
+    <div class="desc one">“${S.emp.line}”</div><div class="gain">${E.empMaxed(state, i) ? `已满级（员工最高 Lv${E.empMaxLv(i)}）` : `速度 +${CFG.EMP_LV_BONUS * 100}% → +${fmt(rateDelta(c => { c.shops[i].emp++; }))}/秒`}</div></div>
+    ${E.empMaxed(state, i) ? '<button class="buy no" disabled data-max="emp">满级</button>' : btn('emp', i, '升级', E.empCost(i, s.emp))}</div>`;
   h += `<div class="sec-title">CEO</div>`;
   if (info.id) {
     const c = E.CEO_BY_ID[info.id], cs = state.ceos[info.id];
     h += `<div class="card ${info.match ? '' : 'hl'}">${ava(info.id)}<div class="info"><div class="name">${c.name}<span class="lv">Lv.${cs.lv}</span>${ceoTags(i)}</div>
       <div class="desc">经营加成 ×${info.mult.toFixed(2)}（${info.match ? '专长对口' : '跨行'} ×${info.typeMult} · 等级 +${Math.round((info.lvMult - 1) * 100)}%）${info.cross ? '<br><b>' + info.cross.title + '</b>：' + info.cross.desc : ''}</div>
-      <div class="gain">${cs.lv >= CFG.CEO_MAX ? '已满级' : '升一级 +' + fmt(rateDelta(x => { x.ceos[info.id].lv++; })) + '/秒（跟着 CEO 走）'}</div></div>
-      <div class="btns">${cs.lv >= CFG.CEO_MAX ? '<button class="buy no" disabled>满级</button>' : btn('ceoUp', info.id, '升级', E.ceoCost(info.id, cs.lv))}<button class="buy alt" data-act="assignTo" data-arg="${i}">调任</button></div></div>`;
+      <div class="gain">${E.ceoMaxed(state, info.id) ? `已满级（最高 Lv${E.ceoMaxLv(info.id)}）` : '升一级 +' + fmt(rateDelta(x => { x.ceos[info.id].lv++; })) + '/秒（跟着 CEO 走）'}</div></div>
+      <div class="btns">${E.ceoMaxed(state, info.id) ? '<button class="buy no" disabled data-max="ceo">满级</button>' : btn('ceoUp', info.id, '升级', E.ceoCost(info.id, cs.lv))}<button class="buy alt" data-act="assignTo" data-arg="${i}">调任</button></div></div>`;
   } else {
     h += `<div class="card hl"><div class="ava">👔</div><div class="info"><div class="name">CEO 空缺</div><div class="desc">派一位 CEO 来：专长对口 ×${CFG.MATCH_MULT}，跨行 ×${CFG.CROSS_MULT} + 专属事件</div></div>
       <button class="buy" data-act="assignTo" data-arg="${i}">派 CEO</button></div>`;
@@ -1201,7 +1230,7 @@ function renderCeo() {
     h += `<div class="card">${ava(c.id)}<div class="info"><div class="name">${c.name}<span class="lv">Lv.${s.lv}</span><span class="tag ${info ? (info.match ? 'match' : 'cross') : 'idle'}">${E.TYPES[c.type]}</span></div>
       <div class="desc one">现任：<b>${ceoPost(c.id)}</b>${info ? `（${info.match ? '专长' : '跨行'} ×${info.mult.toFixed(2)}）` : ''}</div>
       <div class="desc one">“${c.line}”</div></div>
-      <div class="btns">${s.lv >= CFG.CEO_MAX ? '' : btn('ceoUp', c.id, '升级', E.ceoCost(c.id, s.lv))}<button class="buy alt" data-act="assign" data-arg="${c.id}">调任</button></div></div>`;
+      <div class="btns">${E.ceoMaxed(state, c.id) ? '<button class="buy no" disabled data-max="ceo">满级</button>' : btn('ceoUp', c.id, '升级', E.ceoCost(c.id, s.lv))}<button class="buy alt" data-act="assign" data-arg="${c.id}">调任</button></div></div>`;
     h += jobGallery(c.id);
   }
   h += `<div class="sec-title">跨行组合</div><div class="cross-grid">`;
@@ -1322,14 +1351,14 @@ function refreshDynamic(force) {
   const t = now();
   // 顶部
   const r = E.onlineRate(state, t), busy = !!(order && order.progress < 1);
-  const ct = fmt(state.coins); if (coinsEl.textContent !== ct) coinsEl.textContent = ct;
+  const ct = E.walletOk(state) ? fmt(E.balance(state)) : '存档异常'; if (coinsEl.textContent !== ct) coinsEl.textContent = ct;
   const cps = '每秒 +' + fmt(r) + (busy ? '（团单服务中）' : ''); if (cpsEl.textContent !== cps) cpsEl.textContent = cps;
   $('#boostTag').classList.toggle('hidden', !busy); if (busy) $('#boostSec').textContent = Math.round(order.progress * 100);
   const dc = $('#dailyChip'), can = E.canDouble(state, t);
   const dtxt = can ? '今日双倍 ✓' : '双倍 ' + fmtClockMYT(E.nextResetTs(t)) + ' 重置'; if (dc.textContent !== dtxt) dc.textContent = dtxt;
   dc.className = 'chip ' + (can ? 'on' : 'used');
   // 按钮可买状态
-  tabBody.querySelectorAll('[data-cost]').forEach(b => b.classList.toggle('no', state.coins < +b.dataset.cost));
+  tabBody.querySelectorAll('[data-cost]').forEach(b => b.classList.toggle('no', !E.canAfford(state, +b.dataset.cost)));
   refreshCrit();   // 暴击说明不受 900ms 限制：连击中 / 刚断连都马上对上店景 HUD
   if (!force && t - lastDyn < 900) return; lastDyn = t;
   // 下一步
@@ -1337,13 +1366,13 @@ function refreshDynamic(force) {
   $('#goalBar').style.width = Math.min(100, gl.cur / gl.need * 100).toFixed(0) + '%';
   renderTabs();
   // 底部提醒点
-  const gdot = E.gachaUnlocked(state) && !E.gachaComplete(state) && state.coins >= E.gachaPrice(state);
+  const gdot = E.gachaUnlocked(state) && !E.gachaComplete(state) && E.canAfford(state, E.gachaPrice(state));
   const nb = document.querySelector('#bottomNav [data-tab="gacha"]'); const has = !!nb.querySelector('.dot');
   if (gdot && !has) nb.insertAdjacentHTML('beforeend', '<i class="dot"></i>'); if (!gdot && has) nb.querySelector('.dot').remove();
   const cdot = E.CEOS.some(c => state.ceos[c.id].unlocked && state.ceos[c.id].at === -1);
   const cb = document.querySelector('#bottomNav [data-tab="ceo"]'); const hc = !!cb.querySelector('.dot');
   if (cdot && !hc) cb.insertAdjacentHTML('beforeend', '<i class="dot"></i>'); if (!cdot && hc) cb.querySelector('.dot').remove();
-  const mb = document.getElementById('mallBal'); if (mb) mb.textContent = fmt(state.coins);
+  const mb = document.getElementById('mallBal'); if (mb) mb.textContent = E.walletOk(state) ? fmt(E.balance(state)) : '存档异常';
   const hl = document.getElementById('homeLux'); if (hl && homeWho) hl.textContent = E.homeLuxury(state, homeWho);
 }
 
@@ -1356,8 +1385,8 @@ function openModal(html, burst = true) { mpanel.classList.remove('zoom'); mpanel
 // 12c：统一右上角关闭钮 = 代按弹窗里已有的「再想想 / 好 / 知道了 / 返回」，不另走关闭逻辑（领离线收益这类必须选一个的弹窗没有 ×）
 function modalX() {
   const t = mpanel.querySelector('#mNo, #pvNo') || mpanel.querySelector('#mOk'); mpanel.classList.toggle('has-x', !!t); if (!t) return;
-  mpanel.insertAdjacentHTML('afterbegin', `<button class="cx-close" id="mX" type="button" aria-label="${t.id === 'mOk' ? (t.textContent.trim() || '关闭') : '关闭'}">${ic('close')}</button>`);
-  $('#mX').addEventListener('click', () => { const c = mpanel.querySelector('#mNo, #pvNo') || mpanel.querySelector('#mOk'); if (c && c.dataset.x === 'close') closeModal(); else if (c) c.click(); }); // 12c1：data-x="close" 的弹窗（开摊介绍）× 只关窗，不走「开摊」的解锁音效 / 台词
+  mpanel.insertAdjacentHTML('afterbegin', `<button class="cx-close" id="mX" type="button" aria-label="${t.id === 'mOk' && t.dataset.x !== 'close' ? (t.textContent.trim() || '关闭') : '关闭'}">${ic('close')}</button>`);
+  $('#mX').addEventListener('click', () => { const c = mpanel.querySelector('#mNo, #pvNo') || mpanel.querySelector('#mOk'); if (c && c.dataset.x === 'close') closeModal(); else if (c) c.click(); }); // 12c1：data-x="close" 的弹窗（开摊介绍）× 只关窗，不走「开摊」的解锁音效 / 台词；12c3：这种 × 朗读标签也叫「关闭」
 }
 function closeModal() { modal.classList.add('hidden'); mpanel.innerHTML = ''; if (mq.length && !modalOpen()) setTimeout(() => { if (!modalOpen() && mq.length) mq.shift()(); }, 120); }
 function openSheet(html) { sheetPanel.innerHTML = `<button class="cx-close" id="sheetX" type="button" aria-label="关闭">${ic('close')}</button>` + html; sheet.classList.remove('hidden'); $('#sheetX').addEventListener('click', closeSheet); }
@@ -1381,7 +1410,7 @@ function showOffline() {
   const go = dbl => {
     const r = atomic(() => E.claimOffline(state, now(), dbl));
     closeModal();
-    if (r.ok) { sfx('reveal'); popWord(r.doubled ? '翻倍！' : '到账！'); bumpCoins(); burstCoins(W / 2, H * 0.5, 18); toast((r.doubled ? '双倍到账 +' : '到账 +') + fmt(r.amount)); dirty = true; }
+    if (r.ok) { sfx('reveal'); popWord(r.doubled ? '翻倍！' : '到账！'); bumpCoins(); burstCoins(W / 2, H * 0.5, 18); toast((r.doubled ? '双倍到账 +' : '到账 +') + fmt(r.amount) + (r.capped ? '（金币已到上限，多出的没进账）' : '')); dirty = true; }
     else if (r.why !== 'saveFailed') toast(r.why);
   };
   const cd = $('#claimDouble'); if (cd) cd.addEventListener('click', () => { audioUnlock(); go(true); }, { once:true });
@@ -1540,7 +1569,7 @@ function showIntro() {
 // 美术：画师的图转成 webp 后放 art/，在下面两张表里登记一张就用一张；没登记 / 加载失败 → 用色块 + emoji 占位
 // 房间底图：art/home_<ceo>_<lv>.webp（ceo=c77/pearl/otaku/rocket，lv=1/2/3），例 { c77_1:1 }
 // 底图规格：宽 = 列数×200px，高 = (2 + 行数)×200px；上面 2 格高是后墙，下面是地板格，平行投影无消失点。Lv1 6×4 → 1200×1200，墙地分界 y=400
-const HOME_ART = { c77_1: 1, pearl_1: 1, otaku_1: 1, rocket_1: 1 };  // 熊大四位 CEO 的 Lv1（原图墙 / 地板在踢脚线底边处分开，分别缩放到 1200×400 + 1200×800）
+const HOME_ART = { c77_1: 1, pearl_1: 1, otaku_1: 1, rocket_1: 1, c77_2: 1, c77_3: 1, pearl_2: 1, pearl_3: 1, otaku_2: 1, otaku_3: 1, rocket_2: 1, rocket_3: 1 };  // 熊大四位 CEO 的 Lv1（原图墙 / 地板在踢脚线底边处分开，分别缩放到 1200×400 + 1200×800）；12b1：77 / 珍珠姐 Lv2 1600×400+1600×1000、Lv3 2000×400+2000×1200，同样在踢脚线底边切开；12b2：阿宅 / 火箭老板 Lv2/Lv3 同法
 const FURN_ART = { bed:1, bookshelf:1, wardrobe:1, table:1, fridge:1, sofa:1, rug:1, plant:1, lamp:1, tv:1, painting:1, catbed:1, rocket_rocket_model:1, rocket_meteor_stand:1, rocket_biosphere_dome:1, s77_cloud_canopy:1, rocket_capsule_bunk:1 };  // +火箭模型/陨石展座/生态圆顶/云朵纱帐床；宽=占地×200（1格240）
 const furnName = fid => fid.replace(/^furn_/, '');
 // 高家具：占地只有底下那排格子，图按「高 / 宽」比例往上伸（盖住后墙），底脚对齐占地底边；值 = 图高 / 图宽（400×600 → 1.5）
@@ -1664,7 +1693,7 @@ function mallMatch(f) {
   if (mallCat !== 'all' && f.cat !== mallCat) return false;
   if (mallCat === 'cabinet' && mallSub !== 'all' && f.sub !== mallSub) return false;
   const stt = E.furnStats(state, f.id);
-  if (mallFilter.afford && state.coins < f.price) return false;
+  if (mallFilter.afford && !E.canAfford(state, f.price)) return false;
   if (mallFilter.owned && stt.owned <= 0) return false;
   if (mallFilter.price === 'low' && f.price >= 3000) return false;
   if (mallFilter.price === 'mid' && (f.price < 3000 || f.price >= 15000)) return false;
@@ -1678,7 +1707,7 @@ function mallMatch(f) {
 function renderMall() {
   const c = E.CEO_BY_ID[homeWho], open = E.homeOpen(state, homeWho), nm = open || c.id !== 'rocket' ? c.name : '？？？';
   const list = E.FURNITURE.filter(mallMatch);
-  let h = `<div class="mall-head"><div>公共仓库 · ${open ? `现看 <b>${nm}</b> 的家` : `<b>${nm}</b> 还没加入，买的先进仓库`}</div><div>余额 ${coinSm}<b id="mallBal">${fmt(state.coins)}</b></div></div>`;
+  let h = `<div class="mall-head"><div>公共仓库 · ${open ? `现看 <b>${nm}</b> 的家` : `<b>${nm}</b> 还没加入，买的先进仓库`}</div><div>余额 ${coinSm}<b id="mallBal">${fmt(E.balance(state))}</b></div></div>`;
   h += petMallCard();
   h += `<div class="mall-search"><input id="mallSearch" type="search" enterkeyhint="search" placeholder="搜索家具…" value="${mallQ.replace(/"/g, '&quot;')}" autocomplete="off"><button type="button" class="buy alt" data-act="mallClear" ${mallQ || mallCat !== 'all' || mallFilter.afford || mallFilter.owned || mallFilter.price !== 'any' || mallFilter.size !== 'any' ? '' : 'disabled'}>清除</button></div>`;
   h += `<div class="mall-cats" role="tablist"><button class="mc ${mallCat === 'all' ? 'on' : ''}" data-act="mallCat" data-arg="all">全部</button>${E.MALL_CATS.map(c => `<button class="mc ${mallCat === c.id ? 'on' : ''}" data-act="mallCat" data-arg="${c.id}">${c.name}</button>`).join('')}</div>`;
@@ -1706,7 +1735,7 @@ function renderMall() {
   return h;
 }
 function confirmHomeBuy(fid) {
-  const f = E.FURN_BY_ID[fid], stt = E.furnStats(state, fid), bal = state.coins, can = bal >= f.price;
+  const f = E.FURN_BY_ID[fid], stt = E.furnStats(state, fid), bal = E.balance(state), can = E.canAfford(state, f.price);
   openModal(`<div class="mbubble">商城 · 公共仓库</div><div class="buy-prev"><div class="furn-ico big" style="--fc:${f.color}">${furnInner(fid, 0)}</div></div>
     <div class="mtitle">${f.name}（${f.w}×${f.h} 格 · 豪华 +${f.lux}）</div>
     <table class="pv-table"><tr><td>价格</td><td>${fmt(f.price)}</td></tr><tr><td>当前余额</td><td>${fmt(bal)}</td></tr><tr><td>已有</td><td>${stt.owned}（摆出 ${stt.placed} / 仓库 ${stt.warehouse}）</td></tr><tr class="total"><td>买后余额</td><td class="${can ? '' : 'down'}">${can ? fmt(bal - f.price) : '还差 ' + fmt(f.price - bal)}</td></tr></table>
@@ -1721,7 +1750,7 @@ function confirmHomeBuy(fid) {
 }
 function confirmHomeUp(id) {
   const H = E.homeOf(state, id), c = E.CEO_BY_ID[id]; if (H.lv >= E.HOME_MAX) return;
-  const T = E.homeTier(H.lv), N = E.HOME_TIERS[H.lv], bal = state.coins, can = bal >= N.cost;
+  const T = E.homeTier(H.lv), N = E.HOME_TIERS[H.lv], bal = E.balance(state), can = E.canAfford(state, N.cost);
   openModal(`<div class="mbubble">房子升级</div><div class="mtitle">${c.name}：${T.name} → ${N.name}</div>
     <div class="mnote">${T.cols}×${T.rows} 格 → <b>${N.cols}×${N.rows} 格</b>，房型豪华 ${T.bonus} → ${N.bonus}。摆好的家具原位保留；挂画如果挡到新房的窗户 / 墙饰，会自动挪到空墙，挂不下就退回仓库，不会丢。</div>
     <table class="pv-table"><tr><td>价格</td><td>${fmt(N.cost)}</td></tr><tr><td>当前余额</td><td>${fmt(bal)}</td></tr><tr class="total"><td>升级后余额</td><td class="${can ? '' : 'down'}">${can ? fmt(bal - N.cost) : '还差 ' + fmt(N.cost - bal)}</td></tr></table>
@@ -1739,9 +1768,9 @@ const PG = window.PetGame, PET_LIBS = !!(PG && window.PetEngine && window.PetArt
 let petRt = null, petView = null, petM = null, petHiddenAt = 0, petManual = false, petShown = '', petWaitShown = null;   // petWaitShown（p4b）：上一帧是不是「等待安置」，变了就重画家宅条
 function petInit(tryN) {
   if (!PET_LIBS) return;
-  fetch('../art/manifest.json?v=p4b').then(r => { if (!r.ok) throw new Error('manifest ' + r.status); return r.json(); }).then(m => {
+  fetch('../art/manifest.json?v=p5').then(r => { if (!r.ok) throw new Error('manifest ' + r.status); return r.json(); }).then(m => {
     const v = window.PetArt.validateManifest(m); if (!v.ok) throw new Error(v.errors.join('；'));
-    petM = m; petRt = PG.createRuntime({ E, manifest: m }); petView = PG.createView({ manifest: m, PA: window.PetArt, PP: window.PetPuppy, atlasBase: '../art/', ver: 'p4b' });
+    petM = m; petRt = PG.createRuntime({ E, manifest: m }); petView = PG.createView({ manifest: m, PA: window.PetArt, PP: window.PetPuppy, atlasBase: '../art/', ver: 'p5' });
     document.body.dataset.petReady = '1'; dirty = true;
   }).catch(e => { if ((tryN || 0) < 3) setTimeout(() => petInit((tryN || 0) + 1), 600 * ((tryN || 0) + 1)); else console.warn('小狗没加载到：' + e.message); });
 }
@@ -1794,8 +1823,9 @@ function petRoomBar(id) {
 }
 function confirmPetBuy(home) {
   if (!PG) return;
-  const P = PG.PET, bal = state.coins, can = bal >= P.price, nm = E.CEO_BY_ID[home] ? E.CEO_BY_ID[home].name : '';
+  const P = PG.PET, bal = E.balance(state), can = E.canAfford(state, P.price), nm = E.CEO_BY_ID[home] ? E.CEO_BY_ID[home].name : '';   // p5：余额 / 能不能买走统一钱包
   if (petOwned()) { toast('已经有小狗了（只能养一只）'); return; }
+  if (!E.walletOk(state)) { sfx('no'); toast('金币数据异常，现在不能买'); return; }   // p5：12d1 异常钱包（余额超安全整数等）不弹购买窗、不扣钱
   if (!petM) { toast('小狗还没准备好，稍后再试'); return; }
   if (!PG.hasRoom(state, E, home, petM)) { sfx('no'); toast(PG.NO_ROOM, 2600); dirty = true; return; }   // p4b：满屋不弹购买窗、不扣钱
   openModal(`<div class="mbubble">商城 · 宠物</div><div class="buy-prev"><div class="furn-ico big pet-ico"><span>${P.emoji}</span></div></div>
@@ -2077,15 +2107,24 @@ function frame(ts) {
 
 function boot() {
   state = loadState(); claimLock();
+  if (!TEST_MODE && !saveBlocked) { E.normWallet(state); lastGood = JSON.stringify(state); }
   $('#mute').classList.toggle('off', !!state.muted);
   resize();
-  const first = !state.taps && !state.totalEarned && state.shops[0].emp === 0;
+  const first = !state.taps && !state.totalEarned && !state.earnedFrac && state.shops[0].emp === 0;
   const fpMig = E.migrateFootprints(state);
   const wallMig0 = E.migrateWallPaintings(state);   // 读档时已在 E.migrate 里整理过一次，这里通常是 0；两次加起来如实提示
   const wallMig = { moved:loadWallMig.moved + wallMig0.moved, stored:loadWallMig.stored + wallMig0.stored };
   const p = E.settleOffline(state, now(), rid);
   persist();
-  scheduleBig(); scheduleSpecial(); renderTabs(); setTab('shop');
+  scheduleBig(); scheduleSpecial(); renderTabs(); setTab(TEST_MODE ? 'home' : 'shop');
+  if (TEST_MODE) { const b = document.createElement('div'); b.id = 'testBadge'; b.textContent = '测试房间 · ' + (TEST_LV === 3 ? '豪宅' : '公寓') + ' · 不存档，刷新重置'; document.body.appendChild(b);
+    const place = () => { const n = $('#bottomNav'); if (n) b.style.bottom = Math.max(8, innerHeight - n.getBoundingClientRect().top + 6) + 'px'; }; place(); addEventListener('resize', place); }
+  if (loadInfo.source === 'bak') toast('存档里的金币 / 等级数据坏了（' + loadInfo.bad.slice(0, 3).join('、') + '），已从完整备份恢复', 3600);
+  if (saveBlocked && loadInfo.unsafe) { const sb = document.createElement('div'); sb.id = 'saveBadge'; sb.textContent = '存档余额异常（超出安全整数）：交易已暂停、不保存，原存档未覆盖'; sb.style.cssText = 'position:fixed;left:8px;right:8px;top:calc(env(safe-area-inset-top) + 6px);z-index:60;padding:6px 10px;border:2px solid #141414;border-radius:10px;background:#ffd6d6;font-size:12px;font-weight:700;text-align:center;pointer-events:none';
+    document.body.appendChild(sb); queueModal(() => { openModal(`<div class="mbubble">存档余额异常</div><div class="mtitle">余额超出能精确计算的范围</div><div class="mnote">存档里的余额是 <b>${String(loadInfo.rawCoins)}</b>，超过了 ${fmt(E.SAFE_COINS)}（安全整数上限），加减会算不准，不能当正常钱包用。为了不出错：<b>所有买卖和收入都已暂停，这次不会自动保存</b>，原存档原样保留、没有被覆盖。${loadInfo.bakOk ? `备份里有一份正常存档（余额 ${fmt(loadInfo.bakCoins)}），没有自动替换，请联系熊二 / 熊大确认后再恢复。` : '没有找到可用的备份，请联系熊二 / 熊大。'}</div><div class="mbtns"><button class="buy" id="mOk">知道了</button></div>`, false); $('#mOk').addEventListener('click', closeModal, { once:true }); }); }
+  else if (saveBlocked) { const sb = document.createElement('div'); sb.id = 'saveBadge'; sb.textContent = '存档损坏、没有可用备份：本次不保存，原存档未覆盖'; sb.style.cssText = 'position:fixed;left:8px;right:8px;top:calc(env(safe-area-inset-top) + 6px);z-index:60;padding:6px 10px;border:2px solid #141414;border-radius:10px;background:#ffd6d6;font-size:12px;font-weight:700;text-align:center;pointer-events:none';
+    document.body.appendChild(sb); queueModal(() => { openModal(`<div class="mbubble">存档读不出来</div><div class="mtitle">金币 / 等级数据坏了，也没有可用备份</div><div class="mnote">为了不把原存档盖掉，这次游戏<b>不会自动保存</b>（坏字段：${loadInfo.bad.slice(0, 4).join('、')}）。请把情况告诉熊二 / 熊大。</div><div class="mbtns"><button class="buy" id="mOk">知道了</button></div>`, false); $('#mOk').addEventListener('click', closeModal, { once:true }); }); }
+  if (loadInfo.badPending) toast('离线收益数据异常，这一笔没有入账（余额不变）', 3200);
   if (migratedFrom != null) toast('存档已升级到 v' + CFG.SAVE_VERSION + '（新盲盒 + CEO 穿搭，收藏都保留）', 2600);
   if (fpMig && !fpMig.skipped && (fpMig.shifted || fpMig.stored)) toast(fpMig.stored ? `家具占地收紧：${fpMig.shifted} 件按脚底重锚，${fpMig.stored} 件腾不出空位已退回仓库` : `家具占地收紧：${fpMig.shifted} 件已按脚底重锚`, 3200);
   if (wallMig && (wallMig.moved || wallMig.stored)) toast(wallMig.stored ? `墙面整理：${wallMig.moved} 幅挂画挪到空墙，${wallMig.stored} 幅墙面没空已退回仓库` : `墙面整理：${wallMig.moved} 幅挂画已挪到空墙`, 3200);
@@ -2100,7 +2139,7 @@ boot();
 petInit();
 
 // 测试/调试钩子（不影响玩家）
-window.__tzz = { E, FURN_SIDE, furnInner, get combo() { return combo; }, get critFx() { return critFx; }, critLine, refreshCrit, showComic, showCrossBig, queueModal, CROSS_ART, crossURL, showCeoJoin, get state() { return state; }, set state(v) { state = v; }, persist, onReturn, tapShop, act, setTab, switchShop, renderTab,
+window.__tzz = { TEST_MODE, TEST_LV, SAVE_KEY, BAK_KEY, get saveBlocked() { return saveBlocked; }, get loadInfo() { return loadInfo; }, restoreGood, earn, doUpgradeShop, shopUpgradeCount, get buyAmt() { return buyAmt; }, E, FURN_SIDE, furnInner, get combo() { return combo; }, get critFx() { return critFx; }, critLine, refreshCrit, showComic, showCrossBig, queueModal, CROSS_ART, crossURL, showCeoJoin, get state() { return state; }, set state(v) { state = v; }, persist, onReturn, tapShop, act, setTab, switchShop, renderTab,
   forceBig() { nextBigAt = 0; if (order) order = null; }, clearVisitors() { order = null; special = null; nextBigAt = clock + 9999; nextSpecialAt = clock + 9999; }, forceSpecial() { nextSpecialAt = 0; special = null; },
   forceSupers() { for (const k in superNext) superNext[k] = 0; updateSupers(); renderTab(); },
   get big() { return order; }, get order() { return order; }, get special() { return special; }, get guests() { return guests; },

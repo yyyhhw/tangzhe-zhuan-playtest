@@ -575,7 +575,7 @@
         const ev = d.anim.tick(dt);
         for (const e of ev) if (s.onEvent && s.onEvent(w, e) === false) return 'fail';
         if (s.clip === 'play' || s.clip === 'hop') d.drainMode = 'play';
-        if (s.clip === 'hop') { const n = d.anim.seq.length; d.z = Math.sin(Math.PI * clamp((d.anim.k + d.anim.t / 70) / n, 0, 1)) * 0.32; }
+        if (s.clip === 'hop') { const n = d.anim.seq.length; d.z = w.manifest.clips.hop.bakedLift ? 0 : Math.sin(Math.PI * clamp((d.anim.k + d.anim.t / 70) / n, 0, 1)) * 0.32; }   // p5：真图腾空已画进帧里，不再抬第二次
         if (d.anim.done) { d.z = 0; if (s.clip === 'petted') d.petCdUntil = w.t + CFG.PET_CD; return 'done'; }
         return 'run';
       }

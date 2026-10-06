@@ -107,10 +107,10 @@
     ctx.restore();
     ctx.save(); ctx.translate(gx, gy - d.z * tile); ctx.scale(mirror ? -k : k, k); ctx.translate(-128, -208);
     const carried = W.ball.state === 'carried', br = PE.CFG.BALL_R * 256 / M.runtime.displayTiles;
-    if (carried && d.dir === 'N') ballPath(fr.mouth[0], fr.mouth[1], br);
+    if (carried && d.dir === 'N' && fr.mouth) ballPath(fr.mouth[0], fr.mouth[1], br);   // p5：真图北向嘴被挡（mouthHidden）→ 不画球，叼球状态不变
     if (atlas) { const c = PA.cellRect(M, fr.cell); ctx.drawImage(atlas, c.sx, c.sy, c.s, c.s, 0, 0, 256, 256); }
     else PP.drawFrame(ctx, M, name, fi);
-    if (carried && d.dir !== 'N') ballPath(fr.mouth[0], fr.mouth[1] + 4, br);
+    if (carried && d.dir !== 'N' && fr.mouth) ballPath(fr.mouth[0], fr.mouth[1] + 4, br);
     ctx.restore();
   }
   function drawFx() {
@@ -253,13 +253,13 @@
     const v = PA.validateManifest(m); if (!v.ok) throw new Error(v.errors.join('；'));
     M = m;
     const res = makeWorld(true); resize(); welcomeBack(res);
-    if (!m.placeholder && m.atlas.image) { const im = new Image(); im.onload = () => { atlas = im; artMode = 'atlas'; }; im.onerror = () => console.warn('图集没加载到，先用占位小狗'); im.src = 'art/' + m.atlas.image + '?v=p4b'; }
+    if (!m.placeholder && m.atlas.image) { const im = new Image(); im.onload = () => { atlas = im; artMode = 'atlas'; }; im.onerror = () => console.warn('图集没加载到，先用占位小狗'); im.src = 'art/' + m.atlas.image + '?v=p5'; }
     if (Q.get('art') === 'atlas') window.__pet.bakeAtlas();
     document.body.dataset.ready = '1';
     requestAnimationFrame(frame);
   }
   function loadManifest(tryN) {
-    fetch('art/manifest.json?v=p4b').then(r => { if (!r.ok) throw new Error('manifest ' + r.status); return r.json(); }).then(boot).catch(e => {
+    fetch('art/manifest.json?v=p5').then(r => { if (!r.ok) throw new Error('manifest ' + r.status); return r.json(); }).then(boot).catch(e => {
       if (leaving) return;
       if (tryN < 3) { $('label').textContent = '加载中…'; setTimeout(() => loadManifest(tryN + 1), 500 * (tryN + 1)); return; }
       $('label').textContent = '加载失败：' + e.message + '（下拉刷新试试）'; console.error(e);

@@ -3,9 +3,9 @@ const PG = window.PetGame, PET_LIBS = !!(PG && window.PetEngine && window.PetArt
 let petRt = null, petView = null, petM = null, petHiddenAt = 0, petManual = false, petShown = '', petWaitShown = null;   // petWaitShown（p4b）：上一帧是不是「等待安置」，变了就重画家宅条
 function petInit(tryN) {
   if (!PET_LIBS) return;
-  fetch('../art/manifest.json?v=p4b').then(r => { if (!r.ok) throw new Error('manifest ' + r.status); return r.json(); }).then(m => {
+  fetch('../art/manifest.json?v=p5').then(r => { if (!r.ok) throw new Error('manifest ' + r.status); return r.json(); }).then(m => {
     const v = window.PetArt.validateManifest(m); if (!v.ok) throw new Error(v.errors.join('；'));
-    petM = m; petRt = PG.createRuntime({ E, manifest: m }); petView = PG.createView({ manifest: m, PA: window.PetArt, PP: window.PetPuppy, atlasBase: '../art/', ver: 'p4b' });
+    petM = m; petRt = PG.createRuntime({ E, manifest: m }); petView = PG.createView({ manifest: m, PA: window.PetArt, PP: window.PetPuppy, atlasBase: '../art/', ver: 'p5' });
     document.body.dataset.petReady = '1'; dirty = true;
   }).catch(e => { if ((tryN || 0) < 3) setTimeout(() => petInit((tryN || 0) + 1), 600 * ((tryN || 0) + 1)); else console.warn('小狗没加载到：' + e.message); });
 }
@@ -58,8 +58,9 @@ function petRoomBar(id) {
 }
 function confirmPetBuy(home) {
   if (!PG) return;
-  const P = PG.PET, bal = state.coins, can = bal >= P.price, nm = E.CEO_BY_ID[home] ? E.CEO_BY_ID[home].name : '';
+  const P = PG.PET, bal = E.balance(state), can = E.canAfford(state, P.price), nm = E.CEO_BY_ID[home] ? E.CEO_BY_ID[home].name : '';   // p5：余额 / 能不能买走统一钱包
   if (petOwned()) { toast('已经有小狗了（只能养一只）'); return; }
+  if (!E.walletOk(state)) { sfx('no'); toast('金币数据异常，现在不能买'); return; }   // p5：12d1 异常钱包（余额超安全整数等）不弹购买窗、不扣钱
   if (!petM) { toast('小狗还没准备好，稍后再试'); return; }
   if (!PG.hasRoom(state, E, home, petM)) { sfx('no'); toast(PG.NO_ROOM, 2600); dirty = true; return; }   // p4b：满屋不弹购买窗、不扣钱
   openModal(`<div class="mbubble">商城 · 宠物</div><div class="buy-prev"><div class="furn-ico big pet-ico"><span>${P.emoji}</span></div></div>

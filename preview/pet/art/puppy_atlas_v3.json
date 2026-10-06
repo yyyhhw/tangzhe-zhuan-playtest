@@ -1,0 +1,2465 @@
+{
+ "source": "home-transfer-20261006@3fb4756 transfer/batch3_puppy/puppy_complete_native_candidates_20261006_v3.zip (sha256 40fe9351bfdf4225ce289fe92be8b29a41b0c6968943370ef431950f96548895)",
+ "manifestSha256": "0c97a11cc1950f4b17239616deddf2063dfacc8b77e1ab84c1df1463fc7a65dc",
+ "frames": {
+  "0": {
+   "clip": "idle_E",
+   "index": 0,
+   "ms": 220,
+   "dir": "E",
+   "sourceId": "puppy_idle_e_v2",
+   "alphaX": [
+    56,
+    240
+   ],
+   "alphaY": [
+    48,
+    210
+   ],
+   "noseTip": [
+    237,
+    87
+   ]
+  },
+  "1": {
+   "clip": "idle_E",
+   "index": 1,
+   "ms": 200,
+   "dir": "E",
+   "sourceId": "puppy_idle_e_v2",
+   "alphaX": [
+    54,
+    236
+   ],
+   "alphaY": [
+    48,
+    210
+   ],
+   "noseTip": [
+    233,
+    85
+   ]
+  },
+  "2": {
+   "clip": "idle_E",
+   "index": 2,
+   "ms": 200,
+   "dir": "E",
+   "sourceId": "puppy_idle_e_v2",
+   "alphaX": [
+    54,
+    238
+   ],
+   "alphaY": [
+    48,
+    210
+   ],
+   "noseTip": [
+    235,
+    87
+   ]
+  },
+  "3": {
+   "clip": "idle_E",
+   "index": 3,
+   "ms": 220,
+   "dir": "E",
+   "sourceId": "puppy_idle_e_v2",
+   "alphaX": [
+    54,
+    240
+   ],
+   "alphaY": [
+    48,
+    210
+   ],
+   "noseTip": [
+    237,
+    87
+   ]
+  },
+  "4": {
+   "clip": "idle_E",
+   "index": 4,
+   "ms": 200,
+   "dir": "E",
+   "sourceId": "puppy_idle_e_v2",
+   "alphaX": [
+    54,
+    238
+   ],
+   "alphaY": [
+    48,
+    210
+   ],
+   "noseTip": [
+    237,
+    87
+   ]
+  },
+  "5": {
+   "clip": "idle_E",
+   "index": 5,
+   "ms": 200,
+   "dir": "E",
+   "sourceId": "puppy_idle_e_v2",
+   "alphaX": [
+    54,
+    236
+   ],
+   "alphaY": [
+    48,
+    210
+   ],
+   "noseTip": [
+    233,
+    85
+   ]
+  },
+  "6": {
+   "clip": "idle_N",
+   "index": 0,
+   "ms": 240,
+   "dir": "N",
+   "sourceId": "puppy_idle_n_v1",
+   "alphaX": [
+    86,
+    170
+   ],
+   "alphaY": [
+    48,
+    210
+   ],
+   "noseTip": [
+    167,
+    83
+   ]
+  },
+  "7": {
+   "clip": "idle_N",
+   "index": 1,
+   "ms": 240,
+   "dir": "N",
+   "sourceId": "puppy_idle_n_v1",
+   "alphaX": [
+    82,
+    172
+   ],
+   "alphaY": [
+    48,
+    210
+   ],
+   "noseTip": [
+    169,
+    83
+   ]
+  },
+  "8": {
+   "clip": "idle_N",
+   "index": 2,
+   "ms": 240,
+   "dir": "N",
+   "sourceId": "puppy_idle_n_v1",
+   "alphaX": [
+    84,
+    170
+   ],
+   "alphaY": [
+    48,
+    210
+   ],
+   "noseTip": [
+    169,
+    89
+   ]
+  },
+  "9": {
+   "clip": "idle_N",
+   "index": 3,
+   "ms": 240,
+   "dir": "N",
+   "sourceId": "puppy_idle_n_v1",
+   "alphaX": [
+    84,
+    170
+   ],
+   "alphaY": [
+    48,
+    210
+   ],
+   "noseTip": [
+    169,
+    89
+   ]
+  },
+  "10": {
+   "clip": "idle_S",
+   "index": 0,
+   "ms": 240,
+   "dir": "S",
+   "sourceId": "puppy_idle_s_v1",
+   "alphaX": [
+    58,
+    182
+   ],
+   "alphaY": [
+    48,
+    210
+   ],
+   "noseTip": [
+    181,
+    87
+   ]
+  },
+  "11": {
+   "clip": "idle_S",
+   "index": 1,
+   "ms": 240,
+   "dir": "S",
+   "sourceId": "puppy_idle_s_v1",
+   "alphaX": [
+    56,
+    182
+   ],
+   "alphaY": [
+    48,
+    210
+   ],
+   "noseTip": [
+    181,
+    89
+   ]
+  },
+  "12": {
+   "clip": "idle_S",
+   "index": 2,
+   "ms": 240,
+   "dir": "S",
+   "sourceId": "puppy_idle_s_v1",
+   "alphaX": [
+    56,
+    182
+   ],
+   "alphaY": [
+    48,
+    210
+   ],
+   "noseTip": [
+    181,
+    89
+   ]
+  },
+  "13": {
+   "clip": "idle_S",
+   "index": 3,
+   "ms": 240,
+   "dir": "S",
+   "sourceId": "puppy_idle_s_v1",
+   "alphaX": [
+    58,
+    182
+   ],
+   "alphaY": [
+    48,
+    210
+   ],
+   "noseTip": [
+    179,
+    85
+   ]
+  },
+  "14": {
+   "clip": "walk_E",
+   "index": 0,
+   "ms": 100,
+   "dir": "E",
+   "sourceId": "puppy_walk_e_sheet_v1",
+   "alphaX": [
+    32,
+    232
+   ],
+   "alphaY": [
+    48,
+    210
+   ],
+   "noseTip": [
+    231,
+    87
+   ]
+  },
+  "15": {
+   "clip": "walk_E",
+   "index": 1,
+   "ms": 100,
+   "dir": "E",
+   "sourceId": "puppy_walk_e_sheet_v1",
+   "alphaX": [
+    30,
+    230
+   ],
+   "alphaY": [
+    48,
+    210
+   ],
+   "noseTip": [
+    229,
+    87
+   ]
+  },
+  "16": {
+   "clip": "walk_E",
+   "index": 2,
+   "ms": 100,
+   "dir": "E",
+   "sourceId": "puppy_walk_e_sheet_v1",
+   "alphaX": [
+    32,
+    228
+   ],
+   "alphaY": [
+    46,
+    210
+   ],
+   "noseTip": [
+    227,
+    87
+   ]
+  },
+  "17": {
+   "clip": "walk_E",
+   "index": 3,
+   "ms": 100,
+   "dir": "E",
+   "sourceId": "puppy_walk_e_sheet_v1",
+   "alphaX": [
+    30,
+    228
+   ],
+   "alphaY": [
+    46,
+    208
+   ],
+   "noseTip": [
+    225,
+    87
+   ]
+  },
+  "18": {
+   "clip": "walk_E",
+   "index": 4,
+   "ms": 100,
+   "dir": "E",
+   "sourceId": "puppy_walk_e_sheet_v1",
+   "alphaX": [
+    34,
+    234
+   ],
+   "alphaY": [
+    50,
+    208
+   ],
+   "noseTip": [
+    231,
+    89
+   ]
+  },
+  "19": {
+   "clip": "walk_E",
+   "index": 5,
+   "ms": 100,
+   "dir": "E",
+   "sourceId": "puppy_walk_e_sheet_v1",
+   "alphaX": [
+    28,
+    230
+   ],
+   "alphaY": [
+    48,
+    208
+   ],
+   "noseTip": [
+    229,
+    89
+   ]
+  },
+  "20": {
+   "clip": "walk_E",
+   "index": 6,
+   "ms": 100,
+   "dir": "E",
+   "sourceId": "puppy_walk_e_sheet_v1",
+   "alphaX": [
+    30,
+    228
+   ],
+   "alphaY": [
+    48,
+    210
+   ],
+   "noseTip": [
+    227,
+    89
+   ]
+  },
+  "21": {
+   "clip": "walk_E",
+   "index": 7,
+   "ms": 100,
+   "dir": "E",
+   "sourceId": "puppy_walk_e_sheet_v1",
+   "alphaX": [
+    26,
+    228
+   ],
+   "alphaY": [
+    48,
+    210
+   ],
+   "noseTip": [
+    227,
+    89
+   ]
+  },
+  "22": {
+   "clip": "walk_N",
+   "index": 0,
+   "ms": 100,
+   "dir": "N",
+   "sourceId": "puppy_walk_n_sheet_v2",
+   "alphaX": [
+    84,
+    170
+   ],
+   "alphaY": [
+    46,
+    208
+   ],
+   "noseTip": [
+    169,
+    85
+   ]
+  },
+  "23": {
+   "clip": "walk_N",
+   "index": 1,
+   "ms": 100,
+   "dir": "N",
+   "sourceId": "puppy_walk_n_sheet_v2",
+   "alphaX": [
+    86,
+    170
+   ],
+   "alphaY": [
+    46,
+    208
+   ],
+   "noseTip": [
+    169,
+    85
+   ]
+  },
+  "24": {
+   "clip": "walk_N",
+   "index": 2,
+   "ms": 100,
+   "dir": "N",
+   "sourceId": "puppy_walk_n_sheet_v2",
+   "alphaX": [
+    86,
+    170
+   ],
+   "alphaY": [
+    46,
+    208
+   ],
+   "noseTip": [
+    169,
+    85
+   ]
+  },
+  "25": {
+   "clip": "walk_N",
+   "index": 3,
+   "ms": 100,
+   "dir": "N",
+   "sourceId": "puppy_walk_n_sheet_v2",
+   "alphaX": [
+    84,
+    170
+   ],
+   "alphaY": [
+    46,
+    208
+   ],
+   "noseTip": [
+    169,
+    87
+   ]
+  },
+  "26": {
+   "clip": "walk_N",
+   "index": 4,
+   "ms": 100,
+   "dir": "N",
+   "sourceId": "puppy_walk_n_sheet_v2",
+   "alphaX": [
+    84,
+    172
+   ],
+   "alphaY": [
+    48,
+    208
+   ],
+   "noseTip": [
+    169,
+    87
+   ]
+  },
+  "27": {
+   "clip": "walk_N",
+   "index": 5,
+   "ms": 100,
+   "dir": "N",
+   "sourceId": "puppy_walk_n_sheet_v2",
+   "alphaX": [
+    84,
+    170
+   ],
+   "alphaY": [
+    48,
+    208
+   ],
+   "noseTip": [
+    169,
+    87
+   ]
+  },
+  "28": {
+   "clip": "walk_N",
+   "index": 6,
+   "ms": 100,
+   "dir": "N",
+   "sourceId": "puppy_walk_n_sheet_v2",
+   "alphaX": [
+    84,
+    172
+   ],
+   "alphaY": [
+    48,
+    208
+   ],
+   "noseTip": [
+    169,
+    85
+   ]
+  },
+  "29": {
+   "clip": "walk_N",
+   "index": 7,
+   "ms": 100,
+   "dir": "N",
+   "sourceId": "puppy_walk_n_sheet_v2",
+   "alphaX": [
+    84,
+    172
+   ],
+   "alphaY": [
+    48,
+    208
+   ],
+   "noseTip": [
+    169,
+    87
+   ]
+  },
+  "30": {
+   "clip": "walk_S",
+   "index": 0,
+   "ms": 100,
+   "dir": "S",
+   "sourceId": "puppy_walk_s_sheet_v2",
+   "alphaX": [
+    54,
+    186
+   ],
+   "alphaY": [
+    48,
+    208
+   ],
+   "noseTip": [
+    183,
+    89
+   ]
+  },
+  "31": {
+   "clip": "walk_S",
+   "index": 1,
+   "ms": 100,
+   "dir": "S",
+   "sourceId": "puppy_walk_s_sheet_v2",
+   "alphaX": [
+    56,
+    186
+   ],
+   "alphaY": [
+    48,
+    208
+   ],
+   "noseTip": [
+    183,
+    89
+   ]
+  },
+  "32": {
+   "clip": "walk_S",
+   "index": 2,
+   "ms": 100,
+   "dir": "S",
+   "sourceId": "puppy_walk_s_sheet_v2",
+   "alphaX": [
+    54,
+    186
+   ],
+   "alphaY": [
+    48,
+    208
+   ],
+   "noseTip": [
+    183,
+    89
+   ]
+  },
+  "33": {
+   "clip": "walk_S",
+   "index": 3,
+   "ms": 100,
+   "dir": "S",
+   "sourceId": "puppy_walk_s_sheet_v2",
+   "alphaX": [
+    52,
+    186
+   ],
+   "alphaY": [
+    48,
+    208
+   ],
+   "noseTip": [
+    183,
+    89
+   ]
+  },
+  "34": {
+   "clip": "walk_S",
+   "index": 4,
+   "ms": 100,
+   "dir": "S",
+   "sourceId": "puppy_walk_s_sheet_v2",
+   "alphaX": [
+    68,
+    206
+   ],
+   "alphaY": [
+    46,
+    208
+   ],
+   "noseTip": [
+    203,
+    105
+   ]
+  },
+  "35": {
+   "clip": "walk_S",
+   "index": 5,
+   "ms": 100,
+   "dir": "S",
+   "sourceId": "puppy_walk_s_sheet_v2",
+   "alphaX": [
+    68,
+    202
+   ],
+   "alphaY": [
+    46,
+    208
+   ],
+   "noseTip": [
+    199,
+    103
+   ]
+  },
+  "36": {
+   "clip": "walk_S",
+   "index": 6,
+   "ms": 100,
+   "dir": "S",
+   "sourceId": "puppy_walk_s_sheet_v2",
+   "alphaX": [
+    68,
+    192
+   ],
+   "alphaY": [
+    48,
+    210
+   ],
+   "noseTip": [
+    191,
+    109
+   ]
+  },
+  "37": {
+   "clip": "walk_S",
+   "index": 7,
+   "ms": 100,
+   "dir": "S",
+   "sourceId": "puppy_walk_s_sheet_v2",
+   "alphaX": [
+    50,
+    188
+   ],
+   "alphaY": [
+    46,
+    208
+   ],
+   "noseTip": [
+    187,
+    93
+   ]
+  },
+  "38": {
+   "clip": "run_E",
+   "index": 0,
+   "ms": 70,
+   "dir": "E",
+   "sourceId": "puppy_run_e_sheet_v2",
+   "alphaX": [
+    28,
+    244
+   ],
+   "alphaY": [
+    48,
+    208
+   ],
+   "noseTip": [
+    241,
+    93
+   ]
+  },
+  "39": {
+   "clip": "run_E",
+   "index": 1,
+   "ms": 70,
+   "dir": "E",
+   "sourceId": "puppy_run_e_sheet_v2",
+   "alphaX": [
+    40,
+    244
+   ],
+   "alphaY": [
+    46,
+    210
+   ],
+   "noseTip": [
+    241,
+    91
+   ]
+  },
+  "40": {
+   "clip": "run_E",
+   "index": 2,
+   "ms": 70,
+   "dir": "E",
+   "sourceId": "puppy_run_e_sheet_v2",
+   "alphaX": [
+    28,
+    244
+   ],
+   "alphaY": [
+    46,
+    190
+   ],
+   "noseTip": [
+    241,
+    93
+   ]
+  },
+  "41": {
+   "clip": "run_E",
+   "index": 3,
+   "ms": 70,
+   "dir": "E",
+   "sourceId": "puppy_run_e_sheet_v2",
+   "alphaX": [
+    26,
+    242
+   ],
+   "alphaY": [
+    48,
+    210
+   ],
+   "noseTip": [
+    241,
+    95
+   ]
+  },
+  "42": {
+   "clip": "run_E",
+   "index": 4,
+   "ms": 70,
+   "dir": "E",
+   "sourceId": "puppy_run_e_sheet_v2",
+   "alphaX": [
+    38,
+    242
+   ],
+   "alphaY": [
+    46,
+    210
+   ],
+   "noseTip": [
+    241,
+    95
+   ]
+  },
+  "43": {
+   "clip": "run_E",
+   "index": 5,
+   "ms": 70,
+   "dir": "E",
+   "sourceId": "puppy_run_e_sheet_v2",
+   "alphaX": [
+    26,
+    242
+   ],
+   "alphaY": [
+    46,
+    190
+   ],
+   "noseTip": [
+    241,
+    95
+   ]
+  },
+  "44": {
+   "clip": "run_N",
+   "index": 0,
+   "ms": 70,
+   "dir": "N",
+   "sourceId": "puppy_run_n_sheet_v2",
+   "alphaX": [
+    78,
+    178
+   ],
+   "alphaY": [
+    46,
+    208
+   ],
+   "noseTip": [
+    175,
+    85
+   ]
+  },
+  "45": {
+   "clip": "run_N",
+   "index": 1,
+   "ms": 70,
+   "dir": "N",
+   "sourceId": "puppy_run_n_sheet_v2",
+   "alphaX": [
+    78,
+    178
+   ],
+   "alphaY": [
+    46,
+    208
+   ],
+   "noseTip": [
+    175,
+    85
+   ]
+  },
+  "46": {
+   "clip": "run_N",
+   "index": 2,
+   "ms": 70,
+   "dir": "N",
+   "sourceId": "puppy_run_n_sheet_v2",
+   "alphaX": [
+    78,
+    178
+   ],
+   "alphaY": [
+    46,
+    188
+   ],
+   "noseTip": [
+    175,
+    83
+   ]
+  },
+  "47": {
+   "clip": "run_N",
+   "index": 3,
+   "ms": 70,
+   "dir": "N",
+   "sourceId": "puppy_run_n_sheet_v2",
+   "alphaX": [
+    78,
+    178
+   ],
+   "alphaY": [
+    46,
+    208
+   ],
+   "noseTip": [
+    175,
+    83
+   ]
+  },
+  "48": {
+   "clip": "run_N",
+   "index": 4,
+   "ms": 70,
+   "dir": "N",
+   "sourceId": "puppy_run_n_sheet_v2",
+   "alphaX": [
+    78,
+    178
+   ],
+   "alphaY": [
+    46,
+    206
+   ],
+   "noseTip": [
+    175,
+    83
+   ]
+  },
+  "49": {
+   "clip": "run_N",
+   "index": 5,
+   "ms": 70,
+   "dir": "N",
+   "sourceId": "puppy_run_n_sheet_v2",
+   "alphaX": [
+    78,
+    178
+   ],
+   "alphaY": [
+    46,
+    188
+   ],
+   "noseTip": [
+    175,
+    85
+   ]
+  },
+  "50": {
+   "clip": "run_S",
+   "index": 0,
+   "ms": 70,
+   "dir": "S",
+   "sourceId": "puppy_run_s_sheet_v2",
+   "alphaX": [
+    46,
+    184
+   ],
+   "alphaY": [
+    48,
+    210
+   ],
+   "noseTip": [
+    181,
+    85
+   ]
+  },
+  "51": {
+   "clip": "run_S",
+   "index": 1,
+   "ms": 70,
+   "dir": "S",
+   "sourceId": "puppy_run_s_sheet_v2",
+   "alphaX": [
+    52,
+    186
+   ],
+   "alphaY": [
+    48,
+    208
+   ],
+   "noseTip": [
+    183,
+    87
+   ]
+  },
+  "52": {
+   "clip": "run_S",
+   "index": 2,
+   "ms": 70,
+   "dir": "S",
+   "sourceId": "puppy_run_s_sheet_v2",
+   "alphaX": [
+    54,
+    188
+   ],
+   "alphaY": [
+    46,
+    188
+   ],
+   "noseTip": [
+    187,
+    87
+   ]
+  },
+  "53": {
+   "clip": "run_S",
+   "index": 3,
+   "ms": 70,
+   "dir": "S",
+   "sourceId": "puppy_run_s_sheet_v2",
+   "alphaX": [
+    68,
+    202
+   ],
+   "alphaY": [
+    48,
+    210
+   ],
+   "noseTip": [
+    201,
+    111
+   ]
+  },
+  "54": {
+   "clip": "run_S",
+   "index": 4,
+   "ms": 70,
+   "dir": "S",
+   "sourceId": "puppy_run_s_sheet_v2",
+   "alphaX": [
+    68,
+    204
+   ],
+   "alphaY": [
+    48,
+    210
+   ],
+   "noseTip": [
+    201,
+    105
+   ]
+  },
+  "55": {
+   "clip": "run_S",
+   "index": 5,
+   "ms": 70,
+   "dir": "S",
+   "sourceId": "puppy_run_s_sheet_v2",
+   "alphaX": [
+    64,
+    198
+   ],
+   "alphaY": [
+    48,
+    188
+   ],
+   "noseTip": [
+    195,
+    113
+   ]
+  },
+  "56": {
+   "clip": "attention",
+   "index": 0,
+   "ms": 110,
+   "dir": "E",
+   "sourceId": "puppy_attention_e_v2",
+   "alphaX": [
+    56,
+    242
+   ],
+   "alphaY": [
+    48,
+    210
+   ],
+   "noseTip": [
+    239,
+    85
+   ]
+  },
+  "57": {
+   "clip": "attention",
+   "index": 1,
+   "ms": 150,
+   "dir": "E",
+   "sourceId": "puppy_attention_e_v2",
+   "alphaX": [
+    60,
+    238
+   ],
+   "alphaY": [
+    44,
+    210
+   ],
+   "noseTip": [
+    235,
+    75
+   ]
+  },
+  "58": {
+   "clip": "attention",
+   "index": 2,
+   "ms": 420,
+   "dir": "E",
+   "sourceId": "puppy_attention_e_v2",
+   "alphaX": [
+    58,
+    234
+   ],
+   "alphaY": [
+    40,
+    210
+   ],
+   "noseTip": [
+    233,
+    73
+   ]
+  },
+  "59": {
+   "clip": "attention",
+   "index": 3,
+   "ms": 200,
+   "dir": "E",
+   "sourceId": "puppy_attention_e_v2",
+   "alphaX": [
+    58,
+    238
+   ],
+   "alphaY": [
+    48,
+    210
+   ],
+   "noseTip": [
+    237,
+    85
+   ]
+  },
+  "60": {
+   "clip": "sniff",
+   "index": 0,
+   "ms": 180,
+   "dir": "E",
+   "sourceId": "puppy_sniff_e_v1",
+   "alphaX": [
+    46,
+    252
+   ],
+   "alphaY": [
+    50,
+    210
+   ],
+   "noseTip": [
+    251,
+    89
+   ]
+  },
+  "61": {
+   "clip": "sniff",
+   "index": 1,
+   "ms": 180,
+   "dir": "E",
+   "sourceId": "puppy_sniff_e_v1",
+   "alphaX": [
+    46,
+    248
+   ],
+   "alphaY": [
+    68,
+    210
+   ],
+   "noseTip": [
+    247,
+    109
+   ]
+  },
+  "62": {
+   "clip": "sniff",
+   "index": 2,
+   "ms": 180,
+   "dir": "E",
+   "sourceId": "puppy_sniff_e_v1",
+   "alphaX": [
+    46,
+    248
+   ],
+   "alphaY": [
+    68,
+    210
+   ],
+   "noseTip": [
+    241,
+    141
+   ]
+  },
+  "63": {
+   "clip": "sniff",
+   "index": 3,
+   "ms": 180,
+   "dir": "E",
+   "sourceId": "puppy_sniff_e_v1",
+   "alphaX": [
+    46,
+    250
+   ],
+   "alphaY": [
+    68,
+    210
+   ],
+   "noseTip": [
+    243,
+    143
+   ]
+  },
+  "64": {
+   "clip": "sniff",
+   "index": 4,
+   "ms": 180,
+   "dir": "E",
+   "sourceId": "puppy_sniff_e_v1",
+   "alphaX": [
+    48,
+    252
+   ],
+   "alphaY": [
+    58,
+    210
+   ],
+   "noseTip": [
+    251,
+    117
+   ]
+  },
+  "65": {
+   "clip": "sniff",
+   "index": 5,
+   "ms": 180,
+   "dir": "E",
+   "sourceId": "puppy_sniff_e_v1",
+   "alphaX": [
+    44,
+    252
+   ],
+   "alphaY": [
+    48,
+    210
+   ],
+   "noseTip": [
+    249,
+    87
+   ]
+  },
+  "66": {
+   "clip": "hop",
+   "index": 0,
+   "ms": 70,
+   "dir": "E",
+   "sourceId": "puppy_hop_e_sheet_v2",
+   "alphaX": [
+    46,
+    242
+   ],
+   "alphaY": [
+    48,
+    210
+   ],
+   "noseTip": [
+    241,
+    87
+   ]
+  },
+  "67": {
+   "clip": "hop",
+   "index": 1,
+   "ms": 70,
+   "dir": "E",
+   "sourceId": "puppy_hop_e_sheet_v2",
+   "alphaX": [
+    40,
+    232
+   ],
+   "alphaY": [
+    66,
+    208
+   ],
+   "noseTip": [
+    229,
+    107
+   ]
+  },
+  "68": {
+   "clip": "hop",
+   "index": 2,
+   "ms": 70,
+   "dir": "E",
+   "sourceId": "puppy_hop_e_sheet_v2",
+   "alphaX": [
+    42,
+    220
+   ],
+   "alphaY": [
+    46,
+    208
+   ],
+   "noseTip": [
+    217,
+    85
+   ]
+  },
+  "69": {
+   "clip": "hop",
+   "index": 3,
+   "ms": 70,
+   "dir": "E",
+   "sourceId": "puppy_hop_e_sheet_v2",
+   "alphaX": [
+    44,
+    226
+   ],
+   "alphaY": [
+    52,
+    184
+   ],
+   "noseTip": [
+    223,
+    91
+   ]
+  },
+  "70": {
+   "clip": "hop",
+   "index": 4,
+   "ms": 70,
+   "dir": "E",
+   "sourceId": "puppy_hop_e_sheet_v2",
+   "alphaX": [
+    44,
+    234
+   ],
+   "alphaY": [
+    58,
+    186
+   ],
+   "noseTip": [
+    231,
+    99
+   ]
+  },
+  "71": {
+   "clip": "hop",
+   "index": 5,
+   "ms": 70,
+   "dir": "E",
+   "sourceId": "puppy_hop_e_sheet_v2",
+   "alphaX": [
+    44,
+    220
+   ],
+   "alphaY": [
+    60,
+    202
+   ],
+   "noseTip": [
+    219,
+    101
+   ]
+  },
+  "72": {
+   "clip": "hop",
+   "index": 6,
+   "ms": 70,
+   "dir": "E",
+   "sourceId": "puppy_hop_e_sheet_v2",
+   "alphaX": [
+    40,
+    232
+   ],
+   "alphaY": [
+    74,
+    208
+   ],
+   "noseTip": [
+    231,
+    117
+   ]
+  },
+  "73": {
+   "clip": "hop",
+   "index": 7,
+   "ms": 70,
+   "dir": "E",
+   "sourceId": "puppy_hop_e_sheet_v2",
+   "alphaX": [
+    42,
+    230
+   ],
+   "alphaY": [
+    50,
+    208
+   ],
+   "noseTip": [
+    227,
+    91
+   ]
+  },
+  "74": {
+   "clip": "play",
+   "index": 0,
+   "ms": 110,
+   "dir": "E",
+   "sourceId": "puppy_play_e_sheet_v1",
+   "alphaX": [
+    40,
+    228
+   ],
+   "alphaY": [
+    48,
+    208
+   ],
+   "noseTip": [
+    227,
+    85
+   ]
+  },
+  "75": {
+   "clip": "play",
+   "index": 1,
+   "ms": 110,
+   "dir": "E",
+   "sourceId": "puppy_play_e_sheet_v1",
+   "alphaX": [
+    36,
+    218
+   ],
+   "alphaY": [
+    54,
+    208
+   ],
+   "noseTip": [
+    217,
+    119
+   ]
+  },
+  "76": {
+   "clip": "play",
+   "index": 2,
+   "ms": 110,
+   "dir": "E",
+   "sourceId": "puppy_play_e_sheet_v1",
+   "alphaX": [
+    28,
+    224
+   ],
+   "alphaY": [
+    62,
+    208
+   ],
+   "noseTip": [
+    215,
+    129
+   ]
+  },
+  "77": {
+   "clip": "play",
+   "index": 3,
+   "ms": 110,
+   "dir": "E",
+   "sourceId": "puppy_play_e_sheet_v1",
+   "alphaX": [
+    30,
+    220
+   ],
+   "alphaY": [
+    62,
+    208
+   ],
+   "noseTip": [
+    205,
+    115
+   ]
+  },
+  "78": {
+   "clip": "play",
+   "index": 4,
+   "ms": 110,
+   "dir": "E",
+   "sourceId": "puppy_play_e_sheet_v1",
+   "alphaX": [
+    32,
+    234
+   ],
+   "alphaY": [
+    58,
+    208
+   ],
+   "noseTip": [
+    221,
+    89
+   ]
+  },
+  "79": {
+   "clip": "play",
+   "index": 5,
+   "ms": 110,
+   "dir": "E",
+   "sourceId": "puppy_play_e_sheet_v1",
+   "alphaX": [
+    32,
+    214
+   ],
+   "alphaY": [
+    52,
+    208
+   ],
+   "noseTip": [
+    213,
+    85
+   ]
+  },
+  "80": {
+   "clip": "play",
+   "index": 6,
+   "ms": 110,
+   "dir": "E",
+   "sourceId": "puppy_play_e_sheet_v1",
+   "alphaX": [
+    34,
+    218
+   ],
+   "alphaY": [
+    42,
+    208
+   ],
+   "noseTip": [
+    217,
+    77
+   ]
+  },
+  "81": {
+   "clip": "play",
+   "index": 7,
+   "ms": 110,
+   "dir": "E",
+   "sourceId": "puppy_play_e_sheet_v1",
+   "alphaX": [
+    34,
+    230
+   ],
+   "alphaY": [
+    46,
+    208
+   ],
+   "noseTip": [
+    227,
+    83
+   ]
+  },
+  "82": {
+   "clip": "sleep",
+   "index": 0,
+   "ms": 420,
+   "dir": "E",
+   "sourceId": "puppy_sleep_e_v2",
+   "alphaX": [
+    32,
+    226
+   ],
+   "alphaY": [
+    116,
+    212
+   ],
+   "noseTip": [
+    219,
+    165
+   ]
+  },
+  "83": {
+   "clip": "sleep",
+   "index": 1,
+   "ms": 420,
+   "dir": "E",
+   "sourceId": "puppy_sleep_e_v2",
+   "alphaX": [
+    30,
+    224
+   ],
+   "alphaY": [
+    116,
+    212
+   ],
+   "noseTip": [
+    217,
+    165
+   ]
+  },
+  "84": {
+   "clip": "sleep",
+   "index": 2,
+   "ms": 420,
+   "dir": "E",
+   "sourceId": "puppy_sleep_e_v2",
+   "alphaX": [
+    30,
+    226
+   ],
+   "alphaY": [
+    116,
+    212
+   ],
+   "noseTip": [
+    219,
+    165
+   ]
+  },
+  "85": {
+   "clip": "sleep",
+   "index": 3,
+   "ms": 420,
+   "dir": "E",
+   "sourceId": "puppy_sleep_e_v2",
+   "alphaX": [
+    32,
+    226
+   ],
+   "alphaY": [
+    116,
+    212
+   ],
+   "noseTip": [
+    217,
+    165
+   ]
+  },
+  "86": {
+   "clip": "sleep",
+   "index": 4,
+   "ms": 420,
+   "dir": "E",
+   "sourceId": "puppy_sleep_e_v2",
+   "alphaX": [
+    30,
+    224
+   ],
+   "alphaY": [
+    116,
+    212
+   ],
+   "noseTip": [
+    217,
+    165
+   ]
+  },
+  "87": {
+   "clip": "sleep",
+   "index": 5,
+   "ms": 420,
+   "dir": "E",
+   "sourceId": "puppy_sleep_e_v2",
+   "alphaX": [
+    32,
+    226
+   ],
+   "alphaY": [
+    116,
+    212
+   ],
+   "noseTip": [
+    217,
+    165
+   ]
+  },
+  "88": {
+   "clip": "eat",
+   "index": 0,
+   "ms": 170,
+   "dir": "E",
+   "sourceId": "puppy_eat_e_sheet_v1",
+   "alphaX": [
+    46,
+    244
+   ],
+   "alphaY": [
+    48,
+    208
+   ],
+   "noseTip": [
+    241,
+    85
+   ]
+  },
+  "89": {
+   "clip": "eat",
+   "index": 1,
+   "ms": 170,
+   "dir": "E",
+   "sourceId": "puppy_eat_e_sheet_v1",
+   "alphaX": [
+    50,
+    240
+   ],
+   "alphaY": [
+    80,
+    208
+   ],
+   "noseTip": [
+    237,
+    107
+   ]
+  },
+  "90": {
+   "clip": "eat",
+   "index": 2,
+   "ms": 170,
+   "dir": "E",
+   "sourceId": "puppy_eat_e_sheet_v1",
+   "alphaX": [
+    48,
+    238
+   ],
+   "alphaY": [
+    78,
+    208
+   ],
+   "noseTip": [
+    233,
+    147
+   ]
+  },
+  "91": {
+   "clip": "eat",
+   "index": 3,
+   "ms": 170,
+   "dir": "E",
+   "sourceId": "puppy_eat_e_sheet_v1",
+   "alphaX": [
+    46,
+    246
+   ],
+   "alphaY": [
+    80,
+    208
+   ],
+   "noseTip": [
+    245,
+    145
+   ]
+  },
+  "92": {
+   "clip": "eat",
+   "index": 4,
+   "ms": 170,
+   "dir": "E",
+   "sourceId": "puppy_eat_e_sheet_v1",
+   "alphaX": [
+    48,
+    240
+   ],
+   "alphaY": [
+    44,
+    208
+   ],
+   "noseTip": [
+    239,
+    77
+   ]
+  },
+  "93": {
+   "clip": "eat",
+   "index": 5,
+   "ms": 170,
+   "dir": "E",
+   "sourceId": "puppy_eat_e_sheet_v1",
+   "alphaX": [
+    46,
+    244
+   ],
+   "alphaY": [
+    46,
+    208
+   ],
+   "noseTip": [
+    241,
+    85
+   ]
+  },
+  "94": {
+   "clip": "petted",
+   "index": 0,
+   "ms": 180,
+   "dir": "E",
+   "sourceId": "puppy_petted_e_v1",
+   "alphaX": [
+    54,
+    244
+   ],
+   "alphaY": [
+    48,
+    210
+   ],
+   "noseTip": [
+    241,
+    85
+   ]
+  },
+  "95": {
+   "clip": "petted",
+   "index": 1,
+   "ms": 180,
+   "dir": "E",
+   "sourceId": "puppy_petted_e_v1",
+   "alphaX": [
+    56,
+    234
+   ],
+   "alphaY": [
+    48,
+    208
+   ],
+   "noseTip": [
+    231,
+    75
+   ]
+  },
+  "96": {
+   "clip": "petted",
+   "index": 2,
+   "ms": 180,
+   "dir": "E",
+   "sourceId": "puppy_petted_e_v1",
+   "alphaX": [
+    48,
+    236
+   ],
+   "alphaY": [
+    48,
+    210
+   ],
+   "noseTip": [
+    235,
+    79
+   ]
+  },
+  "97": {
+   "clip": "petted",
+   "index": 3,
+   "ms": 180,
+   "dir": "E",
+   "sourceId": "puppy_petted_e_v1",
+   "alphaX": [
+    52,
+    238
+   ],
+   "alphaY": [
+    44,
+    208
+   ],
+   "noseTip": [
+    237,
+    69
+   ]
+  },
+  "98": {
+   "clip": "petted",
+   "index": 4,
+   "ms": 180,
+   "dir": "E",
+   "sourceId": "puppy_petted_e_v1",
+   "alphaX": [
+    54,
+    236
+   ],
+   "alphaY": [
+    46,
+    210
+   ],
+   "noseTip": [
+    235,
+    73
+   ]
+  },
+  "99": {
+   "clip": "petted",
+   "index": 5,
+   "ms": 180,
+   "dir": "E",
+   "sourceId": "puppy_petted_e_v1",
+   "alphaX": [
+    50,
+    242
+   ],
+   "alphaY": [
+    48,
+    210
+   ],
+   "noseTip": [
+    241,
+    85
+   ]
+  },
+  "100": {
+   "clip": "liedown",
+   "index": 0,
+   "ms": 200,
+   "dir": "E",
+   "sourceId": "puppy_lie_down_e_v1",
+   "alphaX": [
+    36,
+    232
+   ],
+   "alphaY": [
+    48,
+    208
+   ],
+   "noseTip": [
+    231,
+    89
+   ]
+  },
+  "101": {
+   "clip": "liedown",
+   "index": 1,
+   "ms": 200,
+   "dir": "E",
+   "sourceId": "puppy_lie_down_e_v1",
+   "alphaX": [
+    36,
+    232
+   ],
+   "alphaY": [
+    80,
+    210
+   ],
+   "noseTip": [
+    229,
+    143
+   ]
+  },
+  "102": {
+   "clip": "liedown",
+   "index": 2,
+   "ms": 200,
+   "dir": "E",
+   "sourceId": "puppy_lie_down_e_v1",
+   "alphaX": [
+    28,
+    232
+   ],
+   "alphaY": [
+    116,
+    210
+   ],
+   "noseTip": [
+    229,
+    159
+   ]
+  },
+  "103": {
+   "clip": "liedown",
+   "index": 3,
+   "ms": 200,
+   "dir": "E",
+   "sourceId": "puppy_lie_down_e_v1",
+   "alphaX": [
+    34,
+    222
+   ],
+   "alphaY": [
+    118,
+    210
+   ],
+   "noseTip": [
+    215,
+    165
+   ]
+  },
+  "104": {
+   "clip": "getup",
+   "index": 0,
+   "ms": 180,
+   "dir": "E",
+   "sourceId": "puppy_wake_e_v1",
+   "alphaX": [
+    32,
+    230
+   ],
+   "alphaY": [
+    118,
+    210
+   ],
+   "noseTip": [
+    223,
+    165
+   ]
+  },
+  "105": {
+   "clip": "getup",
+   "index": 1,
+   "ms": 180,
+   "dir": "E",
+   "sourceId": "puppy_wake_e_v1",
+   "alphaX": [
+    34,
+    230
+   ],
+   "alphaY": [
+    110,
+    210
+   ],
+   "noseTip": [
+    229,
+    155
+   ]
+  },
+  "106": {
+   "clip": "getup",
+   "index": 2,
+   "ms": 180,
+   "dir": "E",
+   "sourceId": "puppy_wake_e_v1",
+   "alphaX": [
+    32,
+    230
+   ],
+   "alphaY": [
+    62,
+    210
+   ],
+   "noseTip": [
+    229,
+    105
+   ]
+  },
+  "107": {
+   "clip": "getup",
+   "index": 3,
+   "ms": 180,
+   "dir": "E",
+   "sourceId": "puppy_wake_e_v1",
+   "alphaX": [
+    38,
+    228
+   ],
+   "alphaY": [
+    48,
+    210
+   ],
+   "noseTip": [
+    225,
+    89
+   ]
+  }
+ },
+ "sidecar": {
+  "walk_E#0": {
+   "mouth": [
+    224.835637,
+    101.333333
+   ],
+   "nose": [
+    225.327189,
+    90.519201
+   ],
+   "cell": 14
+  },
+  "walk_E#1": {
+   "mouth": [
+    222.132104,
+    101.333333
+   ],
+   "nose": [
+    223.115207,
+    90.519201
+   ],
+   "cell": 15
+  },
+  "walk_E#2": {
+   "mouth": [
+    220.65745,
+    99.367127
+   ],
+   "nose": [
+    221.149002,
+    89.044547
+   ],
+   "cell": 16
+  },
+  "walk_E#3": {
+   "mouth": [
+    219.920123,
+    100.841782
+   ],
+   "nose": [
+    220.903226,
+    90.02765
+   ],
+   "cell": 17
+  },
+  "walk_E#4": {
+   "mouth": [
+    224.835637,
+    103.791091
+   ],
+   "nose": [
+    225.81874,
+    93.46851
+   ],
+   "cell": 18
+  },
+  "walk_E#5": {
+   "mouth": [
+    222.623656,
+    102.316436
+   ],
+   "nose": [
+    223.606759,
+    91.502304
+   ],
+   "cell": 19
+  },
+  "walk_E#6": {
+   "mouth": [
+    220.65745,
+    102.807988
+   ],
+   "nose": [
+    221.640553,
+    92.485407
+   ],
+   "cell": 20
+  },
+  "walk_E#7": {
+   "mouth": [
+    220.411674,
+    102.316436
+   ],
+   "nose": [
+    221.394777,
+    91.502304
+   ],
+   "cell": 21
+  },
+  "walk_N#0": {
+   "mouth": null,
+   "nose": null,
+   "cell": 22
+  },
+  "walk_N#1": {
+   "mouth": null,
+   "nose": null,
+   "cell": 23
+  },
+  "walk_N#2": {
+   "mouth": null,
+   "nose": null,
+   "cell": 24
+  },
+  "walk_N#3": {
+   "mouth": null,
+   "nose": null,
+   "cell": 25
+  },
+  "walk_N#4": {
+   "mouth": null,
+   "nose": null,
+   "cell": 26
+  },
+  "walk_N#5": {
+   "mouth": null,
+   "nose": null,
+   "cell": 27
+  },
+  "walk_N#6": {
+   "mouth": null,
+   "nose": null,
+   "cell": 28
+  },
+  "walk_N#7": {
+   "mouth": null,
+   "nose": null,
+   "cell": 29
+  },
+  "walk_S#0": {
+   "mouth": [
+    128.0,
+    111.954481
+   ],
+   "nose": [
+    128.0,
+    103.761024
+   ],
+   "cell": 30
+  },
+  "walk_S#1": {
+   "mouth": [
+    127.772404,
+    111.044097
+   ],
+   "nose": [
+    127.772404,
+    102.85064
+   ],
+   "cell": 31
+  },
+  "walk_S#2": {
+   "mouth": [
+    128.227596,
+    111.499289
+   ],
+   "nose": [
+    128.227596,
+    103.305832
+   ],
+   "cell": 32
+  },
+  "walk_S#3": {
+   "mouth": [
+    128.0,
+    111.954481
+   ],
+   "nose": [
+    128.0,
+    103.761024
+   ],
+   "cell": 33
+  },
+  "walk_S#4": {
+   "mouth": [
+    128.910384,
+    111.044097
+   ],
+   "nose": [
+    128.910384,
+    102.85064
+   ],
+   "cell": 34
+  },
+  "walk_S#5": {
+   "mouth": [
+    128.227596,
+    111.044097
+   ],
+   "nose": [
+    128.227596,
+    102.85064
+   ],
+   "cell": 35
+  },
+  "walk_S#6": {
+   "mouth": [
+    128.455192,
+    113.775249
+   ],
+   "nose": [
+    128.455192,
+    105.581792
+   ],
+   "cell": 36
+  },
+  "walk_S#7": {
+   "mouth": [
+    128.455192,
+    111.044097
+   ],
+   "nose": [
+    128.455192,
+    102.85064
+   ],
+   "cell": 37
+  },
+  "run_E#0": {
+   "mouth": [
+    234.364922,
+    108.876945
+   ],
+   "nose": [
+    236.175389,
+    96.203678
+   ],
+   "cell": 38
+  },
+  "run_E#1": {
+   "mouth": [
+    233.912306,
+    107.519095
+   ],
+   "nose": [
+    235.722772,
+    95.298444
+   ],
+   "cell": 39
+  },
+  "run_E#2": {
+   "mouth": [
+    233.912306,
+    107.971711
+   ],
+   "nose": [
+    235.270156,
+    95.751061
+   ],
+   "cell": 40
+  },
+  "run_E#3": {
+   "mouth": [
+    233.23338,
+    109.782178
+   ],
+   "nose": [
+    235.043847,
+    97.561528
+   ],
+   "cell": 41
+  },
+  "run_E#4": {
+   "mouth": [
+    233.459689,
+    108.424328
+   ],
+   "nose": [
+    234.817539,
+    96.203678
+   ],
+   "cell": 42
+  },
+  "run_E#5": {
+   "mouth": [
+    233.23338,
+    108.876945
+   ],
+   "nose": [
+    234.591231,
+    96.656294
+   ],
+   "cell": 43
+  },
+  "run_N#0": {
+   "mouth": null,
+   "nose": null,
+   "cell": 44
+  },
+  "run_N#1": {
+   "mouth": null,
+   "nose": null,
+   "cell": 45
+  },
+  "run_N#2": {
+   "mouth": null,
+   "nose": null,
+   "cell": 46
+  },
+  "run_N#3": {
+   "mouth": null,
+   "nose": null,
+   "cell": 47
+  },
+  "run_N#4": {
+   "mouth": null,
+   "nose": null,
+   "cell": 48
+  },
+  "run_N#5": {
+   "mouth": null,
+   "nose": null,
+   "cell": 49
+  },
+  "run_S#0": {
+   "mouth": [
+    126.948521,
+    111.964951
+   ],
+   "nose": [
+    126.948521,
+    101.099671
+   ],
+   "cell": 50
+  },
+  "run_S#1": {
+   "mouth": [
+    128.175246,
+    111.964951
+   ],
+   "nose": [
+    128.175246,
+    101.099671
+   ],
+   "cell": 51
+  },
+  "run_S#2": {
+   "mouth": [
+    127.299014,
+    112.665936
+   ],
+   "nose": [
+    127.299014,
+    101.800657
+   ],
+   "cell": 52
+  },
+  "run_S#3": {
+   "mouth": [
+    127.474261,
+    113.016429
+   ],
+   "nose": [
+    127.474261,
+    102.15115
+   ],
+   "cell": 53
+  },
+  "run_S#4": {
+   "mouth": [
+    127.299014,
+    113.016429
+   ],
+   "nose": [
+    127.299014,
+    102.501643
+   ],
+   "cell": 54
+  },
+  "run_S#5": {
+   "mouth": [
+    127.474261,
+    113.366922
+   ],
+   "nose": [
+    127.474261,
+    102.501643
+   ],
+   "cell": 55
+  },
+  "stand_E#0": {
+   "mouth": [
+    222.227902,
+    99.970181
+   ],
+   "nose": [
+    223.42066,
+    88.894569
+   ],
+   "cell": null
+  },
+  "stand_N#0": {
+   "mouth": null,
+   "nose": null,
+   "cell": null
+  },
+  "stand_S#0": {
+   "mouth": [
+    129.458967,
+    106.682877
+   ],
+   "nose": [
+    129.458967,
+    98.253293
+   ],
+   "cell": null
+  }
+ }
+}

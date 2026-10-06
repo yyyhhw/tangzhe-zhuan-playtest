@@ -9,11 +9,16 @@ results = []
 def check(c, msg): results.append((bool(c), msg)); print(('  ✓ ' if c else '  ✗ ') + msg)
 # 在页面里按帧推进并逐帧检查：不压家具、不瞬移
 # p3：页面里逐帧量占位小狗每帧的像素外形（不看 manifest.body，独立核对），算屏幕上的鼻尖 / 尾巴范围
-P3_SETUP = """() => { if (window.__p3) return true; const P = __pet, M = P.M, PE = P.PE, C = PE.CFG;
-  const bb = {}; for (const [name, c] of Object.entries(M.clips)) bb[name] = c.frames.map((f, i) => { const cv = document.createElement('canvas'); cv.width = 256; cv.height = 256; const x = cv.getContext('2d');
-    PetPuppy.drawFrame(x, M, name, i); const d = x.getImageData(0, 0, 256, 256).data; let a = 999, b = -1;
-    for (let y = 0; y < 256; y++) for (let xx = 0; xx < 256; xx++) if (d[(y * 256 + xx) * 4 + 3] > 8) { if (xx < a) a = xx; if (xx > b) b = xx; } return [a, b + 1]; });
-  const K = 1.8 / 256, PX = { E: [46, 217], N: [92, 164], S: [88, 169] };
+P3_SETUP = """async () => { if (window.__p3) return true; const P = __pet, M = P.M, PE = P.PE, C = PE.CFG;
+  // p5：逐帧量真图——在页面里加载 manifest 指向的真图集，把每个 cell 画出来量 alpha>8 的左右范围（概念 256 坐标），不看 manifest.body
+  const im = new Image(); im.src = 'art/' + M.atlas.image + '?v=p5'; await im.decode();
+  const cv = document.createElement('canvas'); cv.width = 128; cv.height = 128; const x = cv.getContext('2d', { willReadFrequently: true });
+  const bb = {}; for (const [name, c] of Object.entries(M.clips)) bb[name] = c.frames.map((f) => { const r = PetArt.cellRect(M, f.cell); x.clearRect(0, 0, 128, 128); x.drawImage(im, r.sx, r.sy, r.s, r.s, 0, 0, 128, 128);
+    const d = x.getImageData(0, 0, 128, 128).data; let a = 999, b = -1;
+    for (let y = 0; y < 128; y++) for (let xx = 0; xx < 128; xx++) if (d[(y * 128 + xx) * 4 + 3] > 8) { if (xx < a) a = xx; if (xx > b) b = xx; } return [a * 2, (b + 1) * 2]; });
+  const K = M.runtime.displayTiles / 256, PX = { E: [256, 0], N: [256, 0], S: [256, 0] };
+  for (const [name, c] of Object.entries(M.clips)) bb[name].forEach(e => { const u = PX[c.dir]; u[0] = Math.min(u[0], e[0]); u[1] = Math.max(u[1], e[1]); });
+  window.__p5px = PX;
   const visDir = (w) => PetArt.IN_PLACE.includes(w.dog.anim.name) ? (w.dog.dir === 'W' ? 'W' : 'E') : w.dog.dir;
   window.__p3 = { bb, visDir,
     // 地面身体盒（逐帧量出的外形 → 格）压到实体家具
@@ -50,6 +55,10 @@ with sync_playwright() as p:
         pg.wait_for_function("__pet.imagesReady().ok === __pet.imagesReady().total", timeout=15000)
         pg.wait_for_timeout(600)
         pg.evaluate(P3_SETUP)
+        if devname == 'iPhone SE':
+            m5 = pg.evaluate("() => ({ px: window.__p5px, body: __pet.M.body, mode: __pet.artMode, ph: __pet.M.placeholder, n: Object.values(__p3.bb).reduce((a, v) => a + v.length, 0) })")
+            check(m5['mode'] == 'atlas' and m5['ph'] is False and m5['n'] == 108, f"p5 真图集已加载、按格子取帧（{m5['mode']}，逐帧量了 {m5['n']} 帧）")
+            check(all(m5['px'][d][0] >= m5['body'][d][0] and m5['px'][d][1] <= m5['body'][d][1] for d in 'ENS'), f"p5 页面里逐帧量真图的外形都在 manifest.body 里：量出 {m5['px']} ⊆ {m5['body']}")
         vp = pg.viewport_size
         lay = pg.evaluate("""() => { const r = (s) => document.querySelector(s).getBoundingClientRect(); return { cv: r('#room'), move: r('#bMove'), call: r('#bCall'), ball: r('#bBall'), sw: document.documentElement.scrollWidth, iw: innerWidth, label: r('#label') }; }""")
         check(lay['cv']['left'] >= 0 and lay['cv']['right'] <= vp['width'] + 0.5, f'房间画布在屏幕宽度内（{lay["cv"]["width"]:.0f}×{lay["cv"]["height"]:.0f}）')

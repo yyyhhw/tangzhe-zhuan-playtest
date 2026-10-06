@@ -18,7 +18,14 @@ WATCH = """() => { if (window.__pw) return; const PE = window.PetEngine; window.
   const f = () => { const w = __tzz.pet.w; if (w) { __pw.frames++; if (PE.bodyOverlap(w)) __pw.overlap++; if (w.dog.x < 0 || w.dog.y < 0 || w.dog.x > w.cols || w.dog.y > w.rows) __pw.outside++;
     const el = document.querySelector('#roomFloor .pet-dog'); if (el) __pw.drawn++; __pw.acts[w.dog.activity] = 1; } requestAnimationFrame(f); }; requestAnimationFrame(f); }"""
 # p4a：在页面里逐帧推进，独立按逐帧量出的外形（不读 manifest.body）查身体盒有没有压家具 / 出界，记下播过的动作
-GSTEP = """(sec) => { const PE = window.PetEngine, w = __tzz.pet.w, C = PE.CFG, K = 1.8 / 256, PX = { E: [46, 217], N: [92, 164], S: [88, 169] };
+GSTEP = """async (sec) => { const PE = window.PetEngine, w = __tzz.pet.w, C = PE.CFG, M = __tzz.pet.M, K = M.runtime.displayTiles / 256;
+  // p5：独立外形 = 页面里加载真图集逐 cell 量 alpha>8 左右范围的并集（不读 manifest.body），只量一次
+  if (!window.__gpx) { const im = new Image(); im.src = '../art/' + M.atlas.image + '?v=p5'; await im.decode(); const cv = document.createElement('canvas'); cv.width = cv.height = 128; const x = cv.getContext('2d', { willReadFrequently: true });
+    const U = { E: [256, 0], N: [256, 0], S: [256, 0] }; let n = 0;
+    for (const c of Object.values(M.clips)) for (const f of c.frames) { const r = window.PetArt.cellRect(M, f.cell); x.clearRect(0, 0, 128, 128); x.drawImage(im, r.sx, r.sy, r.s, r.s, 0, 0, 128, 128); const d = x.getImageData(0, 0, 128, 128).data; let a = 999, b = -1;
+      for (let y = 0; y < 128; y++) for (let xx = 0; xx < 128; xx++) if (d[(y * 128 + xx) * 4 + 3] > 8) { if (xx < a) a = xx; if (xx > b) b = xx; } U[c.dir][0] = Math.min(U[c.dir][0], a * 2); U[c.dir][1] = Math.max(U[c.dir][1], (b + 1) * 2); n++; }
+    window.__gpx = U; window.__gpxN = n; }
+  const PX = window.__gpx;
   const vis = () => window.PetArt.IN_PLACE.includes(w.dog.anim.name) ? (w.dog.dir === 'W' ? 'W' : 'E') : w.dog.dir;
   const hit = () => { const dir = vis(), e = PX[dir === 'W' ? 'E' : dir]; let l = (128 - e[0]) * K, r = (e[1] - 128) * K; if (dir === 'W') [l, r] = [r, l]; const d = w.dog;
     if (d.x - l < -1e-6 || d.x + r > w.cols + 1e-6 || d.y - C.R < -1e-6 || d.y + C.R > w.rows + 1e-6) return true;
@@ -238,6 +245,18 @@ with sync_playwright() as p:
         check(not errs, '控制台 0 报错 / 0 警告 / 0 坏请求' + ('' if not errs else '：' + '；'.join(errs[:4])))
         # ---------- 只在一台上跑：主线预览读这份档不丢小狗；换正式图集接口 ----------
         if devname == 'iPhone 15':
+            # p5 / 熊大 22:08：宠物页的 77 头像也要带 12d2 的单图缓存号（ART_ONE），不能再请求 ?v=11
+            pg.evaluate("() => __tzz.setTab('ceo')"); pg.wait_for_timeout(500)
+            fs5 = pg.evaluate("() => [...document.querySelectorAll('img')].map(i => i.getAttribute('src') || '').filter(s => /face_c77/.test(s))")
+            check(fs5 and all(x.endswith('face_c77.webp?v=12d2') and x.startswith('../../art/') for x in fs5), f'p5 宠物页 77 头像请求 ../../art/face_c77.webp?v=12d2（不再是 ?v=11）{fs5[:2]}')
+            # p5：12d1 异常钱包（主档余额 1e20）→ 买狗被拒，原档逐字节不变
+            raw = pg.evaluate("() => localStorage.getItem('" + SAVE + "')"); bad = json.loads(raw); bad.pop('pet', None); bad['coins'] = 1e20; bad['coinFrac'] = 0; bad['rev'] = (bad.get('rev') or 0) + 100000; badJ = json.dumps(bad)   # rev 抬高：旧页 pagehide 存盘不会盖掉
+            pg.evaluate("(v) => { localStorage.clear(); localStorage.setItem('" + SAVE + "', v); }", badJ); boot(pg)
+            u5 = pg.evaluate("() => { const r0 = __tzz.saveBlocked; __tzz.homeAct('homePetBuy', 'c77'); const st = __tzz.state; return { blk: r0, uns: __tzz.loadInfo && __tzz.loadInfo.unsafe, pet: 'pet' in st, coins: st.coins, modal: __tzz.modalOpen(), toast: document.getElementById('toast').textContent, api: __tzz.pet.PG.buy(st, __tzz.E, 'c77', Date.now(), __tzz.pet.M) }; }")
+            pg.wait_for_timeout(5600); after5 = pg.evaluate("() => localStorage.getItem('" + SAVE + "')")
+            check(u5['blk'] and u5['uns'] and not u5['pet'] and u5['coins'] == 1e20 and not u5['modal'] and '金币数据异常' in u5['toast'] and not u5['api']['ok'] and after5 == badJ, f"p5 异常钱包（余额 1e20）：商城点买狗 → 提示金币数据异常、不弹购买窗；接口也拒；6 秒后原档逐字节不变 {u5['toast']}")
+            good = json.loads(raw); good['rev'] = (good.get('rev') or 0) + 200000
+            pg.evaluate("(v) => { localStorage.clear(); localStorage.setItem('" + SAVE + "', v); }", json.dumps(good)); boot(pg)
             pg.evaluate("() => __tzz.persist()")
             pg.goto(PREVIEW); pg.wait_for_function("window.__tzz && __tzz.state", timeout=20000); pg.wait_for_timeout(800)
             pv = pg.evaluate("() => { __tzz.persist(); const raw = JSON.parse(localStorage.getItem('" + SAVE + "')); return { pet: raw.pet && raw.pet.home, mem: !!__tzz.state.pet, petGame: typeof window.PetGame }; }")

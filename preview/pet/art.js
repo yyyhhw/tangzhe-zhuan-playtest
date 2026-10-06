@@ -58,7 +58,9 @@
         frameCount++;
         useCell(f.cell, name + '#' + i);
         if (!(f.ms > 0 && f.ms <= 2000)) err(name + '#' + i + ' 时长不对：' + f.ms);
-        if (!(Array.isArray(f.mouth) && f.mouth.length === 2 && f.mouth.every(v => v >= 0 && v <= 256))) err(name + '#' + i + ' 缺嘴巴锚点');
+        // p5：北向（背对镜头）嘴被头挡住，真图 sidecar 给的是 null —— 只允许 N 向帧 mouth:null + mouthHidden:true（叼球时不画球）；其余必须是数字
+        if (f.mouth === null && f.mouthHidden === true && c.dir === 'N') return;
+        if (!(Array.isArray(f.mouth) && f.mouth.length === 2 && f.mouth.every(v => Number.isFinite(v) && v >= 0 && v <= 256))) err(name + '#' + i + ' 缺嘴巴锚点');
       });
     }
     for (const name of Object.keys(clips)) if (!(name in REQUIRED)) err('多余片段 ' + name + '（不在约定里）');

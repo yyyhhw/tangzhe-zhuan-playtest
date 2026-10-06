@@ -383,5 +383,33 @@ section('12. 静态检查：存档键 / 主线不受影响');
   ok(/PetGame\.norm\(m\.st, E\)/.test(app) && /petBeforePersist\(\);/.test(app), '读档 norm / 存档 beforePersist 两个钩子在');
 }
 
-console.log(`\n宠物 p4/p4b/p4c 游戏接入：${pass} 过 / ${fail} 失败`);
+section('13. p5：买狗走预览统一钱包（12d addCoins / spendCoins；12d1 异常钱包一律拒绝）');
+{
+  const pets = (st) => ('pet' in st ? 1 : 0);
+  let st = fresh(); st.coins = 3000; st.coinFrac = 0.5;
+  let r = PG.buy(st, E, 'c77', T0, M); ok(r.ok && r.cost === 3000 && st.coins === 0 && st.coinFrac === 0.5 && pets(st) === 1, '余额正好 3000（+0.5 零头）：买到，整数余额精确 −3000、零头不动');
+  st = fresh(); st.coins = 2999; st.coinFrac = 0.99; r = PG.buy(st, E, 'c77', T0, M); ok(!r.ok && r.why === '金币不够' && st.coins === 2999 && st.coinFrac === 0.99 && !pets(st), '2999 + 0.99 零头：不够（整数比较，零头不帮凑），不扣、不写 pet');
+  for (const v of [NaN, Infinity, -1, 'abc', null, undefined, 1e20, Number.MAX_SAFE_INTEGER + 1, 2 ** 60]) {
+    st = fresh(); st.coins = v; const before = JSON.stringify({ c: st.coins, p: 'pet' in st });
+    r = PG.buy(st, E, 'c77', T0, M);
+    ok(!r.ok && r.why === '金币数据异常' && JSON.stringify({ c: st.coins, p: 'pet' in st }) === before && Object.is(st.coins, v), `钱包异常（coins = ${String(v)}）：买狗被拒、余额原样、不写 pet`);
+  }
+  st = fresh(); st.coins = 5e15 + 1; r = PG.buy(st, E, 'c77', T0, M); ok(r.ok && st.coins === 5e15 + 1 - 3000 && pets(st) === 1, '旧档中间段余额 5e15+1：能买，精确 −3000');
+  st = fresh(); st.coins = Number.MAX_SAFE_INTEGER; r = PG.buy(st, E, 'c77', T0, M); ok(r.ok && st.coins === Number.MAX_SAFE_INTEGER - 3000, '余额 = MAX_SAFE_INTEGER：能买，精确 −3000（扣款断言过）');
+  // 12d1：读档发现主档余额超安全整数 → loadSave 异常模式（blocked），这份状态买狗必须被拒
+  const raw = fresh(); raw.coins = 1e20; raw.rev = 5; const L = E.loadSave(JSON.stringify(raw), null, T0); PG.norm(L.st, E);
+  r = PG.buy(L.st, E, 'c77', T0, M); ok(L.blocked && L.unsafe && !r.ok && r.why === '金币数据异常' && L.st.coins === 1e20 && !pets(L.st), '12d1 异常钱包模式（主档余额 1e20，loadSave blocked）：买狗被拒，余额 / 宠物都不变');
+  const raw2 = fresh(); raw2.coins = null; const L2 = E.loadSave(JSON.stringify(raw2), null, T0); PG.norm(L2.st, E);
+  r = PG.buy(L2.st, E, 'c77', T0, M); ok(L2.blocked && !r.ok && !pets(L2.st), '12d 坏档不保存模式（coins = null 没备份）：买狗被拒（读档后 coins 归 0 的内存态也买不起）');
+  // 买完写档前的校验：validState / checkSave 都过（pet 字段不影响金币校验）；loadSave 往返 pet 保留
+  st = fresh(); st.coins = 9000; PG.buy(st, E, 'c77', T0, M); const back = E.loadSave(JSON.stringify(st), null, T0 + 1);
+  ok(E.validState(st).length === 0 && E.checkSave(JSON.parse(JSON.stringify(st))).length === 0 && back.source === 'main' && back.st.pet && back.st.pet.home === 'c77' && back.st.coins === 6000, '买完：validState / checkSave 通过；loadSave 往返小狗和余额都在');
+  const pg = fs.readFileSync(path.join(__dirname, 'petgame.js'), 'utf8'), app = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
+  ok(!/\.coins\s*-=/.test(pg) && /E\.spendCoins\(st, PET\.price\)/.test(pg) && /E\.walletOk\(st\)/.test(pg), 'petgame.js 不再直接改 coins：扣钱只走 E.spendCoins，先查 E.walletOk');
+  ok(/E\.loadSave\(/.test(app) && /if \(m\.blocked\) saveBlocked = true;\n  if \(window\.PetGame\) PetGame\.norm\(m\.st, E\);/.test(app) && /E\.validState\(state\)/.test(app), 'game/app.js 基于 12d2：读档 E.loadSave（异常 / 不保存模式照旧）后才 norm 小狗，写档前 validState + 备份轮换');
+  ok(/const ART_ONE = \{ face_c77:'12d2' \};/.test(app) && /`\.\.\/\.\.\/art\/face_\$\{id\}\.webp\?v=\$\{artV\('face_' \+ id\)\}`/.test(app) && !/face_\$\{id\}\.webp\?v=\$\{ART_V\}/.test(app), '熊大 22:08：game/app.js 基于 12d2 带上 ART_ONE，77 头像地址 = ../../art/face_c77.webp?v=12d2（不再 ?v=11）');
+  ok(/E\.walletOk\(state\)/.test(app) && /E\.canAfford\(state, P\.price\)/.test(app), '购买弹窗：余额 / 能不能买走 E.balance / E.canAfford，钱包异常不弹购买窗');
+}
+
+console.log(`\n宠物 p4/p4b/p4c/p5 游戏接入：${pass} 过 / ${fail} 失败`);
 process.exit(fail ? 1 : 0);

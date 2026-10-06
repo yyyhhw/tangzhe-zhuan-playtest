@@ -54,10 +54,14 @@
     if (!E.homeOpen(st, home)) return { ok: false, why: '这位 CEO 还没加入' };
     if (!M) return { ok: false, why: '小狗还没准备好，稍后再试' };
     if (!hasRoom(st, E, home, M)) return { ok: false, why: NO_ROOM, noRoom: true };
-    if (!(st.coins >= PET.price)) return { ok: false, why: '金币不够' };
-    st.coins -= PET.price;
+    // p5：扣钱走预览统一钱包（12d / 12d1）：钱包异常（坏值 / 余额超安全整数）一律拒绝；spendCoins 自带「旧余额 − 价格 = 新余额」精确断言，失败回滚
+    if (typeof E.spendCoins !== 'function' || typeof E.walletOk !== 'function') return { ok: false, why: '金币数据异常' };
+    if (!E.walletOk(st)) return { ok: false, why: '金币数据异常', badWallet: true };
+    if (!E.canAfford(st, PET.price)) return { ok: false, why: '金币不够' };
+    const r = E.spendCoins(st, PET.price);
+    if (!r.ok) return { ok: false, why: r.why || '金币不够' };
     st.pet = { v: PV, owned: true, home, boughtAt: nowMs || 0, eng: null };
-    return { ok: true, cost: PET.price, home };
+    return { ok: true, cost: r.cost, home };
   }
   function move(st, E, home) {
     if (!owned(st)) return { ok: false, why: '还没有小狗' };
@@ -190,9 +194,9 @@
       ctx.restore();
       ctx.save(); ctx.translate(gx, gy - d.z * tile * dpr); ctx.scale(mirror ? -k : k, k); ctx.translate(-128, -208);
       const carried = b.state === 'carried', br = PE.CFG.BALL_R * 256 / M.runtime.displayTiles;
-      if (carried && d.dir === 'N') ballPath(ctx, frm.mouth[0], frm.mouth[1], br);
+      if (carried && d.dir === 'N' && frm.mouth) ballPath(ctx, frm.mouth[0], frm.mouth[1], br);   // p5：真图北向嘴被挡（mouthHidden）→ 不画球
       if (atlas) { const c = PA.cellRect(M, frm.cell); ctx.drawImage(atlas, c.sx, c.sy, c.s, c.s, 0, 0, 256, 256); } else PP.drawFrame(ctx, M, name, fi);
-      if (carried && d.dir !== 'N') ballPath(ctx, frm.mouth[0], frm.mouth[1] + 4, br);
+      if (carried && d.dir !== 'N' && frm.mouth) ballPath(ctx, frm.mouth[0], frm.mouth[1] + 4, br);
       ctx.restore();
       // 爱心 / 问号 / 睡觉 z
       let fxs = '';

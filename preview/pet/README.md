@@ -1,4 +1,4 @@
-# 宠物原型 p3 / p4 / p4a / p4b / p4c（preview/pet/）
+# 宠物原型 p3 / p4 / p4a / p4b / p4c / p5（preview/pet/）
 
 > **p4**：小狗接进完整游戏流程 → `game/`（预览快照副本 + 小狗）。见下方「p4」。p4 / p4a / p4b / p4c 需单独验收后才并主线。
 
@@ -34,6 +34,14 @@ URL 参数：`?fresh=1` 不读存档；`?seed=N` 固定随机；`?debug=1` 画�
 - 原地动作（抚摸 / 张望 / 闻 / 蹦 / 拨球 / 吃 / 趴下 / 睡 / 起身 / 叼放球）只画侧面，开播前统一过「侧身守卫」（engine `sideGuard`）：当前侧面身体盒放得下 → 播；另一侧放得下 → 换那侧播；两侧都放不下 → 自主类动作（闻 / 蹦 / 吃 / 趴下睡）先按路程找整间屋最近、走得到的能转身处（网格 Dijkstra），挪过去再播；还不行（死胡同 / 被围住）→ 保持原朝向（南北站姿）用替代：抚摸 = 站着摇尾巴（照样冒爱心、加亲密），放球 = 直接放下，睡觉 = 站着打盹（照样回精力），其余取消。抚摸 / 呼唤 / 抛球 / 自主行为全走这一处（游戏 `game/` 共用同一个 engine.js，一起修好）。
 - 顺修：窝走不到（死胡同里）就原地休息，不再反复「走回窝 → 走不到 → 愣一下」。
 - 回归：引擎 section 20（1 格竖走廊 / 横走廊 / 死胡同 / 边界格：点小狗、按钮摸、呼唤、抛球、困了、自主 2–3 分钟，逐帧独立身体盒），原型 e2e + 游戏 e2e 各加 4 个场景（真点屏幕上的小狗；原型同时查屏幕像素）。旧代码（12e1b29）上：引擎 14 挂、原型 e2e 27 挂、游戏 e2e 30 挂。
+
+## p5：熊大 v3 真图（候选）
+
+- 素材：`home-transfer-20261006` 分支 3fb4756 `transfer/batch3_puppy/`（native PNG zip sha256 40fe9351…；**素材分支别删**）。仍是候选：嘴巴点目测 / 推算，N 向嘴被挡（`mouth:null` + `mouthHidden:true`，叼球时北向不画球）。
+- 图集：`tools/build_atlas.py <native 目录> art/` → `art/puppy_atlas_v3.webp`（2048×1024，16×8 格 128px，手机用）+ `art/puppy_atlas_v3.json`（逐帧 alpha 外形 / 鼻尖）；`tools/gen_manifest_v3.py` → `art/manifest.json`（`placeholder:false`、`displayTiles 1.15`、`body` = 逐帧真图外形并集、hop `bakedLift`）。
+- 碰撞只用地面 X 向身宽（manifest.body）+ 地面深度 ±0.22，不看头高；竖身半宽 ≤ 0.375 格，1 格缝照样过。
+- 买狗走预览统一钱包：`E.walletOk` / `E.canAfford` / `E.spendCoins`；12d1 异常钱包（余额超安全整数等）拒买、不弹窗、不写盘。并主预览时换 12d3 统一交易入口。
+- `game/` 由 `tools/game/mkgame.py` 基于 12d2 重新生成，带上 `ART_ONE`：77 头像 `face_c77.webp?v=12d2`。
 
 ## p4c 修复（熊大 15:20 p4b 复核：两处合法读档边界）
 

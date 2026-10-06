@@ -10,8 +10,12 @@ const clone = (o) => JSON.parse(JSON.stringify(o));
 const world = (seed, room, start) => PE.createWorld({ catalog: EC.FURNITURE, room: room || PR.ROOM, interact: PR.INTERACT, manifest: M, seed: seed || 1, start });
 const emptyRoom = (items) => ({ cols: 10, rows: 8, wallRows: 2, front: { x: 5, y: 7.5 }, bed: { x: 0.25, y: 0.3, w: 1.5, h: 1.05 }, bowl: { x: 9.0, y: 0.4, w: 0.62, h: 0.42 }, items: items || [], wall: [] });
 // p3 身体盒（独立于引擎实现，直接用 p3 逐帧量出的占位小狗外形，源帧像素 → 格）：鼻尖 / 尾巴尖 / 耳朵都算
-const BODY_PX = { E: [46, 217], N: [92, 164], S: [88, 169] }, PXK = 1.8 / 256;
-const BOX = { E: { l: (128 - 46) * PXK, r: (217 - 128) * PXK }, N: { l: (128 - 92) * PXK, r: (164 - 128) * PXK }, S: { l: (128 - 88) * PXK, r: (169 - 128) * PXK } };
+// p5：独立核对用的外形不读 manifest.body，而是读 build_atlas.py 从真图集逐帧量出的 alpha 横向范围（art/puppy_atlas_v3.json），按 manifest 的 displayTiles 换算
+const ATL = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, 'art', 'puppy_atlas_v3.json'), 'utf8')).frames;
+const BODY_PX = { E: [256, 0], N: [256, 0], S: [256, 0] };
+for (const f of Object.values(ATL)) { const b = BODY_PX[f.dir]; b[0] = Math.min(b[0], f.alphaX[0]); b[1] = Math.max(b[1], f.alphaX[1]); }
+const PXK = M.runtime.displayTiles / 256;
+const BOX = {}; for (const d of ['E', 'N', 'S']) BOX[d] = { l: (128 - BODY_PX[d][0]) * PXK, r: (BODY_PX[d][1] - 128) * PXK };
 BOX.W = { l: BOX.E.r, r: BOX.E.l };
 const visDir = (w) => PA.IN_PLACE.includes(w.dog.anim.name) ? (w.dog.dir === 'W' ? 'W' : 'E') : w.dog.dir;
 function boxOf(x, y, dir) { const b = BOX[dir]; return { x: x - b.l, y: y - C.R, w: b.l + b.r, h: 2 * C.R }; }
@@ -241,7 +245,12 @@ section('13. 前后遮挡 / 跳起');
   w.dog.y = 4.4; o = PE.drawOrder(w).map(x => x.kind); ok(o.indexOf('dog') > o.indexOf('item'), '小狗在桌子前面 → 后画（挡住桌子）');
   const w2 = world(15, emptyRoom([]), { x: 5, y: 4 }); w2.dog.dir = 'E'; w2.dog.plan = [{ k: 'anim', clip: 'hop' }, { k: 'wait', dur: 5 }]; let maxZ = 0, y0 = w2.dog.y, ymove = 0;
   run(w2, 0.7, (w) => { maxZ = Math.max(maxZ, w.dog.z); ymove = Math.max(ymove, Math.abs(w.dog.y - y0)); });
-  ok(maxZ > 0.2 && ymove === 0 && w2.dog.z === 0, `跳高单独算（最高 ${maxZ.toFixed(2)} 格），落地点 / 影子不动`); }
+  // p5：真图 hop 的腾空已经画进帧里（bakedLift，虚拟地面），引擎不能再抬一次（熊大包说明：不要叠第二条跳跃弧线）
+  ok(M.clips.hop.bakedLift === true && maxZ === 0 && ymove === 0 && w2.dog.z === 0, `跳起：真图帧里自带腾空，引擎不再额外抬高（最高 ${maxZ.toFixed(2)} 格），落地点 / 影子不动`);
+  const air = M.clips.hop.frames.map(f => ATL[f.cell].alphaY[1]); ok(Math.min(...air) < 200 && air[0] >= 206, `跳起：真图 hop 有腾空帧（脚底最高到 y=${Math.min(...air)}，第 0 帧落地 y=${air[0]}）`);
+  const w3 = world(15, emptyRoom([]), { x: 5, y: 4 }), M2 = JSON.parse(JSON.stringify(M)); delete M2.clips.hop.bakedLift;
+  const w4 = PE.createWorld({ catalog: EC.FURNITURE, room: emptyRoom([]), interact: PR.INTERACT, manifest: M2, seed: 15, start: { x: 5, y: 4 } }); w4.dog.dir = 'E'; w4.dog.plan = [{ k: 'anim', clip: 'hop' }, { k: 'wait', dur: 5 }]; let mz4 = 0;
+  run(w4, 0.7, (w) => { mz4 = Math.max(mz4, w.dog.z); }); ok(mz4 > 0.2 && w4.dog.z === 0, `占位图（没有 bakedLift）照旧由引擎算跳高（最高 ${mz4.toFixed(2)} 格）`); }
 
 section('14. 离线 / 存档');
 { const w = world(16); run(w, 20); const aff = w.dog.affinity = 47; w.dog.energy = 30;
@@ -511,13 +520,14 @@ section('20. p4a：转不开身不播侧身动作（1 格竖走廊 / 横走廊 /
     const c2 = clips(w, 180); ok(clean(c2.r), '死胡同自主活动 3 分钟不穿墙（' + JSON.stringify(c2.r) + '）');
     ok(Object.keys(c2.seen).every(k => !PA.IN_PLACE.includes(k)), '死胡同里一个侧身动作都没播（' + Object.keys(c2.seen).join(',') + '）');
   }
-  // 边界格：空房间贴左墙（x=0.5 时左右侧身都出界）、贴墙 1 格宽的竖条（墙 + 一列家具）
+  // 边界格：空房间贴左墙（x=XB 时左右侧身都出界；p5 起按真图身体盒算：XB 在竖身半宽和侧身短边之间）、贴墙 1 格宽的竖条（墙 + 一列家具）
   {
-    const w = world(204, mk(8, 6, [])); place(w, 0.5, 2.5, 'N');
-    ok(!PE.bodyFree(w, 0.5, 2.5, 'E') && !PE.bodyFree(w, 0.5, 2.5, 'W') && PE.bodyFree(w, 0.5, 2.5, 'V'), '边界格 x=0.5：竖着站得下，侧身两边都出界');
-    w.dog.lastGain = -1e9; PE.pet(w, 'tap'); let c = clips(w, 2.5, (w) => w.dog.activity === 'petted'); ok(clean(c.r) && (!c.seen.petted || w.dog.x > 0.6), '边界格点小狗：不出界（旁边 1.8 格内有宽敞处就挪一小步再摸，' + Object.keys(c.seen).join(',') + '）');
-    place(w, 0.5, 2.5, 'N'); let sx = null; w.dog.plan = [{ k: 'face', dir: 'E' }, { k: 'anim', clip: 'sniff', label: '闻闻' }]; c = clips(w, 6, (w) => { if (w.dog.anim.name === 'sniff' && sx == null) sx = w.dog.x; return sx == null; });
-    ok(clean(c.r) && c.seen.sniff && ((w.stats.sideDefer || 0) + (w.stats.reloc || 0)) >= 1 && sx > 0.6 && sx < 1.2, '边界格要闻地板：先挪离墙一点再闻（闻时 x=' + (sx == null ? '-' : sx.toFixed(2)) + '）');
+    const XB = (Math.max(BOX.N.l, BOX.S.l) + Math.min(BOX.E.l, BOX.E.r)) / 2, XE = Math.min(BOX.E.l, BOX.E.r) - 1e-6;
+    const w = world(204, mk(8, 6, [])); place(w, XB, 2.5, 'N');
+    ok(!PE.bodyFree(w, XB, 2.5, 'E') && !PE.bodyFree(w, XB, 2.5, 'W') && PE.bodyFree(w, XB, 2.5, 'V'), '边界格 x=' + XB.toFixed(2) + '：竖着站得下，侧身两边都出界');
+    w.dog.lastGain = -1e9; PE.pet(w, 'tap'); let c = clips(w, 2.5, (w) => w.dog.activity === 'petted'); ok(clean(c.r) && (!c.seen.petted || w.dog.x >= XE), '边界格点小狗：不出界（旁边 1.8 格内有宽敞处就挪一小步再摸，' + Object.keys(c.seen).join(',') + '）');
+    place(w, XB, 2.5, 'N'); let sx = null; w.dog.plan = [{ k: 'face', dir: 'E' }, { k: 'anim', clip: 'sniff', label: '闻闻' }]; c = clips(w, 6, (w) => { if (w.dog.anim.name === 'sniff' && sx == null) sx = w.dog.x; return sx == null; });
+    ok(clean(c.r) && c.seen.sniff && ((w.stats.sideDefer || 0) + (w.stats.reloc || 0)) >= 1 && sx >= XE && sx < 1.2, '边界格要闻地板：先挪离墙一点再闻（闻时 x=' + (sx == null ? '-' : sx.toFixed(2)) + '）');
     const w2 = world(205, mk(6, 6, col(1, 0, 6, 'C'), { x: 4, y: 5.7 })); place(w2, 0.5, 2.5, 'S');
     w2.dog.lastGain = -1e9; PE.pet(w2, 'tap'); c = clips(w2, 2.5); ok(clean(c.r) && !c.seen.petted, '贴墙 1 格竖条（被一列家具封死）：点小狗不穿墙');
     const c2 = clips(w2, 120); ok(clean(c2.r), '贴墙竖条自主活动 2 分钟不穿墙（' + JSON.stringify(c2.r) + '）');
@@ -611,6 +621,67 @@ section('22. p4c：合法读档边界——满屋存档读进只空 1 格的房�
     ok(w.noRoom && w.dog.tired === true, '精力 30（低于 35）没标 tired：满屋读档也按精力进疲倦'); }
   { const w = full(); const s = tiredSave(60); s.dog.tired = false; PE.restore(w, s, 2000);
     ok(w.noRoom && w.dog.tired === false, '精力 60、没疲倦：满屋读档不凭空疲倦'); }
+}
+
+section('23. p5：熊大 v3 真图集（逐帧量真图：外形 / 落地点 / 叼球点 / 循环衔接）');
+{
+  const fs = require('fs'), path = require('path');
+  const img = path.join(__dirname, 'art', M.atlas.image || ''), buf = fs.existsSync(img) ? fs.readFileSync(img) : null;
+  ok(M.placeholder === false && M.atlas.image === 'puppy_atlas_v3.webp' && buf, 'manifest 换成真图集：placeholder:false、atlas.image = puppy_atlas_v3.webp（文件在）');
+  const vp = buf && buf.toString('ascii', 12, 16), sz = vp === 'VP8X' ? [1 + buf.readUIntLE(24, 3), 1 + buf.readUIntLE(27, 3)] : vp === 'VP8L' ? (() => { const v = buf.readUInt32LE(21); return [1 + (v & 0x3fff), 1 + ((v >> 14) & 0x3fff)]; })() : null;
+  ok(sz && sz[0] === 2048 && sz[1] === 1024 && buf.length < 1.5e6, `图集是一张 2048×1024（手机只解码这一张 8 MiB，不留 21 张原图）：${sz} / ${buf ? (buf.length / 1024).toFixed(0) : '-'} KB`);
+  const cells = Object.keys(ATL).map(Number).sort((a, b) => a - b);
+  ok(cells.length === 108 && cells[0] === 0 && cells[107] === 107, '108 帧都在图集 cell 0..107（cell 108 = 影子）');
+  let inBody = 0, cellOK = 0, groundBad = [], n = 0;
+  const AIR = { run_E: [2, 5], run_N: [2, 5], run_S: [2, 5], hop: [3, 4, 5] };   // 熊大包：跑 / 跳腾空帧用虚拟地面，脚不贴地
+  for (const [name, c] of Object.entries(M.clips)) c.frames.forEach((f, i) => {
+    n++; const a = ATL[f.cell];
+    if (a && a.clip === name && a.index === i && a.ms === f.ms) cellOK++;
+    const b = M.body[c.dir]; if (a && a.alphaX[0] >= b[0] && a.alphaX[1] <= b[1]) inBody++;
+    const air = (AIR[name] || []).includes(i);
+    if (a && !air && Math.abs(a.alphaY[1] - 209) > 4) groundBad.push(name + '#' + i + ':' + a.alphaY[1]);
+  });
+  ok(cellOK === 108, `帧序 / 格号 / 时长和熊大 v3 包 proposedP3Cell / p3TimingMs 一一对应（${cellOK}/108）`);
+  ok(inBody === 108, `逐帧真图外形（alpha>8 横向范围）都在 manifest.body 里（${inBody}/108）`);
+  ok(groundBad.length === 0, `落地点：非腾空帧脚底都在 y=208±4（${groundBad.slice(0, 5).join(' ') || '全部对齐'}）`);
+  const kT = M.runtime.displayTiles / 256;
+  ok(Math.max(BOX.N.l, BOX.N.r, BOX.S.l, BOX.S.r) <= 0.375 + 1e-9, `竖身半宽 ${Math.max(BOX.N.l, BOX.S.l, BOX.S.r).toFixed(3)} 格 ≤ 0.375：1 格宽竖缝 / 只空 1 格照样站得下（displayTiles ${M.runtime.displayTiles}）`);
+  ok(PE.CFG.R === 0.22, '地面纵深仍是 ±0.22 格，和图高 / 头高无关');
+  // 嘴巴：N 向被挡 → null + mouthHidden；其余是数字且落在这一帧的真图范围里
+  let nHidden = 0, mouthIn = 0, mouthN = 0;
+  for (const [name, c] of Object.entries(M.clips)) c.frames.forEach((f) => {
+    const a = ATL[f.cell];
+    if (c.dir === 'N') { if (f.mouth === null && f.mouthHidden === true) nHidden++; return; }
+    mouthN++; if (Array.isArray(f.mouth) && f.mouth[0] >= a.alphaX[0] && f.mouth[0] <= a.alphaX[1] && f.mouth[1] >= a.alphaY[0] && f.mouth[1] <= a.alphaY[1]) mouthIn++;
+  });
+  ok(nHidden === 18, `北向 18 帧嘴巴 = null + mouthHidden（熊大：背面遮挡点是 null，叼球时不画球）（${nHidden}）`);
+  ok(mouthIn === mouthN, `东 / 南向嘴巴点都落在该帧真图范围内（${mouthIn}/${mouthN}）`);
+  const bad1 = clone(M); bad1.clips.walk_E.frames[0].mouth = null; bad1.clips.walk_E.frames[0].mouthHidden = true;
+  const bad2 = clone(M); bad2.clips.walk_N.frames[0].mouthHidden = false;
+  ok(PA.validateManifest(M).ok && !PA.validateManifest(bad1).ok && !PA.validateManifest(bad2).ok, '校验：只有北向帧能 mouth:null（且必须标 mouthHidden），东向 null / 北向没标都拦下');
+  // 叼球点：pick_ball 事件帧（sniff#3）嘴巴在身前 dx 格、离地 dz 格；引擎叼球站位离球 0.46 / 0.54 格，球半径 0.12
+  const pf = M.clips.sniff.frames[M.actions.pick_ball.events[0].frame].mouth, dx = (pf[0] - 128) * kT, dz = (208 - pf[1]) * kT;
+  ok([0.46, 0.54].every(off => Math.abs(dx - off) <= PE.CFG.BALL_R + 0.02) && Math.abs(dz - PE.CFG.BALL_R) <= PE.CFG.BALL_R, `叼球帧嘴巴在身前 ${dx.toFixed(3)} 格、离地 ${dz.toFixed(3)} 格：站位 0.46 / 0.54 格时嘴落在球上（0.62 格站位差 ${Math.abs(dx - 0.62).toFixed(3)} 格）`);
+  const df = M.clips.eat.frames[M.actions.drop_ball.events[0].frame].mouth, ddx = (df[0] - 128) * kT;
+  ok(Math.abs(ddx - 0.38) <= PE.CFG.BALL_R, `放球帧嘴巴在身前 ${ddx.toFixed(3)} 格，球落在 0.38 格处（差 ${Math.abs(ddx - 0.38).toFixed(3)} ≤ 球半径）`);
+  // 循环衔接：循环片段末帧 → 首帧，真图外形跳动（左 / 右 / 上 / 下沿）
+  const seams = [];
+  for (const [name, c] of Object.entries(M.clips)) if (c.loop) {
+    const a = ATL[c.frames[c.frames.length - 1].cell], b = ATL[c.frames[0].cell];
+    seams.push([name, Math.max(Math.abs(a.alphaX[0] - b.alphaX[0]), Math.abs(a.alphaX[1] - b.alphaX[1]), Math.abs(a.alphaY[0] - b.alphaY[0]), Math.abs(a.alphaY[1] - b.alphaY[1]))]);
+  }
+  ok(seams.every(s => s[1] <= 24), '循环片段首尾衔接外形跳动 ≤ 24 px（' + seams.map(s => s[0] + ' ' + s[1]).join('，') + '）');
+  // 用真图 manifest 跑一段自主活动 + 抛球：每帧按当前帧真图外形查穿家具
+  const w = world(77), FR = [];
+  let hit = 0, frames = 0;
+  for (let i = 0; i < 60 * 120; i++) {
+    if (i % 1800 === 0) PE.throwBall(w);
+    PE.step(w, H); frames++;
+    const a = ATL[w.dog.anim.frameData().cell], vd = visDir(w), ax = vd === 'W' ? [256 - a.alphaX[1], 256 - a.alphaX[0]] : a.alphaX;
+    const bx = { x: w.dog.x - (128 - ax[0]) * kT, y: w.dog.y - C.R, w: (ax[1] - ax[0]) * kT, h: 2 * C.R };
+    if (!w.noRoom && w.items.some(p => PE.isSolid(w, p) && ovl(bx, PE.itemRect(w, p), 1e-6))) hit++;
+  }
+  ok(hit === 0, `测试房间 2 分钟（含抛球）：逐帧按当前真图帧外形查，${frames} 帧里穿家具 ${hit} 帧`);
 }
 
 console.log(`\n引擎测试：${pass} 过 / ${fail} 挂`);

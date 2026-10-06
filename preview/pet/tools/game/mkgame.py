@@ -1,6 +1,6 @@
 # 从 preview/ 生成 preview/pet/game/ 的快照副本 + 宠物钩子（可重跑；每处替换都断言命中次数）
 import re, pathlib
-SRC = pathlib.Path(__file__).resolve().parents[3]; DST = SRC / 'pet' / 'game'; V = 'p4c'
+SRC = pathlib.Path(__file__).resolve().parents[3]; DST = SRC / 'pet' / 'game'; V = 'p5'
 def rep(s, old, new, n=1):
     c = s.count(old); assert c == n, (old[:80], c); return s.replace(old, new)
 base = (SRC / 'version.json').read_text().strip()
@@ -13,21 +13,22 @@ bv = re.search(r'"v"\s*:\s*"([^"]+)"', base).group(1)
 (DST / 'version.json').write_text('{"v":"%s"}\n' % V)
 # ---------- index.html ----------
 h = (SRC / 'index.html').read_text()
-h = rep(h, '<title>躺着也能赚（预览·未上线）</title>', '<title>躺着也能赚（宠物 p4c 预览·未上线）</title>')
+h = rep(h, '<title>躺着也能赚（预览·未上线）</title>', '<title>躺着也能赚（宠物 p5 预览·未上线）</title>')
 h = rep(h, 'href="icon.svg"', 'href="../../icon.svg"')
 h = rep(h, 'href="apple-touch-icon.png"', 'href="../../apple-touch-icon.png"')
 h = rep(h, f'<link rel="stylesheet" href="style.css?v={bv}">', f'<link rel="stylesheet" href="style.css?v={V}">\n<link rel="stylesheet" href="petgame.css?v={V}">')
 h = rep(h, f"var B='{bv}'", f"var B='{V}'")
 h = rep(h, f'<script src="economy.js?v={bv}"></script>\n<script src="app.js?v={bv}"></script>',
         f'<script src="economy.js?v={V}"></script>\n<script src="../art.js?v={V}"></script>\n<script src="../puppy.js?v={V}"></script>\n<script src="../room.js?v={V}"></script>\n<script src="../engine.js?v={V}"></script>\n<script src="petgame.js?v={V}"></script>\n<script src="app.js?v={V}"></script>')
-h = h.replace('<head>', f'<head>\n<!-- 宠物 p4：预览 {bv} 的快照副本（../../ 是预览目录）+ 小狗接入。生成脚本见 README「p4」。 -->', 1)
+h = h.replace('<head>', f'<head>\n<!-- 宠物 p5：预览 {bv} 的快照副本（../../ 是预览目录）+ 小狗接入。生成脚本见 README「p4」。 -->', 1)
 (DST / 'index.html').write_text(h)
 # ---------- app.js ----------
 a = (SRC / 'app.js').read_text()
-a = a.replace('(() => {\n', f'/* 宠物 p4 副本：基于预览 {bv} 的 app.js，只加小狗钩子（搜「宠物 p4」）；存档键不变，小狗只占 state.pet 一个字段 */\n(() => {{\n', 1)
+a = a.replace('(() => {\n', f'/* 宠物 p5 副本：基于预览 {bv} 的 app.js，只加小狗钩子（搜「宠物 p4」）；存档键不变，小狗只占 state.pet 一个字段 */\n(() => {{\n', 1)
 a = rep(a, '`art/', '`../../art/', 5)
 a = rep(a, 'src="art/', 'src="../../art/', 2)
-a = rep(a, '  const m = E.migrate(raw, now());\n', '  const m = E.migrate(raw, now());\n  if (window.PetGame) PetGame.norm(m.st, E);   // 宠物 p4：没有 pet 字段 = 没买，旧档原样\n')
+# 12d 起读档走 E.loadSave（主档 → 备份 → 不保存模式），在返回读出的 state 前补 pet 字段校验
+a = rep(a, '  if (m.blocked) saveBlocked = true;\n  return m.st;\n', '  if (m.blocked) saveBlocked = true;\n  if (window.PetGame) PetGame.norm(m.st, E);   // 宠物 p4：没有 pet 字段 = 没买，旧档原样\n  return m.st;\n')
 a = rep(a, '  state.maxSeen = Math.max(state.maxSeen || 0, state.lastSeen);\n  state.rev++;\n', '  state.maxSeen = Math.max(state.maxSeen || 0, state.lastSeen);\n  petBeforePersist();   // 宠物 p4：小狗状态写进 state.pet.eng（同一份存档）\n  state.rev++;\n')
 a = rep(a, 'height:${sz.h / rows * 100}%;--fc:${f.color}">', 'height:${sz.h / rows * 100}%;--fc:${f.color};--fz:${10 + (p.y + sz.h) * 10}">')
 a = rep(a, "  const inv = Object.entries(E.furnInvOf(state)).filter(([, n]) => n > 0);\n  if (homeMode === 'decor') {", "  h += petRoomBar(id);\n  const inv = Object.entries(E.furnInvOf(state)).filter(([, n]) => n > 0);\n  if (homeMode === 'decor') {")
