@@ -1,5 +1,6 @@
 # 12d 金币安全 v1 端到端（WebKit = iPhone Safari 内核；SE / SE3 / iPhone 15）
 # 用法：先在本目录起静态服务，再 .pwvenv/bin/python test_coin_e2e.py [URL]
+# 12d3：第 10 / 11 段 = 熊大 22:08 存档四处 + 统一交易（localStorage.setItem 抛异常模拟主档 / 备份写失败，每条改状态路径都要回滚）
 # 12d1：第 9 段 = 熊大 17:53 三处阻塞（余额超 MAX_SAFE_INTEGER 进异常模式、原文不覆盖、交易全封；扣款精确；累计收入整数 + 零头；MAX 零余额 = 0）
 # 覆盖：熊大 17:00 测试者场景（4.52 亿 / 41.88 万每秒 / 团单 / 离线双倍）、坏档走备份、没备份不覆盖、内存坏值不写盘、
 #      余额上限、旧档超上限、等级上限满级显示、MAX / x10 遵守上限、坏离线收益、备份轮换、测试房间不写备份
@@ -260,6 +261,169 @@ with sync_playwright() as p:
             dc_.close()
     except Exception as ex:
         check(False, f'12d1 本段抛错（{type(ex).__name__}: {str(ex)[:160]}）')
+    print('== 10. 12d3 熊大 22:08：存档四处 + 统一交易（localStorage.setItem 抛异常模拟主档 / 备份写失败）==')
+    # 写失败注入：改 Storage.prototype.setItem（localStorage.setItem 对指定键抛 QuotaExceededError）；keys=[] 恢复正常
+    FAILJS = """(keys)=>{ if(!window.__origSet){ window.__origSet=Storage.prototype.setItem; Storage.prototype.setItem=function(k,v){ if(window.__failKeys && window.__failKeys.indexOf(k)>=0){ throw new DOMException('写入失败（测试注入）','QuotaExceededError'); } return window.__origSet.call(this,k,v); }; } window.__failKeys=keys; }"""
+    SNAPJS = "JSON.stringify((s=>({c:s.coins, shops:s.shops, ceos:s.ceos, g:s.gacha, homes:s.homes, inv:s.furnInv, wear:s.wear, dh:s.decorHidden, cs:s.crossSeen, pend:s.pending, big:s.bigCustomers, sp:s.specialCustomers, dd:s.dailyDoubleDay, rev:s.rev}))(__tzz.state))"
+    # 同一个 evaluate 里取快照 + 装注入，避免中间被 5 秒自动存档插一笔
+    # 提示用 MutationObserver 全程记下来（5 秒自动存档的提示可能盖掉交易的提示）
+    TOBS = "window.__toasts=[]; if(!window.__tobs){ window.__tobs=new MutationObserver(()=>{ (window.__toasts||(window.__toasts=[])).push(document.getElementById('toast').textContent); }); window.__tobs.observe(document.getElementById('toast'),{childList:true,characterData:true,subtree:true}); }"
+    ARM = "(keys)=>{ const f=" + FAILJS + "; __tzz.persist(); __tzz.persist(); " + TOBS + " f(keys); return {s:" + SNAPJS + ", m:localStorage.getItem('" + KEY + "'), b:localStorage.getItem('" + BAK + "'), u:(__tzz.homeUndo&&__tzz.homeUndo.c77||[]).length}; }"
+    DISARM = "()=>{ const r={s:" + SNAPJS + ", m:localStorage.getItem('" + KEY + "'), b:localStorage.getItem('" + BAK + "'), t:(window.__toasts||[]).join(' | '), u:(__tzz.homeUndo&&__tzz.homeUndo.c77||[]).length}; window.__failKeys=[]; return r; }"
+    QUIET = "(()=>{const E=__tzz.E; if(!E.__rate0){E.__rate0=E.onlineRate; E.onlineRate=()=>0;} __tzz.clearVisitors();})()"   # 在线收入停掉，余额只因本次操作变化
+    fails_by = {}
+    def case(pg, nm, do, msg, ok_extra=None, modes=('main', 'bak', 'ok')):
+        for mode in modes:
+            try:
+                keys = [KEY] if mode == 'main' else [BAK] if mode == 'bak' else []
+                a = pg.evaluate(ARM, keys)
+                do(); pg.wait_for_timeout(250)
+                z = pg.evaluate(DISARM)
+                if mode == 'ok':
+                    good_ = z['s'] != a['s'] and z['m'] != a['m'] and json.loads(z['m'])['rev'] > json.loads(a['m'])['rev'] and (ok_extra is None or ok_extra(a, z))
+                    check(good_, f"12d3 ③ {nm}：存储正常时照常成功并落盘（rev {json.loads(a['m'])['rev']}→{json.loads(z['m'])['rev']}）")
+                else:
+                    bak_ok = z['b'] == a['b'] or (mode == 'main' and z['b'] == a['m'])
+                    good_ = z['s'] == a['s'] and z['m'] == a['m'] and bak_ok and z['u'] == a['u'] and '保存失败' in z['t'] and msg in z['t']
+                    check(good_, f"12d3 ③ {nm}：{'主档' if mode == 'main' else '备份'}写失败 → 钱和进度整档回滚、主档逐字节不变、" + ("备份不动" if mode == 'bak' else "备份只可能是原主档") + f"，提示「{z['t'][:80]}」")
+                if not good_: fails_by[nm] = fails_by.get(nm, 0) + 1
+                close_modals(pg)
+            except Exception as ex:
+                fails_by[nm] = fails_by.get(nm, 0) + 1
+                try: pg.evaluate("()=>{window.__failKeys=[];}")
+                except Exception: pass
+                check(False, f"12d3 ③ {nm}（{mode}）抛错（{type(ex).__name__}: {str(ex)[:120]}）")
+    def act(pg, a, arg=''): pg.evaluate("([a,g])=>__tzz.act(a,g,null)", [a, arg])
+    t12d3 = time.time()
+    try:
+        c3, p3 = page('iPhone 15')
+        # 经营：店铺 x1 / x10 / MAX、员工、CEO（真点按钮）
+        base = mk(p3, "st.coins=5e14; st.gacha.owned=[...new Set(st.gacha.owned.concat(['s_portal','h_chili']))]; st.homes.pearl={lv:1,placed:[],next:1};")
+        boot(p3, base); close_modals(p3); S(p3, QUIET)
+        S(p3, "__tzz.setTab('shop'); __tzz.switchShop(1)"); p3.wait_for_timeout(300); close_modals(p3)
+        def click_up(amt):
+            def f():
+                p3.locator(f'[data-act="amt"][data-arg="{amt}"]').click(force=True); p3.wait_for_timeout(120)
+                p3.locator('[data-act="up"]').first.click(force=True)
+            return f
+        case(p3, '店铺升级 x1（点按钮）', click_up('1'), '升级没有生效')
+        case(p3, '店铺升级 x10（点按钮）', click_up('10'), '升级没有生效')
+        case(p3, '店铺升级 MAX（点按钮）', click_up('max'), '升级没有生效')
+        case(p3, '员工升级（点按钮）', lambda: p3.locator('[data-act="emp"]').first.click(force=True), '员工升级没有生效')
+        case(p3, 'CEO 升级', lambda: act(p3, 'ceoUp', 'pearl'), 'CEO 升级没有生效')
+        case(p3, '开盲盒', lambda: (act(p3, 'draw'), p3.wait_for_timeout(1000)), '开盒没有生效')
+        case(p3, '换装', lambda: act(p3, 'equip', 'c77:hat:h_chili' if S(p3, "__tzz.state.wear.c77.hat")!='h_chili' else 'c77:hat:none'), '换装没有生效')
+        case(p3, '店门口装饰显示', lambda: act(p3, 'decor', 'd_stool'), '装饰显示没有切换')
+        case(p3, 'CEO 调任 / 交换任职', lambda: (S(p3, "__tzz.showPreview('pearl', __tzz.state.ceos.pearl.at===0?1:0)"), p3.wait_for_timeout(200), p3.locator('#pvYes').click()), '调任没有生效')
+        # 家宅：买家具、房子升级、自动摆放、旋转、收回、撤销
+        S(p3, "__tzz.setTab('home'); __tzz.homeAct('homeWho','c77'); __tzz.homeMode='decor'"); p3.wait_for_timeout(300); close_modals(p3)
+        case(p3, '商城买家具', lambda: (S(p3, "__tzz.homeAct('homeBuy','furn_plant')"), p3.wait_for_timeout(200), p3.locator('#hbYes').click()), '购买没有生效')
+        case(p3, '房子升级', lambda: (S(p3, "__tzz.homeAct('homeUp','pearl')"), p3.wait_for_timeout(200), p3.locator('#huYes').click()), '房子升级没有生效', modes=('main', 'bak'))
+        case(p3, '仓库家具摆进房间', lambda: S(p3, "__tzz.homeAutoPlace('furn_plant')"), '摆放没有生效')
+        uid = lambda: S(p3, "__tzz.state.homes.c77.placed.find(p=>p.fid==='furn_bed').uid")
+        case(p3, '家具旋转', lambda: act(p3, 'homeRot', uid()), '摆放没有生效')
+        case(p3, '撤销上一步', lambda: act(p3, 'homeUndo', 'c77'), '撤销没有生效', modes=('main', 'bak'))
+        def drag_bed():   # 真拖动：按住床 → 拖到另一侧格子 → 松手（走 homeUp 里的 moveItem 分支）
+            b = S(p3, "(()=>{const p=__tzz.state.homes.c77.placed.find(p=>p.fid==='furn_bed'); const T=__tzz.E.homeTier(__tzz.state.homes.c77.lv); const z=__tzz.E.furnSize(p.fid,p.rot); return {x:p.x,y:p.y,w:z.w,h:z.h,cols:T.cols,rows:T.rows,uid:p.uid};})()")
+            p3.evaluate("document.getElementById('room').scrollIntoView({block:'center'})"); p3.wait_for_timeout(80)
+            f = p3.locator('#roomFloor').bounding_box(); cw, ch = f['width'] / b['cols'], f['height'] / b['rows']
+            a = p3.locator(f'#roomFloor .furn[data-uid="{b["uid"]}"]').bounding_box()
+            tx = (b['cols'] - b['w']) if b['x'] == 0 else 0
+            p3.mouse.move(a['x'] + a['width'] / 2, a['y'] + a['height'] / 2); p3.mouse.down()
+            p3.mouse.move(f['x'] + (tx + b['w'] / 2) * cw, f['y'] + (b['y'] + b['h'] / 2) * ch, steps=10); p3.wait_for_timeout(80); p3.mouse.up(); p3.wait_for_timeout(200)
+        case(p3, '家具拖动换位置（真拖）', drag_bed, '摆放没有生效')
+        case(p3, '家具收回仓库', lambda: act(p3, 'homeStore', S(p3, "__tzz.state.homes.c77.placed.find(p=>p.fid==='furn_plant').uid")), '摆放没有生效')
+        # 入账类：团单、特殊客人、传送门
+        S(p3, "__tzz.setTab('shop'); __tzz.switchShop(0)"); p3.wait_for_timeout(300); close_modals(p3)
+        def big():
+            S(p3, "__tzz.forceBig()"); p3.wait_for_timeout(500); S(p3, "(()=>{const o=__tzz.order; if(o) o.progress=1;})()"); p3.wait_for_timeout(300)
+        case(p3, '团单结算入账', big, '团单收入没有入账')
+        def spc():
+            S(p3, "__tzz.forceSpecial()"); p3.wait_for_timeout(600); S(p3, "(()=>{const s=__tzz.special; if(s){ if(__tzz.state.cur!==s.shop) __tzz.switchShop(s.shop); }})()"); p3.wait_for_timeout(300)
+            S(p3, "(()=>{const s=__tzz.special; if(s) __tzz.hitBig(s.x,s.y);})()")
+        case(p3, '特殊客人奖励', spc, '特殊客人奖励没有入账')
+        case(p3, '次元传送门奖励', lambda: S(p3, "__tzz.forceSupers()"), '传送门奖励没有入账')
+        # 重新开始：存不上 → 不清空、不刷新
+        def reset():
+            S(p3, "window.__mark=7"); act(p3, 'reset'); p3.wait_for_timeout(200); p3.locator('#mYes').click(); p3.wait_for_timeout(400)
+        for mode in ['main', 'bak']:
+            a = p3.evaluate(ARM, [KEY] if mode == 'main' else [BAK]); reset(); z = p3.evaluate(DISARM); mk_ = S(p3, "window.__mark")
+            ok_ = z['s'] == a['s'] and z['m'] == a['m'] and (z['b'] == a['b'] or (mode == 'main' and z['b'] == a['m'])) and mk_ == 7 and '没有清空' in z['t']
+            if not ok_: fails_by['重新开始'] = fails_by.get('重新开始', 0) + 1
+            check(ok_, f"12d3 ③ 重新开始：{'主档' if mode == 'main' else '备份'}写失败 → 不清空、不刷新页面，进度原样（{z['t']}）")
+        # 跳转：存不上不跳
+        for mode in ['main', 'bak']:
+            a = p3.evaluate(ARM, [KEY] if mode == 'main' else [BAK]); u0 = p3.url
+            r = S(p3, "__tzz.goPage ? __tzz.goPage('version.json?jump=1') : 'none'"); p3.wait_for_timeout(500); z = p3.evaluate(DISARM)
+            ok_ = r is False and p3.url == u0 and z['m'] == a['m'] and (z['b'] == a['b'] or (mode == 'main' and z['b'] == a['m'])) and '没有跳转' in z['t']
+            if not ok_: fails_by['跳转'] = fails_by.get('跳转', 0) + 1
+            check(ok_, f"12d3 ⑤ 主页面跳转（宠物 / 打僵尸入口）：{'主档' if mode == 'main' else '备份'}写失败 → 不跳转（{r}，{z['t']}）")
+        # ④ 普通自动存档：备份写失败 → 整次放弃，主档不动
+        a = p3.evaluate(ARM, [BAK]); r = S(p3, "__tzz.state.coins -= 1; __tzz.persist()"); z = p3.evaluate(DISARM)
+        check(r is False and z['m'] == a['m'] and z['b'] == a['b'] and '备份写不进去' in z['t'], f"12d3 ④ persist()：备份 setItem 抛异常 → 返回 false，主档逐字节不变（不再吞掉异常继续写主档）「{z['t']}」")
+        a = p3.evaluate(ARM, [KEY]); r = S(p3, "__tzz.persist()"); z = p3.evaluate(DISARM)
+        check(r is False and z['m'] == a['m'] and json.loads(z['m'])['rev'] == S(p3, "__tzz.state.rev"), "12d3 ④ persist()：主档 setItem 抛异常 → 返回 false，内存 rev 退回、和盘上一致")
+        S(p3, "__tzz.persist()"); p0 = ls(p3, KEY); S(p3, "__tzz.persist()")
+        check(ls(p3, BAK) == p0, '12d3 ④ 恢复正常后：写档前把上一份好主档整份放进 -bak（轮换照常）')
+        c3.close()
+        # 领离线：单独开局
+        c4, p4 = page('iPhone 15')
+        boot(p4, mk(p4, "st.lastSeen=st.maxSeen=T-7200e3; st.dailyDoubleDay=null;"), wait=1300); S(p4, QUIET)
+        def claim():
+            if not modal_visible(p4): S(p4, "__tzz.showOffline()"); p4.wait_for_timeout(200)
+            p4.locator('#claim').click(); p4.wait_for_timeout(200)
+        case(p4, '领离线收益', claim, '离线收益没有到账', modes=('main', 'bak'))
+        check(S(p4, "!!__tzz.state.pending"), '12d3 ③ 领离线存不上：待领取那笔还在（没有吞掉，下次能再领）')
+        case(p4, '领离线收益', claim, '离线收益没有到账', modes=('ok',), ok_extra=lambda a, z: json.loads(z['s'])['pend'] is None)
+        c4.close()
+        # 开店 / 雇人：单独开局（书店开着没员工、科技公司没开）
+        for dname in ['iPhone SE', 'iPhone SE (3rd gen)', 'iPhone 15']:
+            c5, p5 = page(dname)
+            boot(p5, mk(p5, "st.shops[3]={open:false,lv:0,emp:0}; st.ceos.rocket={unlocked:false,lv:1,at:-1}; st.shops[2].emp=0;")); close_modals(p5); S(p5, QUIET)
+            S(p5, "__tzz.setTab('shop'); __tzz.switchShop(2)"); p5.wait_for_timeout(300); close_modals(p5)
+            case(p5, f'{dname} 雇人（点按钮）', lambda: p5.locator('[data-act="hire"]').first.click(force=True), '雇人没有生效', modes=('main', 'bak'))
+            S(p5, "__tzz.switchShop(3)"); p5.wait_for_timeout(300); close_modals(p5)
+            case(p5, f'{dname} 开张（点按钮）', lambda: p5.locator('[data-act="open"]').first.click(force=True), '开张没有生效', modes=('main', 'bak'))
+            c5.close()
+    except Exception as ex:
+        check(False, f'12d3 ③ 本段抛错（{type(ex).__name__}: {str(ex)[:160]}）')
+    print('== 11. 12d3 熊大 22:08 第 1 / 2 条：结构坏的主档、主档缺失 ==')
+    try:
+        c6, p6 = page('iPhone 15')
+        good3 = mk(p6, "st.shops[0].lv=53;"); g3 = json.loads(good3)
+        bk3 = json.loads(good3); bk3['coins'] = 451000000; bk3['rev'] = 290; BK3 = json.dumps(bk3)
+        variants3 = {'shops[0] = null': lambda r: r['shops'].__setitem__(0, None), 'shops[1] 缺 emp': lambda r: r['shops'][1].pop('emp'),
+                     'ceos.pearl = null': lambda r: r['ceos'].__setitem__('pearl', None), 'homes.c77 = null': lambda r: r['homes'].__setitem__('c77', None),
+                     'gacha = null': lambda r: r.__setitem__('gacha', None)}
+        for nm, fn in variants3.items():
+            r = json.loads(good3); fn(r); r['rev'] = 305; BADM = json.dumps(r)
+            boot(p6, BADM, BK3); close_modals(p6)
+            st = S(p6, "({src:__tzz.loadInfo.source, c:__tzz.state.coins, shops:__tzz.state.shops, ceos:__tzz.state.ceos, blk:__tzz.saveBlocked})")
+            b1 = ls(p6, BAK); S(p6, "__tzz.persist()"); m2 = json.loads(ls(p6, KEY)); b2 = json.loads(ls(p6, BAK))
+            check(st['src'] == 'bak' and st['shops'] == bk3['shops'] and st['ceos'] == bk3['ceos'] and st['shops'][0]['lv'] == 53 and m2['shops'][0]['lv'] == 53 and b1 != BADM and ls(p6, BAK) != BADM and p6.evaluate("b=>__tzz.E.checkSave(JSON.parse(b)).length===0", b1) and b2['shops'][0] and b2['shops'][0]['lv'] == 53, f"12d3 ① 主档 {nm} + 好备份 → 用备份（烧烤摊 Lv53 不变 Lv1）；坏主档从没进 -bak（备份始终是通过完整校验的好档）{st['src']}")
+        r = json.loads(good3); r['shops'][0] = None; BADM = json.dumps(r)
+        boot(p6, BADM, None, wait=1200)
+        info = S(p6, "({blk:__tzz.saveBlocked, src:__tzz.loadInfo.source, badge:(document.getElementById('saveBadge')||{}).textContent||'', modal:document.getElementById('mpanel').innerText})")
+        check(info['blk'] and info['src'] == 'broken' and '只读' in info['badge'] and '只读' in info['modal'] and '不会自动保存' in info['modal'], f"12d3 ① 主档 shops[0]=null + 没备份 → 只读模式（角标 + 弹窗）{info['src']}")
+        close_modals(p6); S(p6, "__tzz.setTab('shop'); __tzz.switchShop(0)"); p6.wait_for_timeout(300); close_modals(p6)
+        S(p6, "__tzz.state.coins=1e9"); lv0 = S(p6, "__tzz.state.shops[0].lv"); p6.locator('[data-act="amt"][data-arg="1"]').click(force=True); p6.locator('[data-act="up"]').first.click(force=True); p6.wait_for_timeout(250)
+        t_ = S(p6, "document.getElementById('toast').textContent")
+        check(S(p6, "__tzz.state.shops[0].lv") == lv0 and S(p6, "__tzz.state.coins") == 1e9 and '只读' in t_, f"12d3 ① 只读模式点「升级」→ 拒绝（等级、余额不变）「{t_}」")
+        r_ = S(p6, "__tzz.persist()"); p6.wait_for_timeout(5600)
+        check(r_ is False and ls(p6, KEY) == BADM and ls(p6, BAK) is None, '12d3 ① 只读模式：persist() 如实返回 false，6 秒后原主档逐字节不变、没有生成备份')
+        for nm, mv in [('缺失', None), ('空字符串', ''), ('JSON null', 'null')]:
+            boot(p6, mv, BK3, wait=1200); t_ = p6.inner_text('#toast') if p6.locator('#toast:not(.hidden)').count() else ''
+            st = S(p6, "({src:__tzz.loadInfo.source, c:__tzz.state.coins, shops:__tzz.state.shops, blk:__tzz.saveBlocked})"); close_modals(p6)
+            b1 = ls(p6, BAK); m2 = json.loads(ls(p6, KEY))
+            check(st['src'] == 'bak' and not st['blk'] and st['c'] >= 451000000 and st['shops'] == bk3['shops'] and '主存档不见了' in t_ and m2['coins'] >= 451000000 and m2['shops'] == bk3['shops'] and json.loads(b1)['coins'] >= 451000000 and json.loads(b1)['shops'] == bk3['shops'], f"12d3 ② 主档{nm} + 好备份 → 用备份（余额 {st['c']}，不是零进度），主档 / -bak 都是备份进度（没有零进度档写回去）「{t_}」")
+        bb = json.loads(good3); bb['shops'][0] = None; BB = json.dumps(bb)
+        boot(p6, None, BB, wait=1200); info = S(p6, "({blk:__tzz.saveBlocked, src:__tzz.loadInfo.source, c:__tzz.state.coins})"); close_modals(p6)
+        S(p6, "__tzz.persist()"); p6.wait_for_timeout(300)
+        check(info['blk'] and info['src'] != 'new' and ls(p6, KEY) is None and ls(p6, BAK) == BB, f"12d3 ② 主档缺失 + 备份结构坏 → 只读，不生成零进度主档、坏备份原文不动 {info}")
+        c6.close()
+    except Exception as ex:
+        check(False, f'12d3 ①② 本段抛错（{type(ex).__name__}: {str(ex)[:160]}）')
+    print(f"12d3 段用时 {time.time() - t12d3:.0f} 秒；失败分布 {fails_by}")
     check(not errs, f'12d 没有页面报错 {errs[:3]}')
     b.close()
 print(f"coin e2e: {sum(1 for r in results if r[0])} passed, {sum(1 for r in results if not r[0])} failed")

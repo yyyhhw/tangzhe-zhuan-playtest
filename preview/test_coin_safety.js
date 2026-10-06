@@ -1,4 +1,5 @@
 // node test_coin_safety.js [economy.js 路径] — 12d 金币安全 v1 回归（熊大 16:49 五条 + 16:50 等级边界 + 17:00 测试者 4.52 亿场景）
+// 12d3（熊大 22:08 存档四处 + 统一交易）：第 12 段——checkSave 整档结构、主档缺失先看备份、备份写失败整次放弃、E.transact / E.commitSave 回滚
 // 12d1（熊大 17:53 三处阻塞）：第 9～11 段——余额超 MAX_SAFE_INTEGER 封禁交易 + 通用「扣款精确」断言、totalEarned 整数 + 零头、MAX 零余额返回 0
 // 每条都是「读到坏值 / 越界」路径：存档字段、离线收益、团单、特殊客户、手点、调任结清、MAX 批量、升级、开店雇人、盲盒、家具、房子。
 // 拿旧代码跑（node test_coin_safety.js /tmp/old_economy.js）会挂一大片，证明这些用例真能抓到问题。
@@ -123,7 +124,7 @@ t('读档：好档 checkSave 为空', () => E.checkSave(JSON.parse(JSON.stringif
   t('loadSave：主档 JSON 截断 → 用备份', () => { const r = E.loadSave(G.slice(0, 200), bak, T0); return r.source === 'bak' && r.st.coins === 451000000; });
   t('loadSave：主档坏 + 备份也坏 → blocked（调用方不覆盖原档）', () => { const r = E.loadSave(B, B, T0); return r.source === 'broken' && r.blocked; });
   t('loadSave：主档坏 + 没有备份 → blocked', () => { const r = E.loadSave(B, null, T0); return r.blocked; });
-  t('loadSave：没有主档 → 新游戏（不拿备份顶上）', () => { const r = E.loadSave(null, bak, T0); return r.source === 'new' && r.st.coins === 0; });
+  t('loadSave：没有主档也没有备份 → 新游戏', () => { const r = E.loadSave(null, null, T0); return r.source === 'new' && r.st.coins === 0; });   // 12d3：原「没有主档 → 新游戏（不拿备份顶上）」按熊大 22:08 第 2 条改为先看备份，见第 12 段
   t('loadSave：主档店铺等级坏 → 用备份，不降成 Lv1', () => { const r0 = JSON.parse(G); r0.shops[0].lv = 'abc'; const r = E.loadSave(JSON.stringify(r0), bak, T0); return r.source === 'bak' && r.st.shops[0].lv === JSON.parse(bak).shops[0].lv; });
   t('读档：坏的待领取收益丢掉并标记（不入账、不拦整档）', () => { const r0 = JSON.parse(G); r0.pending = { id:'z', sec:10, amount:'abc' }; const m = E.migrate(r0, T0); return m.st.pending === null && m.badPending === true && m.st.coins === 452000000; });
   t('读档：合法待领取收益原样保留', () => { const r0 = JSON.parse(G); r0.pending = { id:'z', sec:10, gap:10, amount:123.25, from:T0 }; const m = E.migrate(r0, T0); return m.st.pending && m.st.pending.amount === 123.25 && !m.badPending; });
@@ -220,6 +221,96 @@ t('12d1 MAX：余额 0 → 可买 0 级', () => { const st = full(0); return E.s
 t('12d1 MAX：余额差 1 买不起下一级 → 0；正好够 → 1', () => { const st = full(); const p = E.upgradeCost(1, st.shops[1].lv); st.coins = p - 1; const a = E.shopBuyCount(st, 1, 'max'); st.coins = p; const b = E.shopBuyCount(st, 1, 'max'); return a === 0 && b === 1; });
 t('12d1 MAX：余额 p−1 + 零头 0.99 也是 0（整数比较，不靠零头凑）', () => { const st = full(); const p = E.upgradeCost(1, st.shops[1].lv); st.coins = p - 1; st.coinFrac = 0.99; return E.shopBuyCount(st, 1, 'max') === 0 && !E.canAfford(st, p); });
 t('12d1 MAX：四家店余额 0 全是 0，升级照样被拒、余额不变', () => [0, 1, 2, 3].every(i => { const st = full(0); const r = E.upgradeShop(st, i); return E.shopBuyCount(st, i, 'max') === 0 && !r.ok && st.coins === 0; }));
+
+/* ===== 12. 12d3 熊大 22:08：存档四处 + 统一交易入口（扣款 + 改状态 + 落盘，任一步失败整体回滚）===== */
+// 模拟 localStorage：fail = { 键名: true } 时 setItem 抛异常（同浏览器里 QuotaExceededError）
+function mem(init, fail) {
+  const d = Object.assign({}, init || {}); const f = fail || {};
+  return { d, f, getItem:k => (k in d ? d[k] : null), setItem(k, v) { if (f[k]) { const e = new Error('写入失败（测试注入）'); e.name = 'QuotaExceededError'; throw e; } d[k] = String(v); }, removeItem:k => { delete d[k]; } };
+}
+const K = 'tangzhe-preview-save', KB = 'tangzhe-preview-save-bak';
+const has12d3 = typeof E.transact === 'function' && typeof E.commitSave === 'function';
+const G3 = () => { const s = good(); s.coins = 452000000; s.coinFrac = 0; s.rev = 20; return s; };
+const raw3 = () => JSON.parse(JSON.stringify(G3()));
+const deep = st => JSON.stringify(st);
+// ① checkSave 整档结构：每一种都必须判坏档（9550afd 只看金币 / 等级数值，shops[0]=null 等都放过）
+const STRUCT = [
+  ['shops[0] = null', r => { r.shops[0] = null; }], ['shops[1] = null', r => { r.shops[1] = null; }], ['shops[2] = "x"', r => { r.shops[2] = 'x'; }], ['shops[3] = []', r => { r.shops[3] = []; }],
+  ['shops[0] 缺 lv', r => { delete r.shops[0].lv; }], ['shops[1] 缺 emp', r => { delete r.shops[1].emp; }], ['shops[2] 缺 open', r => { delete r.shops[2].open; }],
+  ['shops 只有 3 家', r => { r.shops.pop(); }], ['shops 有 5 家', r => { r.shops.push({ open:false, lv:0, emp:0 }); }], ['shops 整个缺失', r => { delete r.shops; }], ['shops = {}', r => { r.shops = {}; }],
+  ['shops[0].lv = 2.5（读档会被取整降级）', r => { r.shops[0].lv = 2.5; }], ['shops[1].emp = 1.5', r => { r.shops[1].emp = 1.5; }], ['开着的店 lv = 0', r => { r.shops[2].lv = 0; }], ['shops[0].emp = 99（超 EMP_MAX 会被截）', r => { r.shops[0].emp = 99; }],
+  ['ceos.pearl = null', r => { r.ceos.pearl = null; }], ['ceos.otaku 缺 lv', r => { delete r.ceos.otaku.lv; }], ['ceos.rocket.unlocked = "yes"', r => { r.ceos.rocket.unlocked = 'yes'; }], ['ceos.c77.at = 9', r => { r.ceos.c77.at = 9; }], ['ceos.c77.lv = 1.5', r => { r.ceos.c77.lv = 1.5; }], ['ceos = []', r => { r.ceos = []; }],
+  ['homes.c77 = null（会被重建成空小屋）', r => { r.homes.c77 = null; }], ['homes.pearl.lv = "abc"', r => { r.homes.pearl.lv = 'abc'; }], ['homes.otaku.placed = "x"', r => { r.homes.otaku.placed = 'x'; }], ['homes.c77.placed 里有 null', r => { r.homes.c77.placed = [null]; }], ['homes = 5', r => { r.homes = 5; }],
+  ['gacha = null（收藏会被清空）', r => { r.gacha = null; }], ['gacha.owned = "x"', r => { r.gacha.owned = 'x'; }], ['furnInv = []', r => { r.furnInv = []; }], ['furnInv 数量 = "2"', r => { r.furnInv = { furn_bed:'2' }; }],
+  ['wear = null', r => { r.wear = null; }], ['crossSeen = 5', r => { r.crossSeen = 5; }], ['decorHidden = "x"', r => { r.decorHidden = 'x'; }], ['claimLog = {}', r => { r.claimLog = {}; }],
+  ['cur = 7（界面会读 shops[7] 崩）', r => { r.cur = 7; }], ['rev = "abc"', r => { r.rev = 'abc'; }], ['taps = -1', r => { r.taps = -1; }], ['totalEarned = "x"', r => { r.totalEarned = 'x'; }], ['lastSeen = "x"', r => { r.lastSeen = 'x'; }], ['存档是数组', r => '[]'],
+];
+const mkBad = fn => { const r = raw3(); const o = fn(r); return o === '[]' ? [] : r; };
+for (const [nm, fn] of STRUCT) t(`12d3 ① checkSave：${nm} → 判坏档`, () => E.checkSave(mkBad(fn)).length > 0);
+for (const [nm, fn] of STRUCT.slice(0, 11)) t(`12d3 ① 读档：主档 ${nm} + 好备份 → 用备份（不 migrate 成初始等级）`, () => { const b = raw3(); b.coins = 451000000; b.rev = 19; const r = E.loadSave(JSON.stringify(mkBad(fn)), JSON.stringify(b), T0); return r.source === 'bak' && r.st.coins === 451000000 && JSON.stringify(r.st.shops) === JSON.stringify(b.shops); });
+for (const [nm, fn] of STRUCT.slice(0, 4)) t(`12d3 ① 读档：主档 ${nm} + 没备份 → 只读（blocked），不当好档读`, () => { const r = E.loadSave(JSON.stringify(mkBad(fn)), null, T0); return r.blocked === true && r.source === 'broken' && (!E.isBlocked || E.isBlocked(r.st)); });
+t('12d3 ① 熊大原场景：主档 shops[0]=null（店 Lv53）+ 好备份 → 读档后写一次：备份逐字节不变，主档写回备份里的进度（不是 Lv1）', () => {
+  const b = raw3(); b.rev = 19; b.shops[0].lv = 53; const B = JSON.stringify(b); const m = raw3(); m.shops[0] = null; m.rev = 21; const M = JSON.stringify(m);
+  const ls = mem({ [K]:M, [KB]:B }); const L = E.loadSave(ls.getItem(K), ls.getItem(KB), T0); if (L.source !== 'bak') return false;
+  L.st.rev = Math.max(L.st.rev, L.mainRev || 0);
+  // 主页面 persist 规则：坏主档不进备份
+  const prev = ls.getItem(K); let ok = false; try { ok = !E.checkSave(JSON.parse(prev)).length; } catch (e) {} if (ok) ls.setItem(KB, prev);
+  L.st.rev++; ls.setItem(K, JSON.stringify(L.st));
+  return ls.getItem(KB) === B && JSON.parse(ls.getItem(K)).shops[0].lv === b.shops[0].lv && b.shops[0].lv > 1;
+});
+t('12d3 ① 跨页写档：当前主档结构坏（shops[0]=null）→ commitSave 拒绝，主档 / 备份逐字节不变', () => { if (!has12d3) return false; const b = JSON.stringify(raw3()); const m = raw3(); m.shops[0] = null; const M = JSON.stringify(m); const ls = mem({ [K]:M, [KB]:b }); const st = G3(); st.rev = 99; const r = E.commitSave(ls, K, KB, st); return !r.ok && ls.getItem(K) === M && ls.getItem(KB) === b; });
+t('12d3 ① 写档前校验：内存 shops[0]=null / cur=9 / homes.c77=null / gacha=null → validState 报错（不写盘）', () => [s => { s.shops[0] = null; }, s => { s.cur = 9; }, s => { s.homes.c77 = null; }, s => { s.gacha = null; }].every(f => { const s = G3(); f(s); let v; try { v = E.validState(s); } catch (e) { return false; } return v.length > 0; }));
+t('12d3 ① 合法旧档照常读：v1（伙伴 hired）、v3 只有 77 的 CEO 记录、新档、测试房间都通过完整校验', () => {
+  const v1 = { v:1, coins:4321, shops:[{ open:true, lv:12, hired:true }, { open:true, lv:3, hired:false }, { open:false, lv:0, hired:false }, { open:false, lv:0, hired:false }] };
+  const v3 = { v:3, rev:5, coins:777, totalEarned:777, shops:[{ open:true, lv:4, emp:1 }, { open:false, lv:0, emp:0 }, { open:false, lv:0, emp:0 }, { open:false, lv:0, emp:0 }], ceos:{ c77:{ unlocked:true, lv:2, at:0 } }, gacha:{ owned:[], draws:0, pity:0, last:null }, claimLog:[] };
+  const j = x => JSON.parse(JSON.stringify(x));
+  return [v1, v3, j(E.newState(T0)), j(E.testHomesState(T0, 3)), raw3(), j(full(5e15 + 1))].every(r => E.checkSave(r).length === 0) && E.loadSave(JSON.stringify(v1), null, T0).source === 'main';
+});
+// ② 主档缺失 / 空串 / JSON null → 先看备份
+for (const [nm, mv] of [['缺失（null）', null], ['空字符串', ''], ['JSON null', 'null']]) {
+  t(`12d3 ② 主档${nm} + 好备份 → 用备份（余额 / 等级 / rev 来自备份），不是零进度新档`, () => { const b = raw3(); b.coins = 451000000; b.rev = 33; const r = E.loadSave(mv, JSON.stringify(b), T0); return r.source === 'bak' && r.st.coins === 451000000 && r.st.shops[3].lv === 25 && r.st.rev === 33 && !r.blocked; });
+  t(`12d3 ② 主档${nm} + 备份结构坏（shops[0]=null）→ 只读，不生成零进度`, () => { const b = raw3(); b.shops[0] = null; const r = E.loadSave(mv, JSON.stringify(b), T0); return r.blocked === true && r.source !== 'new' && r.source !== 'bak'; });
+  t(`12d3 ② 主档${nm} + 备份 JSON 截断 → 只读，不生成零进度`, () => { const r = E.loadSave(mv, JSON.stringify(raw3()).slice(0, 150), T0); return r.blocked === true && r.source !== 'new'; });
+  t(`12d3 ② 主档${nm} + 备份余额 1e20 → 只读（不当钱包）`, () => { const b = raw3(); b.coins = 1e20; const r = E.loadSave(mv, JSON.stringify(b), T0); return r.blocked === true && r.source !== 'new' && r.source !== 'bak'; });
+}
+t('12d3 ② 主档缺失 + 没有备份 → 才是新游戏', () => { const r = E.loadSave('', null, T0); return r.source === 'new' && !r.blocked && r.st.coins === 0; });
+t('12d3 ② 主档缺失 + 坏备份 → 只读状态写不出去（commitSave 拒绝，备份原文不动）', () => { if (!has12d3) return false; const b = raw3(); b.shops[0] = null; const B = JSON.stringify(b); const ls = mem({ [KB]:B }); const L = E.loadSave(null, B, T0); const r = E.commitSave(ls, K, KB, L.st); return L.blocked && !r.ok && ls.getItem(K) === null && ls.getItem(KB) === B; });
+// ④ 备份写失败 → 整次保存放弃，主档不动
+t('12d3 ④ commitSave：备份 setItem 抛异常 → 返回失败，主档 / 备份逐字节不变，rev 不变', () => { if (!has12d3) return false; const P = JSON.stringify(raw3()); const ls = mem({ [K]:P, [KB]:'old-bak' }, { [KB]:true }); const st = G3(); st.coins -= 100; const rev = st.rev; const r = E.commitSave(ls, K, KB, st); return !r.ok && r.stage === 'bak' && ls.getItem(K) === P && ls.getItem(KB) === 'old-bak' && st.rev === rev; });
+t('12d3 ④ commitSave：主档 setItem 抛异常 → 返回失败，主档不变、rev 不变（备份 = 原主档）', () => { if (!has12d3) return false; const P = JSON.stringify(raw3()); const ls = mem({ [K]:P }, { [K]:true }); const st = G3(); const rev = st.rev; const r = E.commitSave(ls, K, KB, st); return !r.ok && r.stage === 'main' && ls.getItem(K) === P && st.rev === rev && (ls.getItem(KB) === null || ls.getItem(KB) === P); });
+t('12d3 ④ commitSave 成功：先把原主档整份放进 -bak，rev + 1，写出的档通过 checkSave', () => { if (!has12d3) return false; const P = JSON.stringify(raw3()); const ls = mem({ [K]:P }); const st = G3(); st.coins = 451999000; const r = E.commitSave(ls, K, KB, st); const w = JSON.parse(ls.getItem(K)); return r.ok && r.rev === 21 && st.rev === 21 && w.rev === 21 && w.coins === 451999000 && ls.getItem(KB) === P && E.checkSave(w).length === 0; });
+t('12d3 ④ commitSave：存储里 rev 更新（别的页面写过）→ 拒绝、不覆盖', () => { if (!has12d3) return false; const p = raw3(); p.rev = 50; const P = JSON.stringify(p); const ls = mem({ [K]:P }); const st = G3(); const r = E.commitSave(ls, K, KB, st); return !r.ok && r.stage === 'conflict' && ls.getItem(K) === P && ls.getItem(KB) === null; });
+t('12d3 ④ commitSave：余额 1e20 读出的只读状态 → 拒绝（原文不动）', () => { if (!has12d3) return false; const u = raw3(); u.coins = 1e20; const U = JSON.stringify(u); const ls = mem({ [K]:U }); const L = E.loadSave(U, null, T0); const r = E.commitSave(ls, K, KB, L.st); return !r.ok && ls.getItem(K) === U; });
+// ⑤ 统一交易入口 E.transact
+t('12d3 ⑤ E.transact / E.commitSave / E.isBlocked 存在', () => has12d3 && typeof E.isBlocked === 'function');
+t('12d3 ⑤ 成功：扣 50、改状态、调一次 save，返回 { ok, cost:50, result }', () => { if (!has12d3) return false; const st = G3(); const c = st.coins; let n = 0; const r = E.transact(st, { price:50, apply:s => { s.zombie = { lv:(s.zombie ? s.zombie.lv : 0) + 1 }; return { ok:true, lv:s.zombie.lv }; }, save:s => { n++; return s === st; } }); return r.ok && r.cost === 50 && r.result.lv === 1 && st.coins === c - 50 && st.zombie.lv === 1 && n === 1; });
+for (const [nm, sv] of [['返回 false', () => false], ['返回 { ok:false }', () => ({ ok:false, why:'x' })], ['抛异常', () => { throw new Error('quota'); }], ['返回 undefined', () => undefined], ['返回字符串 "ok"', () => 'ok']]) {
+  t(`12d3 ⑤ save ${nm} → 整档回滚（钱、训练等级、rev 都还原），stage = save、why = 保存失败`, () => { if (!has12d3) return false; const st = G3(); const s0 = deep(st); const r = E.transact(st, { price:1234, apply:s => { s.zombie = { lv:9 }; s.shops[0].lv++; s.rev++; return { ok:true }; }, save:sv }); return !r.ok && r.stage === 'save' && r.why === '保存失败' && deep(st) === s0; });
+}
+t('12d3 ⑤ 回滚后对象引用不变（调用方手里的 st 还是同一个，嵌套字段也是回滚后的值）', () => { if (!has12d3) return false; const st = G3(); const ref = st; const r = E.transact(st, { price:10, apply:s => { s.shops[1].lv = 99; }, save:() => false }); return !r.ok && st === ref && st.shops[1].lv === G3().shops[1].lv; });
+t('12d3 ⑤ apply 返回 { ok:false } → 回滚，不调 save', () => { if (!has12d3) return false; const st = G3(); const s0 = deep(st); let n = 0; const r = E.transact(st, { price:100, apply:s => { s.shops[0].lv = 77; return { ok:false, why:'已满级' }; }, save:() => { n++; return true; } }); return !r.ok && r.stage === 'apply' && r.why === '已满级' && n === 0 && deep(st) === s0; });
+t('12d3 ⑤ apply 抛异常 → 回滚，不调 save', () => { if (!has12d3) return false; const st = G3(); const s0 = deep(st); let n = 0; const r = E.transact(st, { price:100, apply:() => { throw new Error('boom'); }, save:() => { n++; return true; } }); return !r.ok && r.stage === 'apply' && n === 0 && deep(st) === s0; });
+t('12d3 ⑤ 金币不够 → stage = pay，不调 apply / save，一分不扣', () => { if (!has12d3) return false; const st = G3(); st.coins = 10; const s0 = deep(st); let a = 0, n = 0; const r = E.transact(st, { price:11, apply:() => { a++; }, save:() => { n++; return true; } }); return !r.ok && r.stage === 'pay' && r.why === '金币不够' && a === 0 && n === 0 && deep(st) === s0; });
+for (const v of [NaN, -1, Infinity, 'abc', null, 2e15]) t(`12d3 ⑤ 价格 ${BADN(v)} → 拒绝，不调 apply / save`, () => { if (!has12d3) return false; const st = G3(); const s0 = deep(st); let a = 0, n = 0; const r = E.transact(st, { price:v, apply:() => { a++; }, save:() => { n++; return true; } }); return !r.ok && a === 0 && n === 0 && deep(st) === s0; });
+t('12d3 ⑤ blocked:true（调用方已知只读）→ 拒绝', () => { if (!has12d3) return false; const st = G3(); const s0 = deep(st); let n = 0; const r = E.transact(st, { price:1, apply:() => {}, save:() => { n++; return true; }, blocked:true }); return !r.ok && r.stage === 'blocked' && n === 0 && deep(st) === s0; });
+for (const [nm, mainS, bakS] of [['余额 1e20（异常档）', (() => { const u = raw3(); u.coins = 1e20; return JSON.stringify(u); })(), null], ['坏档没备份（shops[0]=null）', (() => { const u = raw3(); u.shops[0] = null; return JSON.stringify(u); })(), null], ['主档缺失 + 坏备份', null, (() => { const u = raw3(); u.ceos.pearl = null; return JSON.stringify(u); })()]])
+  t(`12d3 ⑤ ${nm}读出的状态：不传 blocked 也拒绝交易（不扣钱、不调 save）`, () => { if (!has12d3) return false; const L = E.loadSave(mainS, bakS, T0); const s0 = deep(L.st); let n = 0; const r = E.transact(L.st, { price:0, apply:s => { s.coins = 5; }, save:() => { n++; return true; } }); return L.blocked && !r.ok && r.stage === 'blocked' && n === 0 && deep(L.st) === s0; });
+t('12d3 ⑤ apply 把状态改坏（shops[0]=null / 余额 NaN / cur=9）→ stage = validate，回滚、不调 save', () => { if (!has12d3) return false; return [s => { s.shops[0] = null; }, s => { s.coins = NaN; }, s => { s.cur = 9; }].every(f => { const st = G3(); const s0 = deep(st); let n = 0; const r = E.transact(st, { price:5, apply:f, save:() => { n++; return true; } }); return !r.ok && r.stage === 'validate' && n === 0 && deep(st) === s0; }); });
+t('12d3 ⑤ 经营购买也能走：transact(apply = upgradeShop) 存不上 → 等级和钱都回滚', () => { if (!has12d3) return false; const st = G3(); const s0 = deep(st); const r = E.transact(st, { apply:s => E.upgradeShop(s, 1), save:() => false }); return !r.ok && r.stage === 'save' && deep(st) === s0; });
+// ⑤ 跨页完整链路（打僵尸训练 / 宠物买狗的写法）：读档 → transact（save = commitSave）→ 失败全回滚
+const zombieTrain = (ls, price) => { const L = E.loadSave(ls.getItem(K), ls.getItem(KB), T0); if (L.blocked) return { ok:false, stage:'blocked', L };
+  const r = E.transact(L.st, { price, apply:s => { const z = s.zombie || (s.zombie = { lv:0 }); z.lv++; return { ok:true, lv:z.lv }; }, save:s => E.commitSave(ls, K, KB, s) }); r.L = L; return r; };
+t('12d3 ⑤ 打僵尸训练（跨页）成功：主档余额 −价格、zombie.lv +1、rev +1，-bak = 原主档', () => { if (!has12d3) return false; const P = JSON.stringify(raw3()); const ls = mem({ [K]:P }); const r = zombieTrain(ls, 5000); const w = JSON.parse(ls.getItem(K)); return r.ok && w.coins === 452000000 - 5000 && w.zombie.lv === 1 && w.rev === 21 && ls.getItem(KB) === P && r.L.st.zombie.lv === 1; });
+t('12d3 ⑤ 打僵尸训练：备份写失败 → 主档 / 备份逐字节不变，内存里的钱和训练等级都回滚', () => { if (!has12d3) return false; const P = JSON.stringify(raw3()); const ls = mem({ [K]:P, [KB]:'B0' }, { [KB]:true }); const r = zombieTrain(ls, 5000); return !r.ok && r.stage === 'save' && ls.getItem(K) === P && ls.getItem(KB) === 'B0' && r.L.st.coins === 452000000 && !r.L.st.zombie && r.L.st.rev === 20; });
+t('12d3 ⑤ 打僵尸训练：主档写失败 → 主档不变，内存回滚（没有「扣了钱存不上」）', () => { if (!has12d3) return false; const P = JSON.stringify(raw3()); const ls = mem({ [K]:P }, { [K]:true }); const r = zombieTrain(ls, 5000); return !r.ok && ls.getItem(K) === P && r.L.st.coins === 452000000 && !r.L.st.zombie; });
+t('12d3 ⑤ 打僵尸训练：存档余额 1e20 → 整局禁止训练扣款，原文不动', () => { if (!has12d3) return false; const u = raw3(); u.coins = 1e20; const U = JSON.stringify(u); const ls = mem({ [K]:U }); const r = zombieTrain(ls, 5000); return !r.ok && r.stage === 'blocked' && ls.getItem(K) === U; });
+t('12d3 ⑤ 宠物买狗（跨页）：存不上 → pet 字段不出现、钱不扣；能存上 → pet 写进同一份主档', () => { if (!has12d3) return false; const P = JSON.stringify(raw3());
+  const buy = ls => { const L = E.loadSave(ls.getItem(K), ls.getItem(KB), T0); const r = E.transact(L.st, { price:8000, apply:s => { if (s.pet) return { ok:false, why:'已经有狗了' }; s.pet = { id:'puppy', t:T0 }; return { ok:true }; }, save:s => E.commitSave(ls, K, KB, s) }); return { r, st:L.st }; };
+  const a = buy(mem({ [K]:P }, { [K]:true })), ls2 = mem({ [K]:P }), b = buy(ls2);
+  return !a.r.ok && !a.st.pet && a.st.coins === 452000000 && b.r.ok && JSON.parse(ls2.getItem(K)).pet.id === 'puppy' && JSON.parse(ls2.getItem(K)).coins === 452000000 - 8000; });
+// ⑥ 已确认的取舍保持不变
+t('12d3 ⑥ 取舍不变：1e15 < 余额 ≤ MAX_SAFE 的旧档照常读、能花不涨；totalEarned 超安全整数的旧值读档不裁', () => { const r0 = raw3(); r0.coins = 5e15 + 1; r0.totalEarned = 1e17; const L = E.loadSave(JSON.stringify(r0), null, T0); const c = L.st.coins; E.addCoins(L.st, 100); const u = E.upgradeShop(L.st, 0); return L.source === 'main' && c === 5e15 + 1 && u.ok && L.st.coins === c - u.cost && L.st.totalEarned === 1e17; });
+t('12d3 ⑥ 取舍不变：余额 1e20 仍是异常模式（不自动拿备份顶）', () => { const u = raw3(); u.coins = 1e20; const r = E.loadSave(JSON.stringify(u), JSON.stringify(raw3()), T0); return r.unsafe === true && r.blocked === true && r.source === 'unsafe'; });
 
 console.log(`coin safety tests: ${pass} passed, ${fail} failed`);
 if (process.env.COIN_FAILS_JSON) require('fs').writeFileSync(process.env.COIN_FAILS_JSON, JSON.stringify(fails, null, 1));
