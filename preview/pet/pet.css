@@ -1,0 +1,23 @@
+:root{--ink:#2b2118;--paper:#fff7ea;--accent:#e07a3f;--green:#2f9e5b;--red:#d64545}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:#f3e6d2;color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Noto Sans CJK SC",sans-serif;overscroll-behavior:none}
+#app{max-width:520px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 6px) 8px calc(env(safe-area-inset-bottom) + 8px);display:flex;flex-direction:column;gap:6px;min-height:100svh}
+.top{display:flex;flex-direction:column;gap:1px}
+.ttl{font-size:17px;font-weight:900}
+.ttl b{background:var(--accent);color:#fff;border-radius:5px;padding:0 5px;font-size:13px;vertical-align:2px}
+.sub{font-size:11px;opacity:.65}
+.stage{position:relative;border:3px solid var(--ink);border-radius:8px;box-shadow:4px 4px 0 var(--ink);overflow:hidden;background:#e9d5b7;touch-action:none}
+#room{display:block;width:100%;touch-action:none}
+.toast{position:absolute;left:50%;top:10px;transform:translateX(-50%);background:rgba(43,33,24,.88);color:#fff;font-size:12px;padding:5px 10px;border-radius:12px;white-space:nowrap;pointer-events:none;transition:opacity .25s}
+.toast.hidden{opacity:0}
+.status{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:13px;min-height:22px;padding:0 2px}
+#label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.aff{flex:none;font-weight:800;color:#b5527a}
+.ctl{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.btn{font:inherit;font-size:16px;font-weight:900;padding:11px 0;border:3px solid var(--ink);border-radius:10px;background:var(--paper);box-shadow:3px 3px 0 var(--ink);color:var(--ink)}
+.btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
+.btn:disabled{opacity:.4}
+.tools{display:flex;align-items:center;gap:8px;font-size:12px}
+.tbtn{font:inherit;font-size:12px;font-weight:800;padding:5px 10px;border:2px solid var(--ink);border-radius:8px;background:#fff;color:var(--ink)}
+.tbtn.on{background:var(--accent);color:#fff}
+.hint{opacity:.7}
