@@ -2,28 +2,32 @@
 // 打僵尸 z1 原型：只有 77。存档只用 PROTO_KEY（模拟余额 + 训练等级），不碰 tangzhe-save / tangzhe-preview-save。
 (() => {
 const PROTO_KEY = 'tangzhe-zombie-proto';
-const RUN_SEC = 180, BOSS_AT = 150;
+const MAX_LV = 50, HP_G = 1.085;
+const levelDur = n => Math.min(150, 60 + (n - 1) * 2);
+const isBossLv = n => n % 10 === 0;
 const INK = '#141414', PAPER = '#f7f1e3', RED = '#e63946', YEL = '#ffd23f';
 const $ = s => document.querySelector(s);
 const fin = (v, d) => (typeof v === 'number' && isFinite(v) ? v : d);
 
 // ---- 模拟钱包（接口与将来的统一钱包一致：balance / canSpend / spend）----
 const TRAIN = [
-  { id: 'atk',  name: '串串火候', desc: lv => `普攻伤害 ×${(1.15 ** lv).toFixed(2)}`, base: 2e6 },
-  { id: 'rate', name: '翻串手速', desc: lv => `出串间隔 ${fireInterval(lv).toFixed(2)} 秒`, base: 3e6 },
-  { id: 'hp',   name: '摊主体力', desc: lv => `生命 ${Math.round(100 * 1.12 ** lv)}`, base: 2.5e6 },
-  { id: 'ult',  name: '火圈加柴', desc: lv => `火圈伤害 ×${(1.2 ** lv).toFixed(2)}`, base: 4e6 },
+  { id: 'atk',  name: '串串火候', desc: lv => `普攻伤害 ×${(1.15 ** lv).toFixed(2)}`, base: 1e6 },
+  { id: 'rate', name: '翻串手速', desc: lv => `出串间隔 ${fireInterval(lv).toFixed(2)} 秒`, base: 1.5e6 },
+  { id: 'hp',   name: '摊主体力', desc: lv => `生命 ${Math.round(100 * 1.12 ** lv)}`, base: 1.2e6 },
+  { id: 'ult',  name: '火圈加柴', desc: lv => `火圈伤害 ×${(1.2 ** lv).toFixed(2)}`, base: 2e6 },
 ];
 const MAX_TRAIN = 30;
-const price = (t, lv) => Math.round(t.base * 2.6 ** lv);
+const price = (t, lv) => Math.round(t.base * 1.9 ** lv);
 function fireInterval(lv) { return Math.max(0.2, 0.55 * 0.95 ** lv); }
 function loadProto() {
   let raw = null; try { raw = JSON.parse(localStorage.getItem(PROTO_KEY) || 'null'); } catch (e) { raw = null; }
-  const p = { coins: 5e10, lv: { atk: 0, rate: 0, hp: 0, ult: 0 }, best: 0 };
+  const p = { coins: 5e10, lv: { atk: 0, rate: 0, hp: 0, ult: 0 }, best: 0, cleared: 0, endBest: { t: 0, kills: 0 } };
   if (raw && typeof raw === 'object') {
     p.coins = Math.max(0, Math.min(1e15, fin(raw.coins, p.coins)));
     for (const k in p.lv) p.lv[k] = Math.max(0, Math.min(MAX_TRAIN, Math.floor(fin(raw.lv && raw.lv[k], 0))));
     p.best = Math.max(0, fin(raw.best, 0));
+    p.cleared = Math.max(0, Math.min(MAX_LV, Math.floor(fin(raw.cleared, 0))));
+    const eb = raw.endBest || {}; p.endBest = { t: Math.max(0, fin(eb.t, 0)), kills: Math.max(0, Math.floor(fin(eb.kills, 0))) };
   }
   return p;
 }
@@ -57,10 +61,12 @@ window.addEventListener('resize', resize);
 
 // ---- 对局 ----
 let G = null, raf = 0, last = 0, paused = false;
-function newRun() {
+let selLv = 1;
+function newRun(mode, n) {
   const lv = proto.lv, maxHp = Math.round(100 * 1.12 ** lv.hp);
   return {
-    t: 0, over: false, win: false, kills: 0, spawnAcc: 0, bossSpawned: false,
+    mode, n, dur: mode === 'level' ? levelDur(n) : Infinity, nextBoss: mode === 'level' ? (isBossLv(n) ? levelDur(n) - 30 : Infinity) : 60,
+    t: 0, over: false, win: false, kills: 0, spawnAcc: 0,
     p: { x: W / 2, y: H * 0.62, r: 15 * U, hp: maxHp, maxHp, face: 1, inv: 0, fireCd: 0.3, walk: 0, moving: false },
     dmg: 10 * 1.15 ** lv.atk, interval: fireInterval(lv.rate), ultMul: 1.2 ** lv.ult,
     skewers: 3, ult: 0, ring: null, shake: 0,
@@ -75,22 +81,24 @@ const ZT = {
   boss:   { r: 42, hp: 3200, sp: 20, dmg: 28, col: '#9a6fb0', ult: 60 },
 };
 function spawn(type) {
-  const T = ZT[type], scale = 1 + G.t / 75, side = Math.floor(rnd() * 4), m = 30 * U;
+  const T = ZT[type], d = diff(), scale = (1 + G.t / 75) * HP_G ** (d - 1), side = Math.floor(rnd() * 4), m = 30 * U;
   let x, y;
   if (side === 0) { x = rnd() * W; y = -m; } else if (side === 1) { x = W + m; y = rnd() * H; }
   else if (side === 2) { x = rnd() * W; y = H + m; } else { x = -m; y = rnd() * H; }
-  const hp = T.hp * (type === 'boss' ? 1 + G.t / 120 : scale);
-  G.zs.push({ type, x, y, r: T.r * U, hp, maxHp: hp, sp: T.sp * U * (0.9 + rnd() * 0.2), dmg: T.dmg, col: T.col, flash: 0, kx: 0, ky: 0, slow: 0, burn: 0, wob: rnd() * 6 });
+  const hp = type === 'boss' ? T.hp * HP_G ** (d - 1) * (1 + G.t / 300) : T.hp * scale;
+  G.zs.push({ type, x, y, r: T.r * U, hp, maxHp: hp, sp: T.sp * U * (0.9 + rnd() * 0.2) * Math.min(1.5, 1 + (d - 1) * 0.008), dmg: T.dmg * (1 + (d - 1) * 0.05), col: T.col, flash: 0, kx: 0, ky: 0, slow: 0, burn: 0, wob: rnd() * 6 });
 }
+// 难度档：关卡 = 关号；无尽 = 50 起每 30 秒 +1
+function diff() { return G.mode === 'endless' ? MAX_LV + G.t / 30 : G.n; }
 function spawner(dt) {
-  const t = G.t, rate = Math.min(5.5, 0.7 + t / 38);
+  const t = G.t, d = diff(), rate = Math.min(5.5 + (d - 1) * 0.04, (0.7 + t / 38) * (1 + (d - 1) * 0.02));
   G.spawnAcc += rate * dt;
   while (G.spawnAcc >= 1 && G.zs.length < 140) {
     G.spawnAcc -= 1;
     const r = rnd();
     spawn(t > 60 && r < 0.12 ? 'tank' : t > 25 && r < 0.4 ? 'runner' : 'walker');
   }
-  if (!G.bossSpawned && t >= BOSS_AT) { G.bossSpawned = true; spawn('boss'); toast('差评僵尸王来了！'); }
+  if (t >= G.nextBoss) { G.nextBoss = G.mode === 'endless' ? G.nextBoss + 60 : Infinity; spawn('boss'); toast('差评僵尸王来了！'); }
 }
 function nearest() {
   let best = null, bd = Infinity; const p = G.p;
@@ -185,7 +193,7 @@ function step(dt) {
   for (let i = G.fx.length - 1; i >= 0; i--) { const f = G.fx[i]; f.x += f.vx * dt; f.y += f.vy * dt; f.t -= dt; if (f.t <= 0) G.fx.splice(i, 1); }
   for (let i = G.txt.length - 1; i >= 0; i--) { const f = G.txt[i]; f.y -= 30 * U * dt; f.t -= dt; if (f.t <= 0) G.txt.splice(i, 1); }
   G.shake = Math.max(0, G.shake - dt);
-  if (G.t >= RUN_SEC) end(true);
+  if (G.mode === 'level' && G.t >= G.dur) end(true);
 }
 const ringRadius = R => (40 + 80 * Math.min(1, R.t / 0.4)) * U;
 
@@ -289,14 +297,25 @@ function drawRing(R) {
 let toastT = 0;
 function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 1100); }
 function hud() {
-  const p = G.p, left = Math.max(0, Math.ceil(RUN_SEC - G.t));
+  const p = G.p, sec = G.mode === 'level' ? Math.max(0, Math.ceil(G.dur - G.t)) : Math.floor(G.t);
   $('#hpFill').style.width = (p.hp / p.maxHp * 100) + '%'; $('#hpTxt').textContent = `${Math.ceil(p.hp)} / ${p.maxHp}`;
-  $('#clock').textContent = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+  $('#clock').textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
+  $('#lvlTxt').textContent = G.mode === 'level' ? `第 ${G.n} 关${isBossLv(G.n) ? '·Boss' : ''}` : `无尽 难度 ${Math.floor(diff())}`;
   $('#killTxt').textContent = `击倒 ${G.kills}`; $('#skewTxt').textContent = `飞串 ×${G.skewers}`;
   const ub = $('#ultBtn'), ready = G.ult >= 100 && !G.ring;
   $('#ultFill').style.height = G.ult + '%'; ub.disabled = !ready; ub.classList.toggle('ready', ready);
 }
+function renderLv() {
+  const top = Math.min(MAX_LV, proto.cleared + 1); selLv = Math.min(Math.max(1, selLv), top);
+  $('#lvTxt').textContent = `第 ${selLv} 关`;
+  $('#lvInfo').textContent = `${levelDur(selLv)} 秒${isBossLv(selLv) ? ' · Boss 关' : ''}${selLv <= proto.cleared ? ' · 已通关' : ''}`;
+  $('#lvProg').textContent = `已通关 ${proto.cleared} / ${MAX_LV}`;
+  $('#lvPrev').disabled = selLv <= 1; $('#lvNext').disabled = selLv >= top;
+  const eb = $('#endlessBtn'), open = proto.cleared >= MAX_LV;
+  eb.disabled = !open; eb.textContent = open ? `无尽模式（最好 ${Math.floor(proto.endBest.t)} 秒）` : `无尽模式（通关 ${MAX_LV} 关开放）`;
+}
 function renderTrain() {
+  renderLv();
   $('#walletTxt').textContent = fmt(Wallet.balance());
   $('#train').innerHTML = TRAIN.map(t => {
     const lv = proto.lv[t.id], max = lv >= MAX_TRAIN, c = price(t, lv);
@@ -312,12 +331,26 @@ $('#train').addEventListener('click', e => {
   renderTrain();
 });
 function show(id) { for (const s of ['#menu', '#pause', '#result']) $(s).classList.toggle('hidden', s !== id); $('#hud').classList.toggle('hidden', id === '#menu'); }
-function start() { resize(); G = newRun(); paused = false; joy.on = false; show(null); hud(); last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop); }
+function start(mode, n) {
+  if (mode === 'endless' && proto.cleared < MAX_LV) return false;
+  if (mode !== 'endless') { mode = 'level'; n = Math.min(Math.max(1, Math.floor(fin(n, selLv))), Math.min(MAX_LV, proto.cleared + 1)); selLv = n; }
+  resize(); G = newRun(mode, n); paused = false; joy.on = false; show(null); hud(); last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop); }
 function end(win) {
   G.over = true; G.win = win; joy.on = false;
-  proto.best = Math.max(proto.best, G.kills); saveProto();
-  $('#resTitle').textContent = win ? '撑住了！收摊！' : '77 被围住了…';
-  $('#resStats').textContent = `坚持 ${Math.floor(G.t)} 秒 · 击倒 ${G.kills} · 最高 ${proto.best}`;
+  proto.best = Math.max(proto.best, G.kills);
+  let title, again = '再来一局';
+  if (G.mode === 'endless') {
+    const rec = G.t > proto.endBest.t; if (rec) proto.endBest = { t: G.t, kills: G.kills };
+    title = rec ? '无尽新纪录！' : '无尽结算';
+  } else if (win) {
+    proto.cleared = Math.max(proto.cleared, G.n);
+    title = G.n >= MAX_LV ? `第 ${G.n} 关通关！无尽模式开放` : `第 ${G.n} 关通关！`;
+    again = G.n >= MAX_LV ? '进入无尽' : '下一关';
+  } else title = `第 ${G.n} 关失败…`;
+  saveProto();
+  $('#resTitle').textContent = title; $('#againBtn').textContent = again;
+  $('#resStats').textContent = G.mode === 'endless' ? `坚持 ${Math.floor(G.t)} 秒 · 击倒 ${G.kills} · 最好 ${Math.floor(proto.endBest.t)} 秒`
+    : `坚持 ${Math.floor(G.t)} / ${G.dur} 秒 · 击倒 ${G.kills}`;
   show('#result');
 }
 function setPause(on) { if (!G || G.over) return; paused = on; joy.on = false; show(on ? '#pause' : null); if (!on) last = performance.now(); }
@@ -327,8 +360,15 @@ function loop(now) {
   draw();
   raf = requestAnimationFrame(loop);
 }
-$('#startBtn').addEventListener('click', start);
-$('#againBtn').addEventListener('click', start);
+$('#startBtn').addEventListener('click', () => start('level', selLv));
+$('#endlessBtn').addEventListener('click', () => start('endless'));
+$('#againBtn').addEventListener('click', () => {
+  if (G && G.mode === 'endless') return start('endless');
+  if (G && G.win) return G.n >= MAX_LV ? start('endless') : start('level', G.n + 1);
+  start('level', G ? G.n : selLv);
+});
+$('#lvPrev').addEventListener('click', () => { selLv--; renderLv(); });
+$('#lvNext').addEventListener('click', () => { selLv++; renderLv(); });
 $('#menuBtn').addEventListener('click', () => { G = null; renderTrain(); show('#menu'); draw(); });
 $('#pauseBtn').addEventListener('click', () => setPause(true));
 $('#resumeBtn').addEventListener('click', () => setPause(false));
@@ -336,7 +376,8 @@ $('#quitBtn').addEventListener('click', () => { paused = false; end(false); });
 $('#ultBtn').addEventListener('click', () => { castUlt(); hud(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) setPause(true); });
 
+selLv = Math.min(MAX_LV, proto.cleared + 1);
 resize(); renderTrain(); draw();
 // 测试钩子：只读状态 + 固定步长推进
-window.__zb = { get G() { return G; }, proto, Wallet, step, castUlt, start, setPause, joy, PROTO_KEY, price, TRAIN };
+window.__zb = { get G() { return G; }, proto, Wallet, step, castUlt, start, setPause, joy, PROTO_KEY, price, TRAIN, levelDur, renderTrain, saveProto, MAX_LV };
 })();

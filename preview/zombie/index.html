@@ -1,15 +1,15 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-<!-- 打僵尸 z1：独立原型（未上线）。只用模拟余额，不读写经营存档；角色造型复用 ../art。 -->
+<!-- 打僵尸 z2：独立原型（未上线）。只用模拟余额，不读写经营存档；角色造型复用 ../art。 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#f7f1e3">
 <meta name="format-detection" content="telephone=no">
-<title>77 打僵尸（原型 z1·未上线）</title>
+<title>77 打僵尸（原型 z2·未上线）</title>
 <link rel="icon" href="../icon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="zombie.css?v=z1">
+<link rel="stylesheet" href="zombie.css?v=z2">
 </head>
 <body>
 <canvas id="cv"></canvas>
@@ -20,7 +20,7 @@
     <div class="clock" id="clock">3:00</div>
     <button class="icon-btn" id="pauseBtn" type="button" aria-label="暂停">II</button>
   </div>
-  <div class="hud-sub"><span id="killTxt">击倒 0</span><span id="skewTxt">飞串 ×3</span></div>
+  <div class="hud-sub"><span id="killTxt">击倒 0</span><span id="lvlTxt"></span><span id="skewTxt">飞串 ×3</span></div>
   <button id="ultBtn" type="button" aria-label="大招：火圈" disabled><span class="ult-fill" id="ultFill"></span><span class="ult-lbl">火圈</span></button>
   <div id="toast" class="toast"></div>
 </div>
@@ -30,8 +30,13 @@
     <img src="../art/face_c77.webp" alt="77" width="96" height="96">
     <div>
       <h1>77 打僵尸</h1>
-      <p>拖动屏幕走位，自动扔飞串；能量满了放<b>火圈</b>。撑过 3 分钟就赢。</p>
+      <p>拖动屏幕走位，自动扔飞串；能量满了放<b>火圈</b>。撑到倒计时结束就过关，共 50 关，通关后开放无尽模式。</p>
     </div>
+  </div>
+  <div class="card">
+    <div class="row"><h2>选关</h2><span class="wallet" id="lvProg"></span></div>
+    <div class="lvsel"><button class="buy" id="lvPrev" type="button" aria-label="上一关">‹</button><div><b id="lvTxt">第 1 关</b><small id="lvInfo"></small></div><button class="buy" id="lvNext" type="button" aria-label="下一关">›</button></div>
+    <button class="buy" id="endlessBtn" type="button" disabled>无尽模式</button>
   </div>
   <div class="card">
     <div class="row"><h2>战斗训练</h2><span class="wallet">模拟余额 <b id="walletTxt">0</b></span></div>
@@ -45,7 +50,7 @@
   <div class="card center">
     <h2>暂停中</h2>
     <button class="buy big" id="resumeBtn" type="button">继续</button>
-    <button class="buy" id="quitBtn" type="button">放弃本局</button>
+    <button class="buy" id="quitBtn" type="button">退出本局</button>
   </div>
 </section>
 
@@ -58,6 +63,6 @@
   </div>
 </section>
 
-<script src="zombie.js?v=z1"></script>
+<script src="zombie.js?v=z2"></script>
 </body>
 </html>
