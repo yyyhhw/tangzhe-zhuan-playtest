@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<!-- 打僵尸 z1：独立原型（未上线）。只用模拟余额，不读写经营存档；角色造型复用 ../art。 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#f7f1e3">
+<meta name="format-detection" content="telephone=no">
+<title>77 打僵尸（原型 z1·未上线）</title>
+<link rel="icon" href="../icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="zombie.css?v=z1">
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="hud" class="hidden">
+  <div class="hud-top">
+    <div class="hp"><i id="hpFill"></i><b id="hpTxt">100</b></div>
+    <div class="clock" id="clock">3:00</div>
+    <button class="icon-btn" id="pauseBtn" type="button" aria-label="暂停">II</button>
+  </div>
+  <div class="hud-sub"><span id="killTxt">击倒 0</span><span id="skewTxt">飞串 ×3</span></div>
+  <button id="ultBtn" type="button" aria-label="大招：火圈" disabled><span class="ult-fill" id="ultFill"></span><span class="ult-lbl">火圈</span></button>
+  <div id="toast" class="toast"></div>
+</div>
+
+<section id="menu" class="screen">
+  <div class="card hero">
+    <img src="../art/face_c77.webp" alt="77" width="96" height="96">
+    <div>
+      <h1>77 打僵尸</h1>
+      <p>拖动屏幕走位，自动扔飞串；能量满了放<b>火圈</b>。撑过 3 分钟就赢。</p>
+    </div>
+  </div>
+  <div class="card">
+    <div class="row"><h2>战斗训练</h2><span class="wallet">模拟余额 <b id="walletTxt">0</b></span></div>
+    <p class="note">原型用模拟金币，价格待金币安全方案定稿后再接经营金币。</p>
+    <div id="train"></div>
+  </div>
+  <button class="buy big red" id="startBtn" type="button">开打！</button>
+</section>
+
+<section id="pause" class="screen dim hidden">
+  <div class="card center">
+    <h2>暂停中</h2>
+    <button class="buy big" id="resumeBtn" type="button">继续</button>
+    <button class="buy" id="quitBtn" type="button">放弃本局</button>
+  </div>
+</section>
+
+<section id="result" class="screen dim hidden">
+  <div class="card center">
+    <h2 id="resTitle">撑住了！</h2>
+    <p id="resStats"></p>
+    <button class="buy big red" id="againBtn" type="button">再来一局</button>
+    <button class="buy" id="menuBtn" type="button">回训练</button>
+  </div>
+</section>
+
+<script src="zombie.js?v=z1"></script>
+</body>
+</html>
