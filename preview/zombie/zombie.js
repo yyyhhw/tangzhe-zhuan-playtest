@@ -312,7 +312,7 @@ function renderLv() {
   $('#lvProg').textContent = `已通关 ${proto.cleared} / ${MAX_LV}`;
   $('#lvPrev').disabled = selLv <= 1; $('#lvNext').disabled = selLv >= top;
   const eb = $('#endlessBtn'), open = proto.cleared >= MAX_LV;
-  eb.disabled = !open; eb.textContent = open ? `无尽模式（最好 ${Math.floor(proto.endBest.t)} 秒）` : `无尽模式（通关 ${MAX_LV} 关开放）`;
+  eb.disabled = !open; eb.textContent = open ? `无尽模式·最好 ${Math.floor(proto.endBest.t)} 秒` : `无尽·通关 ${MAX_LV} 关开放`;
 }
 function renderTrain() {
   renderLv();
