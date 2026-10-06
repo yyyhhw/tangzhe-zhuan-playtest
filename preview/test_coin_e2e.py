@@ -1,5 +1,6 @@
 # 12d 金币安全 v1 端到端（WebKit = iPhone Safari 内核；SE / SE3 / iPhone 15）
 # 用法：先在本目录起静态服务，再 .pwvenv/bin/python test_coin_e2e.py [URL]
+# 12d1：第 9 段 = 熊大 17:53 三处阻塞（余额超 MAX_SAFE_INTEGER 进异常模式、原文不覆盖、交易全封；扣款精确；累计收入整数 + 零头；MAX 零余额 = 0）
 # 覆盖：熊大 17:00 测试者场景（4.52 亿 / 41.88 万每秒 / 团单 / 离线双倍）、坏档走备份、没备份不覆盖、内存坏值不写盘、
 #      余额上限、旧档超上限、等级上限满级显示、MAX / x10 遵守上限、坏离线收益、备份轮换、测试房间不写备份
 import sys, json, time
@@ -150,14 +151,14 @@ with sync_playwright() as p:
         check(False, f'12d 本段抛错（{type(ex).__name__}: {str(ex)[:160]}）')
     print('== 6. 旧档已超上限：保留余额和等级，停止增长，读档不降级 ==')
     try:
-        over = mk(pg, "st.coins=3e16; st.coinFrac=0; st.shops[0].lv=150; st.shops[1].emp=38; st.ceos.rocket.lv=29;")
+        over = mk(pg, "st.coins=5e15; st.coinFrac=0; st.shops[0].lv=150; st.shops[1].emp=38; st.ceos.rocket.lv=29;")
         boot(pg, over, wait=1500); close_modals(pg)
         S(pg, "__tzz.setTab('shop'); __tzz.switchShop(0)"); pg.wait_for_timeout(2500); close_modals(pg)
         ov = S(pg, "({c:__tzz.state.coins, lv:__tzz.state.shops[0].lv, emp:__tzz.state.shops[1].emp, rk:__tzz.state.ceos.rocket.lv, up:!!document.querySelector('[data-act=\"up\"]'), mx:[...document.querySelectorAll('[data-max]')].map(e=>e.dataset.max+':'+e.textContent+':'+e.disabled)})")
-        check(ov['c'] == 3e16 and ov['lv'] == 150 and ov['emp'] == 38 and ov['rk'] == 29, f"12d 旧档 3e16 / 店 Lv150 / 员工 Lv38 / 火箭 Lv29 读档后 2.5 秒：余额不涨不截、等级不降 {ov['c']}")
+        check(ov['c'] == 5e15 and ov['lv'] == 150 and ov['emp'] == 38 and ov['rk'] == 29, f"12d 旧档 5e15 / 店 Lv150 / 员工 Lv38 / 火箭 Lv29 读档后 2.5 秒：余额不涨不截、等级不降 {ov['c']}")
         check(not ov['up'] and 'shop:满级:true' in ov['mx'], f"12d 旧档 Lv150 店铺：只显示「满级」（不能买）{ov['mx']}")
         pg.reload(); pg.wait_for_timeout(1000); close_modals(pg)
-        check(S(pg, "__tzz.state.coins===3e16 && __tzz.state.shops[0].lv===150"), '12d 旧档超上限刷新后仍保留')
+        check(S(pg, "__tzz.state.coins===5e15 && __tzz.state.shops[0].lv===150"), '12d 旧档超上限刷新后仍保留')
 
     except Exception as ex:
         check(False, f'12d 本段抛错（{type(ex).__name__}: {str(ex)[:160]}）')
@@ -165,7 +166,7 @@ with sync_playwright() as p:
     try:
         for dname in ['iPhone SE', 'iPhone SE (3rd gen)', 'iPhone 15']:
             dc, dp = page(dname)
-            sv = mk(dp, "st.coins=3e16; st.coinFrac=0; st.shops[0].lv=100; st.shops[0].emp=35; st.ceos.c77.lv=30; st.shops[3].emp=21; st.ceos.rocket.lv=25;")
+            sv = mk(dp, "st.coins=5e15; st.coinFrac=0; st.shops[0].lv=100; st.shops[0].emp=35; st.ceos.c77.lv=30; st.shops[3].emp=21; st.ceos.rocket.lv=25;")
             boot(dp, sv); close_modals(dp)
             dp.evaluate("__tzz.setTab('shop'); __tzz.switchShop(0)"); dp.wait_for_timeout(300); close_modals(dp)
             dp.locator('[data-act="amt"][data-arg="max"]').click(); dp.wait_for_timeout(300)
@@ -207,6 +208,58 @@ with sync_playwright() as p:
         check(ls(pg, KEY) is None and ls(pg, BAK) is None, '12d 测试房间仍然不写主档 / 备份')
     except Exception as ex:
         check(False, f'12d 本段抛错（{type(ex).__name__}: {str(ex)[:160]}）')
+    print('== 9. 12d1 熊大 17:53：余额超安全整数封禁交易 / 扣款精确 / 累计收入零头 / MAX 零余额 ==')
+    try:
+        good = mk(pg); bakJ = json.loads(good); bakJ['coins'] = 451000000; bakJ['rev'] = 290; bak = json.dumps(bakJ)
+        for coins, nm in [(1e20, '1e20'), (9007199254740993, 'MAX_SAFE_INTEGER+2')]:
+            r = json.loads(good); r['coins'] = coins; r['coinFrac'] = 0; r['shops'][2]['emp'] = 0; r['rev'] = 305; r['lastSeen'] = r['maxSeen'] = r['lastSeen'] - 3600e3; um = json.dumps(r)   # 离开 1 小时回来
+            for bk, bn in [(bak, '有好备份'), (None, '没有备份')]:
+                boot(pg, um, bk, wait=1200)
+                info = S(pg, "({blk:__tzz.saveBlocked, uns:__tzz.loadInfo.unsafe, src:__tzz.loadInfo.source, badge:(document.getElementById('saveBadge')||{}).textContent||'', modal:document.getElementById('mpanel').innerText, coinTxt:document.getElementById('coins').textContent})")
+                hint = '备份里有一份正常存档' if bk else '没有找到可用的备份'
+                check(info['blk'] and info['uns'] and info['src'] != 'bak' and info['src'] != 'main' and '余额异常' in info['badge'] and '超过了' in info['modal'] and '没有被覆盖' in info['modal'] and hint in info['modal'] and info['coinTxt'] == '存档异常', f"12d1 主档余额 {nm} + {bn}：进入异常模式（不读成正常钱包、不自动拿备份覆盖），角标 + 弹窗说明，余额显示「存档异常」 {info['src']}")
+                close_modals(pg)
+                S(pg, "__tzz.setTab('shop'); __tzz.switchShop(2)"); pg.wait_for_timeout(300); close_modals(pg)
+                mut = S(pg, "new Promise(res=>{let n=0; const ob=new MutationObserver(m=>{n+=m.length}); ob.observe(document.getElementById('tabBody'),{childList:true,subtree:true}); setTimeout(()=>{ob.disconnect(); res(n)},1000)})")
+                check(mut < 5 and not S(pg, "!!__tzz.state.pending") and not modal_visible(pg) and S(pg, "Date.now()-__tzz.state.lastSeen") < 2000, f"12d1 主档余额 {nm} + {bn}：离开 1 小时回来不结算离线、不弹领取，时间照常往前记（页面不会每帧重画：1 秒内 {mut} 次 DOM 变动）")
+                before = S(pg, "JSON.stringify({c:__tzz.state.coins, s:__tzz.state.shops, ce:__tzz.state.ceos, g:__tzz.state.gacha.owned.length, inv:__tzz.state.furnInv})")
+                for sel in ['[data-act="hire"]', '[data-act="emp"]', '[data-act="up"]']:   # force：按钮被拒时会抖动，不等它停稳
+                    if pg.locator(sel).count(): pg.locator(sel).first.click(force=True); pg.wait_for_timeout(250)
+                pg.locator('[data-act="amt"][data-arg="max"]').click(force=True); pg.wait_for_timeout(200)
+                if pg.locator('[data-act="up"]').count(): pg.locator('[data-act="up"]').first.click(force=True); pg.wait_for_timeout(250)
+                api = S(pg, "(()=>{const E=__tzz.E,s=__tzz.state; return [E.hireEmp(s,2),E.upgradeShop(s,0),E.upgradeEmp(s,0),E.upgradeCeo(s,'c77'),E.gachaDraw(s,0.5),E.buyFurniture(s,'furn_bed'),E.upgradeHome(s,'c77'),E.addCoins(s,100)].map(r=>!!r.ok)})()")
+                after = S(pg, "JSON.stringify({c:__tzz.state.coins, s:__tzz.state.shops, ce:__tzz.state.ceos, g:__tzz.state.gacha.owned.length, inv:__tzz.state.furnInv})")
+                check(after == before and not any(api), f"12d1 主档余额 {nm} + {bn}：点雇人 / 升级 / MAX + 8 条买卖接口全部被拒，余额 / 等级 / 收藏一点没变 {api}")
+                S(pg, "__tzz.persist(); __tzz.tapShop(100,300); __tzz.persist()"); pg.wait_for_timeout(5600)
+                check(ls(pg, KEY) == um and ls(pg, BAK) == bk, f"12d1 主档余额 {nm} + {bn}：6 秒自动存档 + 手点 + 手动保存后，原主档 / 备份一个字节都没变")
+        # 扣款精确（UI）：旧档中间段 5e15+1、正常 4.52 亿（升级前一刻冻结收入）
+        for coins, nm in [(5e15 + 1, '旧档中间段 5e15+1'), (9007199254740991, 'MAX_SAFE_INTEGER')]:
+            sv = mk(pg, f"st.coins={int(coins)}; st.coinFrac=0;"); boot(pg, sv); close_modals(pg)
+            S(pg, "__tzz.setTab('shop'); __tzz.switchShop(1)"); pg.wait_for_timeout(300); close_modals(pg); pg.locator('[data-act="amt"][data-arg="1"]').click(); pg.wait_for_timeout(200)
+            res = []
+            for sel in ['[data-act="up"]', '[data-act="emp"]']:
+                c0 = S(pg, "__tzz.state.coins"); cost = int(pg.locator(sel).first.get_attribute('data-cost')); pg.locator(sel).first.click(); pg.wait_for_timeout(250); c1 = S(pg, "__tzz.state.coins")
+                res.append((sel, c0 - c1 == cost and c1 < c0 and float(c1).is_integer(), c0, c1, cost))
+            check(all(r[1] for r in res), f"12d1 扣款精确（{nm}）：店铺升级 / 员工升级点完余额正好少按钮上的价格 {[(r[0][10:-2], r[2]-r[3], r[4]) for r in res]}")
+        # 累计收入整数 + 零头（41.88 万/秒、累计 3e15）
+        sv = mk(pg, "st.totalEarned=3e15; st.earnedFrac=0;"); boot(pg, sv); close_modals(pg)
+        S(pg, "__tzz.persist()"); a = json.loads(ls(pg, KEY)); pg.wait_for_timeout(3000); S(pg, "__tzz.persist()"); z = json.loads(ls(pg, KEY))
+        dte = (z['totalEarned'] - a['totalEarned']) + (z.get('earnedFrac', 0) - a.get('earnedFrac', 0)); dc = (z['coins'] - a['coins']) + (z['coinFrac'] - a['coinFrac'])
+        check(float(z['totalEarned']).is_integer() and 'earnedFrac' in z and 0 <= z['earnedFrac'] < 1 and dc > 400000 and abs(dte - dc) < 1e-3, f"12d1 累计收入 3e15 上逐帧入账 3 秒：存档 totalEarned 是整数 + earnedFrac 零头，累计增量 {dte:.3f} = 余额增量 {dc:.3f}")
+        # MAX 零余额 = 0（三机型显示 / 禁用）
+        for dname in ['iPhone SE', 'iPhone SE (3rd gen)', 'iPhone 15']:
+            dc_, dp = page(dname)
+            boot(dp, mk(dp)); close_modals(dp)
+            dp.evaluate("__tzz.setTab('shop'); __tzz.switchShop(0)"); dp.wait_for_timeout(300); close_modals(dp)
+            dp.locator('[data-act="amt"][data-arg="max"]').click(); dp.wait_for_timeout(200)
+            z0 = S(dp, "(()=>{__tzz.state.coins=0; __tzz.state.coinFrac=0; __tzz.renderTab(); const b=document.querySelector('[data-act=\"up\"]'); return {k:__tzz.shopUpgradeCount(0), lab:b.innerText, cost:+b.dataset.cost, no:b.classList.contains('no'), one:__tzz.E.upgradeCost(0,__tzz.state.shops[0].lv), lv:__tzz.state.shops[0].lv}})()")
+            check(z0['k'] == 0 and '×' not in z0['lab'] and z0['cost'] == z0['one'] and z0['no'], f"12d1 {dname}：余额 0 选 MAX → 可买 0 级，按钮显示下一级价格 {z0['cost']} 且置灰（不显示 0 元、不显示 ×N）「{z0['lab'].splitlines()[0]}」")
+            dp.evaluate("__tzz.state.coins=0"); dp.locator('[data-act="up"]').first.click(force=True); dp.wait_for_timeout(250)
+            t = S(dp, "({lv:__tzz.state.shops[0].lv, t:document.getElementById('toast').textContent})")
+            check(t['lv'] == z0['lv'] and '金币不够' in t['t'], f"12d1 {dname}：余额 0 点 MAX「升级」→ 提示金币不够、等级不变（{t['t']}）")
+            dc_.close()
+    except Exception as ex:
+        check(False, f'12d1 本段抛错（{type(ex).__name__}: {str(ex)[:160]}）')
     check(not errs, f'12d 没有页面报错 {errs[:3]}')
     b.close()
 print(f"coin e2e: {sum(1 for r in results if r[0])} passed, {sum(1 for r in results if not r[0])} failed")

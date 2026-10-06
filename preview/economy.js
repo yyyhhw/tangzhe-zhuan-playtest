@@ -131,9 +131,13 @@
   // 余额 = coins（整数）+ coinFrac（0 ≤ 零头 < 1）。整数部分到 1e15 也是精确整数，小额收入攒在零头里不会被吞。
   // 坏值（NaN / Infinity / 负数 / 非数字）一律拒绝，余额原样不动；到上限就停在上限；旧档已超上限的余额保留、不再增长。
   const COIN_CAP = () => CFG.COIN_CAP;
+  const SAFE = Number.MAX_SAFE_INTEGER;   // 9007199254740991：超过它整数加减就不精确了（12d1：熊大 17:53）
   const isAmt = x => typeof x === 'number' && isFinite(x) && x >= 0;
+  const fracOk = f => f === undefined || f === null || (isAmt(f) && f < 1);
+  // 12d1：余额必须是安全整数范围内的有限非负数，否则整个钱包不能用（不入账、不扣款）
+  //   ≤ 1e15：正常收支；1e15 < 余额 ≤ MAX_SAFE_INTEGER（旧档）：保留、能精确花、不再增长；> MAX_SAFE_INTEGER：异常，封禁所有交易
   function walletOk(st) {
-    return !!st && isAmt(st.coins) && (st.coinFrac === undefined || st.coinFrac === null || (isAmt(st.coinFrac) && st.coinFrac < 1));
+    return !!st && isAmt(st.coins) && st.coins <= SAFE && fracOk(st.coinFrac);
   }
   // 把合法但没拆开的余额（旧档 / 测试直接写的 123.45）拆成整数 + 零头；坏值返回 false、一点不改
   function normWallet(st) {
@@ -145,6 +149,20 @@
     return true;
   }
   function balance(st) { return walletOk(st) ? st.coins + (st.coinFrac || 0) : NaN; }
+  // 12d1：累计收入同样拆成整数 totalEarned + 零头 earnedFrac（大额时逐帧小数不丢）；到 MAX_SAFE_INTEGER 封顶不再涨（只是统计）
+  function normEarned(st) {
+    let t = isAmt(st.totalEarned) ? st.totalEarned : (isAmt(st.coins) ? Math.min(st.coins, SAFE) : 0), f = isAmt(st.earnedFrac) && st.earnedFrac < 1 ? st.earnedFrac : 0;
+    if (t !== Math.floor(t)) { const w = Math.floor(t); f += t - w; t = w; }
+    if (f >= 1) { const w = Math.floor(f); t += w; f -= w; }
+    st.totalEarned = t; st.earnedFrac = f;
+  }
+  function addEarned(st, amt) {
+    normEarned(st);
+    if (!(amt > 0) || st.totalEarned >= SAFE) return;
+    const t = st.earnedFrac + amt, w = Math.floor(t);
+    if (w >= SAFE - st.totalEarned) { st.totalEarned = SAFE; st.earnedFrac = 0; }
+    else { st.totalEarned += w; st.earnedFrac = t - w; }
+  }
   function overCap(st) { return walletOk(st) && st.coins >= COIN_CAP(); }
   // 入账：返回 { ok, added, capped, why }；added = 实际进账（到上限后多出来的不算）
   function addCoins(st, amt) {
@@ -156,20 +174,26 @@
     let added;
     if (w >= COIN_CAP() - st.coins) { added = COIN_CAP() - b0; st.coins = COIN_CAP(); st.coinFrac = 0; }
     else { st.coins += w; st.coinFrac = t - w; added = amt; }
-    st.totalEarned = isAmt(st.totalEarned) ? st.totalEarned + added : st.coins;
+    addEarned(st, added);
     return { ok:true, added, capped:st.coins >= COIN_CAP() };
   }
   // 价格校验：非数字 / 无穷 / 负数 → 拒绝；超过余额上限 → 不能买（不压低价格）
   function priceOk(price) { return isAmt(price) && Math.ceil(price) <= COIN_CAP(); }
-  function canAfford(st, price) { return priceOk(price) && walletOk(st) && st.coins + (st.coinFrac || 0) >= Math.ceil(price); }
+  function canAfford(st, price) { return priceOk(price) && walletOk(st) && st.coins >= Math.ceil(price); }   // 整数对整数比较（零头 < 1 不影响能不能买）
   // 扣款：返回 { ok, cost, why }；失败时余额一点不动
+  // 12d1 通用断言：扣完必须「旧余额 − 价格 = 新余额」精确成立（安全整数、真的变少），否则回滚并拒绝——再也不会出现扣了钱余额没变的白买
   function spendCoins(st, price) {
     if (!isAmt(price)) return { ok:false, why:'价格异常' };
     const c = Math.ceil(price);
     if (c > COIN_CAP()) return { ok:false, why:'超出金币上限，不能买', over:true };
     if (!normWallet(st)) return { ok:false, why:'金币数据异常' };
     if (st.coins < c) return { ok:false, why:'金币不够' };
-    st.coins -= c; return { ok:true, cost:c };
+    const b0 = st.coins, f0 = st.coinFrac, after = b0 - c;
+    if (!Number.isSafeInteger(b0) || !Number.isSafeInteger(after) || after < 0 || b0 - after !== c || after + c !== b0 || (c > 0 && !(after < b0)))
+      return { ok:false, why:'金币扣款校验失败' };
+    st.coins = after;
+    if (st.coins !== after || b0 - st.coins !== c || st.coinFrac !== f0) { st.coins = b0; st.coinFrac = f0; return { ok:false, why:'金币扣款校验失败' }; }
+    return { ok:true, cost:c };
   }
   // 等级上限（到顶显示满级；旧档已超过的保留但不能再升）
   function shopMaxLv(i) { return CFG.SHOP_LV_MAX[i]; }
@@ -179,14 +203,16 @@
   function empMaxed(st, i) { return st.shops[i].emp >= empMaxLv(i); }
   function ceoMaxed(st, id) { return st.ceos[id].lv >= ceoMaxLv(id); }
   // 店铺批量升级能买几级：want = 1 / 10 / 'max'。不超过等级上限；MAX 最多循环 MAX_BUY_STEPS 次、单价超上限即停
+  // 12d1：MAX 买不起一级（含余额为 0 / 坏值）返回 0，不再兜底成 1；x1 / x10 是玩家指定数量，照常返回（买不起由按钮置灰 + 扣款拒绝）
   function shopBuyCount(st, i, want) {
     const s = st.shops[i], room = Math.max(0, shopMaxLv(i) - s.lv);
     if (!room) return 0;
     if (want !== 'max') return Math.max(1, Math.min(room, Math.floor(Number(want)) || 1));
-    const bal = balance(st); let k = 0, c = 0;
+    if (!walletOk(st)) return 0;
+    const bal = st.coins; let k = 0, c = 0;
     const lim = Math.min(room, CFG.MAX_BUY_STEPS);
     while (k < lim) { const n = upgradeCost(i, s.lv + k); if (!priceOk(n) || !(c + n <= bal)) break; c += n; k++; }
-    return Math.max(1, k);
+    return k;
   }
 
   /* ===== 超级装饰（每店一件，只能从盲盒抽到；效果常驻，不用摆放） ===== */
@@ -405,6 +431,7 @@
   }
   // 把离线结算写进 st.pending（调用方随后立刻保存）；返回 pending 或 null
   function settleOffline(st, now, idGen) {
+    if (!walletOk(st)) { if (isAmt(now) && !(now < (st.lastSeen || 0))) { st.lastSeen = now; st.maxSeen = Math.max(st.maxSeen || 0, now); } return null; }   // 12d1：钱包异常（如余额超安全整数）→ 不结算离线、不弹领取、余额不动；只把时间往前记（否则每帧都判「刚回来」）
     if (st.pending && !pendingOk(st.pending)) st.pending = null;   // 12d：坏的待领取收益丢掉，不入账、不拿它累加
     const off = computeOffline(st, now);
     if (off.rolledBack) { st.lastSeen = now; return { rolledBack:true }; }
@@ -1120,7 +1147,7 @@
   /* ================= 存档：新建 / 版本迁移 ================= */
   function newState(now) {
     const st = {
-      v:CFG.SAVE_VERSION, rev:0, coins:0, totalEarned:0,
+      v:CFG.SAVE_VERSION, rev:0, coins:0, coinFrac:0, totalEarned:0, earnedFrac:0,
       shops:SHOPS.map((_, i) => ({ open:i === 0, lv:i === 0 ? 1 : 0, emp:0 })),
       ceos:{}, crossSeen:{},
       taps:0, crits:0, bigCustomers:0, specialCustomers:0, boostEnd:0,
@@ -1145,7 +1172,8 @@
     st.coins = isAmt(raw.coins) ? raw.coins : 0;
     st.coinFrac = isAmt(raw.coinFrac) && raw.coinFrac < 1 ? raw.coinFrac : 0;
     normWallet(st);
-    st.totalEarned = isAmt(raw.totalEarned) ? raw.totalEarned : st.coins;
+    st.totalEarned = isAmt(raw.totalEarned) ? raw.totalEarned : st.coins; st.earnedFrac = raw.earnedFrac;
+    normEarned(st);   // 12d1：累计收入拆整数 + 零头
     const badPending = raw.pending != null && !pendingOk(raw.pending);
     st.pending = raw.pending != null && !badPending ? Object.assign({}, raw.pending) : null;
     st.shops = SHOPS.map((_, i) => {
@@ -1195,6 +1223,7 @@
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return ['save'];
     const bad = [];
     if (!isAmt(raw.coins)) bad.push('coins');
+    else if (raw.coins > SAFE) bad.push('coins>安全整数');   // 12d1：超过 MAX_SAFE_INTEGER 的余额不能当钱包用
     if (raw.coinFrac !== undefined && !(isAmt(raw.coinFrac) && raw.coinFrac < 1)) bad.push('coinFrac');
     if (raw.shops !== undefined && !Array.isArray(raw.shops)) bad.push('shops');
     else (raw.shops || []).forEach((o, i) => { if (!o || typeof o !== 'object') return;
@@ -1208,8 +1237,8 @@
   function validState(st) {
     if (!st || typeof st !== 'object') return ['state'];
     const bad = [];
-    if (!normWallet(st)) bad.push('coins');
-    if (!isAmt(st.totalEarned)) bad.push('totalEarned');
+    if (!normWallet(st)) bad.push(isAmt(st.coins) && st.coins > SAFE ? 'coins>安全整数' : 'coins');
+    if (!isAmt(st.totalEarned) || !(st.earnedFrac == null || (isAmt(st.earnedFrac) && st.earnedFrac < 1))) bad.push('totalEarned');
     if (!Array.isArray(st.shops) || st.shops.length !== SHOPS.length) bad.push('shops');
     else st.shops.forEach((o, i) => { if (!o || !isAmt(o.lv) || !isAmt(o.emp)) bad.push('shops[' + i + ']'); });
     if (!st.ceos || typeof st.ceos !== 'object') bad.push('ceos');
@@ -1226,6 +1255,8 @@
     if (!mBad.length) return Object.assign(migrate(m.raw, now), { source:'main', bad:[], raw:m.raw });
     const mainRev = m.raw && isAmt(m.raw.rev) ? m.raw.rev : 0;
     const b = parse(bakStr), bBad = b.none ? ['none'] : b.err ? ['json'] : checkSave(b.raw);
+    // 12d1：主档余额超出安全整数（如 1e20）→ 原文原样保留、不自动拿备份覆盖，进入异常模式（不写盘、封禁所有交易）；备份是否可用只做提示
+    if (mBad.includes('coins>安全整数')) return Object.assign(migrate(m.raw, now), { source:'unsafe', bad:mBad, raw:m.raw, mainRev, blocked:true, unsafe:true, bakOk:!bBad.length, bakCoins:!bBad.length ? b.raw.coins : null });
     if (!bBad.length) return Object.assign(migrate(b.raw, now), { source:'bak', bad:mBad, raw:b.raw, mainRev });
     return Object.assign(migrate(m.err ? null : m.raw, now), { source:'broken', bad:mBad, bakBad:bBad, raw:m.raw || null, mainRev, blocked:true });
   }
@@ -1278,7 +1309,7 @@
 
   return { CFG, ROCKET_NAME, TYPES, SHOPS, CEOS, CEO_BY_ID, SIGNS, CROSS, ITEMS, ITEM_BY_ID, REGULAR_ITEMS, SUPER_ITEMS, CARD_COUNT, SET_REWARD, MILESTONES,
     SUPER_OF_SHOP, hasSuper, superMult, rushActive, rushMult, startRush, critChance, critMult, portalReward, gachaComplete,
-    COIN_CAP:CFG.COIN_CAP, walletOk, normWallet, balance, overCap, addCoins, spendCoins, canAfford, priceOk, pendingOk,
+    COIN_CAP:CFG.COIN_CAP, SAFE_COINS:SAFE, normEarned, walletOk, normWallet, balance, overCap, addCoins, spendCoins, canAfford, priceOk, pendingOk,
     shopMaxLv, empMaxLv, ceoMaxLv, shopMaxed, empMaxed, ceoMaxed, shopBuyCount, checkSave, validState, loadSave,
     milestoneMult, nextMilestone, upgradeCost, bulkUpgradeCost, empCost, ceoCost, empMult, shopBase,
     ceoAt, ceoInfo, shopRate, baseRate, onlineRate, offlineRate, rushOnlineRate, boostActive, orderPayout, settleOrder,

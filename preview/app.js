@@ -22,10 +22,10 @@ function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return n
 function loadState() {
   if (TEST_MODE) { loadWallMig = { moved:0, stored:0 }; migratedFrom = null; return E.testHomesState(now(), TEST_LV); }
   const m = E.loadSave(lsGet(SAVE_KEY), lsGet(BAK_KEY), now()), raw = m.raw;
-  loadInfo = { source:m.source, bad:m.bad || [], badPending:!!m.badPending };
-  if (raw && raw.v !== CFG.SAVE_VERSION && m.source !== 'broken') { try { localStorage.setItem(BAK_KEY + '-v' + (raw.v || 0), JSON.stringify(raw)); } catch (e) {} }
+  loadInfo = { source:m.source, bad:m.bad || [], badPending:!!m.badPending, unsafe:!!m.unsafe, bakOk:!!m.bakOk, bakCoins:m.bakCoins, rawCoins:m.raw && m.raw.coins };
+  if (raw && raw.v !== CFG.SAVE_VERSION && m.source !== 'broken' && !m.blocked) { try { localStorage.setItem(BAK_KEY + '-v' + (raw.v || 0), JSON.stringify(raw)); } catch (e) {} }
   loadWallMig = m.wall || { moved:0, stored:0 };
-  migratedFrom = raw && m.source !== 'broken' ? (raw.v !== CFG.SAVE_VERSION ? (raw.v || 0) : null) : null;
+  migratedFrom = raw && m.source !== 'broken' && !m.blocked ? (raw.v !== CFG.SAVE_VERSION ? (raw.v || 0) : null) : null;
   if (m.source === 'bak') m.st.rev = Math.max(m.st.rev || 0, m.mainRev || 0);   // 从备份恢复：rev 不低于坏主档，免得多标签锁误判
   if (m.blocked) saveBlocked = true;
   return m.st;
@@ -1073,7 +1073,7 @@ function handleUnlocks(list) { (list || []).forEach(id => queueModal(() => showC
 // 12d：x1 / x10 / MAX 都不超过店铺等级上限（满级返回 0）；MAX 最多循环 CFG.MAX_BUY_STEPS 次
 function shopUpgradeCount(i) { return E.shopBuyCount(state, i, buyAmt); }
 function doUpgradeShop(i, btn) {
-  const k = shopUpgradeCount(i); if (!k) return failBuy(btn, '已满级');
+  const k = shopUpgradeCount(i); if (!k) return failBuy(btn, E.shopMaxed(state, i) ? '已满级' : E.walletOk(state) ? '金币不够' : '金币数据异常');   // 12d1：MAX 一级都买不起 → 0
   const cost = E.bulkUpgradeCost(i, state.shops[i].lv, k);
   if (!(E.balance(state) >= cost)) return failBuy(btn, E.walletOk(state) ? '金币不够' : '金币数据异常');
   let best = null, unlocked = [];
@@ -1169,7 +1169,7 @@ function renderShop() {
   }
   const info = E.ceoInfo(state, i), sr = E.shopRate(state, i), sign = E.signOf(state, i);
   const nm = E.nextMilestone(s.lv), prevM = [0, 10, 25, 50].filter(m => m <= s.lv).pop() || 0;
-  const k = shopUpgradeCount(i), upCost = E.bulkUpgradeCost(i, s.lv, k), shopTop = E.shopMaxed(state, i);
+  const shopTop = E.shopMaxed(state, i), k0 = shopUpgradeCount(i), k = shopTop ? 0 : Math.max(1, k0), upCost = E.bulkUpgradeCost(i, s.lv, k);   // 12d1：MAX 买不起时按钮显示下一级的价格并置灰（不再显示 0 元）
   const upGain = rateDelta(c => { c.shops[i].lv += k; });
   let h = `<div class="summary">「${sign.name}」每秒 <b style="color:var(--red)">+${fmt(sr)}</b>${s.emp > 0
       ? `<br>店铺 ${fmt(E.shopBase(i, s.lv))} × 员工 ×${E.empMult(s.emp).toFixed(2)} × CEO ×${info.mult.toFixed(2)}${E.hasSuper(state, i) ? ` × 超级装饰 ×${CFG.SUPER_RATE}` : ''}`
@@ -1345,7 +1345,7 @@ function refreshDynamic(force) {
   const t = now();
   // 顶部
   const r = E.onlineRate(state, t), busy = !!(order && order.progress < 1);
-  const ct = fmt(E.balance(state)); if (coinsEl.textContent !== ct) coinsEl.textContent = ct;
+  const ct = E.walletOk(state) ? fmt(E.balance(state)) : '存档异常'; if (coinsEl.textContent !== ct) coinsEl.textContent = ct;
   const cps = '每秒 +' + fmt(r) + (busy ? '（团单服务中）' : ''); if (cpsEl.textContent !== cps) cpsEl.textContent = cps;
   $('#boostTag').classList.toggle('hidden', !busy); if (busy) $('#boostSec').textContent = Math.round(order.progress * 100);
   const dc = $('#dailyChip'), can = E.canDouble(state, t);
@@ -1366,7 +1366,7 @@ function refreshDynamic(force) {
   const cdot = E.CEOS.some(c => state.ceos[c.id].unlocked && state.ceos[c.id].at === -1);
   const cb = document.querySelector('#bottomNav [data-tab="ceo"]'); const hc = !!cb.querySelector('.dot');
   if (cdot && !hc) cb.insertAdjacentHTML('beforeend', '<i class="dot"></i>'); if (!cdot && hc) cb.querySelector('.dot').remove();
-  const mb = document.getElementById('mallBal'); if (mb) mb.textContent = fmt(E.balance(state));
+  const mb = document.getElementById('mallBal'); if (mb) mb.textContent = E.walletOk(state) ? fmt(E.balance(state)) : '存档异常';
   const hl = document.getElementById('homeLux'); if (hl && homeWho) hl.textContent = E.homeLuxury(state, homeWho);
 }
 
@@ -1992,7 +1992,7 @@ function boot() {
   if (!TEST_MODE && !saveBlocked) { E.normWallet(state); lastGood = JSON.stringify(state); }
   $('#mute').classList.toggle('off', !!state.muted);
   resize();
-  const first = !state.taps && !state.totalEarned && state.shops[0].emp === 0;
+  const first = !state.taps && !state.totalEarned && !state.earnedFrac && state.shops[0].emp === 0;
   const fpMig = E.migrateFootprints(state);
   const wallMig0 = E.migrateWallPaintings(state);   // 读档时已在 E.migrate 里整理过一次，这里通常是 0；两次加起来如实提示
   const wallMig = { moved:loadWallMig.moved + wallMig0.moved, stored:loadWallMig.stored + wallMig0.stored };
@@ -2002,7 +2002,9 @@ function boot() {
   if (TEST_MODE) { const b = document.createElement('div'); b.id = 'testBadge'; b.textContent = '测试房间 · ' + (TEST_LV === 3 ? '豪宅' : '公寓') + ' · 不存档，刷新重置'; document.body.appendChild(b);
     const place = () => { const n = $('#bottomNav'); if (n) b.style.bottom = Math.max(8, innerHeight - n.getBoundingClientRect().top + 6) + 'px'; }; place(); addEventListener('resize', place); }
   if (loadInfo.source === 'bak') toast('存档里的金币 / 等级数据坏了（' + loadInfo.bad.slice(0, 3).join('、') + '），已从完整备份恢复', 3600);
-  if (saveBlocked) { const sb = document.createElement('div'); sb.id = 'saveBadge'; sb.textContent = '存档损坏、没有可用备份：本次不保存，原存档未覆盖'; sb.style.cssText = 'position:fixed;left:8px;right:8px;top:calc(env(safe-area-inset-top) + 6px);z-index:60;padding:6px 10px;border:2px solid #141414;border-radius:10px;background:#ffd6d6;font-size:12px;font-weight:700;text-align:center;pointer-events:none';
+  if (saveBlocked && loadInfo.unsafe) { const sb = document.createElement('div'); sb.id = 'saveBadge'; sb.textContent = '存档余额异常（超出安全整数）：交易已暂停、不保存，原存档未覆盖'; sb.style.cssText = 'position:fixed;left:8px;right:8px;top:calc(env(safe-area-inset-top) + 6px);z-index:60;padding:6px 10px;border:2px solid #141414;border-radius:10px;background:#ffd6d6;font-size:12px;font-weight:700;text-align:center;pointer-events:none';
+    document.body.appendChild(sb); queueModal(() => { openModal(`<div class="mbubble">存档余额异常</div><div class="mtitle">余额超出能精确计算的范围</div><div class="mnote">存档里的余额是 <b>${String(loadInfo.rawCoins)}</b>，超过了 ${fmt(E.SAFE_COINS)}（安全整数上限），加减会算不准，不能当正常钱包用。为了不出错：<b>所有买卖和收入都已暂停，这次不会自动保存</b>，原存档原样保留、没有被覆盖。${loadInfo.bakOk ? `备份里有一份正常存档（余额 ${fmt(loadInfo.bakCoins)}），没有自动替换，请联系熊二 / 熊大确认后再恢复。` : '没有找到可用的备份，请联系熊二 / 熊大。'}</div><div class="mbtns"><button class="buy" id="mOk">知道了</button></div>`, false); $('#mOk').addEventListener('click', closeModal, { once:true }); }); }
+  else if (saveBlocked) { const sb = document.createElement('div'); sb.id = 'saveBadge'; sb.textContent = '存档损坏、没有可用备份：本次不保存，原存档未覆盖'; sb.style.cssText = 'position:fixed;left:8px;right:8px;top:calc(env(safe-area-inset-top) + 6px);z-index:60;padding:6px 10px;border:2px solid #141414;border-radius:10px;background:#ffd6d6;font-size:12px;font-weight:700;text-align:center;pointer-events:none';
     document.body.appendChild(sb); queueModal(() => { openModal(`<div class="mbubble">存档读不出来</div><div class="mtitle">金币 / 等级数据坏了，也没有可用备份</div><div class="mnote">为了不把原存档盖掉，这次游戏<b>不会自动保存</b>（坏字段：${loadInfo.bad.slice(0, 4).join('、')}）。请把情况告诉熊二 / 熊大。</div><div class="mbtns"><button class="buy" id="mOk">知道了</button></div>`, false); $('#mOk').addEventListener('click', closeModal, { once:true }); }); }
   if (loadInfo.badPending) toast('离线收益数据异常，这一笔没有入账（余额不变）', 3200);
   if (migratedFrom != null) toast('存档已升级到 v' + CFG.SAVE_VERSION + '（新盲盒 + CEO 穿搭，收藏都保留）', 2600);

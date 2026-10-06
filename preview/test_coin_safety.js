@@ -1,4 +1,5 @@
 // node test_coin_safety.js [economy.js 路径] — 12d 金币安全 v1 回归（熊大 16:49 五条 + 16:50 等级边界 + 17:00 测试者 4.52 亿场景）
+// 12d1（熊大 17:53 三处阻塞）：第 9～11 段——余额超 MAX_SAFE_INTEGER 封禁交易 + 通用「扣款精确」断言、totalEarned 整数 + 零头、MAX 零余额返回 0
 // 每条都是「读到坏值 / 越界」路径：存档字段、离线收益、团单、特殊客户、手点、调任结清、MAX 批量、升级、开店雇人、盲盒、家具、房子。
 // 拿旧代码跑（node test_coin_safety.js /tmp/old_economy.js）会挂一大片，证明这些用例真能抓到问题。
 const path = require('path');
@@ -10,7 +11,7 @@ const CAP = 1e15;
 const bal = st => st.coins + (st.coinFrac || 0);
 const BAD = [NaN, Infinity, -Infinity, -5, -0.01, 'abc', '100', null, undefined, {}, [], true];
 const BADN = v => (typeof v === 'number' ? String(v) : JSON.stringify(v) === undefined ? 'undefined' : JSON.stringify(v));
-const snap = st => JSON.stringify({ c:st.coins, f:st.coinFrac || 0, te:st.totalEarned, shops:st.shops, ceos:st.ceos, g:st.gacha && st.gacha.owned.length, inv:st.furnInv, homes:st.homes && Object.values(st.homes).map(h => h.lv) });
+const snap = st => JSON.stringify({ c:st.coins, f:st.coinFrac || 0, te:st.totalEarned, ef:st.earnedFrac || 0, shops:st.shops, ceos:st.ceos, g:st.gacha && st.gacha.owned.length, inv:st.furnInv, homes:st.homes && Object.values(st.homes).map(h => h.lv) });
 function full(coins) {
   const st = E.newState(T0); st.coins = 1e13; E.hireEmp(st, 0); [1, 2, 3].forEach(i => { E.openShop(st, i); E.hireEmp(st, i); });
   st.shops[3].lv = 25; E.checkUnlocks(st); st.coins = coins == null ? 1e12 : coins; st.coinFrac = 0; st.totalEarned = 5e12; st.lastSeen = st.maxSeen = T0;
@@ -22,7 +23,7 @@ t('钱包：addCoins / spendCoins 存在（统一入账 / 扣款接口）', () =
 t('钱包：余额上限 = 1e15（1000 万亿）', () => E.CFG.COIN_CAP === 1e15);
 for (const v of BAD) t('钱包：addCoins(' + BADN(v) + ') 拒绝，余额 / 零头 / 累计收入原样', () => { const st = full(452000000); st.coinFrac = 0.25; const s0 = snap(st); const r = E.addCoins(st, v); return r.ok === false && snap(st) === s0; });
 for (const v of BAD) t('钱包：spendCoins(' + BADN(v) + ') 拒绝，余额原样', () => { const st = full(452000000); const s0 = snap(st); const r = E.spendCoins(st, v); return r.ok === false && snap(st) === s0; });
-t('钱包：单价超过 1e15 → 不能买（不压低价格），余额原样', () => { const st = full(); st.coins = 3e16; const r = E.spendCoins(st, 1.0000001e15); return !r.ok && r.over && st.coins === 3e16; });
+t('钱包：单价超过 1e15 → 不能买（不压低价格），余额原样', () => { const st = full(); st.coins = 5e15; const r = E.spendCoins(st, 1.0000001e15); return !r.ok && r.over && st.coins === 5e15; });
 t('钱包：金币不够 → 拒绝、不扣', () => { const st = full(100); const r = E.spendCoins(st, 101); return !r.ok && r.why === '金币不够' && st.coins === 100; });
 t('钱包：整数金币 + 独立零头：9000 亿余额上 0.3 × 10 = 正好 +3，整数部分一直是整数', () => { const st = full(9e14); for (let k = 0; k < 10; k++) E.addCoins(st, 0.3); return Number.isInteger(st.coins) && Math.abs(bal(st) - (9e14 + 3)) < 1e-6 && st.coinFrac < 1; });
 t('钱包：每帧小额收入（0.6/秒 × 16ms）在 9999 亿余额上一分钟后照样 +36', () => { const st = full(999999999999); for (let k = 0; k < 3750; k++) E.addCoins(st, 0.6 * 0.016); return Math.abs(bal(st) - (999999999999 + 36)) < 1e-4; });
@@ -39,14 +40,14 @@ for (const B of [5e9, 3.7e10, 5e10, 8.8e11]) {
 
 /* ===== 2. 旧档超上限：保留余额和等级，停止增长，读档不降级 ===== */
 {
-  const legacy = { v:3, rev:7, coins:3e16, totalEarned:4e16, shops:[{ open:true, lv:150, emp:40 }, { open:true, lv:120, emp:38 }, { open:true, lv:99, emp:30 }, { open:true, lv:88, emp:30 }],
+  const legacy = { v:3, rev:7, coins:5e15, totalEarned:6e15, shops:[{ open:true, lv:150, emp:40 }, { open:true, lv:120, emp:38 }, { open:true, lv:99, emp:30 }, { open:true, lv:88, emp:30 }],
     ceos:{ c77:{ unlocked:true, lv:30, at:0 }, pearl:{ unlocked:true, lv:30, at:1 }, otaku:{ unlocked:true, lv:30, at:2 }, rocket:{ unlocked:true, lv:29, at:3 } }, lastSeen:T0, maxSeen:T0 };
   const ld = () => E.migrate(JSON.parse(JSON.stringify(legacy)), T0).st;
-  t('旧档超上限：读档保留 3e16 余额（不截到 1e15）', () => ld().coins === 3e16);
+  t('旧档超上限：读档保留 5e15 余额（不截到 1e15）', () => ld().coins === 5e15);
   t('旧档超上限：读档不降级（店 150/120/99/88、员工 40/38/30/30、火箭 Lv29 原样）', () => { const s = ld(); return s.shops.map(x => x.lv).join() === '150,120,99,88' && s.shops.map(x => x.emp).join() === '40,38,30,30' && s.ceos.rocket.lv === 29; });
-  t('旧档超上限：团单 / 特殊客户 / 调任结清 / 离线都不再增长', () => { const s = ld(); E.settleOrder(s, 1e9); E.settleSpecial(s, 0); s.lastSeen = T0 - 3000; E.creditOnline(s, T0); E.settleOffline(s, T0 + 30e3); return s.coins === 3e16; });
-  t('旧档超上限：领离线收益不增长（领取记录照写）', () => { const s = ld(); s.pending = { id:'x1', sec:3600, gap:3600, amount:5e9, from:T0 - 3600e3 }; const r = E.claimOffline(s, T0, false); return r.ok && s.coins === 3e16 && !s.pending && s.claimLog.some(c => c.id === 'x1'); });
-  t('旧档超上限：等级超过上限的店 / 员工 / CEO 不能再升，不扣钱', () => { const s = ld(); const r = [E.upgradeShop(s, 0), E.upgradeEmp(s, 1), E.upgradeCeo(s, 'rocket'), E.upgradeCeo(s, 'c77')]; return r.every(x => !x.ok && x.why === '已满级') && s.coins === 3e16 && s.shops[0].lv === 150 && s.shops[1].emp === 38 && s.ceos.rocket.lv === 29; });
+  t('旧档超上限：团单 / 特殊客户 / 调任结清 / 离线都不再增长', () => { const s = ld(); E.settleOrder(s, 1e9); E.settleSpecial(s, 0); s.lastSeen = T0 - 3000; E.creditOnline(s, T0); E.settleOffline(s, T0 + 30e3); return s.coins === 5e15; });
+  t('旧档超上限：领离线收益不增长（领取记录照写）', () => { const s = ld(); s.pending = { id:'x1', sec:3600, gap:3600, amount:5e9, from:T0 - 3600e3 }; const r = E.claimOffline(s, T0, false); return r.ok && s.coins === 5e15 && !s.pending && s.claimLog.some(c => c.id === 'x1'); });
+  t('旧档超上限：等级超过上限的店 / 员工 / CEO 不能再升，不扣钱', () => { const s = ld(); const r = [E.upgradeShop(s, 0), E.upgradeEmp(s, 1), E.upgradeCeo(s, 'rocket'), E.upgradeCeo(s, 'c77')]; return r.every(x => !x.ok && x.why === '已满级') && s.coins === 5e15 && s.shops[0].lv === 150 && s.shops[1].emp === 38 && s.ceos.rocket.lv === 29; });
   t('旧档超上限：产速是有限数（不 NaN / ∞）', () => { const s = ld(); const r = E.baseRate(s); return isFinite(r) && r > 0; });
 }
 
@@ -56,25 +57,25 @@ t('等级上限表 = 熊大 16:50：店 110/93/79/69、员工 35/31/26/22、CEO 
 t('等级上限按公式复核：最后一笔单价 ≤ 1e15，再下一级 > 1e15（店 / 员工 / 火箭）', () => SM.every((m, i) => E.upgradeCost(i, m - 1) <= CAP && E.upgradeCost(i, m) > CAP) && EM.every((m, i) => E.empCost(i, m - 1) <= CAP && E.empCost(i, m) > CAP) && E.ceoCost('rocket', 24) <= CAP && E.ceoCost('rocket', 25) > CAP);
 SM.forEach((m, i) => {
   t(`店铺 ${E.SHOPS[i].short}：Lv${m - 1}→${m} 能买（1e15 余额）`, () => { const st = full(CAP); st.shops[i].lv = m - 1; const r = E.upgradeShop(st, i); return r.ok && st.shops[i].lv === m && st.coins === CAP - E.upgradeCost(i, m - 1); });
-  t(`店铺 ${E.SHOPS[i].short}：Lv${m} 满级，旧档 3e16 余额也不能再升、不扣钱`, () => { const st = full(); st.coins = 3e16; st.shops[i].lv = m; const r = E.upgradeShop(st, i); return !r.ok && r.why === '已满级' && st.shops[i].lv === m && st.coins === 3e16; });
+  t(`店铺 ${E.SHOPS[i].short}：Lv${m} 满级，旧档 5e15 余额也不能再升、不扣钱`, () => { const st = full(); st.coins = 5e15; st.shops[i].lv = m; const r = E.upgradeShop(st, i); return !r.ok && r.why === '已满级' && st.shops[i].lv === m && st.coins === 5e15; });
 });
 EM.forEach((m, i) => {
   t(`员工 ${E.SHOPS[i].emp.name}：Lv${m - 1}→${m} 能买`, () => { const st = full(CAP); st.shops[i].emp = m - 1; return E.upgradeEmp(st, i).ok && st.shops[i].emp === m; });
-  t(`员工 ${E.SHOPS[i].emp.name}：Lv${m} 满级，旧档 3e16 余额也不能再升、不扣钱`, () => { const st = full(); st.coins = 3e16; st.shops[i].emp = m; const r = E.upgradeEmp(st, i); return !r.ok && st.shops[i].emp === m && st.coins === 3e16; });
+  t(`员工 ${E.SHOPS[i].emp.name}：Lv${m} 满级，旧档 5e15 余额也不能再升、不扣钱`, () => { const st = full(); st.coins = 5e15; st.shops[i].emp = m; const r = E.upgradeEmp(st, i); return !r.ok && st.shops[i].emp === m && st.coins === 5e15; });
 });
 Object.keys(CM).forEach(id => {
   t(`CEO ${id}：Lv${CM[id] - 1}→${CM[id]} 能买`, () => { const st = full(CAP); st.ceos[id].lv = CM[id] - 1; return E.upgradeCeo(st, id).ok && st.ceos[id].lv === CM[id]; });
-  t(`CEO ${id}：Lv${CM[id]} 满级，旧档 3e16 余额也不能再升、不扣钱`, () => { const st = full(); st.coins = 3e16; st.ceos[id].lv = CM[id]; const r = E.upgradeCeo(st, id); return !r.ok && st.ceos[id].lv === CM[id] && st.coins === 3e16; });
+  t(`CEO ${id}：Lv${CM[id]} 满级，旧档 5e15 余额也不能再升、不扣钱`, () => { const st = full(); st.coins = 5e15; st.ceos[id].lv = CM[id]; const r = E.upgradeCeo(st, id); return !r.ok && st.ceos[id].lv === CM[id] && st.coins === 5e15; });
 });
 t('超上限价格不压低：Lv110→111 的报价仍是公式原价（> 1e15），钱包判不能买', () => { const c = E.upgradeCost(0, 110); return c === Math.ceil(30 * Math.pow(1.33, 110)) && c > CAP && !E.canAfford(full(CAP), c); });
 
 /* ===== 4. MAX 批量购买遵守上限 ===== */
-t('MAX：烧烤 Lv100 + 旧档 3e16 余额（钱够买很多级）→ 最多买到 Lv110（10 级）', () => { const st = full(); st.coins = 3e16; st.shops[0].lv = 100; return E.shopBuyCount(st, 0, 'max') === 10; });
+t('MAX：烧烤 Lv100 + 旧档 5e15 余额（钱够买很多级）→ 最多买到 Lv110（10 级）', () => { const st = full(); st.coins = 5e15; st.shops[0].lv = 100; return E.shopBuyCount(st, 0, 'max') === 10; });
 t('MAX：烧烤 Lv100 + 1e15 余额 → 只算买得起的级数（逐级累加 ≤ 余额）', () => { const st = full(CAP); st.shops[0].lv = 100; let k = 0, c = 0; while (c + E.upgradeCost(0, 100 + k) <= CAP) c += E.upgradeCost(0, 100 + k++); return E.shopBuyCount(st, 0, 'max') === k && k > 0 && k < 10; });
-t('MAX：照 MAX 连买 200 次（3e16 余额），最终停在 Lv110、钱包没变负', () => { const st = full(); st.coins = 3e16; st.shops[0].lv = 100; for (let k = 0; k < 200; k++) E.upgradeShop(st, 0); return st.shops[0].lv === 110 && st.coins > 0; });
+t('MAX：照 MAX 连买 200 次（5e15 余额），最终停在 Lv110、钱包没变负', () => { const st = full(); st.coins = 5e15; st.shops[0].lv = 100; for (let k = 0; k < 200; k++) E.upgradeShop(st, 0); return st.shops[0].lv === 110 && st.coins > 0; });
 t('MAX：满级时可买数 = 0（x1 / x10 / MAX 都是 0）', () => { const st = full(CAP); st.shops[2].lv = 79; return [1, 10, 'max'].every(a => E.shopBuyCount(st, 2, a) === 0); });
 t('x10：Lv105 只能买 5 级（不超过 110）', () => { const st = full(CAP); st.shops[0].lv = 105; return E.shopBuyCount(st, 0, 10) === 5; });
-t('MAX：余额坏值（NaN）时 MAX 只报 1 级、实际一级也买不到', () => { const st = full(); st.coins = NaN; const k = E.shopBuyCount(st, 0, 'max'); const r = E.upgradeShop(st, 0); return k === 1 && !r.ok && st.shops[0].lv === 1; });
+t('MAX：余额坏值（NaN）时 MAX 可买 0 级、实际一级也买不到', () => { const st = full(); st.coins = NaN; const k = E.shopBuyCount(st, 0, 'max'); const r = E.upgradeShop(st, 0); return k === 0 && !r.ok && st.shops[0].lv === 1; });
 t('MAX：旧档超上限等级（Lv150）可买数 0', () => { const st = full(CAP); st.shops[0].lv = 150; return E.shopBuyCount(st, 0, 'max') === 0; });
 t('MAX：循环次数有上限（MAX_BUY_STEPS = 200）', () => E.CFG.MAX_BUY_STEPS === 200);
 
@@ -164,6 +165,61 @@ t('读档：旧档小数余额 452345678.375 → 整数 452345678 + 零头 0.375
   t('4.52 亿场景：写档前校验通过；存档往返后余额 / 零头 / 等级逐字段相同', () => { const v = E.validState(st); const back = E.loadSave(JSON.stringify(st), null, T0 + 1).st; return v.length === 0 && back.coins === st.coins && back.coinFrac === st.coinFrac && JSON.stringify(back.shops) === JSON.stringify(st.shops) && JSON.stringify(back.ceos) === JSON.stringify(st.ceos); });
   t('4.52 亿场景：还能继续正常升级（店铺 Lv53→54 扣原价）', () => { const c = st.coins, cost = E.upgradeCost(0, 53); const r = E.upgradeShop(st, 0); return r.ok && st.coins === c - cost && st.shops[0].lv === 54; });
 }
+
+/* ===== 9. 12d1 熊大 17:53 ①：余额超过 MAX_SAFE_INTEGER 不能当钱包；任何购买后余额必须精确减少价格 ===== */
+const SAFE = Number.MAX_SAFE_INTEGER;
+const UNSAFE = [1e20, SAFE + 1, SAFE + 3, 2 ** 60, 1e300];
+const ALLBUY = {   // 全部花钱路径（准备 → 动作），用来做「扣款精确」通用断言
+  '店铺升级': [null, st => E.upgradeShop(st, 0)], '员工升级': [null, st => E.upgradeEmp(st, 0)], 'CEO 升级': [null, st => E.upgradeCeo(st, 'c77')],
+  '开店': [st => { st.shops[3].open = false; st.shops[3].lv = 0; st.shops[3].emp = 0; }, st => E.openShop(st, 3)],
+  '雇员工（50）': [st => { st.shops[0].emp = 0; }, st => E.hireEmp(st, 0)], '盲盒': [null, st => E.gachaDraw(st, 0.5)], '买家具': [null, st => E.buyFurniture(st, 'furn_bed')], '升级房子': [null, st => E.upgradeHome(st, 'c77')],
+  '店铺升级（奇数价 Lv7）': [st => { st.shops[1].lv = 7; }, st => E.upgradeShop(st, 1)],
+};
+for (const v of UNSAFE) {
+  t(`12d1 读档：coins = ${v} 超过安全整数 → checkSave 判坏档`, () => E.checkSave(Object.assign(JSON.parse(JSON.stringify(good())), { coins:v })).length > 0);
+  t(`12d1 写档前校验：内存余额 ${v} → validState 报错（不写盘）`, () => { const s = good(); s.coins = v; return (E.validState(s) || []).length > 0; });
+  t(`12d1 钱包：余额 ${v} → walletOk 为假，入账被拒、余额原样`, () => { const s = good(); s.coins = v; s.coinFrac = 0; const s0 = snap(s); const r = E.addCoins(s, 100); return (!E.walletOk || !E.walletOk(s)) && !r.ok && snap(s) === s0; });
+  for (const [nm, [prep, fn]] of Object.entries(ALLBUY)) t(`12d1 余额 ${v}：${nm} → 拒绝，余额 / 等级 / 仓库 / 收藏都不变（不能白买）`, () => { const st = full(); if (prep) prep(st); st.coins = v; st.coinFrac = 0; const s0 = snap(st); const r = fn(st); return !r.ok && snap(st) === s0; });
+  t(`12d1 余额 ${v}：MAX 可买 0 级`, () => { const st = full(); st.coins = v; return E.shopBuyCount(st, 0, 'max') === 0; });
+}
+t('12d1 熊大原例：1e20 旧档雇员（50）→ 必须拒绝；旧版是「返回成功、员工 +1、余额没少」', () => { const st = full(); st.shops[0].emp = 0; st.coins = 1e20; const r = E.hireEmp(st, 0); return !r.ok && st.shops[0].emp === 0 && st.coins === 1e20; });
+{
+  const G = JSON.stringify(good()), bak = (() => { const r = JSON.parse(G); r.coins = 451000000; r.rev = 19; return JSON.stringify(r); })();
+  const U = (() => { const r = JSON.parse(G); r.coins = 1e20; r.rev = 22; return JSON.stringify(r); })();
+  t('12d1 loadSave：主档余额 1e20 + 备份好 → 异常模式（blocked），不自动拿备份覆盖、原文保留', () => { const r = E.loadSave(U, bak, T0); return r.blocked === true && r.source !== 'main' && r.source !== 'bak' && r.unsafe === true && r.bakOk === true; });
+  t('12d1 loadSave：主档余额 1e20 + 没备份 → 异常模式（blocked）', () => { const r = E.loadSave(U, null, T0); return r.blocked === true && r.source !== 'main'; });
+  t('12d1 loadSave：异常模式读出的状态钱包不可用（所有交易都会被拒）', () => { const r = E.loadSave(U, bak, T0); return !E.walletOk(r.st) && !E.hireEmp(Object.assign(r.st, {}), 0).ok; });
+  t('12d1 loadSave：余额正好 MAX_SAFE_INTEGER（旧档中间段）→ 正常读主档（保留，不截断）', () => { const r0 = JSON.parse(G); r0.coins = SAFE; r0.coinFrac = 0; const r = E.loadSave(JSON.stringify(r0), bak, T0); return r.source === 'main' && r.st.coins === SAFE; });
+}
+for (const B of [100, 452000000, 452000000.37, CAP - 1, CAP, 5e15 + 1, SAFE - 1, SAFE]) {
+  for (const [nm, [prep, fn]] of Object.entries(ALLBUY)) t(`12d1 扣款精确：余额 ${B} 时 ${nm} → 成功则余额正好少 cost、整数且变小；失败则一点不动`, () => {
+    const st = full(B); if (prep) prep(st); E.normWallet ? E.normWallet(st) : 0; const c0 = st.coins, f0 = st.coinFrac || 0, s0 = snap(st); const r = fn(st);
+    if (!r.ok) return snap(st) === s0;
+    return typeof r.cost === 'number' && r.cost > 0 && Number.isSafeInteger(st.coins) && st.coins < c0 && c0 - st.coins === r.cost && st.coins + r.cost === c0 && (st.coinFrac || 0) === f0;
+  });
+}
+t('12d1 扣款精确：spendCoins 在 MAX_SAFE_INTEGER 上扣 1 / 49 / 3 都精确', () => [1, 49, 3].every(p => { const st = full(SAFE); const r = E.spendCoins(st, p); return r.ok && st.coins === SAFE - p; }));
+t('12d1 中间段：余额 5e15+1 不再增长，但花钱照样精确', () => { const st = full(5e15 + 1); E.settleOrder(st, 1e6); const c = st.coins; const r = E.upgradeShop(st, 1); return c === 5e15 + 1 && r.ok && st.coins === c - r.cost; });
+t('12d1 余额 1e20：离开 1 小时 / 30 秒都不结算离线收益（不弹领取、余额不变）', () => { const st = full(1e20); st.pending = null; const s0 = snap(st); const p = E.settleOffline(st, T0 + 3600e3); const st2 = full(1e20); E.settleOffline(st2, T0 + 30e3); return !p && !st.pending && snap(st) === s0 && st2.coins === 1e20 && st.lastSeen === T0 + 3600e3; });   // 时间要往前记，不然界面每帧都当「刚回来」
+t('12d1 canAfford：余额 1e20 → 什么都买不起', () => { const st = full(1e20); return !E.canAfford(st, 50) && !E.canAfford(st, 1); });
+
+/* ===== 10. 12d1 熊大 17:53 ②：totalEarned 整数 + 独立零头，大额处逐帧小数不丢 ===== */
+for (const T of [5e12, 2e14, 3e15, 5e15]) {
+  t(`12d1 累计收入 ${T}：0.3 × 10 = 正好 +3（整数部分一直是整数）`, () => { const st = full(1000); st.totalEarned = T; st.earnedFrac = 0; for (let k = 0; k < 10; k++) E.addCoins(st, 0.3); return Number.isInteger(st.totalEarned) && Math.abs((st.totalEarned - T) + (st.earnedFrac || 0) - 3) < 1e-6 && (st.earnedFrac || 0) < 1; });
+  t(`12d1 累计收入 ${T}：每帧 0.6/秒 × 16ms 一分钟 +36`, () => { const st = full(1000); st.totalEarned = T; st.earnedFrac = 0; for (let k = 0; k < 3750; k++) E.addCoins(st, 0.6 * 0.016); return Math.abs((st.totalEarned - T) + (st.earnedFrac || 0) - 36) < 1e-4; });
+}
+t('12d1 累计收入：4.52 亿场景 41.88 万/秒逐帧 60 秒，累计收入 3e15 上精确 +产速×60', () => { const st = full(452000000); st.totalEarned = 3e15; st.earnedFrac = 0; let sum = 0; for (let k = 0; k < 3600; k++) { const g = 418793.537 / 60; sum += g; E.addCoins(st, g); } return Math.abs((st.totalEarned - 3e15) + (st.earnedFrac || 0) - sum) < 1e-2 && Number.isInteger(st.totalEarned); });
+t('12d1 累计收入：旧档小数 totalEarned 123.75 → 读档拆成 123 + 0.75', () => { const m = E.migrate({ v:3, coins:10, totalEarned:123.75 }, T0).st; return m.totalEarned === 123 && m.earnedFrac === 0.75; });
+t('12d1 累计收入：存档往返零头逐位相同', () => { const st = full(452000000); st.totalEarned = 3e15; st.earnedFrac = 0; for (let k = 0; k < 7; k++) E.addCoins(st, 0.37); const r = E.loadSave(JSON.stringify(st), null, T0); return r.source === 'main' && r.st.totalEarned === st.totalEarned && r.st.earnedFrac === st.earnedFrac && Math.abs((r.st.totalEarned - 3e15) + r.st.earnedFrac - 2.59) < 1e-6; });
+t('12d1 累计收入：零头坏值（NaN / 2）→ validState 报 totalEarned', () => [NaN, 2, -1].every(v => { const s = good(); s.earnedFrac = v; return E.validState(s).includes('totalEarned'); }));
+t('12d1 累计收入：到 MAX_SAFE_INTEGER 封顶不再涨（不出现不精确的大数）', () => { const st = full(1000); st.totalEarned = SAFE - 2; st.earnedFrac = 0; E.addCoins(st, 10); return st.totalEarned === SAFE && Number.isSafeInteger(st.totalEarned); });
+t('12d1 累计收入：领离线双倍按实际入账累计（大额也精确）', () => { const st = full(1000); st.totalEarned = 3e15; st.earnedFrac = 0; st.pending = { id:'e1', sec:3600, gap:3600, amount:1234.25, from:T0 }; const r = E.claimOffline(st, T0, true); return r.ok && Math.abs((st.totalEarned - 3e15) + (st.earnedFrac || 0) - 2468.5) < 1e-6; });
+
+/* ===== 11. 12d1 熊大 17:53 ③：MAX 买不起一级返回 0（不再 Math.max(1,k)）===== */
+t('12d1 MAX：余额 0 → 可买 0 级', () => { const st = full(0); return E.shopBuyCount(st, 0, 'max') === 0; });
+t('12d1 MAX：余额差 1 买不起下一级 → 0；正好够 → 1', () => { const st = full(); const p = E.upgradeCost(1, st.shops[1].lv); st.coins = p - 1; const a = E.shopBuyCount(st, 1, 'max'); st.coins = p; const b = E.shopBuyCount(st, 1, 'max'); return a === 0 && b === 1; });
+t('12d1 MAX：余额 p−1 + 零头 0.99 也是 0（整数比较，不靠零头凑）', () => { const st = full(); const p = E.upgradeCost(1, st.shops[1].lv); st.coins = p - 1; st.coinFrac = 0.99; return E.shopBuyCount(st, 1, 'max') === 0 && !E.canAfford(st, p); });
+t('12d1 MAX：四家店余额 0 全是 0，升级照样被拒、余额不变', () => [0, 1, 2, 3].every(i => { const st = full(0); const r = E.upgradeShop(st, i); return E.shopBuyCount(st, i, 'max') === 0 && !r.ok && st.coins === 0; }));
 
 console.log(`coin safety tests: ${pass} passed, ${fail} failed`);
 if (process.env.COIN_FAILS_JSON) require('fs').writeFileSync(process.env.COIN_FAILS_JSON, JSON.stringify(fails, null, 1));
