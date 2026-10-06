@@ -20,6 +20,7 @@ iPhone 竖屏 Safari 漫画风挂机小游戏。**试玩链接，不是正式上
 12e1（熊大 23:26 独立验收 1–3）：① addCoins 封顶按 (cap − coins) − coinFrac 算进账，1e15 附近零头不再漏记累计收益 ② 坏领取记录（claimLog 里 null / 非对象 / 无 id）读档和领取时隔离，离线领取不再永久「操作失败」，防重复照旧 ③ 完整游戏小狗画布左右留余量（padXOf），叼着的球朝东 / 朝西都不裁边。
 
 12e2（板砖，熊大 23:26 第 4–5 项）：打僵尸训练扣费、结算进度都改走 `txn` → `E.transact`（扣费 + 改 `state.zombie` + `persist()` 一起成功，失败整档回滚），不再自己 `E.spendCoins`；回给小游戏的只读判定 `zbBlocked()` = frozen / saveBlocked / `E.isBlocked` / 钱包异常 / loadInfo 异常，只读时训练、结算都不改内存和存档。小游戏嵌入模式结算等经营页回执（`ack:'result'`）再按权威进度显示：存档失败不报「通关 / 无尽开放 / 新纪录」，结算页 `#resNote` 写明没存上，按钮改「再打一次」。`zombie/test_zombie_embed.py` 42 → 66（第 50 关写盘失败、无尽写盘失败、只读坏档 shops[0].lv=-1）。
+12e3-zb（板砖，熊大 06:04 规格，只改 `zombie/`）：小游戏读经营页 `zb:'state'` 的 `ceo`（烧烤店在任 CEO，null = 没人在任；老经营页不带该字段时按 77），点开打时锁进 `G.ceo`，一局里不换，结算 `zb:'result'` 原样回传 `ceo`。`ZB.HEROES / CEO_IDS / PLAYABLE / heroOf` 在 zbcore.js；技能没做的 CEO（目前只有 77 在 `PLAYABLE`）显示「即将开放」，没人在任提示回经营派人，两种都开不了局。训练、关卡、首通仍共用 `state.zombie`，不迁移。原型页可用 `?ceo=pearl` 预览。test_zombie_e2e 60 → 69、test_zombie_embed 66 → 78。
 
 11t：生活模式点家具改按类别 / 能力触发（bed 类休息、书架看书、衣柜换衣），新云朵纱帐床也能休息；旧床回归通过。
 
