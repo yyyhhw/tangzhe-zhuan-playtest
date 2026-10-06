@@ -19,3 +19,8 @@
 .pet-note .buy{margin-left:6px;padding:2px 8px;font-size:12px}
 .pet-ico span{font-size:min(30px,8vw);line-height:1}
 .pet-card{border-color:#e07a3f}
+/* p4b：卡片标题里的「宠物 · 新」不被截；满屋「暂时无法入宅」按钮折两行不挤正文；等待安置提示醒目一点 */
+.pet-card .name{flex-wrap:wrap;white-space:normal;overflow:visible;row-gap:2px}
+.pet-card .name .tag{white-space:nowrap}
+.pet-card #petNoRoom{max-width:96px;white-space:normal;line-height:1.25;padding:6px 8px}
+.pet-wait{border-color:#e07a3f;background:#fff4e6;line-height:1.5}

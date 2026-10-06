@@ -4,7 +4,9 @@
    走/跑/玩 每秒 −0.06/−0.30/−0.20，睡觉 +0.80；亲密起始 40，有效互动 +1（60 秒冷却），离线 / 冷落永不扣；
    收益加成 0（不接经济）。只在「目标或障碍变了」时重算路径（带间隙网格 A* + 拉直）。
    p3：碰撞 = 脚下圆（半径 0.22）+ 按朝向的身体盒（横向范围来自 manifest.body 逐帧量出的鼻尖 / 尾巴尖，纵深 ±0.22）；
-       互动目标绑定家具 uid，布局一变重算站位，目标没了 / 走不到就取消；读档整组恢复布局再统一查冲突。 */
+       互动目标绑定家具 uid，布局一变重算站位，目标没了 / 走不到就取消；读档整组恢复布局再统一查冲突。
+   p4b：屋里没有小狗能站的地方（合法摆满）= 正常状态 w.noRoom（「等待安置」：不画、不动、不响应，布局一变自动重找，有空地就出来）；
+        读档逐字段校验（sanitizeSave：有限数值 + 范围，缺失给默认，合法 0 保留），坏档不再算出 NaN / 存档报错。 */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory(require('./art.js'));
   else root.PetEngine = factory(root.PetArt);
@@ -14,14 +16,16 @@
     WALK: 0.65, RUN: 1.30, R: 0.22, RES: 0.25, BALL_R: 0.12,
     ENERGY0: 70, TIRED: 35, RESTED: 70,
     DRAIN: { walk: 0.06, run: 0.30, play: 0.20 }, SLEEP_GAIN: 0.80,
-    AFF0: 40, AFF_CD: 60,
+    AFF0: 40, AFF_CD: 60, AFF_MAX: 99999,
     PERSONALITY: { curious: 0.70, affectionate: 0.75, playful: 0.65 },
     INCOME_BONUS: 0,
     PET_CD: 1.5,           // 摸完一次后这么久内再点只冒爱心，不重播动画
     OFFLINE_BED_AFTER: 20, // 离开超过这么多秒，回来时在自己窝里（自己休息过）
     SAVE_V: 1,
+    T_MAX: 1e9,            // p4b：读档时 t（秒）的上限，超了 = 坏档
   };
   const DIRV = { E: [1, 0], W: [-1, 0], N: [0, -1], S: [0, 1] };
+  const DIRS4 = ['E', 'W', 'N', 'S'];
   const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
   const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 
@@ -50,7 +54,8 @@
       t: 0, rs: (opt.seed == null ? 12345 : opt.seed) >>> 0,
       obsVer: 0, _obs: null, _obsVer: -1, _grid: null,
       paused: false,
-      stats: { plans: 0, replans: 0, noPath: 0, stuck: 0, petStarts: 0, petAbsorbed: 0, callDup: 0, fetches: 0, maxStep: 0 },
+      stats: { plans: 0, replans: 0, noPath: 0, stuck: 0, petStarts: 0, petAbsorbed: 0, callDup: 0, fetches: 0, maxStep: 0, noRoom: 0, placed: 0 },
+      noRoom: false, _roomVer: -1,
       log: [], fx: [], failed: [],
       ball: { x: 0, y: 0, z: 0, vx: 0, vy: 0, state: 'floor', flight: null },
     };
@@ -62,9 +67,9 @@
       plan: [], step: null, anim: new Art.Animator(manifest), petCdUntil: 0,
       move: null, lastEat: -1e9,
     };
-    const sp = nearestDogPoint(w, w.dog, 3);
-    if (sp) { w.dog.x = sp.x; w.dog.y = sp.y; }
-    const bp = nearestFreePoint(w, { x: room.front.x + 1.2, y: room.rows - 1.2 }, CFG.BALL_R, 3);
+    const sp = safeSpot(w, w.dog, 3);   // p4b：整屋都站不下 → 不崩，进「等待安置」
+    if (sp) { w.dog.x = sp.x; w.dog.y = sp.y; } else setNoRoom(w);
+    const bp = ballSpot(w, { x: room.front.x + 1.2, y: room.rows - 1.2 }, 3);
     w.ball.x = bp.x; w.ball.y = bp.y;
     return w;
   }
@@ -187,6 +192,52 @@
       for (let a = 0; a < 24; a++) { const x = p.x + Math.cos(a / 24 * 6.2832) * r, y = p.y + Math.sin(a / 24 * 6.2832) * r; if (bodyFree(w, x, y, 'H')) return { x, y }; }
     return nearestFreePoint(w, p, CFG.R, maxD);
   }
+  /* ---------- p4b：安全站位 / 等待安置 ----------
+     安全 = 脚下圆 + 竖身体盒（V）都放得下（不退回到「只有脚下圆放得下」的点）；优先左右也转得开（H）。
+     附近（maxD）找不到就整屋网格扫一遍；都没有 = null（屋里摆满了）。 */
+  const finP = (p) => !!p && Number.isFinite(p.x) && Number.isFinite(p.y);
+  function safeSpot(w, pref, maxD) {
+    const p = finP(pref) ? pref : { x: w.cols / 2, y: w.rows / 2 }, lim = maxD == null ? 3 : maxD;
+    for (const cls of ['H', 'V']) {
+      if (bodyFree(w, p.x, p.y, cls)) return { x: p.x, y: p.y };
+      for (let r = 0.05; r <= lim; r += 0.05)
+        for (let a = 0; a < 24; a++) { const x = p.x + Math.cos(a / 24 * 6.2832) * r, y = p.y + Math.sin(a / 24 * 6.2832) * r; if (bodyFree(w, x, y, cls)) return { x, y }; }
+    }
+    const g = grid(w);
+    for (const key of ['freeH', 'free']) {
+      let best = null;
+      for (let n = 0; n < g.nx * g.ny; n++) if (g[key][n]) { const q = nodePt(g, n), d = Math.hypot(q.x - p.x, q.y - p.y); if (!best || d < best.d) best = { q, d }; }
+      if (best) return best.q;
+    }
+    return null;
+  }
+  function hasRoom(w) { return !!safeSpot(w, { x: w.front.x, y: w.front.y - 0.6 }, 0); }
+  // 球：附近空地 → 整屋扫 → 实在没有就跟着小狗（屋里满了时球也不画）
+  function ballSpot(w, pref, maxD) {
+    const q = finP(pref) ? nearestFreePoint(w, pref, CFG.BALL_R, maxD || 3) : null; if (q) return q;
+    const R = CFG.RES / 2, p = finP(pref) ? pref : w.dog; let best = null;
+    for (let y = R; y < w.rows; y += R) for (let x = R; x < w.cols; x += R) if (circleFree(w, x, y, CFG.BALL_R)) { const d = Math.hypot(x - p.x, y - p.y); if (!best || d < best.d) best = { x, y, d }; }
+    return best ? { x: best.x, y: best.y } : { x: w.dog.x, y: w.dog.y };
+  }
+  function setNoRoom(w) {
+    const d = w.dog, b = w.ball;
+    if (!w.noRoom) w.stats.noRoom++;
+    w.noRoom = true; w._roomVer = w.obsVer;
+    d.plan = []; d.step = null; d.move = null; d.activity = 'waiting'; d.tgt = null; d.z = 0; d.carrying = false;
+    d.label = '屋里摆满了，没地方站（腾出空地就出来）';
+    if (b.state === 'carried' || b.state === 'air') { b.state = 'floor'; b.flight = null; b.z = 0; b.vx = b.vy = 0; }
+  }
+  // 等待安置中：布局变了就重找；找到就从门口那边出来
+  function tryPlace(w) {
+    w._roomVer = w.obsVer;
+    const d = w.dog, p = safeSpot(w, { x: w.front.x, y: w.front.y - 0.6 }, 3); if (!p) return false;
+    w.noRoom = false; w.stats.placed++;
+    d.x = p.x; d.y = p.y; d.z = 0; d.dir = 'S'; d.side = 'E';
+    setPlan(w, 'idle', [{ k: 'wait', dur: 0.8, label: '腾出空地了，跑出来看看' }]);
+    d.step = d.plan.shift(); startStep(w, d.step);
+    const b = w.ball; if (!ballFree(w, b.x, b.y)) { const q = ballSpot(w, { x: d.x + 0.4, y: d.y }, 3); b.x = q.x; b.y = q.y; b.vx = b.vy = 0; }
+    return true;
+  }
   function astar(w, s, goal) {
     const g = grid(w), N = g.nx * g.ny, gs = new Float64Array(N).fill(Infinity), came = new Int32Array(N).fill(-1), closed = new Uint8Array(N);
     const gx = goal % g.nx, gy = Math.floor(goal / g.nx);
@@ -293,6 +344,7 @@
   }
   // 测试 / 以后正式接入用：让它去某件家具（按 uid）
   function visit(w, uid, stay) {
+    if (w.noRoom) return { ok: false, why: 'noRoom' };
     const p = w.items.find(q => q.uid === uid); if (!p || !w.interact[p.fid]) return { ok: false, why: 'noInteract' };
     const s = interactSpot(w, p.fid, uid); if (!s || !s.free || !reachable(w, w.dog, s.spot, 0.05)) return { ok: false, why: 'unreachable' };
     setPlan(w, 'visit', visitSteps(w, s, stay !== false), null, { uid, key: p.fid, spot: { ...s.spot }, ver: w.obsVer });
@@ -612,6 +664,11 @@
   }
   function update(w, dt) {
     const d = w.dog, ox = d.x, oy = d.y;
+    if (w.noRoom) {   // p4b：等待安置——不动、不画；布局一变就重找空地
+      w.t += dt; d.drainMode = null;
+      if (w.obsVer !== w._roomVer) tryPlace(w);
+      return;
+    }
     w.t += dt; d.drainMode = null;
     if (!w.paused) updateBall(w, dt); else if (w.ball.state === 'carried') updateBall(w, dt);
     runDog(w, dt);
@@ -641,6 +698,7 @@
   const sleeping = (w) => !!(w.dog.step && (w.dog.step.k === 'sleep' || (w.dog.step.k === 'anim' && w.dog.step.clip === 'liedown')));
   function call(w) {
     const d = w.dog;
+    if (w.noRoom) return { ok: false, why: 'noRoom' };
     if (w.paused) return { ok: false, why: 'rearrange' };
     if (d.activity === 'called') { w.stats.callDup++; return { ok: true, dup: true }; }
     const steps = [];
@@ -655,6 +713,7 @@
   }
   function pet(w, how) {
     const d = w.dog;
+    if (w.noRoom) return { ok: false, why: 'noRoom' };
     if (w.paused) return { ok: false, why: 'rearrange' };
     const busy = d.activity === 'petted' || w.t < d.petCdUntil;
     if (busy) { w.stats.petAbsorbed++; fx(w, 'heart'); return { ok: true, absorbed: true }; }
@@ -669,6 +728,7 @@
   }
   function throwBall(w, target) {
     const d = w.dog, b = w.ball;
+    if (w.noRoom) return { ok: false, why: 'noRoom' };
     if (w.paused) return { ok: false, why: 'rearrange' };
     if (b.state === 'carried') return { ok: false, why: 'carried' };
     if (b.state === 'air') return { ok: false, why: 'flying' };
@@ -745,58 +805,91 @@
     if (lay.bed) w.bed = { ...lay.bed };
     w.items = (lay.items || []).filter(p => w.byId[p.fid] && !w.byId[p.fid].wall).map((p, i) => ({ uid: p.uid || 'f' + i, fid: p.fid, x: p.x, y: p.y, rot: p.rot || 0 }));
     w.obsVer++;
-    const d = w.dog; let moved = false;
-    if (!bodyFree(w, d.x, d.y, visDir(w), 1e-6)) {
-      const p = nearestDogPoint(w, d, Math.max(w.cols, w.rows)); if (p) { d.x = p.x; d.y = p.y; moved = true; }
-      if (w.ball.state === 'carried') { /* 嘴里的球跟着走 */ }
+    const d = w.dog; let moved = false, placed = false;
+    if (w.noRoom) placed = tryPlace(w);   // p4b：等待安置中，布局一变就重找
+    else if (!bodyFree(w, d.x, d.y, visDir(w), 1e-6)) {
+      const p = safeSpot(w, d, Math.max(w.cols, w.rows));
+      if (!p) { setNoRoom(w); return { ok: true, dogMoved: false, noRoom: true }; }   // p4b：空地被挡满 → 等待安置（不压家具、不崩）
+      d.x = p.x; d.y = p.y; moved = true;
       setPlan(w, 'confused', [...inPlace('attention', { label: '家具搬过来了，挪个地方' }), { k: 'wait', dur: 0.6 }]); fx(w, 'q');
     }
     const b = w.ball;
-    if (b.state !== 'carried' && !ballFree(w, b.x, b.y)) { const q = nearestFreePoint(w, b, CFG.BALL_R, Math.max(w.cols, w.rows)); if (q) { b.x = q.x; b.y = q.y; b.vx = b.vy = 0; if (b.state === 'air') { b.state = 'floor'; b.flight = null; b.z = 0; } } }
-    return { ok: true, dogMoved: moved };
+    if (b.state !== 'carried' && !ballFree(w, b.x, b.y)) { const q = ballSpot(w, b, Math.max(w.cols, w.rows)); b.x = q.x; b.y = q.y; b.vx = b.vy = 0; if (b.state === 'air') { b.state = 'floor'; b.flight = null; b.z = 0; } }
+    return { ok: true, dogMoved: moved, placed, noRoom: !!w.noRoom };
   }
 
   /* ---------- 存档 / 离线 ---------- */
+  // p4b：只写有限数值（运行中万一出了非法值也不把 NaN / null 写进存档、不因 toFixed 报错）
+  const fin = (v) => typeof v === 'number' && Number.isFinite(v);
+  const fx4 = (v, def, k) => fin(v) ? +v.toFixed(k == null ? 4 : k) : def;
   function serialize(w, nowMs) {
     const d = w.dog, b = w.ball;
     let bx = b.x, by = b.y;
     if (b.state === 'air' && b.flight) { bx = b.flight.tx; by = b.flight.ty; }
     return {
-      v: CFG.SAVE_V, savedAt: nowMs, t: +w.t.toFixed(3), rs: w.rs,
-      dog: { x: +d.x.toFixed(4), y: +d.y.toFixed(4), dir: d.dir, energy: +d.energy.toFixed(3), affinity: d.affinity, lastGain: d.lastGain, tired: d.tired, asleep: sleeping(w), lastEat: d.lastEat },
-      ball: { x: +bx.toFixed(4), y: +by.toFixed(4), carried: b.state === 'carried' },
+      v: CFG.SAVE_V, savedAt: fin(nowMs) ? nowMs : 0, t: fx4(w.t, 0, 3), rs: (w.rs >>> 0),
+      dog: { x: fx4(d.x, w.front.x), y: fx4(d.y, w.front.y - 0.55), dir: DIRS4.includes(d.dir) ? d.dir : 'S', energy: fx4(clamp(d.energy, 0, 100), CFG.ENERGY0, 3), affinity: fin(d.affinity) ? Math.floor(d.affinity) : CFG.AFF0, lastGain: fin(d.lastGain) ? d.lastGain : -1e9, tired: d.tired === true, asleep: sleeping(w), lastEat: fin(d.lastEat) ? d.lastEat : -1e9 },
+      ball: { x: fx4(bx, w.front.x), y: fx4(by, w.front.y), carried: b.state === 'carried' },
       items: w.items.map(p => ({ uid: p.uid, fid: p.fid, x: p.x, y: p.y, rot: p.rot })),
     };
   }
   // 回来：离线 = 自己在窝里休息（只回精力），不扣亲密、不动金币（本来就不接经济）、不复制小狗或球
-  function restore(w, s, nowMs) {
-    if (!s || s.v !== CFG.SAVE_V || !s.dog) return { ok: false };
+  /* p4b：读档逐字段校验——有限数值 + 范围，缺失 / 非法给默认，合法的 0 保留；坐标非法记 null（读档时按房间重找安全站位）。
+     结构不对（不是对象 / 版本不对）返回 null；dog / ball 缺了按默认补，不因为一个字段坏了丢整份。 */
+  const isObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
+  function sanitizeSave(s) {
+    if (!isObj(s) || s.v !== CFG.SAVE_V) return null;
+    const dg = isObj(s.dog) ? s.dog : {}, bl = isObj(s.ball) ? s.ball : {};
+    const t = fin(s.t) && s.t >= 0 ? Math.min(s.t, CFG.T_MAX) : 0;
+    const coord = (v) => fin(v) && Math.abs(v) <= 1e4 ? v : null;
+    const stamp = (v) => fin(v) && v >= -1e9 ? Math.min(v, t) : -1e9;   // 冷却时间戳：不晚于存档时的 t（否则冷却永远不结束）
+    const out = {
+      v: CFG.SAVE_V, savedAt: fin(s.savedAt) && s.savedAt >= 0 ? s.savedAt : null, t, rs: fin(s.rs) ? (s.rs >>> 0) : null,
+      dog: { x: coord(dg.x), y: coord(dg.y), dir: DIRS4.includes(dg.dir) ? dg.dir : 'S',
+        energy: fin(dg.energy) ? clamp(dg.energy, 0, 100) : CFG.ENERGY0,
+        affinity: fin(dg.affinity) ? clamp(Math.floor(dg.affinity), CFG.AFF0, CFG.AFF_MAX) : CFG.AFF0,
+        lastGain: stamp(dg.lastGain), tired: dg.tired === true, asleep: dg.asleep === true, lastEat: stamp(dg.lastEat) },
+      ball: { x: coord(bl.x), y: coord(bl.y), carried: bl.carried === true },
+    };
+    for (const k of Object.keys(s)) if (!(k in out) && k !== 'items') out[k] = s[k];   // 外层带的其他字段（如游戏里的 home）原样交给调用方校验
+    if (Array.isArray(s.items)) out.items = s.items.filter(isObj);
+    return out;
+  }
+  // 回来：离线 = 自己在窝里休息（只回精力），不扣亲密、不动金币（本来就不接经济）、不复制小狗或球
+  function restore(w, raw, nowMs) {
+    const s = sanitizeSave(raw);
+    if (!s) return { ok: false };
     const layout = restoreLayout(w, s.items);
-    const elapsed = clamp(((nowMs || 0) - (s.savedAt || 0)) / 1000, 0, 86400 * 30);
+    const elapsed = s.savedAt == null || !fin(nowMs) ? 0 : clamp((nowMs - s.savedAt) / 1000, 0, 86400 * 30);
     const d = w.dog;
-    w.t = (s.t || 0) + elapsed; if (s.rs) w.rs = s.rs >>> 0;
-    d.affinity = Math.max(CFG.AFF0, Math.floor(s.dog.affinity || CFG.AFF0));
-    d.lastGain = typeof s.dog.lastGain === 'number' ? s.dog.lastGain : -1e9;
-    d.lastEat = typeof s.dog.lastEat === 'number' ? s.dog.lastEat : -1e9;
-    // 只认有限数值：合法的 0 保留为 0（不当成缺失）；缺失 / 非数字 / NaN / 无穷 才用默认 70。离线休息另算
-    const e0 = typeof s.dog.energy === 'number' && Number.isFinite(s.dog.energy) ? clamp(s.dog.energy, 0, 100) : CFG.ENERGY0;
+    w.t = s.t + elapsed; if (s.rs != null) w.rs = s.rs;
+    d.affinity = s.dog.affinity; d.lastGain = s.dog.lastGain; d.lastEat = s.dog.lastEat;
+    // 合法的 0 保留为 0（不当成缺失）；缺失 / 非数字 / NaN / 无穷 才用默认 70。离线休息另算
+    const e0 = s.dog.energy;
     d.energy = Math.min(100, e0 + CFG.SLEEP_GAIN * elapsed);
-    d.carrying = false; d.z = 0; d.plan = []; d.step = null;
+    d.carrying = false; d.z = 0; d.plan = []; d.step = null; d.move = null;
     const bed = interactSpot(w, 'pet_bed');
     const inBed = (elapsed >= CFG.OFFLINE_BED_AFTER || s.dog.asleep) && bed && bed.free;
+    const inRoom = (p) => p.x != null && p.y != null && p.x >= 0 && p.y >= 0 && p.x <= w.cols && p.y <= w.rows;
+    const spot = inBed ? null : (inRoom(s.dog) ? safeSpot(w, s.dog, 4) : null) || safeSpot(w, callSpot(w), Math.max(w.cols, w.rows));
+    if (!inBed && !spot) {   // p4b：屋里摆满了 → 等待安置（精力 / 亲密照常保留）
+      setNoRoom(w);
+      const b = w.ball; b.state = 'floor'; b.z = 0; b.vx = b.vy = 0; b.flight = null; const q = ballSpot(w, d, 3); b.x = q.x; b.y = q.y;
+      return { ok: true, elapsed, energyGain: d.energy - e0, inBed: false, waiting: true, reverted: layout.reverted };
+    }
+    w.noRoom = false;
     if (inBed) {
       d.x = bed.spot.x; d.y = bed.spot.y; d.dir = 'E'; d.side = 'E';
       d.tired = d.energy < CFG.RESTED;
       setPlan(w, 'rest', [{ k: 'sleep', label: '在窝里睡着（你不在时自己休息了）' }, { k: 'anim', clip: 'getup', label: '你回来了，伸懒腰起来' }, { k: 'fn', fn: (w) => { w.dog.tired = false; } }]);
     } else {
-      const p = nearestDogPoint(w, { x: +s.dog.x, y: +s.dog.y }, 4) || nearestDogPoint(w, callSpot(w), 4);
-      d.x = p.x; d.y = p.y; d.dir = ['E', 'W', 'N', 'S'].includes(s.dog.dir) ? s.dog.dir : 'S'; d.tired = (!!s.dog.tired || d.energy < CFG.TIRED) && d.energy < CFG.RESTED;
+      d.x = spot.x; d.y = spot.y; d.dir = s.dog.dir; d.tired = (s.dog.tired || d.energy < CFG.TIRED) && d.energy < CFG.RESTED;
       setPlan(w, 'idle', [{ k: 'wait', dur: 1, label: '你回来了' }]);
     }
     d.step = d.plan.shift(); startStep(w, d.step);   // 回来第一帧就是安全姿势（窝里睡 / 站着），不等下一帧
     const b = w.ball; b.state = 'floor'; b.z = 0; b.vx = b.vy = 0; b.flight = null;
-    let bp = s.ball && !s.ball.carried ? { x: +s.ball.x, y: +s.ball.y } : { x: d.x + 0.4, y: d.y + 0.2 };
-    bp = nearestFreePoint(w, bp, CFG.BALL_R, 4) || nearestFreePoint(w, { x: w.front.x + 1, y: w.front.y }, CFG.BALL_R, 6);
+    let bp = !s.ball.carried && inRoom(s.ball) ? { x: s.ball.x, y: s.ball.y } : { x: d.x + 0.4, y: d.y + 0.2 };
+    bp = nearestFreePoint(w, bp, CFG.BALL_R, 4) || ballSpot(w, { x: w.front.x + 1, y: w.front.y }, 6);
     b.x = bp.x; b.y = bp.y;
     return { ok: true, elapsed, energyGain: d.energy - e0, inBed: !!inBed, reverted: layout.reverted };
   }
@@ -833,7 +926,7 @@
   function snapshot(w) {
     const d = w.dog, b = w.ball;
     return {
-      coords: '地板格，原点左后角，x→右，y→前（屏幕下方）', t: +w.t.toFixed(2), paused: w.paused,
+      coords: '地板格，原点左后角，x→右，y→前（屏幕下方）', t: +w.t.toFixed(2), paused: w.paused, noRoom: !!w.noRoom,
       dog: { x: +d.x.toFixed(3), y: +d.y.toFixed(3), z: +d.z.toFixed(3), dir: d.dir, clip: d.anim.name, frame: d.anim.frame(), activity: d.activity, step: d.step ? d.step.k : null, label: d.label, energy: +d.energy.toFixed(2), affinity: d.affinity, tired: d.tired, carrying: b.state === 'carried' },
       ball: { x: +b.x.toFixed(3), y: +b.y.toFixed(3), z: +b.z.toFixed(3), state: b.state },
       items: w.items.map(p => ({ uid: p.uid, fid: p.fid, ...itemRect(w, p), solid: isSolid(w, p) })),
@@ -853,6 +946,7 @@
   function minClearance(w) { let m = Infinity; for (const o of obstacles(w)) m = Math.min(m, rectDist(w.dog.x, w.dog.y, o)); return m; }
 
   return { CFG, createWorld, update, step, call, pet, throwBall, setRearrange, moveItem, canPlace, serialize, restore, restoreLayout, setLayout, snapshot, drawOrder, visit, nearestDogPoint,
+    safeSpot, hasRoom, sanitizeSave, ballSpot,
     planPath, reachable, circleFree, segClear, obstacles, itemRect, sizeOf, isSolid, isRug, interactSpot, minClearance, overlapsFurniture, rectDist, callSpot, grid,
     bodyFree, bodyOverlap, boxAt, visDir, segOK };
 });

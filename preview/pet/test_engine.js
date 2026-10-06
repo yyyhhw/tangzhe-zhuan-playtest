@@ -523,5 +523,50 @@ section('20. p4a：转不开身不播侧身动作（1 格竖走廊 / 横走廊 /
     const c2 = clips(w2, 120); ok(clean(c2.r), '贴墙竖条自主活动 2 分钟不穿墙（' + JSON.stringify(c2.r) + '）');
   }
 }
+section('21. p4b：屋里没地方站 = 等待安置（不崩）；坏档逐字段容错');
+{
+  const tryDo = (fn) => { try { return { v: fn() }; } catch (e) { return { err: e.message || String(e) }; } };
+  const finAll = (o) => { let okk = true; (function walk(v) { if (typeof v === 'number' && !Number.isFinite(v)) okk = false; else if (v && typeof v === 'object') for (const k in v) walk(v[k]); })(o); return okk; };
+  const cells = (cols, rows, skip) => { const a = []; for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) if (!(skip || []).some(([i, j]) => i === x && j === y)) a.push({ uid: 'p' + x + '_' + y, fid: 'furn_plant', x, y }); return a; };
+  const room = (cols, rows, items) => ({ cols, rows, wallRows: 2, front: { x: cols / 2, y: rows - 0.3 }, bed: { x: 0, y: rows - 0.9, w: 1.3, h: 0.9 }, bowl: null, items });
+  for (const [cols, rows] of [[6, 4], [8, 5], [10, 6]]) {
+    const r = tryDo(() => world(301, room(cols, rows, cells(cols, rows))));
+    ok(!r.err && r.v.noRoom === true, `${cols}×${rows} 摆满：createWorld 不报错，noRoom（${r.err || ''}）`);
+    if (r.err) continue;
+    const w = r.v, rr = tryDo(() => run(w, 5));
+    ok(!rr.err && w.dog.activity === 'waiting' && [w.dog.x, w.dog.y, w.ball.x, w.ball.y, w.t].every(Number.isFinite), `${cols}×${rows} 等待安置：update 不报错、无 NaN`);
+    ok(['call', 'throwBall'].every(k => PE[k](w).why === 'noRoom') && PE.pet(w, 'tap').why === 'noRoom', `${cols}×${rows} 等待安置：三个操作都回 noRoom`);
+    ok(PE.hasRoom(w) === false && PE.safeSpot(w, { x: 1, y: 1 }) === null, `${cols}×${rows}：safeSpot = null（不退回到压家具的点）`);
+    const ser = tryDo(() => JSON.parse(JSON.stringify(PE.serialize(w, 1000)))); ok(!ser.err && finAll(ser.v), `${cols}×${rows} 等待中 serialize：有限数值`);
+    const w2 = world(302, room(cols, rows, cells(cols, rows))); const res = tryDo(() => PE.restore(w2, ser.v, 2000));
+    ok(!res.err && res.v.ok && res.v.waiting && w2.noRoom, `${cols}×${rows} 满屋读档：restore 不报错，等待安置`);
+    PE.setLayout(w, { items: cells(cols, rows, [[2, 1]]) }); const r2 = run(w, 3);
+    ok(!w.noRoom && w.stats.placed === 1 && clean(r2) && Math.floor(w.dog.x) === 2 && Math.floor(w.dog.y) === 1, `${cols}×${rows} 空出 (2,1) 一格：自动出来，站在那格里不穿家具（${JSON.stringify(r2)}）`);
+    PE.pet(w, 'tap'); const r3 = run(w, 4); ok(clean(r3), `${cols}×${rows} 1 格里点小狗：不穿家具（侧身守卫接管）`);
+    PE.setLayout(w, { items: cells(cols, rows) }); ok(w.noRoom && w.stats.noRoom === 2, `${cols}×${rows} 最后一格也挡上：回到等待安置`);
+    PE.setLayout(w, { cols: cols + 2, rows: rows + 1, front: { x: cols / 2 + 1, y: rows + 0.7 }, items: cells(cols, rows) }); const r4 = run(w, 10);
+    ok(!w.noRoom && clean(r4), `${cols}×${rows} 房子变大：自动出来，正常活动`);
+  }
+  // 原型房间：坏档逐字段
+  const fields = ['savedAt', 't', 'rs', 'dog.x', 'dog.y', 'dog.dir', 'dog.energy', 'dog.affinity', 'dog.lastGain', 'dog.lastEat', 'dog.tired', 'dog.asleep', 'ball.x', 'ball.y', 'ball.carried', 'dog', 'ball', 'items'];
+  const bads = [NaN, Infinity, -Infinity, 'abc', -5, 1e300, undefined, null, {}, [7]];
+  const set = (o, path, v) => { const ks = path.split('.'); let c = o; for (let i = 0; i < ks.length - 1; i++) c = c[ks[i]]; if (v === undefined) delete c[ks[ks.length - 1]]; else c[ks[ks.length - 1]] = v; };
+  let crash = 0, nan = 0, body = 0; const why = [];
+  const w0 = world(303); run(w0, 5); const base = PE.serialize(w0, 10000);
+  for (const f of fields) for (const v of bads) {
+    const s = clone(base); set(s, f, v); const w = world(304);
+    const r = tryDo(() => { const res = PE.restore(w, s, 12000); const rr = run(w, 2); const out = PE.serialize(w, 14000); return { res, rr, out }; });
+    if (r.err) { crash++; why.push(f + '=' + String(v) + '：' + r.err); continue; }
+    if (!r.v.res.ok || !finAll(r.v.out) || ![w.dog.x, w.dog.y, w.dog.energy, w.dog.affinity, w.t].every(Number.isFinite)) { nan++; why.push(f + '=' + String(v) + ' NaN'); }
+    if (!clean(r.v.rr)) { body++; why.push(f + '=' + String(v) + ' 穿'); }
+  }
+  ok(crash === 0 && nan === 0 && body === 0, `原型存档 ${fields.length} 字段 × ${bads.length} 坏值：不报错 ${crash} / NaN ${nan} / 穿家具 ${body}` + (why.length ? '：' + why.slice(0, 4).join('；') : ''));
+  const sz = PE.sanitizeSave ? PE.sanitizeSave({ v: 1, savedAt: 0, t: 0, rs: 0, dog: { x: 0, y: 0, energy: 0, affinity: 0, lastGain: 0, dir: 'W' } }) : null;
+  ok(sz && sz.savedAt === 0 && sz.t === 0 && sz.rs === 0 && sz.dog.energy === 0 && sz.dog.lastGain === 0 && sz.dog.x === 0 && sz.dog.dir === 'W' && sz.dog.affinity === C.AFF0, 'sanitizeSave：合法的 0 原样保留（亲密 0 低于起始 → 40）');
+  ok(PE.sanitizeSave && PE.sanitizeSave(null) === null && PE.sanitizeSave({ v: 2 }) === null && PE.sanitizeSave([1]) === null, 'sanitizeSave：不是对象 / 版本不对 → null');
+  const w5 = world(305); const r5 = tryDo(() => PE.restore(w5, { v: 1, t: 'abc', savedAt: 'x', dog: { energy: '50', affinity: NaN } }, 5000));
+  ok(!r5.err && w5.t === 0 && w5.dog.energy === C.ENERGY0 && w5.dog.affinity === C.AFF0 && !PE.bodyOverlap(w5), '字符串 t / savedAt、字符串精力、NaN 亲密：按默认（t 0、精力 70、亲密 40），站在安全处');
+}
+
 console.log(`\n引擎测试：${pass} 过 / ${fail} 挂`);
 process.exit(fail ? 1 : 0);

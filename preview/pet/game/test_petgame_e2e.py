@@ -2,6 +2,7 @@
 # 用法：仓库根目录起静态服务（python3 -m http.server 49761），再 /workspace/.pwvenv/bin/python preview/pet/game/test_petgame_e2e.py [URL]
 # 覆盖：旧档（没有 pet 字段）照常读 → 商城看到小狗 → 点购买 → 进家宅出现小狗 → 自己活动（逐帧不压家具）→ 点小狗 / 呼唤 / 抛球
 #       → 布置模式暂停、家具摆到它脚下会让开 → 刷新存档保留（短离开原地、长离开在窝里睡）→ 不新增存档键 → 主线预览读这份档不丢小狗 → 换正式图集的接口
+# p4b：合法满屋购买（三档）不扣钱、「暂时无法入宅」；已有宠物满屋读档 / 布置挡满 / 搬进满屋 →「等待安置」，腾空 / 升级后自动出来；坏档（字符串 / 无穷 / 负数 / 缺字段 / null）读档不报错、存回去没有 NaN
 import sys, os, json, base64
 from playwright.sync_api import sync_playwright
 URL = sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:49761/preview/pet/game/'
@@ -72,7 +73,7 @@ with sync_playwright() as p:
         check(st['rawPet'] and st['rawPet']['owned'] is True, '购买立刻写进原存档（同一个键）')
         check(st['sub'] == 'room', '买完自动翻到家宅')
         check(st['keys'] == keys0 and 'tangzhe-pet-proto' not in st['keys'], '没有新增 localStorage 键：' + ','.join(st['keys']))
-        dup = pg.evaluate("() => { const r = __tzz.pet.PG.buy(__tzz.state, __tzz.E, 'c77', Date.now()); return { ok: r.ok, coins: __tzz.state.coins }; }")
+        dup = pg.evaluate("() => { const r = __tzz.pet.PG.buy(__tzz.state, __tzz.E, 'c77', Date.now(), __tzz.pet.M); return { ok: r.ok, coins: __tzz.state.coins }; }")
         check(not dup['ok'] and dup['coins'] == 47000, '再买一次：拒绝，不扣钱')
         # ---------- 家宅里：小狗出现 + 自己活动 ----------
         to_room(pg); pg.evaluate(WATCH)
@@ -80,10 +81,13 @@ with sync_playwright() as p:
         check(canvas_ink(pg) > 500, f'小狗画出来了（占位图非空像素 {canvas_ink(pg)}）')
         check(pg.locator('#petBar button').count() == 3, '生活模式：呼唤 / 摸摸 / 抛球 三个按钮')
         bh = pg.evaluate("() => Math.min(...[...document.querySelectorAll('#petBar button')].map(b => b.getBoundingClientRect().height))"); check(bh >= 36, f'按钮够大（{bh:.0f}px 高）')
-        s0 = pg.evaluate("() => __tzz.pet.snapshot().dog"); pg.wait_for_timeout(7000); s1 = pg.evaluate("() => __tzz.pet.snapshot().dog")
+        s0 = pg.evaluate("() => __tzz.pet.snapshot().dog"); t0 = pg.evaluate("() => __tzz.pet.w.t"); pg.wait_for_timeout(7000)
+        try: pg.wait_for_function("(t0) => __tzz.pet.w.t >= t0 + 7", arg=t0, timeout=15000)   # 按模拟时间算满 7 秒（机器忙时 rAF 掉帧，dt 封顶 0.1）
+        except Exception: pass
+        s1 = pg.evaluate("() => __tzz.pet.snapshot().dog"); t1 = pg.evaluate("() => __tzz.pet.w.t")
         moved = abs(s1['x'] - s0['x']) + abs(s1['y'] - s0['y'])
         pw = pg.evaluate("() => window.__pw")
-        check(moved > 0.3 or s1['activity'] != s0['activity'], f'自己活动（7 秒：{s0["activity"]} → {s1["activity"]}，走了 {moved:.2f} 格）')
+        check(moved > 0.3 or s1['activity'] != s0['activity'], f'自己活动（模拟 {t1 - t0:.1f} 秒：{s0["activity"]} → {s1["activity"]}，走了 {moved:.2f} 格）')
         check(pw['frames'] > 120 and pw['overlap'] == 0 and pw['outside'] == 0, f'逐帧：身体盒不压家具、不出房间（{pw["frames"]} 帧）')
         pg.screenshot(path=f'{SHOTS}/{tag}_3_room.png')
         # 层级：小狗 z 跟家具前沿一致
@@ -170,6 +174,67 @@ with sync_playwright() as p:
             r = pg.evaluate(GSTEP, 90)
             check(r['body'] == 0 and r['eng'] == 0, f'p4a {name}：自主活动 90 秒不穿墙（{r["body"]} / {r["frames"]} 帧）')
         pg.evaluate("() => __tzz.pet.manual(false)")
+        # ---------- p4b：满屋 = 正常状态（熊大 14:14）；坏档容错（熊大 14:17）----------
+        REV = [200000]
+        def inject(js):   # js 返回要写进存档的 state（在页面里用 __tzz.E 现做）；rev 每次加大，旧页 pagehide 存档盖不掉
+            REV[0] += 100000
+            pg.evaluate("(rev) => { const E = __tzz.E; const s = (" + js + ")(E); if (typeof s !== 'string') s.rev = rev; localStorage.setItem('" + SAVE + "', typeof s === 'string' ? s.replace('\"__REV__\"', rev) : JSON.stringify(s)); }", REV[0])
+            boot(pg)
+        FILL = """(E, s, id, skip) => { const H = E.homeOf(s, id), T = E.homeTier(H.lv), c0 = s.coins; let n = 0;
+          for (let y = 0; y < T.rows; y++) for (let x = 0; x < T.cols; x++) { if ((skip || []).some(([a, b]) => a === x && b === y)) continue; s.coins = 1e9; E.buyFurniture(s, 'furn_plant'); if (E.placeItem(s, id, 'furn_plant', x, y, 0, 'floor').ok) n++; }
+          s.coins = c0; return n; }"""
+        ST = "() => { const s = __tzz.state, raw = JSON.parse(localStorage.getItem('" + SAVE + "')); return { coins: s.coins, rawCoins: raw.coins, pet: s.pet || null, rawPet: raw.pet || null, owned: __tzz.pet.PG.owned(s), waiting: __tzz.pet.waiting, dog: !!document.querySelector('#roomFloor .pet-dog'), wait: !!document.querySelector('#petWait'), bar: !!document.querySelector('#petBar'), modal: __tzz.modalOpen(), toast: (document.querySelector('#toast') || {}).textContent || '' }; }"
+        # (1) 合法满屋购买：小屋 6×4 摆满 24 个花盆 → 商城卡「暂时无法入宅」、点购买不弹窗不扣钱；公寓 / 豪宅同样
+        for lv, nm, cells in ((1, '小屋', 24), (2, '公寓', 40), (3, '豪宅', 60)):
+            inject("(E) => { const s = E.newState(Date.now()); s.coins = 1e9; while (E.homeOf(s, 'c77').lv < " + str(lv) + ") E.upgradeHome(s, 'c77'); s.coins = 5000; (" + FILL + ")(E, s, 'c77'); delete s.pet; return s; }")
+            pg.evaluate("() => { __tzz.setTab('home'); __tzz.homeAct('homeSub', 'mall'); }"); pg.wait_for_timeout(400)
+            cd = pg.evaluate("() => { const c = document.querySelector('#petCard'); const b = document.querySelector('#petNoRoom'); return { room: c && c.dataset.room, btn: b ? b.textContent : '', dis: b ? b.disabled : null, buy: !!document.querySelector('#petCard [data-act=homePetBuy]'), n: __tzz.E.homeOf(__tzz.state, 'c77').placed.length }; }")
+            check(cd['n'] == cells and cd['room'] == 'full' and cd['btn'] == '暂时无法入宅' and cd['dis'] and not cd['buy'], f'p4b {nm}合法摆满 {cd["n"]} 个花盆：商城卡显示「暂时无法入宅」（禁用，没有购买键）')
+            if lv == 1: pg.locator('#petCard').scroll_into_view_if_needed(); pg.screenshot(path=f'{SHOTS}/{tag}_p4b_full_mall.png')
+            pg.evaluate("() => __tzz.homeAct('homePetBuy', 'c77')"); pg.wait_for_timeout(300)
+            st = pg.evaluate(ST)
+            check(not st['modal'] and '暂时无法入宅' in st['toast'] and st['coins'] == 5000 and not st['owned'] and st['pet'] is None, f'p4b {nm}满屋硬点购买：不弹窗，提示「暂时无法入宅」，金币 5000 → {st["coins"]}，没有宠物')
+            r = pg.evaluate("() => { const r = __tzz.pet.PG.buy(__tzz.state, __tzz.E, 'c77', Date.now(), __tzz.pet.M); __tzz.persist(); const raw = JSON.parse(localStorage.getItem('" + SAVE + "')); return { ok: r.ok, noRoom: !!r.noRoom, coins: __tzz.state.coins, raw: raw.coins, pet: 'pet' in raw }; }")
+            check(not r['ok'] and r['noRoom'] and r['coins'] == 5000 and r['raw'] == 5000 and not r['pet'], f'p4b {nm}满屋直接调购买：拒绝（noRoom），存档金币 {r["raw"]}、无 pet')
+        # (2) 已有宠物，读档时满屋 → 等待安置（不崩、所有权 / 金币不变）；收起一盆 → 自动出来
+        inject("(E) => { const s = E.newState(Date.now()); s.coins = 7777; (" + FILL + ")(E, s, 'c77'); s.pet = { v: 1, owned: true, home: 'c77', boughtAt: Date.now() - 9e5, eng: { v: 1, savedAt: Date.now() - 5000, t: 120, rs: 99, home: 'c77', dog: { x: 2.5, y: 2.5, dir: 'E', energy: 55, affinity: 47, lastGain: 10, tired: false, asleep: false, lastEat: -1e9 }, ball: { x: 1, y: 1, carried: false } } }; return s; }")
+        to_room(pg); pg.wait_for_timeout(300)
+        st = pg.evaluate(ST)
+        check(st['owned'] and st['waiting'] and st['wait'] and not st['dog'] and not st['bar'] and st['coins'] == 7777, f'p4b 已有宠物 + 满屋读档：不崩，家宅显示「小狗等待安置」，不画小狗、不出按钮，金币 {st["coins"]}')
+        pg.screenshot(path=f'{SHOTS}/{tag}_p4b_waiting.png')
+        pg.evaluate("() => __tzz.persist()"); st = pg.evaluate(ST)
+        check(st['rawPet'] and st['rawPet']['owned'] is True and (((st['rawPet'] or {}).get('eng') or {}).get('dog') or {}).get('affinity') == 47 and st['rawCoins'] == 7777, '等待中存档：所有权 / 亲密 47 / 金币都在')
+        pg.evaluate("() => { const s = __tzz.state, H = __tzz.E.homeOf(s, 'c77'); __tzz.E.storeItem(s, 'c77', H.placed.find(p => p.x === 3 && p.y === 2).uid); __tzz.persist(); __tzz.renderTab(); }"); pg.wait_for_timeout(700)
+        st = pg.evaluate(ST)
+        check(not st['waiting'] and st['dog'] and st['bar'] and not st['wait'] and '跑出来' in st['toast'], f'收起一盆：小狗自动出来（提示「{st["toast"]}」），按钮回来')
+        pg.evaluate("() => __tzz.pet.manual(true)"); r = pg.evaluate(GSTEP, 10)
+        aff = pg.evaluate("() => __tzz.pet.w.dog.affinity")
+        check(r['body'] == 0 and r['eng'] == 0 and aff == 47, f'出来后 1 格里活动 10 秒不压家具（{r["body"]} 帧，动作 {"→".join(r["seq"][:4])}），亲密 {aff}')
+        pg.evaluate("() => __tzz.pet.manual(false)")
+        # (3) 布置把最后一格挡上 → 等待安置；收起 → 出来
+        pg.evaluate("() => { __tzz.homeAct('homeMode', 'decor'); const s = __tzz.state, E = __tzz.E; s.coins += 500; E.buyFurniture(s, 'furn_plant'); E.placeItem(s, 'c77', 'furn_plant', 3, 2, 0, 'floor'); __tzz.persist(); __tzz.renderTab(); }"); pg.wait_for_timeout(500)
+        st = pg.evaluate(ST)
+        check(st['waiting'] and st['wait'] and not st['dog'] and st['owned'] and st['coins'] == 7777, '布置模式把最后一格摆上：等待安置（提示在，小狗不画），金币不变')
+        pg.evaluate("() => { const s = __tzz.state, H = __tzz.E.homeOf(s, 'c77'); __tzz.E.storeItem(s, 'c77', H.placed.find(p => p.x === 3 && p.y === 2).uid); __tzz.homeAct('homeMode', 'live'); __tzz.persist(); __tzz.renderTab(); }"); pg.wait_for_timeout(600)
+        st = pg.evaluate(ST); check(not st['waiting'] and st['dog'], '收起刚摆的：小狗出来')
+        # (4) 搬进满屋 → 等待安置；升级房子 → 自动出来；金币只扣升级费
+        pg.evaluate("() => { const s = __tzz.state, E = __tzz.E; s.ceos.pearl.unlocked = true; (" + FILL + ")(E, s, 'pearl'); __tzz.persist(); __tzz.homeAct('homePetMove', 'pearl'); }"); pg.wait_for_timeout(500)
+        to_room(pg); st = pg.evaluate(ST)
+        check((st['pet'] or {}).get('home') == 'pearl' and st['owned'] and st['waiting'] and st['wait'] and not st['dog'] and st['coins'] == 7777, f'搬进满屋（珍珠姐家摆满）：搬过去、等待安置，金币不变（提示「{st["toast"][:30]}…」）')
+        pg.evaluate("() => { const s = __tzz.state; s.coins += 80000; const r = __tzz.E.upgradeHome(s, 'pearl'); __tzz.persist(); __tzz.renderTab(); return r.ok; }"); pg.wait_for_timeout(600)
+        st = pg.evaluate(ST)
+        check(not st['waiting'] and st['dog'] and st['coins'] == 7777 and st['owned'], f'升级成公寓：小狗自动出来，金币只扣升级费（{st["coins"]}），宠物还是 1 只')
+        # (5) 坏档：eng 字段是字符串 / 无穷（JSON 1e400）/ 负数 / 超界 / null / 缺字段，owned / boughtAt 也坏 → 读档不报错、所有权保留、存回去没有 NaN
+        inject("""(E) => { const s = E.newState(Date.now()); s.coins = 4321; s.rev = '__REV__'; s.pet = { v: 1, owned: 'true', home: 'c77', boughtAt: 'x', eng: { v: 1, savedAt: 'NaN', t: 'abc', rs: -1, home: 'c77', dog: { x: '2', y: null, dir: 'toString', energy: -5, affinity: 'big', lastGain: 1e12, tired: 'no' }, ball: [1] } };
+          return JSON.stringify(s).replace('"lastGain":1000000000000', '"lastGain":1e400,"lastEat":-1e400'); }""")
+        to_room(pg); pg.wait_for_timeout(400)
+        cr = pg.evaluate("() => { const w = __tzz.pet.w, d = w && w.dog; __tzz.persist(); const txt = localStorage.getItem('" + SAVE + "'), raw = JSON.parse(txt); return { owned: __tzz.pet.PG.owned(__tzz.state), coins: __tzz.state.coins, fin: !!w && [d.x, d.y, d.energy, d.affinity, d.lastGain, w.t].every(Number.isFinite), ov: !!w && window.PetEngine.bodyOverlap(w), dog: !!document.querySelector('#roomFloor .pet-dog'), bad: /NaN|Infinity/.test(txt), eng: raw.pet ? raw.pet.eng : null, b: raw.pet ? raw.pet.boughtAt : null, o: raw.pet ? raw.pet.owned : null }; }")
+        e = cr['eng'] or {}
+        check(cr['owned'] and cr['o'] is True and cr['coins'] == 4321 and cr['dog'] and cr['fin'] and not cr['ov'], '坏档（字符串 / 无穷 / 负数 / null / 缺字段）读档：不报错，小狗还在、画出来、数值都有限、不压家具')
+        check(not cr['bad'] and isinstance(e.get('savedAt'), (int, float)) and isinstance(e.get('t'), (int, float)) and (e.get('dog') or {}).get('energy') == 0 and (e.get('dog') or {}).get('affinity') == 40 and cr['b'] == 0, f'存回去：没有 NaN / Infinity，savedAt / t 是数字，精力 -5→0、亲密 40、boughtAt 0（eng.t={e.get("t")}）')
+        boot(pg); to_room(pg)
+        cr2 = pg.evaluate("() => { const w = __tzz.pet.w; return { owned: __tzz.pet.PG.owned(__tzz.state), fin: !!w && [w.dog.x, w.dog.y, w.dog.energy, w.t].every(Number.isFinite), dog: !!document.querySelector('#roomFloor .pet-dog') }; }")
+        check(cr2['owned'] and cr2['fin'] and cr2['dog'], '修好的档再刷新：照常')
         check(not errs, '控制台 0 报错 / 0 警告 / 0 坏请求' + ('' if not errs else '：' + '；'.join(errs[:4])))
         # ---------- 只在一台上跑：主线预览读这份档不丢小狗；换正式图集接口 ----------
         if devname == 'iPhone 15':
@@ -203,5 +268,5 @@ with sync_playwright() as p:
     check(hits['n'] >= 2 and not errs, f'manifest 第一次没拉到 → 自动重试成功（{hits["n"]} 次，0 报错）')
     ctx.close(); b.close()
 ok = sum(1 for c, _ in results if c)
-print(f'\n宠物 p4 端到端：{ok} 过 / {len(results) - ok} 挂')
+print(f'\n宠物 p4/p4b 端到端：{ok} 过 / {len(results) - ok} 挂')
 sys.exit(0 if ok == len(results) else 1)

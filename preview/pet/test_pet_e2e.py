@@ -1,4 +1,4 @@
-# 宠物原型 p3 — 手机端端到端测试（WebKit = iPhone Safari 内核）
+# 宠物原型 p3 / p4a / p4b — 手机端端到端测试（WebKit = iPhone Safari 内核）
 # 用法：在仓库根目录起静态服务（python3 -m http.server 49761），再 /workspace/.pwvenv/bin/python preview/pet/test_pet_e2e.py [URL]
 import sys, os, json
 from playwright.sync_api import sync_playwright
@@ -242,6 +242,29 @@ with sync_playwright() as p:
                 check(r['body'] == 0 and r['vis'] == 0 and r['overlap'] == 0, f'p4a {name}{k}：不穿墙（地面 {r["body"]} / 屏幕 {r["vis"]}）')
             r = pg.evaluate(STEP_JS, [90, None])
             check(r['body'] == 0 and r['vis'] == 0 and r['overlap'] == 0 and r['teleport'] == 0, f'p4a {name}：自主活动 90 秒不穿墙（地面 {r["body"]} / 屏幕 {r["vis"]}，朝向 {r["dirs"]}）')
+        # ===== p4b：屋里没地方站 = 等待安置（不崩）；坏档逐字段容错 =====
+        full = [{'uid': f'q{x}_{y}', 'fid': 'furn_plant', 'x': x, 'y': y} for y in range(8) for x in range(10)]
+        nr = pg.evaluate("""(items) => { const P = __pet, w = P.w; let err = ''; try { P.PE.setLayout(w, { items }); P.advance(3); } catch (e) { err = e.message; } return { err, noRoom: w.noRoom, act: w.dog.activity, label: document.querySelector('#label').textContent }; }""", full)
+        check(not nr['err'] and nr['noRoom'] and nr['act'] == 'waiting' and '摆满' in nr['label'], f'p4b 原型房间 10×8 摆满：不报错，等待安置（{nr["label"]}）')
+        pg.screenshot(path=f'{SHOTS}/{tag}_p4b_full.png')
+        pg.click('#bCall'); pg.wait_for_timeout(150); tt = pg.evaluate("document.querySelector('#toast').textContent")
+        pt = pg.evaluate("(() => __pet.screenOf(__pet.w.dog.x, __pet.w.dog.y - 0.4))()"); s0 = pg.evaluate("__pet.w.stats.petStarts"); pg.mouse.click(pt['x'], pt['y']); s1 = pg.evaluate("__pet.w.stats.petStarts")
+        check('没地方站' in tt and s1 == s0, f'等待安置：呼唤提示「{tt}」，点原位置不触发抚摸')
+        hole = [q for q in full if not (q['x'] == 6 and q['y'] == 4)]
+        pg.evaluate("(items) => { __pet.PE.setLayout(__pet.w, { items }); __pet.advance(0); }", hole)
+        r = pg.evaluate(STEP_JS, [10, None]); sn = r['snap']['dog']
+        check(not r['snap'].get('noRoom', True) and int(sn['x']) == 6 and int(sn['y']) == 4 and r['body'] == 0 and r['vis'] == 0 and r['overlap'] == 0 and r['teleport'] == 0, f'空出 (6,4) 一格：自动出来站进去，10 秒不穿家具（地面 {r["body"]} / 屏幕 {r["vis"]}）')
+        # 坏档：字符串 / 无穷（JSON 1e400）/ 负数 / null / 缺字段
+        badtxt = '{"v":1,"savedAt":"x","t":"abc","rs":-3,"dog":{"x":"2","y":null,"dir":"toString","energy":-5,"affinity":"big","lastGain":1e400,"lastEat":-1e400,"tired":"no"},"ball":[1],"items":[{"uid":"f10","fid":"furn_s77_rocking_chair","x":1e400,"y":"a"},null,7]}'
+        pg.evaluate("(t) => { localStorage.setItem('" + KEY + "', t); Storage.prototype.setItem = function () {}; }", badtxt)   # 旧页 pagehide 还会存一次：先让它存不进去，坏档才留得住
+        try:
+            pg.goto(URL + '?seed=12'); pg.wait_for_function("document.body.dataset.ready==='1'", timeout=15000); pg.evaluate("__pet.manual(true)")
+            pg.wait_for_function("__pet.imagesReady().ok === __pet.imagesReady().total", timeout=15000)
+            cr = pg.evaluate("""() => { const P = __pet, w = P.w, d = w.dog; P.advance(2); P.save(); const txt = localStorage.getItem('""" + KEY + """'); const s = JSON.parse(txt);
+              return { fin: [d.x, d.y, d.energy, d.affinity, d.lastGain, d.lastEat, w.t].every(Number.isFinite), ov: P.PE.bodyOverlap(w), bad: /NaN|Infinity|null/.test(txt), e: s.dog.energy, a: s.dog.affinity, t: s.t, dir: s.dog.dir }; }""")
+            check(cr['fin'] and not cr['ov'] and not cr['bad'] and cr['e'] == 0 and cr['a'] == 40 and isinstance(cr['t'], (int, float)), f'p4b 原型坏档读档：不报错、数值有限、不压家具；存回去没有 NaN / Infinity / null（精力 -5→{cr["e"]}、亲密→{cr["a"]}、t={cr["t"]}）')
+        except Exception as ex:
+            check(False, f'p4b 原型坏档读档：页面起不来（{str(ex)[:90]}）')
         check(not errs, '控制台 0 报错 / 0 警告 / 0 坏请求' + ('' if not errs else '：' + '；'.join(errs[:4])))
         ctx.close()
     # 换真图集那条路：把占位帧烘成 2048×1024 图集再按 cell 画

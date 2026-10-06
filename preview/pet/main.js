@@ -151,10 +151,10 @@
     for (const p of W.items) if (PE.isRug(W, p) && !(drag && drag.uid === p.uid)) drawItem(p);
     drawBed();
     const byUid = {}; for (const p of W.items) byUid[p.uid] = p;
-    const list = PE.drawOrder(W).filter(o => !(drag && o.uid === drag.uid)).map(o => ({ f: o.kind === 'item' ? () => drawItem(byUid[o.uid]) : o.kind === 'bowl' ? drawBowl : o.kind === 'dog' ? drawDog : drawBall }));   // 落地点决定前后遮挡
+    const list = PE.drawOrder(W).filter(o => !(drag && o.uid === drag.uid) && !(W.noRoom && (o.kind === 'dog' || o.kind === 'ball'))).map(o => ({ f: o.kind === 'item' ? () => drawItem(byUid[o.uid]) : o.kind === 'bowl' ? drawBowl : o.kind === 'dog' ? drawDog : drawBall }));   // 落地点决定前后遮挡
     for (const it of list) it.f();
     if (rearrange) drawRearrange();
-    drawFx();
+    if (!W.noRoom) drawFx();   // p4b：等待安置（屋里没地方站）不画小狗 / 球
     if (Q.has('debug')) drawDebug();
     const lb = W.dog.label + (Q.has('debug') ? ` · 精力${W.dog.energy.toFixed(0)}` : '');
     if (lb !== lastLabel) { $('label').textContent = lb; lastLabel = lb; }
@@ -167,7 +167,7 @@
   let toastT = 0;
   function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.remove('hidden'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.add('hidden'), 1800); }
   function toTile(e) { const b = cv.getBoundingClientRect(); return { x: (e.clientX - b.left) / tile, y: (e.clientY - b.top - wallH) / tile }; }
-  function hitDog(p) { const d = W.dog; return Math.abs(p.x - d.x) < 0.6 && p.y > d.y - 1.05 - d.z && p.y < d.y + 0.25; }
+  function hitDog(p) { const d = W.dog; if (W.noRoom) return false; return Math.abs(p.x - d.x) < 0.6 && p.y > d.y - 1.05 - d.z && p.y < d.y + 0.25; }
   function hitItem(p) {
     const cand = W.items.filter(q => { const r = PE.itemRect(W, q); return p.x >= r.x && p.x < r.x + r.w && p.y >= r.y && p.y < r.y + r.h; });
     cand.sort((a, b) => (PE.isRug(W, a) - PE.isRug(W, b)) || (PE.itemRect(W, b).y + PE.itemRect(W, b).h) - (PE.itemRect(W, a).y + PE.itemRect(W, a).h));
@@ -193,9 +193,10 @@
     render();
   };
   cv.addEventListener('pointerup', endDrag); cv.addEventListener('pointercancel', endDrag);
-  $('bCall').onclick = () => { const r = PE.call(W); if (!r.ok) toast('先把家具放好'); render(); };
-  $('bPet').onclick = () => { const r = PE.pet(W, 'button'); if (!r.ok) toast('先把家具放好'); render(); };
-  $('bBall').onclick = () => { const r = PE.throwBall(W); if (!r.ok) toast(r.why === 'carried' ? '球在它嘴里呢' : r.why === 'flying' ? '球还在飞' : '先把家具放好'); else if (r.ignored === 'asleep') toast('它睡着了，球先放那儿'); render(); };
+  const why = (r) => r.why === 'noRoom' ? '屋里没地方站，先腾出空地' : '先把家具放好';
+  $('bCall').onclick = () => { const r = PE.call(W); if (!r.ok) toast(why(r)); render(); };
+  $('bPet').onclick = () => { const r = PE.pet(W, 'button'); if (!r.ok) toast(why(r)); render(); };
+  $('bBall').onclick = () => { const r = PE.throwBall(W); if (!r.ok) toast(r.why === 'carried' ? '球在它嘴里呢' : r.why === 'flying' ? '球还在飞' : why(r)); else if (r.ignored === 'asleep') toast('它睡着了，球先放那儿'); render(); };
   $('bMove').onclick = () => {
     rearrange = !rearrange; PE.setRearrange(W, rearrange); drag = null;
     $('bMove').classList.toggle('on', rearrange); $('bMove').textContent = rearrange ? '✅ 放好了' : '🪑 搬家具';
@@ -252,13 +253,13 @@
     const v = PA.validateManifest(m); if (!v.ok) throw new Error(v.errors.join('；'));
     M = m;
     const res = makeWorld(true); resize(); welcomeBack(res);
-    if (!m.placeholder && m.atlas.image) { const im = new Image(); im.onload = () => { atlas = im; artMode = 'atlas'; }; im.onerror = () => console.warn('图集没加载到，先用占位小狗'); im.src = 'art/' + m.atlas.image + '?v=p4a'; }
+    if (!m.placeholder && m.atlas.image) { const im = new Image(); im.onload = () => { atlas = im; artMode = 'atlas'; }; im.onerror = () => console.warn('图集没加载到，先用占位小狗'); im.src = 'art/' + m.atlas.image + '?v=p4b'; }
     if (Q.get('art') === 'atlas') window.__pet.bakeAtlas();
     document.body.dataset.ready = '1';
     requestAnimationFrame(frame);
   }
   function loadManifest(tryN) {
-    fetch('art/manifest.json?v=p4a').then(r => { if (!r.ok) throw new Error('manifest ' + r.status); return r.json(); }).then(boot).catch(e => {
+    fetch('art/manifest.json?v=p4b').then(r => { if (!r.ok) throw new Error('manifest ' + r.status); return r.json(); }).then(boot).catch(e => {
       if (leaving) return;
       if (tryN < 3) { $('label').textContent = '加载中…'; setTimeout(() => loadManifest(tryN + 1), 500 * (tryN + 1)); return; }
       $('label').textContent = '加载失败：' + e.message + '（下拉刷新试试）'; console.error(e);
