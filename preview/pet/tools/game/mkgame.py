@@ -1,6 +1,6 @@
 # 从 preview/ 生成 preview/pet/game/ 的快照副本 + 宠物钩子（可重跑；每处替换都断言命中次数）
 import re, pathlib, sys
-SRC = pathlib.Path(__file__).resolve().parents[3]; DST = SRC / 'pet' / 'game'; V = 'p6'
+SRC = pathlib.Path(__file__).resolve().parents[3]; DST = SRC / 'pet' / 'game'; V = 'p6a'
 def rep(s, old, new, n=1):
     c = s.count(old); assert c == n, (old[:80], c); return s.replace(old, new)
 base = (SRC / 'version.json').read_text().strip()

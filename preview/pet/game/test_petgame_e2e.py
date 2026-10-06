@@ -86,6 +86,16 @@ with sync_playwright() as p:
         to_room(pg); pg.evaluate(WATCH)
         check(pg.locator('#roomFloor .pet-dog').count() == 1 and pg.locator('#roomFloor .pet-bed').count() == 1, '家宅地板里有小狗 + 小窝')
         check(canvas_ink(pg) > 500, f'小狗画出来了（占位图非空像素 {canvas_ink(pg)}）')
+        # 12e（熊大 23:26 第 3 项）：叼着球的 idle_E#0 / run_E#0，朝东 / 朝西（镜像）都不能被画布左右边裁掉——画布最左 / 最右 2 列必须全透明
+        pg.wait_for_function("() => __tzz.pet.view && __tzz.pet.view.artMode === 'atlas'", timeout=15000)
+        edge = pg.evaluate("""() => { const P = __tzz.pet, w = P.w, v = P.view, fl = document.querySelector('#roomFloor'); P.manual(true); const out = {};
+          const b0 = { ...w.ball }, d0 = { dir: w.dog.dir, name: w.dog.anim.name };
+          for (const [clip, dir] of [['idle_E', 'E'], ['idle_E', 'W'], ['run_E', 'E'], ['run_E', 'W'], ['sniff', 'E'], ['sniff', 'W']]) {
+            w.ball.state = 'carried'; w.dog.dir = dir; w.dog.anim.play(clip, { restart: true }); v.draw(w, fl);
+            const cv = v.els.cv, x = cv.getContext('2d'), H = cv.height, a = (cx) => { const d = x.getImageData(cx, 0, 2, H).data; let m = 0; for (let i = 3; i < d.length; i += 4) m = Math.max(m, d[i]); return m; };
+            out[clip + '#' + w.dog.anim.frame() + '/' + dir] = [a(0), a(cv.width - 2), cv.width]; }
+          Object.assign(w.ball, b0); w.dog.dir = d0.dir; w.dog.anim.play(d0.name, { restart: true }); P.manual(false); return out; }""")
+        check(all(v[0] == 0 and v[1] == 0 for v in edge.values()), f'12e 叼球不裁边：idle_E#0 / run_E#0 / sniff#0 朝东朝西，画布最左 / 最右 2 列全透明 {edge}')
         check(pg.locator('#petBar button').count() == 3, '生活模式：呼唤 / 摸摸 / 抛球 三个按钮')
         bh = pg.evaluate("() => Math.min(...[...document.querySelectorAll('#petBar button')].map(b => b.getBoundingClientRect().height))"); check(bh >= 36, f'按钮够大（{bh:.0f}px 高）')
         s0 = pg.evaluate("() => __tzz.pet.snapshot().dog"); t0 = pg.evaluate("() => __tzz.pet.w.t"); pg.wait_for_timeout(7000)

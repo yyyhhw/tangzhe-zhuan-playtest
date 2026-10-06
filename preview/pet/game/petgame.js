@@ -155,9 +155,21 @@
   }
 
   /* ---------- 画（浏览器：小狗 / 窝 / 球都是 #roomFloor 里的绝对定位元素，跟家具按落地点排前后） ---------- */
+  // 12e：画布横向余量（概念 256 坐标）= 任何帧（含镜像）叼着的球最外沿伸出 0..256 的量 + 描边，至少 8
+  function padXOf(M) {
+    if (!M || !M.clips) return 8;
+    const br = PE.CFG.BALL_R * 256 / M.runtime.displayTiles, lw = Math.max(1.5, br * 0.22);
+    let out = 0;
+    for (const c of Object.values(M.clips)) for (const f of c.frames) {
+      if (!f.mouth) continue;
+      const x = f.mouth[0]; out = Math.max(out, x + br + lw - 256, br + lw - x);   // 朝东伸出右边；镜像（朝西）时 256−x 侧同理 = x−br 伸出左边
+    }
+    return Math.max(8, Math.ceil(out + 2));
+  }
   function createView(opt) {
     const M = opt.manifest, PA = opt.PA, PP = opt.PP;
     let atlas = null, els = null, cvW = 0, cvH = 0;
+    const PAD_X = padXOf(M);
     const sheetSrc = opt.atlasBase && M && !M.placeholder && M.atlas && M.atlas.image ? opt.atlasBase + M.atlas.image : null;
     if (sheetSrc && typeof Image !== 'undefined') { const im = new Image(); im.onload = () => { atlas = im; }; im.onerror = () => console.warn('小狗图集没加载到，先用占位小狗'); im.src = sheetSrc + (opt.ver ? '?v=' + opt.ver : ''); }
     function mk(cls, tag) { const e = document.createElement(tag || 'div'); e.className = cls; e.setAttribute('aria-hidden', 'true'); return e; }
@@ -186,12 +198,15 @@
       if (b.state === 'carried') e.ball.style.display = 'none';
       else { const r = PE.CFG.BALL_R * tile; e.ball.style.cssText = `display:block;left:${pc(b.x, w.cols)};top:${pc(b.y, w.rows)};width:${2 * r}px;height:${2 * r}px;z-index:${10 + Math.floor(b.y * 10)};transform:translate(-50%,${-2 * r - b.z * tile}px)`; }
       // 小狗：canvas = 原型同一套逐帧画法（占位）或图集格子
-      const W2 = Math.round(S * dpr), H2 = Math.round((S + pad) * dpr);
-      if (W2 !== cvW || H2 !== cvH) { e.cv.width = cvW = W2; e.cv.height = cvH = H2; e.cv.style.width = S + 'px'; e.cv.style.height = (S + pad) + 'px'; }
-      e.dog.style.cssText = `left:${pc(d.x, w.cols)};top:${pc(d.y, w.rows)};width:${S}px;height:${S + pad}px;z-index:${10 + Math.floor(d.y * 10)};transform:translate(-50%,${-(208 / 256 * S + pad)}px)`;
+      // 12e（熊大 23:26 第 3 项）：画布左右各留 padX 余量——叼着的球 / 鼻尖会伸出 256 概念格（idle_E#0、run_E#0 朝东截右边、朝西镜像截左边）；
+      //   画布仍以落地点居中（translate(-50%)），所以定位不变，只是更宽
+      const padX = Math.ceil(S * PAD_X / 256), CW = S + 2 * padX;
+      const W2 = Math.round(CW * dpr), H2 = Math.round((S + pad) * dpr);
+      if (W2 !== cvW || H2 !== cvH) { e.cv.width = cvW = W2; e.cv.height = cvH = H2; e.cv.style.width = CW + 'px'; e.cv.style.height = (S + pad) + 'px'; }
+      e.dog.style.cssText = `left:${pc(d.x, w.cols)};top:${pc(d.y, w.rows)};width:${CW}px;height:${S + pad}px;z-index:${10 + Math.floor(d.y * 10)};transform:translate(-50%,${-(208 / 256 * S + pad)}px)`;
       const ctx = e.ctx, k = S / 256 * dpr, name = d.anim.name, fi = d.anim.frame(), frm = M.clips[name].frames[fi], mirror = d.dir === 'W';
       ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, cvW, cvH);
-      const gx = S / 2 * dpr, gy = (pad + 208 / 256 * S) * dpr, sk = k * (1 - Math.min(0.4, d.z * 0.6));
+      const gx = CW / 2 * dpr, gy = (pad + 208 / 256 * S) * dpr, sk = k * (1 - Math.min(0.4, d.z * 0.6));
       ctx.save(); ctx.translate(gx, gy); ctx.scale(sk, sk); ctx.translate(-128, -208);
       if (atlas) { const c = PA.cellRect(M, M.shadow.cell); ctx.drawImage(atlas, c.sx, c.sy, c.s, c.s, 0, 0, 256, 256); } else PP.drawShadow(ctx, M);
       ctx.restore();
@@ -216,5 +231,5 @@
     return { draw, hit, detach, get artMode() { return atlas ? 'atlas' : 'placeholder'; }, get els() { return els; } };
   }
 
-  return { PET, PV, BED, INTERACT, NO_ROOM, norm, owned, buy, move, hasRoom, layoutOf, pickBed, bedOK, createRuntime, createView };
+  return { PET, PV, BED, INTERACT, NO_ROOM, norm, owned, buy, move, hasRoom, layoutOf, pickBed, bedOK, createRuntime, createView, padXOf };
 });

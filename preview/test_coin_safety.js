@@ -312,6 +312,36 @@ t('12d3 ⑤ 宠物买狗（跨页）：存不上 → pet 字段不出现、钱�
 t('12d3 ⑥ 取舍不变：1e15 < 余额 ≤ MAX_SAFE 的旧档照常读、能花不涨；totalEarned 超安全整数的旧值读档不裁', () => { const r0 = raw3(); r0.coins = 5e15 + 1; r0.totalEarned = 1e17; const L = E.loadSave(JSON.stringify(r0), null, T0); const c = L.st.coins; E.addCoins(L.st, 100); const u = E.upgradeShop(L.st, 0); return L.source === 'main' && c === 5e15 + 1 && u.ok && L.st.coins === c - u.cost && L.st.totalEarned === 1e17; });
 t('12d3 ⑥ 取舍不变：余额 1e20 仍是异常模式（不自动拿备份顶）', () => { const u = raw3(); u.coins = 1e20; const r = E.loadSave(JSON.stringify(u), JSON.stringify(raw3()), T0); return r.unsafe === true && r.blocked === true && r.source === 'unsafe'; });
 
+// ===== 12e：熊大 23:26 独立验收第 1 / 2 项 =====
+{
+  const mk = (c, f) => { const s = E.migrate(null, 1790000000000).st; s.coins = c; s.coinFrac = f; s.totalEarned = 5; s.earnedFrac = 0; return s; };
+  const earned = (s) => s.totalEarned + s.earnedFrac;
+  // ① 封顶分支零头漏记
+  for (const [c, f, amt] of [[1e15 - 1, 0.99, 0.01], [1e15 - 1, 0.99, 0.02], [1e15 - 1, 0.5, 0.5], [1e15 - 1, 0.5, 3], [1e15 - 2, 0.75, 1.25], [1e15 - 1, 0.999, 0.001], [1e15 - 10, 0.3, 50]]) {
+    const s = mk(c, f), e0 = earned(s), want = (1e15 - c) - f, r = E.addCoins(s, amt);
+    t(`12e ① 封顶零头：coins=${c} frac=${f} 收入 ${amt} → 到上限、added=${want.toFixed(3)}（不是 0）、累计收益记上`, () =>
+      r.ok && r.capped && s.coins === 1e15 && s.coinFrac === 0 && r.added > 0 && Math.abs(r.added - want) < 1e-6 && Math.abs((earned(s) - e0) - want) < 1e-6);
+  }
+  t('12e ① 没到上限的零头入账照旧精确（coins=1e15−5、frac 0.99 + 0.02 → coins+1、frac 0.01）', () => { const s = mk(1e15 - 5, 0.99), r = E.addCoins(s, 0.02); return r.ok && !r.capped && s.coins === 1e15 - 4 && Math.abs(s.coinFrac - 0.01) < 1e-9 && r.added === 0.02; });
+  t('12e ① 已经到上限：再收入 added=0、累计不变', () => { const s = mk(1e15, 0), e0 = earned(s), r = E.addCoins(s, 0.5); return r.ok && r.added === 0 && earned(s) === e0; });
+  // ② 坏领取记录卡死离线领取
+  const T = 1790000000000;
+  const withPending = (log) => { const s = E.migrate(null, T).st; s.coins = 1000; s.coinFrac = 0; s.pending = { id: 'p1', amount: 200, sec: 3600, gap: 3600 }; s.claimLog = log; return s; };
+  const claimTx = (s) => E.transact(s, { apply: (x) => E.claimOffline(x, T + 1000, false), save: () => true });   // = app.js 领取路径（atomic → E.transact）
+  for (const [nm, log] of [['[null]', [null]], ['[undefined]', [undefined]], ['[数字 5]', [5]], ["['p1'] 字符串", ['p1']], ['[{}] 没 id', [{}]], ['[[]] 数组', [[]]], ['[null, 合法 p0]', [null, { id: 'p0', amt: 1, dbl: false, t: T }]]]) {
+    const s = withPending(log), r = claimTx(s);
+    t(`12e ② claimLog=${nm} + pending p1（200）：真实领取路径成功入账、pending 清掉、坏记录隔离（不再永久「操作失败」）`, () =>
+      r.ok && s.coins === 1200 && s.pending === null && s.claimLog.every(c => c && typeof c === 'object' && c.id !== undefined) && s.claimLog.some(c => c.id === 'p1') && !E.checkSave(JSON.parse(JSON.stringify(s))).length);
+  }
+  t('12e ② 坏记录里夹着已领过的 p1：仍然拒绝重复领取（不入账、pending 清掉）', () => { const s = withPending([null, { id: 'p1', amt: 200, dbl: false, t: T }]), r = claimTx(s); return !r.ok && s.coins === 1000 && (s.pending === null || r.stage === 'apply'); });
+  t('12e ② 读档就隔离坏领取记录：loadSave 后 claimLog 只剩合法项，领取一次成功、第二次拒绝', () => {
+    const raw = withPending([null, 7, { id: 'p0', amt: 1, dbl: false, t: T }]); const L = E.loadSave(JSON.stringify(raw), null, T);
+    const ok1 = !L.blocked && L.st.claimLog.length === 1 && L.st.claimLog[0].id === 'p0';
+    const r1 = claimTx(L.st), c1 = L.st.coins; L.st.pending = { id: 'p1', amount: 200, sec: 3600, gap: 3600 }; const r2 = claimTx(L.st);
+    return ok1 && r1.ok && c1 === 1200 && !r2.ok && L.st.coins === 1200;
+  });
+}
+
 console.log(`coin safety tests: ${pass} passed, ${fail} failed`);
 if (process.env.COIN_FAILS_JSON) require('fs').writeFileSync(process.env.COIN_FAILS_JSON, JSON.stringify(fails, null, 1));
 process.exitCode = fail ? 1 : 0;

@@ -172,7 +172,8 @@
     if (st.coins >= COIN_CAP()) return { ok:true, added:0, capped:true };   // 已到 / 旧档已超上限：保留，不再增长
     const b0 = st.coins + st.coinFrac, t = st.coinFrac + amt, w = Math.floor(t);
     let added;
-    if (w >= COIN_CAP() - st.coins) { added = COIN_CAP() - b0; st.coins = COIN_CAP(); st.coinFrac = 0; }
+    // 12d3 熊大 23:26 第 1 项：封顶时按修改前的整数 / 零头分开算 (cap − coins) − coinFrac，不再用 cap − (coins + coinFrac)（1e15 附近大浮点会把 0.99 零头吃掉，added 变 0、累计收益漏记）
+    if (w >= COIN_CAP() - st.coins) { const c0 = st.coins, f0 = st.coinFrac; added = Math.max(0, (COIN_CAP() - c0) - f0); st.coins = COIN_CAP(); st.coinFrac = 0; }
     else { st.coins += w; st.coinFrac = t - w; added = amt; }
     addEarned(st, added);
     return { ok:true, added, capped:st.coins >= COIN_CAP() };
@@ -446,11 +447,14 @@
   }
   function canDouble(st, now) { return !clockRolledBack(st, now) && st.dailyDoubleDay !== dayKey(now); }
   // 领取：入账 + 领取记录 + 清 pending 在同一个对象里改完，调用方一次性保存
+  function claimRecOk(c) { return !!c && typeof c === 'object' && !Array.isArray(c) && ((typeof c.id === 'string' && c.id !== '') || (typeof c.id === 'number' && Number.isFinite(c.id))); }
   function pendingOk(p) { return !!p && typeof p === 'object' && isAmt(p.amount) && isAmt(p.sec) && (typeof p.id === 'string' || typeof p.id === 'number'); }
   function claimOffline(st, now, useDouble) {
     const p = st.pending; if (!p) return { ok:false, why:'已经领过了' };
     if (!pendingOk(p)) { st.pending = null; return { ok:false, why:'离线收益数据异常，没有入账', bad:true }; }   // 12d：坏值拒绝，余额不动
     if (!Array.isArray(st.claimLog)) st.claimLog = [];
+    // 12d3 熊大 23:26 第 2 项：坏领取记录（null / 非对象 / 没有合法 id）隔离掉再查重——不能因为一条坏记录让领取永久「操作失败」；合法记录保留，防重复领取照旧
+    if (!st.claimLog.every(claimRecOk)) st.claimLog = st.claimLog.filter(claimRecOk);
     if (st.claimLog.some(c => c.id === p.id)) { st.pending = null; return { ok:false, why:'已经领过了' }; }
     if (!walletOk(st)) return { ok:false, why:'金币数据异常' };
     const dbl = !!useDouble && canDouble(st, now);
@@ -1195,7 +1199,7 @@
       ? { owned:[...new Set(raw.gacha.owned.filter(id => ITEM_BY_ID[id]))], draws:num(raw.gacha.draws, 0), pity:Math.max(0, Math.floor(num(raw.gacha.pity, 0))), last:raw.gacha.last || null }
       : { owned:[], draws:0, pity:0, last:null };
     if (st.gacha.last && !ITEM_BY_ID[st.gacha.last.id]) st.gacha.last = null;
-    st.claimLog = Array.isArray(raw.claimLog) ? raw.claimLog.slice(-20) : [];
+    st.claimLog = Array.isArray(raw.claimLog) ? raw.claimLog.filter(claimRecOk).slice(-20) : [];   // 12d3：读档就隔离坏领取记录（null 等），合法记录原样
     st.crossSeen = raw.crossSeen && typeof raw.crossSeen === 'object' ? raw.crossSeen : {};
     // 穿搭跟着 CEO 走：v2 的全局 equip 归给 77
     const okWear = (slot, id) => id == null ? null : (id === 'c_gold' || id === 'h_gold' || (ITEM_BY_ID[id] && ITEM_BY_ID[id].type === slot)) ? id : null;

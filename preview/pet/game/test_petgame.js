@@ -454,5 +454,20 @@ section('14. p6：买狗走 12d3 统一交易入口 E.transact（保存失败整
   ok(/const r = E\.transact\(state, \{ price:price \|\| 0, apply, save:\(\) => persist\(\), blocked:saveBlocked \}\);/.test(app), 'game/app.js 基于 12d3（带 txn / E.transact）');
 }
 
+section('15. 12e：熊大 23:26 第 3 项——完整游戏画布左右留余量，叼着的球不被裁（朝东截右、朝西镜像截左）');
+{
+  ok(typeof PG.padXOf === 'function', 'petgame.js 导出 padXOf（画布横向余量）');
+  const pad = typeof PG.padXOf === 'function' ? PG.padXOf(M) : 0, br = PE.CFG.BALL_R * 256 / M.runtime.displayTiles, lw = Math.max(1.5, br * 0.22);
+  const over = [];
+  for (const [name, c] of Object.entries(M.clips)) c.frames.forEach((f, i) => { if (!f.mouth) return;
+    const lo = f.mouth[0] - br - lw, hi = f.mouth[0] + br + lw;                       // 朝东：球在 [lo, hi]
+    const mlo = 256 - hi, mhi = 256 - lo;                                             // 朝西镜像：x → 256 − x
+    if (lo < -pad || hi > 256 + pad || mlo < -pad || mhi > 256 + pad) over.push(`${name}#${i}`); });
+  ok(pad > 0 && !over.length, `所有叼球帧（含镜像）的球都在画布 [−${pad}, 256+${pad}] 概念坐标内（超出：${over.slice(0, 6).join('、') || '无'}）`);
+  for (const [name, i] of [['idle_E', 0], ['run_E', 0], ['sniff', 0]]) { const m = M.clips[name].frames[i].mouth; ok(m && m[0] + br + lw > 256 && m[0] + br + lw <= 256 + pad, `${name}#${i}：球右沿 ${(m[0] + br + lw).toFixed(1)} 伸出 256（旧画布会裁），在余量 256+${pad} 以内`); }
+  const src = fs.readFileSync(path.join(__dirname, 'petgame.js'), 'utf8');
+  ok(/CW = S \+ 2 \* padX/.test(src) && /gx = CW \/ 2 \* dpr/.test(src) && /width:\$\{CW\}px/.test(src), '画布宽 = S + 2·padX，落地点仍在画布正中（gx = CW/2），dog 元素同宽、translate(-50%) 定位不变');
+}
+
 console.log(`\n宠物 p4/p4b/p4c/p5/p6 游戏接入：${pass} 过 / ${fail} 失败`);
 process.exit(fail ? 1 : 0);

@@ -15,6 +15,10 @@ iPhone 竖屏 Safari 漫画风挂机小游戏。**试玩链接，不是正式上
 
 开发：`node test_economy.js`、`node test_coin_safety.js`、`python test_playtest.py URL`、`python test_coin_e2e.py URL`（WebKit/iPhone；URL 要带 index.html）。
 
+12e：宠物并进主预览（商城买狗走 E.transact，狗只存在 state.pet；没买狗时家宅布局不变）+ 合入板砖打僵尸 b640f25（经营页入口，iframe，训练仍是 E.spendCoins + atomic，**待切 E.transact**）。联合链路：`python test_joint_12e.py URL`（买狗 → 训练 → 返回 → 刷新，金币 / rev 一致）；打僵尸：`zombie/test_zombie_embed.py`、`zombie/test_zombie_e2e.py`；宠物：`pet/test_engine.js`、`pet/game/test_petgame.js`、`pet/test_pet_e2e.py`、`pet/game/test_petgame_e2e.py`（也可传主预览 URL）。
+
+12e1（熊大 23:26 独立验收 1–3）：① addCoins 封顶按 (cap − coins) − coinFrac 算进账，1e15 附近零头不再漏记累计收益 ② 坏领取记录（claimLog 里 null / 非对象 / 无 id）读档和领取时隔离，离线领取不再永久「操作失败」，防重复照旧 ③ 完整游戏小狗画布左右留余量（padXOf），叼着的球朝东 / 朝西都不裁边。
+
 11t：生活模式点家具改按类别 / 能力触发（bed 类休息、书架看书、衣柜换衣），新云朵纱帐床也能休息；旧床回归通过。
 
 11u：接入舱式单层床 `furn_rocket_capsule_bunk`（原 ID / 价格 22000 / 豪华度 7 不变）。索引占地提案 2×3 实测改 **2×1**：图是正面扁图，2×3 会让上面 2 排空着挡位；2×1 与沙发 3×1 同样贴底显示。图暂用 819×546 缩小版裁成 400 宽 webp，原图到了直接替换 `art/furn_rocket_capsule_bunk.webp`，不改代码。竖放 1×2 时图会缩得较小（和沙发竖放一样，没有侧视图）。
