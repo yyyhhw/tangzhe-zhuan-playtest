@@ -1,8 +1,10 @@
-# 躺着也能赚（试玩版）
+# 躺着也能赚（v12 正式版）
 
-iPhone 竖屏 Safari 漫画风挂机小游戏。**试玩链接，不是正式上线版**（杨总说「上线」后再正式上线）。
+iPhone 竖屏 Safari 漫画风挂机小游戏。v12 正式版（由预览 11z1 合入：200 件家具、4 张特殊跨行漫画；存档键仍为 `tangzhe-save`，v11 存档原样保留并自动跑占地迁移）。预览站在 `/preview/`，使用独立存档键。
 
-试玩：https://yyyhhw.github.io/tangzhe-zhuan-playtest/
+已知视觉限制（仍在修）：面板灯等比缩小后偏细；沙发竖向摆放仍使用正面图。
+
+正式：https://yyyhhw.github.io/tangzhe-zhuan-playtest/
 
 - 四家店：77烧烤摊 / 奶茶店 / 漫画书店 / 摸鱼科技公司
 - 每家店 1 位 CEO + 1 位员工；店铺、员工、CEO 三样分开升级；里程碑 Lv10/25/50 → ×2/×4/×8

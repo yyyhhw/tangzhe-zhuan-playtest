@@ -203,6 +203,17 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 .pimg img.art{transform:none;object-fit:cover}
 .pchar .pe{position:absolute;right:-14px;bottom:-6px;font-size:28px}
 .comic.two .pt{margin-top:10px}
+.cross-wrap.has-art .comic{display:none}.cross-wrap:not(.has-art) .cross-cap{display:none}
+.cross-art{display:flex;justify-content:center;margin:2px 0 8px}
+.cross-art img{width:min(80vw,340px,calc(100dvh - 330px));min-width:180px;aspect-ratio:1;object-fit:cover;border:3px solid var(--ink);border-radius:12px;background:#fbf4e6;display:block}
+.cross-zoom{position:relative;padding:0;border:0;background:none;cursor:zoom-in;display:block;border-radius:12px}
+.cross-zoom:focus-visible{outline:3px solid var(--yellow);outline-offset:3px}
+.zoom-hint{position:absolute;right:6px;bottom:6px;background:rgba(20,20,20,.72);color:#fff;font-size:11.5px;font-weight:800;padding:3px 8px;border-radius:10px;pointer-events:none}
+.modal:has(.mpanel.zoom){padding:6px}
+.mpanel.zoom{width:min(calc(100vw - 12px),520px);padding:14px 6px 12px;box-shadow:4px 4px 0 var(--ink)}
+.mpanel.zoom .job-big img{width:min(calc(100vw - 36px),480px,calc(100dvh - 190px - var(--sat) - var(--sab)));cursor:zoom-out}
+.cross-cap{font-size:12.5px;font-weight:800;line-height:1.45;margin:0 0 10px;text-align:left}
+.cross-cap div{background:#fff;border:2px solid var(--ink);border-radius:10px;padding:3px 8px;margin-top:4px}
 .swap-box{text-align:left;font-size:12.5px;line-height:1.6;border:2.5px solid var(--ink);border-radius:8px;background:#fff6cf;padding:6px 9px;margin:4px 0 6px}
 .swap-box b{background:var(--ink);color:var(--yellow);padding:0 6px;border-radius:3px}
 
@@ -323,7 +334,7 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 .room.has-art .room-wall,.room.has-art .room-floor{background:transparent!important;border-bottom-color:transparent}
 .room.has-art .rw-deco{display:none}
 .room.has-art .room-floor{background-image:linear-gradient(to right,rgba(20,20,20,.12) 1px,transparent 1px),linear-gradient(to bottom,rgba(20,20,20,.12) 1px,transparent 1px)!important;background-size:calc(100% / var(--cols)) calc(100% / var(--rows))!important}
-.room-wall{position:relative;z-index:1;aspect-ratio:var(--cols)/2;display:flex;align-items:flex-start;justify-content:space-between;padding:8px 10px 0;border-bottom:5px solid var(--trim);
+.room-wall{position:relative;z-index:1;aspect-ratio:var(--cols)/2;display:flex;align-items:flex-start;justify-content:flex-end;gap:6px;padding:8px 10px 0;border-bottom:5px solid var(--trim);
   background:radial-gradient(rgba(20,20,20,.12) 1.1px,transparent 1.5px) 0 0/7px 7px,var(--wall)}
 .room-wall .rw-deco{font-size:22px}
 .room-wall .rw-name{font-size:11px;font-weight:900;background:#fff;border:2px solid var(--ink);border-radius:4px;padding:1px 6px;transform:rotate(-2deg)}
@@ -362,6 +373,7 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 #wallHl{z-index:5}
 .drag-ghost.tall{background:transparent;border-width:0;box-shadow:none}
 .furn.tall .fi img{object-position:center bottom}
+.furn.wallf .fi img{object-position:center top}  /* 挂画图贴格子上沿挂（墙壁最上面），图比格子扁也不往中间飘 */
 .furn.rug.art .fi img{object-fit:fill}  /* 地毯平铺在地上：图拉满占地格 */
 .furn.rug.art{opacity:1}
 .furn .fn{position:absolute;left:2px;bottom:1px;font-size:9px;font-weight:900;background:rgba(255,255,255,.85);border-radius:3px;padding:0 3px;pointer-events:none;white-space:nowrap}
@@ -429,3 +441,8 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 .home-actor .ha-act{position:absolute;right:-4px;top:-8px;font-style:normal;font-size:14px}
 .live-note{margin:0 4px 8px 0}
 .room.live-mode .furn{cursor:pointer}
+
+/* 房名牌 / emoji 窗户都靠右上（压在禁区上），左边空墙留给挂画 */
+/* 墙面禁区：拖挂画时才显示（斜纹红），和 E.wallBlockedCells 同一份 */
+.wall-block{position:absolute;display:none;pointer-events:none;z-index:1;border-radius:4px;background:repeating-linear-gradient(45deg,rgba(230,57,70,.30) 0 6px,rgba(230,57,70,.08) 6px 12px);outline:1px dashed rgba(230,57,70,.6);outline-offset:-2px}
+.wall-grid.show-block .wall-block{display:block}

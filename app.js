@@ -357,7 +357,7 @@ function avatarURL(id, key) {
   return (avaCache[k] = o.toDataURL());
 }
 // 熊大画的 CEO 头像（图没加载出来就退回画布小人头像）
-const ART_V = '7', PORTRAIT = { c77:1, pearl:1, otaku:1, rocket:1 };
+const ART_V = '12', PORTRAIT = { c77:1, pearl:1, otaku:1, rocket:1 };
 const faceURL = id => PORTRAIT[id] ? `art/face_${id}.webp?v=${ART_V}` : avatarURL(id);
 const bustURL = id => PORTRAIT[id] ? `art/ceo_${id}.webp?v=${ART_V}` : avatarURL(id);
 const faceImg = id => `<img src="${faceURL(id)}"${PORTRAIT[id] ? ` class="art" data-fb="${id}"` : ''} alt="">`;
@@ -365,6 +365,9 @@ const bustImg = id => `<img src="${bustURL(id)}"${PORTRAIT[id] ? ` class="art" d
 // CEO×店铺 任职形象（16 张）：本行用 ceo_<id>.webp，其余放 art/job_<id>_<店id>.webp，交过来一张在 JOB_ART 里登记一张
 const JOB_ART = { c77_tea:1, c77_book:1, c77_tech:1, pearl_bbq:1, pearl_book:1, pearl_tech:1,
   otaku_bbq:1, otaku_tea:1, otaku_tech:1, rocket_bbq:1, rocket_tea:1, rocket_book:1 }; // 熊大 12 张补图已全部到齐
+// 4 张特殊跨行漫画整图（熊大交付原图 → 480² WebP）；图加载失败自动退回两格头像+文字
+const CROSS_ART = { 'rocket@0':'cross_rocket_bbq', 'c77@3':'cross_c77_tech', 'pearl@2':'cross_pearl_book', 'otaku@1':'cross_otaku_tea' };
+const crossURL = k => `art/${CROSS_ART[k]}.webp?v=${ART_V}`;
 const homeShop = id => E.CEO_BY_ID[id].home;
 const hasJobArt = (id, i) => i === homeShop(id) ? !!PORTRAIT[id] : !!JOB_ART[id + '_' + E.SHOPS[i].id];
 const jobURL = (id, i) => i !== homeShop(id) && JOB_ART[id + '_' + E.SHOPS[i].id] ? `art/job_${id}_${E.SHOPS[i].id}.webp?v=${ART_V}` : bustURL(id);
@@ -680,7 +683,7 @@ function tapShop(x, y) {
   // 每满 50 连击：三档各 +5 个百分点
   if (combo.n % CFG.COMBO_STEP === 0) { const pc = Math.round(E.critChance(state, i, now(), combo.n) * 100);
     addText('连击 ' + combo.n + '！暴击率 ' + pc + '%', W / 2, H * 0.42, { size:16 * U, color:'#06d6a0', life:1.3, rot:-0.05 }); sfx('mile'); }
-  bumpCoins();
+  bumpCoins(); refreshCrit();   // 下方暴击说明跟着每一下同步，不等 900ms
   if (Math.random() < 0.12) { const cid = E.ceoAt(state, i); if (cid) sayLine('c', E.SIGNS[cid][i][1]); }
 }
 // 四家店各一套暴击特效：烧烤火星炭火 / 奶茶珍珠弹射 + 涟漪 / 书店速度线 + 翻页 / 科技电弧 + 能量环；档越高越大越久
@@ -1053,11 +1056,24 @@ function ceoTags(i) {
   const info = E.ceoInfo(state, i); if (!info.id) return '';
   return info.match ? `<span class="tag match">专长 ×${CFG.MATCH_MULT}</span>` : `<span class="tag cross">跨行 ×${CFG.CROSS_MULT}${info.cross ? ' · ' + info.cross.title : ''}</span>`;
 }
-// 暴击概率 / 倍率分开显示：概率 = 三档合计（含连击、超级装饰），倍率 = 三档各自
-function critLine(i) {
+// 暴击说明：「当前暴击率」= 含连击 / 超级装饰加成的总概率（和店景 HUD 同一套 E.critChance）；「基础概率」= 三档 base 合计（固定 35%）
+const CRIT_BASE = Math.round(CFG.CRIT_TIERS.reduce((a, c) => a + c.p, 0) * 100);
+function critLineInner(i) {
   const t = now(), n = comboNow(), ps = E.critTiers(state, i, t, n), tot = Math.round(E.critChance(state, i, t, n) * 100);
   const sum = ps.reduce((a, b) => a + b, 0), sc = sum > 1 ? 1 / sum : 1, pc = p => Math.round(p * sc * 1000) / 10;
-  return `<div class="critline" id="critLine"><span>暴击概率 <b id="critPct">${tot}%</b><small id="critTiers">（${CFG.CRIT_TIERS.map((c, k) => c.name + ' ' + pc(ps[k]) + '%').join(' · ')}）</small></span><span>暴击倍率 <b>${CFG.CRIT_TIERS.map((c, k) => '×' + E.tierMult(state, i, t, k)).join(' / ')}</b></span><span class="cl-tip">连点（间隔 ≤1 秒）每满 ${CFG.COMBO_STEP} 下三档各 +5%，最高 100%</span></div>`;
+  const noCombo = Math.round(E.critChance(state, i, t, 0) * 100), add = [];
+  if (tot > noCombo) add.push(`连击 ${n} 下 +${tot - noCombo}%`);
+  if (noCombo > CRIT_BASE) add.push(`超级装饰 +${noCombo - CRIT_BASE}%`);
+  return `<span>当前暴击率 <b id="critPct">${tot}%</b><small id="critTiers">（${CFG.CRIT_TIERS.map((c, k) => c.name + ' ' + pc(ps[k]) + '%').join(' · ')}）</small></span>`
+    + `<span>基础概率 <b id="critBase">${CRIT_BASE}%</b><small id="critBonus">${add.length ? '（' + add.join('，') + '）' : '（现在没加成）'}</small></span>`
+    + `<span>暴击倍率 <b>${CFG.CRIT_TIERS.map((c, k) => '×' + E.tierMult(state, i, t, k)).join(' / ')}</b></span>`
+    + `<span class="cl-tip">连点（间隔 ≤1 秒）每满 ${CFG.COMBO_STEP} 下三档各 +5%，最高 100%；停手 1 秒回基础</span>`;
+}
+function critLine(i) { return `<div class="critline" id="critLine">${critLineInner(i)}</div>`; }
+// 轻量刷新：只换 #critLine 里面，内容没变就不动 DOM（点店铺每下都调；refreshDynamic 每 0.25 秒也调，停手断连能及时回基础）
+function refreshCrit() {
+  const cl = document.getElementById('critLine'); if (!cl || tab !== 'shop') return;
+  const h = critLineInner(state.cur); if (cl.innerHTML !== h) cl.innerHTML = h;
 }
 function renderShop() {
   const i = state.cur, S = E.SHOPS[i], s = state.shops[i];
@@ -1255,6 +1271,7 @@ function refreshDynamic(force) {
   dc.className = 'chip ' + (can ? 'on' : 'used');
   // 按钮可买状态
   tabBody.querySelectorAll('[data-cost]').forEach(b => b.classList.toggle('no', state.coins < +b.dataset.cost));
+  refreshCrit();   // 暴击说明不受 900ms 限制：连击中 / 刚断连都马上对上店景 HUD
   if (!force && t - lastDyn < 900) return; lastDyn = t;
   // 下一步
   const gl = E.nextGoal(state); $('#goalTxt').textContent = gl.text + (gl.lv ? `（${gl.cur}/${gl.need}）` : gl.count ? `（${gl.cur}/${gl.need}）` : '');
@@ -1267,7 +1284,6 @@ function refreshDynamic(force) {
   const cdot = E.CEOS.some(c => state.ceos[c.id].unlocked && state.ceos[c.id].at === -1);
   const cb = document.querySelector('#bottomNav [data-tab="ceo"]'); const hc = !!cb.querySelector('.dot');
   if (cdot && !hc) cb.insertAdjacentHTML('beforeend', '<i class="dot"></i>'); if (!cdot && hc) cb.querySelector('.dot').remove();
-  const cl = document.getElementById('critLine'); if (cl && tab === 'shop') { const tmp = document.createElement('div'); tmp.innerHTML = critLine(state.cur); if (tmp.firstChild.innerHTML !== cl.innerHTML) cl.innerHTML = tmp.firstChild.innerHTML; }
   const mb = document.getElementById('mallBal'); if (mb) mb.textContent = fmt(state.coins);
   const hl = document.getElementById('homeLux'); if (hl && homeWho) hl.textContent = E.homeLuxury(state, homeWho);
 }
@@ -1277,7 +1293,7 @@ const modal = $('#modal'), mpanel = $('#mpanel'), sheet = $('#sheet'), sheetPane
 const mq = [];
 function modalOpen() { return !modal.classList.contains('hidden') || !sheet.classList.contains('hidden'); }
 function queueModal(fn) { if (modalOpen()) mq.push(fn); else fn(); }
-function openModal(html, burst = true) { mpanel.innerHTML = html; modal.querySelector('.burst').style.display = burst ? '' : 'none'; modal.classList.remove('hidden'); mpanel.scrollTop = 0; }
+function openModal(html, burst = true) { mpanel.classList.remove('zoom'); mpanel.innerHTML = html; modal.querySelector('.burst').style.display = burst ? '' : 'none'; modal.classList.remove('hidden'); mpanel.scrollTop = 0; }
 function closeModal() { modal.classList.add('hidden'); mpanel.innerHTML = ''; if (mq.length && !modalOpen()) setTimeout(() => { if (!modalOpen() && mq.length) mq.shift()(); }, 120); }
 function openSheet(html) { sheetPanel.innerHTML = html; sheet.classList.remove('hidden'); }
 function closeSheet() { sheet.classList.add('hidden'); sheetPanel.innerHTML = ''; }
@@ -1374,16 +1390,30 @@ function showPreview(id, target) {
     renderTab();
   }, { once:true });
 }
-function showComic(k, fresh) {
+function showComic(k, fresh, back) { // back：从放大图返回，只重画，不重复记已看/音效
   const x = E.CROSS[k], [id, shop] = k.split('@'), c = E.CEO_BY_ID[id];
-  if (!state.ceos[id].unlocked && !fresh) { toast('这位 CEO 还没加入'); return; }
-  if (fresh) { state.crossSeen[k] = true; persist(); sfx('mile'); }
+  if (!back && !state.ceos[id].unlocked && !fresh) { toast('这位 CEO 还没加入'); return; }
+  if (fresh && !back) { state.crossSeen[k] = true; persist(); sfx('mile'); }
   openModal(`<div class="mbubble">${fresh ? '跨行事件！' : '跨行组合'}</div><div class="mtitle">${c.name} × ${E.SHOPS[+shop].short}：「${x.title}」</div>
     <div class="comic-sfx">${x.sfx}</div>
-    <div class="comic two">${x.panels.map((p, n) => `<div class="panel4"><span class="pn">${n + 1}</span><div class="pchar"><div class="pimg">${faceImg(p[0])}</div><span class="pe">${p[1]}</span></div><div class="pt">${p[2]}</div></div>`).join('')}</div>
+    <div class="cross-wrap${CROSS_ART[k] ? ' has-art' : ''}">
+    ${CROSS_ART[k] ? `<div class="cross-art"><button class="cross-zoom" id="crossZoom" aria-label="放大看「${x.title}」整图"><img src="${crossURL(k)}" alt="${x.title}" onerror="var w=this.closest('.cross-wrap');if(w)w.classList.remove('has-art');var a=this.closest('.cross-art');if(a)a.remove()"><span class="zoom-hint">🔍 点图放大</span></button></div>
+    <div class="cross-cap">${x.panels.map(p => `<div>${p[1]} ${p[2]}</div>`).join('')}</div>` : ''}
+    <div class="comic two">${x.panels.map((p, n) => `<div class="panel4"><span class="pn">${n + 1}</span><div class="pchar"><div class="pimg">${faceImg(p[0])}</div><span class="pe">${p[1]}</span></div><div class="pt">${p[2]}</div></div>`).join('')}</div></div>
     <div class="mnote"><b>专属效果：</b>${x.desc}${E.crossActive(state, k) ? '（生效中）' : ''}</div>
-    <button class="buy big" id="mOk">知道了</button>`);
+    <button class="buy big" id="mOk">知道了</button>`, !back);
+  const z = $('#crossZoom'); if (z) z.addEventListener('click', () => showCrossBig(k, fresh), { once:true });
   $('#mOk').addEventListener('click', closeModal, { once:true });
+}
+// 跨行漫画点图放大：复用 CEO 任职照的大图弹窗（.job-big），返回时回到原漫画（不关弹窗，排队中的下一张不会丢）
+function showCrossBig(k, fresh) {
+  const x = E.CROSS[k], [id, shop] = k.split('@'), c = E.CEO_BY_ID[id];
+  openModal(`<div class="mtitle">${c.name} × ${E.SHOPS[+shop].short}：「${x.title}」</div><div class="job-big"><img src="${crossURL(k)}" alt="${x.title}" id="crossBigImg"
+    onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'mnote',textContent:'整图没加载出来，返回看文字版'}))"></div><button class="buy big" id="mOk">返回漫画</button>`, false);
+  mpanel.classList.add('zoom');
+  const back = () => showComic(k, fresh, true);
+  $('#mOk').addEventListener('click', back, { once:true });
+  const im = $('#crossBigImg'); if (im) im.addEventListener('click', back, { once:true });
 }
 function showCeoJoin(id) {
   const c = E.CEO_BY_ID[id], s = state.ceos[id]; sfx('mile');
@@ -1446,10 +1476,20 @@ function showIntro() {
 // 房间底图：art/home_<ceo>_<lv>.webp（ceo=c77/pearl/otaku/rocket，lv=1/2/3），例 { c77_1:1 }
 // 底图规格：宽 = 列数×200px，高 = (2 + 行数)×200px；上面 2 格高是后墙，下面是地板格，平行投影无消失点。Lv1 6×4 → 1200×1200，墙地分界 y=400
 const HOME_ART = { c77_1: 1, pearl_1: 1, otaku_1: 1, rocket_1: 1 };  // 熊大四位 CEO 的 Lv1（原图墙 / 地板在踢脚线底边处分开，分别缩放到 1200×400 + 1200×800）
-const FURN_ART = { bed:1, bookshelf:1, wardrobe:1, table:1, fridge:1, sofa:1, rug:1, plant:1, lamp:1 };  // 熊大小床 / 书架 / 衣柜 400×600 透明底；桌子 / 冰箱 / 沙发 / 地毯 / 绿植 / 台灯 透明底（裁掉四周透明留白，宽 = 占地格数×200，1 格的 240）。家具：art/furn_<bed|sofa|table|lamp|rug|plant|bookshelf|tv|fridge|wardrobe|painting|catbed>.webp，例 { bed:1 }
+const FURN_ART = { bed:1, bookshelf:1, wardrobe:1, table:1, fridge:1, sofa:1, rug:1, plant:1, lamp:1, tv:1, painting:1, catbed:1, rocket_rocket_model:1, rocket_meteor_stand:1, rocket_biosphere_dome:1, s77_cloud_canopy:1, rocket_capsule_bunk:1 };  // +火箭模型/陨石展座/生态圆顶/云朵纱帐床；宽=占地×200（1格240）
 const furnName = fid => fid.replace(/^furn_/, '');
 // 高家具：占地只有底下那排格子，图按「高 / 宽」比例往上伸（盖住后墙），底脚对齐占地底边；值 = 图高 / 图宽（400×600 → 1.5）
-const FURN_UP = { bookshelf: 1.5, wardrobe: 1.5, table: 202 / 400, sofa: 225 / 600, fridge: 512 / 240, plant: 396 / 240, lamp: 468 / 240 };  // 桌子 / 沙发是正面图：保持竖直、底脚贴占地底边；冰箱 / 绿植 / 台灯 1×1 往上伸
+const FURN_UP = { bookshelf: 1.5, wardrobe: 1.5, table: 202 / 400, sofa: 225 / 600, fridge: 512 / 240, plant: 396 / 240, lamp: 468 / 240, tv: 287 / 400, catbed: 166 / 240, rocket_rocket_model: 594 / 240, rocket_meteor_stand: 274 / 240, s77_cloud_canopy: 701 / 600, rocket_capsule_bunk: 186 / 400 };  // +火箭/陨石 1×1 往上伸；云朵床略高；圆顶 2×2 铺满不登记
+// 11v：packs 01–10 的 43 件；地毯（透明边补成占地比例、铺满）和墙饰（贴墙上沿）不登记往上伸，其余地上家具都按图高/宽贴底
+Object.assign(FURN_ART, { s77_quilt_daybed:1, s77_drawer_bed:1, s77_book_nook_bed:1, s77_peg_cubby:1, s77_ladder_shelf:1, s77_basket_cabinet:1, s77_round_corner_chest:1, s77_sewing_cabinet:1, s77_pantry_hutch:1, s77_attic_trunk:1, s77_reading_stool:1, s77_rocking_chair:1, s77_heart_bench:1, s77_folding_tray:1, s77_quilt_ottoman:1, s77_window_bench:1, s77_sewing_desk:1, s77_curved_sectional:1, s77_lantern_stand:1, s77_mushroom_lamp:1, s77_petal_uplight:1, s77_quilt_shade_lamp:1, s77_hearth_light:1, s77_box_fan:1, s77_toaster_cart:1, s77_record_console:1, s77_sewing_machine_stand:1, s77_stove_oven:1, s77_laundry_pair:1, s77_braided_runner:1, s77_patchwork_flower_rug:1, s77_quilt_island_rug:1, s77_embroidery_hoops:1, s77_wood_cuckoo:1, s77_quilt_wall:1, s77_pressed_flower_frame:1, s77_family_silhouette:1, s77_watering_stand:1, s77_knitting_basket:1, s77_olive_planter:1, s77_mini_greenhouse:1, pearl_tea_daybed:1, pearl_pearl_bed:1 });
+Object.assign(FURN_UP, { s77_quilt_daybed: 157 / 600, s77_drawer_bed: 359 / 400, s77_book_nook_bed: 579 / 600, s77_peg_cubby: 431 / 240, s77_ladder_shelf: 539 / 400, s77_basket_cabinet: 330 / 400, s77_round_corner_chest: 426 / 400, s77_sewing_cabinet: 360 / 400, s77_pantry_hutch: 693 / 400, s77_attic_trunk: 321 / 400, s77_reading_stool: 234 / 240, s77_rocking_chair: 249 / 240, s77_heart_bench: 252 / 600, s77_folding_tray: 134 / 240, s77_quilt_ottoman: 224 / 240, s77_window_bench: 140 / 600, s77_sewing_desk: 269 / 400, s77_curved_sectional: 335 / 600, s77_lantern_stand: 255 / 240, s77_mushroom_lamp: 224 / 240, s77_petal_uplight: 647 / 240, s77_quilt_shade_lamp: 301 / 240, s77_hearth_light: 190 / 400, s77_box_fan: 263 / 240, s77_toaster_cart: 235 / 240, s77_record_console: 293 / 400, s77_sewing_machine_stand: 358 / 400, s77_stove_oven: 534 / 400, s77_laundry_pair: 440 / 240, s77_watering_stand: 369 / 240, s77_knitting_basket: 212 / 240, s77_olive_planter: 458 / 240, s77_mini_greenhouse: 475 / 400, pearl_tea_daybed: 156 / 600, pearl_pearl_bed: 382 / 400 });
+// 11w：packs 13/16/19/27/30/33/36/39 的 34 件；地毯铺满不登记往上伸，其余地上家具按图高/宽贴底
+Object.assign(FURN_ART, { pearl_cup_carousel:1, pearl_bakery_display:1, pearl_sideboard_island:1, pearl_archive_apothecary:1, pearl_conversation_pit:1, pearl_tea_gongfu_desk:1, pearl_paper_pear_lamp:1, pearl_tea_glass_lamp:1, pearl_boba_globe_lamp:1, pearl_tea_mat:1, pearl_scallop_rug:1, pearl_tea_river_runner:1, otaku_floor_chair:1, otaku_modular_couch:1, otaku_arcade_bench:1, otaku_streaming_desk:1, otaku_panel_rug:1, otaku_controller_rug:1, otaku_speed_runner:1, otaku_pixel_succulent:1, otaku_manga_book_stack:1, otaku_robot_planter:1, otaku_aquatic_pixel_tank:1, rocket_field_cot:1, rocket_cargo_crate:1, rocket_mesh_rack:1, rocket_airlock_wardrobe:1, rocket_rail_bench:1, rocket_mission_table:1, rocket_zero_g_lounger:1, rocket_cage_lamp:1, rocket_tripod_searchlight:1, rocket_pipe_valve_lamp:1, rocket_rocket_nozzle_light:1 });
+Object.assign(FURN_UP, { pearl_cup_carousel: 525 / 240, pearl_bakery_display: 252 / 400, pearl_sideboard_island: 225 / 600, pearl_archive_apothecary: 355 / 600, pearl_conversation_pit: 335 / 600, pearl_tea_gongfu_desk: 211 / 600, pearl_paper_pear_lamp: 521 / 240, pearl_tea_glass_lamp: 1006 / 240, pearl_boba_globe_lamp: 932 / 240, otaku_floor_chair: 231 / 240, otaku_modular_couch: 264 / 600, otaku_arcade_bench: 254 / 400, otaku_streaming_desk: 291 / 600, otaku_pixel_succulent: 211 / 240, otaku_manga_book_stack: 236 / 240, otaku_robot_planter: 241 / 240, otaku_aquatic_pixel_tank: 163 / 400, rocket_field_cot: 430 / 400, rocket_cargo_crate: 229 / 240, rocket_mesh_rack: 328 / 400, rocket_airlock_wardrobe: 633 / 400, rocket_rail_bench: 177 / 600, rocket_mission_table: 414 / 600, rocket_zero_g_lounger: 392 / 400, rocket_cage_lamp: 369 / 240, rocket_tripod_searchlight: 367 / 240, rocket_pipe_valve_lamp: 480 / 240, rocket_rocket_nozzle_light: 266 / 240 });
+// 11y：missing107 的 106 件新 ID；地毯铺满/墙饰挂墙不登记往上伸
+Object.assign(FURN_ART, { pearl_tea_loft:1, pearl_canopy_lounge:1, pearl_capsule_daybed:1, pearl_tea_cat_hammock:1, pearl_tea_cubby:1, pearl_glass_wardrobe:1, pearl_rattan_bookcase:1, pearl_tea_trolley_shelf:1, pearl_tea_stool:1, pearl_cafe_chair:1, pearl_round_tea_table:1, pearl_scallop_sofa:1, pearl_tea_bar:1, pearl_bar_stool:1, pearl_picnic_table:1, pearl_egg_swing:1, pearl_fan_shade_lamp:1, pearl_tea_arc_lamp:1, pearl_fountain_light:1, pearl_tea_kettle_cart:1, pearl_juice_press:1, pearl_milk_frother_bar:1, pearl_tea_brewer:1, pearl_dessert_chiller:1, pearl_marble_pearl_rug:1, pearl_tea_menu_board:1, pearl_cup_wall_rack:1, pearl_sunburst_mirror:1, pearl_tea_leaf_relief:1, pearl_moon_window_art:1, pearl_herb_crate:1, pearl_tea_bonsai:1, pearl_ceramic_cup_stack:1, pearl_terrarium_orb:1, pearl_tea_tree_screen:1, otaku_floor_futon:1, otaku_sofa_sleeper:1, otaku_bunk_manga:1, otaku_gaming_pod:1, otaku_projector_bed:1, otaku_cat_keyboard_cave:1, otaku_locker_wardrobe:1, otaku_disc_tower:1, otaku_figure_vitrine:1, otaku_comic_wheel_cart:1, otaku_controller_drawers:1, otaku_modular_pixel_shelf:1, otaku_server_display_rack:1, otaku_beanbag:1, otaku_kotatsu:1, otaku_gaming_chair:1, otaku_manga_desk:1, otaku_snack_sidecar:1, otaku_cocoon_lounger:1, otaku_panel_lamp:1, otaku_gooseneck_stand:1, otaku_pixel_cube_light:1, otaku_arcade_marquee_lamp:1, otaku_orbital_neon_floor:1, otaku_sleep_timer_totem:1, otaku_mini_fridge:1, otaku_console_station:1, otaku_arcade_cabinet:1, otaku_projector_cart:1, otaku_triple_monitor_station:1, otaku_pixel_map_rug:1, otaku_speech_bubble_board:1, otaku_manga_page_triptych:1, otaku_controller_wall_mount:1, otaku_pixel_city_lightbox:1, otaku_cactus_cartridge:1, rocket_steel_platform_bed:1, rocket_cryo_rest_pod:1, rocket_observatory_bed:1, rocket_landing_cat_pod:1, rocket_steel_locker:1, rocket_pipe_bookcase:1, rocket_tool_chest:1, rocket_specimen_drawer:1, rocket_orbital_archive:1, rocket_bolt_stool:1, rocket_workbench:1, rocket_drafting_chair:1, rocket_pipe_sofa:1, rocket_oil_drum_table:1, rocket_captain_chair:1, rocket_cantilever_desk:1, rocket_orbital_ring_lamp:1, rocket_solar_array_lamp:1, rocket_industrial_fan:1, rocket_vacuum_dock:1, rocket_coffee_pressure_unit:1, rocket_air_purifier:1, rocket_hydroponic_unit:1, rocket_planetarium_console:1, rocket_workshop_mat:1, rocket_orbit_rug:1, rocket_runway_runner:1, rocket_lunar_relief_rug:1, rocket_blueprint_frame:1, rocket_gear_clock:1, rocket_mission_patch_board:1, rocket_moon_sample_relief:1, rocket_orbital_map_panel:1, rocket_concrete_succulent:1, rocket_pipe_vase:1 });
+Object.assign(FURN_UP, { pearl_tea_loft: 412 / 400, pearl_canopy_lounge: 615 / 600, pearl_capsule_daybed: 336 / 400, pearl_tea_cat_hammock: 132 / 240, pearl_tea_cubby: 447 / 400, pearl_glass_wardrobe: 455 / 400, pearl_rattan_bookcase: 699 / 400, pearl_tea_trolley_shelf: 254 / 240, pearl_tea_stool: 199 / 240, pearl_cafe_chair: 555 / 240, pearl_round_tea_table: 391 / 400, pearl_scallop_sofa: 234 / 600, pearl_tea_bar: 300 / 600, pearl_bar_stool: 667 / 240, pearl_picnic_table: 170 / 400, pearl_egg_swing: 706 / 400, pearl_fan_shade_lamp: 350 / 240, pearl_tea_arc_lamp: 361 / 240, pearl_fountain_light: 209 / 400, pearl_tea_kettle_cart: 256 / 240, pearl_juice_press: 371 / 240, pearl_milk_frother_bar: 282 / 400, pearl_tea_brewer: 226 / 400, pearl_dessert_chiller: 711 / 400, pearl_herb_crate: 111 / 240, pearl_tea_bonsai: 213 / 240, pearl_ceramic_cup_stack: 368 / 240, pearl_terrarium_orb: 274 / 240, pearl_tea_tree_screen: 390 / 600, otaku_floor_futon: 264 / 400, otaku_sofa_sleeper: 503 / 400, otaku_bunk_manga: 470 / 400, otaku_gaming_pod: 564 / 400, otaku_projector_bed: 598 / 600, otaku_cat_keyboard_cave: 174 / 240, otaku_locker_wardrobe: 516 / 400, otaku_disc_tower: 741 / 240, otaku_figure_vitrine: 310 / 400, otaku_comic_wheel_cart: 180 / 240, otaku_controller_drawers: 282 / 400, otaku_modular_pixel_shelf: 518 / 600, otaku_server_display_rack: 433 / 400, otaku_beanbag: 200 / 240, otaku_kotatsu: 200 / 400, otaku_gaming_chair: 394 / 240, otaku_manga_desk: 371 / 400, otaku_snack_sidecar: 321 / 240, otaku_cocoon_lounger: 601 / 400, otaku_panel_lamp: 1331 / 240, otaku_gooseneck_stand: 461 / 240, otaku_pixel_cube_light: 696 / 240, otaku_arcade_marquee_lamp: 399 / 400, otaku_orbital_neon_floor: 768 / 240, otaku_sleep_timer_totem: 770 / 240, otaku_mini_fridge: 284 / 240, otaku_console_station: 291 / 400, otaku_arcade_cabinet: 477 / 240, otaku_projector_cart: 208 / 240, otaku_triple_monitor_station: 320 / 600, otaku_cactus_cartridge: 235 / 240, rocket_steel_platform_bed: 298 / 400, rocket_cryo_rest_pod: 434 / 400, rocket_observatory_bed: 543 / 600, rocket_landing_cat_pod: 239 / 240, rocket_steel_locker: 418 / 400, rocket_pipe_bookcase: 418 / 400, rocket_tool_chest: 247 / 400, rocket_specimen_drawer: 250 / 400, rocket_orbital_archive: 936 / 600, rocket_bolt_stool: 260 / 240, rocket_workbench: 213 / 400, rocket_drafting_chair: 386 / 240, rocket_pipe_sofa: 337 / 600, rocket_oil_drum_table: 342 / 400, rocket_captain_chair: 342 / 240, rocket_cantilever_desk: 326 / 400, rocket_orbital_ring_lamp: 479 / 240, rocket_solar_array_lamp: 372 / 400, rocket_industrial_fan: 238 / 240, rocket_vacuum_dock: 401 / 240, rocket_coffee_pressure_unit: 508 / 400, rocket_air_purifier: 632 / 240, rocket_hydroponic_unit: 241 / 400, rocket_planetarium_console: 485 / 400, rocket_concrete_succulent: 228 / 240, rocket_pipe_vase: 347 / 240 });
+const ROOM_WALL_ROWS = 2;  // 后墙高 2 格
 const furnTall = fid => !!(FURN_ART[furnName(fid)] && FURN_UP[furnName(fid)]);
 const HOME_ICON = ['🏠', '🏢', '🏰'];
 let homeWho = 'c77', homeSub = 'room', homeMode = 'live', homeSel = null, homeDrag = null;
@@ -1461,7 +1501,11 @@ const undoStack = id => homeUndo[id] || (homeUndo[id] = []);
 function pushUndo(u) { const s = undoStack(u.ceo); s.push(u); if (s.length > 60) s.shift(); }
 function furnInner(fid, rot, inRoom) {
   const f = E.FURN_BY_ID[fid], sz = E.furnSize(fid, rot), odd = rot & 1, n = furnName(fid);
-  const st = inRoom && furnTall(fid) ? `left:0;top:auto;bottom:0;width:100%;height:${sz.w * FURN_UP[n] / sz.h * 100}%;transform:none` : `width:${odd ? sz.h / sz.w * 100 : 100}%;height:${odd ? sz.w / sz.h * 100 : 100}%;transform:translate(-50%,-50%) rotate(${rot * 90}deg)`;
+  // 挂画（wall:true）在房间里：顶对齐、贴格子上沿挂（靠天花板），不在格子中间飘；转 90° 的才按中心转
+  // 11z：往上伸的图最高只到「占地 + 2 格后墙」（房间顶边）；超高的（面板灯、光盘塔、计时图腾等）等比缩小、脚底不动，整图不被顶边裁掉
+  const st = inRoom && furnTall(fid) ? `left:0;top:auto;bottom:0;width:100%;height:${Math.min(sz.w * FURN_UP[n], sz.h + ROOM_WALL_ROWS) / sz.h * 100}%;transform:none`
+    : inRoom && f.wall && !odd ? `left:50%;top:0;width:100%;height:100%;transform:translateX(-50%)`
+    : `width:${odd ? sz.h / sz.w * 100 : 100}%;height:${odd ? sz.w / sz.h * 100 : 100}%;transform:translate(-50%,-50%) rotate(${rot * 90}deg)`;
   return `<div class="fi" style="${st}"><span class="fe">${f.emoji}</span>${FURN_ART[n] ? `<img src="art/furn_${n}.webp?v=${ART_V}" data-homefb="1" alt="">` : ''}</div>`;
 }
 document.addEventListener('error', e => { const el = e.target; if (el && el.tagName === 'IMG' && el.dataset && el.dataset.homefb) { const fu = el.closest('.furn'); if (fu) fu.classList.remove('art'); el.remove(); } }, true);
@@ -1514,9 +1558,11 @@ function renderRoom() {
   const wallItems = H.placed.filter(isWall).slice().sort((a, b) => a.y - b.y || a.x - b.x).map(p => mkFurn(p, E.WALL_ROWS)).join('');
   const floorItems = H.placed.filter(p => !isWall(p)).slice().sort((a, b) => isRug(a) - isRug(b) || footY(a) - footY(b) || a.x - b.x).map(p => mkFurn(p, T.rows)).join('');
   const artKey = `${id}_${H.lv}`, hasArt = !!HOME_ART[artKey];
+  // 墙面禁区（和 E.canPlace / E.findFree 同一份 E.wallBlockedCells）：平时隐藏，拖挂画时斜纹标红
+  const wallBlocks = E.wallBlockedCells(state, id).map(([x, y]) => `<i class="wall-block" style="left:${x / T.cols * 100}%;top:${y / E.WALL_ROWS * 100}%;width:${100 / T.cols}%;height:${100 / E.WALL_ROWS}%"></i>`).join('');
   h += `<div class="room tier-${T.id}${hasArt ? ' has-art' : ''}" id="room" data-tier="${T.id}" style="--cols:${T.cols};--rows:${T.rows};--wall:${T.wall};--floor:${T.floor};--trim:${T.trim}">
     ${hasArt ? `<img class="room-art" src="art/home_${artKey}.webp?v=${ART_V}" data-homefb="1" alt="" onerror="this.closest('.room')&&this.closest('.room').classList.remove('has-art')">` : ''}
-    <div class="room-wall" id="roomWall"><span class="rw-deco">${T.id === 'hut' ? '🪟' : T.id === 'apt' ? '🪟 🪟' : '✨🕯️✨'}</span><span class="rw-name">${c.name}的${T.name}</span><div class="wall-grid" id="wallGrid">${wallItems}<div class="room-hl hidden" id="wallHl"></div></div></div>
+    <div class="room-wall" id="roomWall"><span class="rw-deco">${T.id === 'hut' ? '🪟' : T.id === 'apt' ? '🪟 🪟' : '✨🕯️✨'}</span><span class="rw-name">${c.name}的${T.name}</span><div class="wall-grid" id="wallGrid">${wallBlocks}${wallItems}<div class="room-hl hidden" id="wallHl"></div></div></div>
     <div class="room-floor" id="roomFloor">${floorItems}<div class="home-actor" id="homeActor" style="left:${(homeActorOf(id).x + 0.5) / T.cols * 100}%;top:${(homeActorOf(id).y + 0.5) / T.rows * 100}%"><span class="ha-ava">${ava(id)}</span>${(() => { const ac = homeActorOf(id); return ac.line && ac.until > clock ? `<b class="ha-line">${ac.line}</b>` : ''; })()}<i class="ha-act">${(() => { const ac = homeActorOf(id); return ac.act === 'rest' ? '💤' : ac.act === 'read' ? '📖' : ac.act === 'dress' ? '👕' : ''; })()}</i></div><div class="room-hl hidden" id="roomHl"></div></div></div>`;
   const st = undoStack(id);
   h += `<div class="mode-tabs" role="tablist"><button class="mt ${homeMode === 'live' ? 'on' : ''}" data-act="homeMode" data-arg="live">🚶 生活</button><button class="mt ${homeMode === 'decor' ? 'on' : ''}" data-act="homeMode" data-arg="decor">🛋️ 布置</button></div>`;
@@ -1617,7 +1663,7 @@ function homeCommit(r, msg) {
   persist(); sfx('tap'); if (msg) toast(msg); dirty = true; return true;
 }
 function homeAutoPlace(fid) {
-  for (const rot of [0, 1]) { const at = E.findFree(state, homeWho, fid, rot);
+  for (const rot of E.FURN_BY_ID[fid].wall ? [0] : [0, 1]) { const at = E.findFree(state, homeWho, fid, rot);   // 挂画自动挂不横转（不会侧着挂）；禁区和手动拖动同一份 canPlace
     if (at) { const r = E.placeItem(state, homeWho, fid, at.x, at.y, rot, at.surf); if (homeCommit(r)) homeSel = r.uid; return; } }
   sfx('no'); toast(E.FURN_BY_ID[fid].wall ? '墙面挂满了：先收一幅，或者换个位置' : '房间放不下了：先收回点东西，或者升级房子');
 }
@@ -1664,9 +1710,9 @@ function homeLiveTap(e) {
     const p = E.homeOf(state, id).placed.find(q => q.uid === fEl.dataset.uid); if (!p) return;
     const f = E.FURN_BY_ID[p.fid], sz = E.furnSize(p.fid, p.rot);
     const cx = p.x + Math.floor(sz.w / 2), cy = p.y + Math.floor(sz.h / 2);
-    if (p.fid === 'furn_bed') return go(cx, Math.min(T.rows - 1, p.y + sz.h - 1), 'rest');
-    if (p.fid === 'furn_bookshelf') return go(cx, Math.min(T.rows - 1, p.y + 1), 'read');
-    if (p.fid === 'furn_wardrobe') return go(cx, Math.min(T.rows - 1, p.y + 1), 'dress');
+    const act = E.furnLiveAct(p.fid);
+    if (act === 'rest') return go(cx, Math.min(T.rows - 1, p.y + sz.h - 1), 'rest');
+    if (act === 'read' || act === 'dress') return go(cx, Math.min(T.rows - 1, p.y + 1), act);
     return go(cx, cy, 'walk');
   }
   if (!e.target.closest('#roomFloor')) return;
@@ -1717,7 +1763,8 @@ function homeDragAt(d) {
   if (!d.moved) { d.moved = true; homeSel = null;
     const g = document.createElement('div'); g.className = 'furn drag-ghost' + (E.FURN_BY_ID[d.fid].layer === 'rug' ? ' rug' : '') + (E.FURN_BY_ID[d.fid].wall ? ' wallf' : '') + (furnTall(d.fid) ? ' tall' : '');
     g.style.cssText = `width:${d.w * c.cw}px;height:${d.h * c.ch}px;--fc:${E.FURN_BY_ID[d.fid].color}`; g.innerHTML = furnInner(d.fid, d.rot, true);
-    document.body.appendChild(g); d.ghost = g; if (d.src === 'room') d.el.classList.add('lifting'); }
+    document.body.appendChild(g); d.ghost = g; if (d.src === 'room') d.el.classList.add('lifting');
+    if (d.surf === 'wall') { const wg = $('#wallGrid'); if (wg) wg.classList.add('show-block'); } }
   d.ghost.style.left = (d.px - d.offX * c.cw) + 'px'; d.ghost.style.top = (d.py - d.offY * c.ch) + 'px';
   const hlFloor = $('#roomHl'), hlWall = $('#wallHl'), hl = c.surf === 'wall' ? hlWall : hlFloor;
   if (hlFloor) hlFloor.classList.add('hidden'); if (hlWall) hlWall.classList.add('hidden');
@@ -1733,6 +1780,7 @@ function homeEnd() {
   if (d && d.raf) { cancelAnimationFrame(d.raf); d.raf = 0; }
   window.removeEventListener('pointermove', homeMove); window.removeEventListener('pointerup', homeUp); window.removeEventListener('pointercancel', homeCancel);
   if (d && d.ghost) d.ghost.remove();
+  const wg = $('#wallGrid'); if (wg) wg.classList.remove('show-block');
   return d;
 }
 function homeUp(e) {
@@ -1742,7 +1790,8 @@ function homeUp(e) {
   if (!d.moved) {   // 轻点：家具 → 选中/取消；仓库 → 自动找空位
     if (d.src === 'room') { homeSel = homeSel === d.uid ? null : d.uid; sfx('tap'); }
     else homeAutoPlace(d.fid);
-  } else if (!d.cell) { sfx('no'); toast(d.src === 'inv' ? (d.surf === 'wall' ? '拖到墙面上才能挂' : '拖到房间的格子里才能放') : '拖出房间了，放回原位'); }
+  } else if (!d.cell) { sfx('no'); const nm = E.FURN_BY_ID[d.fid].name;
+    toast(d.surf === 'wall' ? nm + '只能放墙面' + (d.src === 'room' ? '，放回原位' : '') : d.src === 'inv' ? '拖到房间的格子里才能放' : '拖出房间了，放回原位'); }
   else if (!d.valid || !d.valid.ok) { sfx('no'); toast((d.valid && d.valid.why) || '放不下'); }
   else if (d.src === 'inv') { const r = E.placeItem(state, homeWho, d.fid, d.cell.x, d.cell.y, d.rot, d.cell.surf); if (homeCommit(r)) homeSel = r.uid; }
   else { homeCommit(E.moveItem(state, homeWho, d.uid, d.cell.x, d.cell.y)); homeSel = d.uid; }
@@ -1845,11 +1894,13 @@ function boot() {
   $('#mute').classList.toggle('off', !!state.muted);
   resize();
   const first = !state.taps && !state.totalEarned && state.shops[0].emp === 0;
+  const fpMig = E.migrateFootprints(state);
   const wallMig = E.migrateWallPaintings(state);
   const p = E.settleOffline(state, now(), rid);
   persist();
   scheduleBig(); scheduleSpecial(); renderTabs(); setTab('shop');
   if (migratedFrom != null) toast('存档已升级到 v' + CFG.SAVE_VERSION + '（新盲盒 + CEO 穿搭，收藏都保留）', 2600);
+  if (fpMig && !fpMig.skipped && (fpMig.shifted || fpMig.stored)) toast(fpMig.stored ? `家具占地收紧：${fpMig.shifted} 件按脚底重锚，${fpMig.stored} 件腾不出空位已退回仓库` : `家具占地收紧：${fpMig.shifted} 件已按脚底重锚`, 3200);
   if (wallMig && (wallMig.moved || wallMig.stored)) toast(wallMig.stored ? `挂画改挂墙了：${wallMig.moved} 幅上墙，${wallMig.stored} 幅墙面没空已退回仓库` : `挂画改挂墙了：${wallMig.moved} 幅已迁到墙面`, 3200);
   if (p && p.rolledBack) toast('检测到手机时间被往回调，这段时间不发离线收益');
   if (first) queueModal(showIntro);
@@ -1861,7 +1912,7 @@ function boot() {
 boot();
 
 // 测试/调试钩子（不影响玩家）
-window.__tzz = { E, get combo() { return combo; }, get critFx() { return critFx; }, critLine, showComic, showCeoJoin, get state() { return state; }, set state(v) { state = v; }, persist, onReturn, tapShop, act, setTab, switchShop, renderTab,
+window.__tzz = { E, get combo() { return combo; }, get critFx() { return critFx; }, critLine, refreshCrit, showComic, showCrossBig, queueModal, CROSS_ART, crossURL, showCeoJoin, get state() { return state; }, set state(v) { state = v; }, persist, onReturn, tapShop, act, setTab, switchShop, renderTab,
   forceBig() { nextBigAt = 0; if (order) order = null; }, clearVisitors() { order = null; special = null; nextBigAt = clock + 9999; nextSpecialAt = clock + 9999; }, forceSpecial() { nextSpecialAt = 0; special = null; },
   forceSupers() { for (const k in superNext) superNext[k] = 0; updateSupers(); renderTab(); },
   get big() { return order; }, get order() { return order; }, get special() { return special; }, get guests() { return guests; },

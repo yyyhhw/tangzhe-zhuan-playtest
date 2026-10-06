@@ -475,18 +475,22 @@
   // w×h = 占地（格），rot 为奇数时宽高互换；layer:'rug' 地毯可以垫在家具下面（地毯之间不能叠）
   // wall:true = 挂画：只挂墙面（surf:'wall'），不占地板格；墙面格子 cols×WALL_ROWS，避开窗户 / 房名牌
   const WALL_ROWS = 2;
-  // 墙面禁区（房名牌左上 + 各家阳光窗）：格子坐标，挂画任意一格踩到就不行
+  // 墙面禁区：格子坐标 [x,y]，挂画任意一格踩到就不行；自动摆放（findFree）和手动拖动（canPlace）共用这一份
+  // 有底图的房间按底图实拍校准（墙面 = 底图上方 1200×400，每格 200×200）：四家 Lv1 右边 4 列都是画好的窗户 / 架子 / 挂饰，
+  // 只有左边 2 列是空墙；房名牌在有底图时挪到右上角（压在禁区上），不再占空墙
+  const ART_WALL = (cols) => { const out = []; for (let y = 0; y < WALL_ROWS; y++) for (const x of cols) out.push([x, y]); return out; };
   const WALL_BLOCK = {
-    _name: [[0, 0]],
-    c77_1: [[2, 0], [3, 0]],
-    pearl_1: [[1, 0], [2, 0], [4, 0], [5, 0]],
-    otaku_1: [[2, 0], [3, 0]],
-    rocket_1: [[2, 0], [3, 0]],
+    c77_1:    ART_WALL([2, 3, 4, 5]),   // 围裙挂钩（第 3 列）+ 格子窗帘大窗（第 4–6 列，上下两排都占）
+    pearl_1:  ART_WALL([2, 3, 4, 5]),   // 茶具搁架 + 蝴蝶结（第 3–4 列）+ 椭圆花框 / 彩旗 / 干花束（第 5–6 列）
+    otaku_1:  ART_WALL([2, 3, 4, 5]),   // 绿植书架 + 手柄 / 耳机挂钩（第 3–4 列）+ 百叶窗（第 4–6 列）
+    rocket_1: ART_WALL([2, 3, 4, 5]),   // 火箭搁架 + 星图画框（第 3–5 列）+ 舷窗 / 铜管（第 5–6 列）
   };
-  function wallKey(st, id) { const h = homeOf(st, id); return id + '_' + h.lv; }
+  // 没底图（升级后的公寓 / 豪宅）：emoji 窗户 + 房名牌都靠右上，占第一排最右 3 格；左边永远留空墙，
+  // 所以小屋左 2 列挂好的画升级后照样合法（格子只会变大）
+  function plainWallBlock(cols) { return [[cols - 3, 0], [cols - 2, 0], [cols - 1, 0]]; }
   function wallBlockedCells(st, id) {
-    const k = wallKey(st, id), extra = WALL_BLOCK[k] || WALL_BLOCK[id + '_1'] || [];
-    return WALL_BLOCK._name.concat(extra);
+    const h = homeOf(st, id), k = id + '_' + h.lv;
+    return WALL_BLOCK[k] ? WALL_BLOCK[k].map(c => c.slice()) : plainWallBlock(homeTier(h.lv).cols);
   }
   function hitsWallBlock(st, id, x, y, w, h) {
     const blocked = wallBlockedCells(st, id);
@@ -519,6 +523,196 @@
     { id:'furn_wardrobe',  name:'衣柜', emoji:'🚪', color:'#a1887f', w:2, h:1, price:15000, lux:14, cat:'cabinet', sub:'wardrobe' },
     { id:'furn_fridge',    name:'冰箱', emoji:'🧊', color:'#bde0fe', w:1, h:1, price:20000, lux:18, cat:'appliance' },
     { id:'furn_tv',        name:'电视', emoji:'📺', color:'#264653', w:2, h:1, price:30000, lux:25, cat:'appliance' },
+    { id:'furn_rocket_rocket_model',   name:'分段火箭模型', emoji:'🚀', color:'#6c757d', w:1, h:1, price:6500,   lux:4,  cat:'plant' },
+    { id:'furn_rocket_meteor_stand',   name:'悬架陨石展座', emoji:'☄️', color:'#adb5bd', w:1, h:1, price:32000,  lux:7,  cat:'plant' },
+    { id:'furn_rocket_biosphere_dome', name:'生态圆顶花园', emoji:'🪴', color:'#52b788', w:2, h:2, price:125000, lux:16, cat:'plant' },
+    { id:'furn_rocket_capsule_bunk',   name:'舱式单层床',   emoji:'🛏️', color:'#8d99ae', w:2, h:1, price:22000,  lux:7,  cat:'bed' },  // 索引提案 2×3；正面扁图实测改 2×1（同沙发 3×1），免得上面 2 排空着挡位
+    { id:'furn_s77_cloud_canopy',      name:'云朵纱帐床',   emoji:'🛏️', color:'#e9ecef', w:3, h:3, price:18000,  lux:7,  cat:'bed' },
+    // 11v：packs 01–10 的 43 件（跳过已接入的云朵纱帐床）；名称/价格/豪华度/占地按 200 件公共资产索引提案
+    { id:'furn_s77_quilt_daybed', name:'拼布午睡榻', emoji:'🛏️', color:'#ce9473', w:3, h:1, price:1800, lux:2, cat:'bed' },
+    { id:'furn_s77_drawer_bed', name:'抽屉收纳床', emoji:'🛏️', color:'#d1a083', w:2, h:2, price:6500, lux:4, cat:'bed' },  // 11w 熊大拍板 2×3→2×2，脚底锚定；FURN_UP 359/400
+    { id:'furn_s77_book_nook_bed', name:'书窝壁龛床', emoji:'🛏️', color:'#c78a5f', w:3, h:3, price:36000, lux:7, cat:'bed' },
+    { id:'furn_s77_peg_cubby', name:'挂钩小格柜', emoji:'🗄️', color:'#d5a578', w:1, h:1, price:850, lux:1, cat:'cabinet' },
+    { id:'furn_s77_ladder_shelf', name:'梯形置物架', emoji:'🪜', color:'#da9e69', w:2, h:1, price:1600, lux:2, cat:'cabinet' },
+    { id:'furn_s77_basket_cabinet', name:'编篮收纳柜', emoji:'🧺', color:'#d4a47a', w:2, h:1, price:2200, lux:2, cat:'cabinet' },
+    { id:'furn_s77_round_corner_chest', name:'圆角五斗柜', emoji:'🗄️', color:'#e4a182', w:2, h:1, price:5200, lux:4, cat:'cabinet' },
+    { id:'furn_s77_sewing_cabinet', name:'针线折门柜', emoji:'🗄️', color:'#da8f71', w:2, h:1, price:8500, lux:4, cat:'cabinet' },
+    { id:'furn_s77_pantry_hutch', name:'玻璃餐具柜', emoji:'🍽️', color:'#d8b089', w:2, h:1, price:15000, lux:4, cat:'cabinet' },
+    { id:'furn_s77_attic_trunk', name:'阁楼旅行箱柜', emoji:'🧳', color:'#c88564', w:2, h:1, price:28000, lux:7, cat:'cabinet' },
+    { id:'furn_s77_reading_stool', name:'矮圆阅读凳', emoji:'🪑', color:'#e8ae79', w:1, h:1, price:400, lux:1, cat:'seat' },
+    { id:'furn_s77_rocking_chair', name:'摇摇扶手椅', emoji:'🪑', color:'#e48e67', w:1, h:1, price:3500, lux:2, cat:'seat' },  // 11w 熊大拍板 1×2→1×1，脚底锚定；FURN_UP 249/240
+    { id:'furn_s77_heart_bench', name:'爱心靠背长凳', emoji:'💗', color:'#e5926f', w:3, h:1, price:2800, lux:2, cat:'seat' },
+    { id:'furn_s77_folding_tray', name:'折脚早餐桌', emoji:'🪵', color:'#edb779', w:1, h:1, price:650, lux:1, cat:'seat' },
+    { id:'furn_s77_quilt_ottoman', name:'拼布储物脚凳', emoji:'🛋️', color:'#de9e86', w:1, h:1, price:1200, lux:2, cat:'seat' },
+    { id:'furn_s77_window_bench', name:'飘窗阅读长榻', emoji:'🛋️', color:'#d58d6b', w:3, h:1, price:9000, lux:4, cat:'seat' },
+    { id:'furn_s77_sewing_desk', name:'手摇缝纫桌', emoji:'🧵', color:'#b97c4f', w:2, h:1, price:17000, lux:7, cat:'seat' },
+    { id:'furn_s77_curved_sectional', name:'花瓣转角沙发', emoji:'🛋️', color:'#dd937e', w:3, h:2, price:65000, lux:11, cat:'seat' },  // 索引提案 3×3；宽扁正面图（600×335）实测改 3×2，免得最上一排空着挡位；11w 保持 3×2 不再缩到 3×1
+    { id:'furn_s77_lantern_stand', name:'提篮纸灯架', emoji:'🏮', color:'#e2b481', w:1, h:1, price:550, lux:1, cat:'lamp' },
+    { id:'furn_s77_mushroom_lamp', name:'蘑菇陶灯', emoji:'🍄', color:'#e7ab8e', w:1, h:1, price:1600, lux:2, cat:'lamp' },
+    { id:'furn_s77_petal_uplight', name:'花瓣上照灯', emoji:'🌷', color:'#e0b285', w:1, h:1, price:4800, lux:2, cat:'lamp' },
+    { id:'furn_s77_quilt_shade_lamp', name:'拼布弧臂灯', emoji:'💡', color:'#d89774', w:1, h:1, price:10000, lux:4, cat:'lamp' },  // 11w 熊大拍板 1×2→1×1，脚底锚定；FURN_UP 301/240（底座偏心不强制居中）
+    { id:'furn_s77_hearth_light', name:'微光壁炉灯', emoji:'🔥', color:'#c18d66', w:2, h:1, price:28000, lux:7, cat:'lamp' },
+    { id:'furn_s77_box_fan', name:'木框循环扇', emoji:'🌀', color:'#deb18c', w:1, h:1, price:900, lux:1, cat:'appliance' },
+    { id:'furn_s77_toaster_cart', name:'吐司机小推车', emoji:'🍞', color:'#dbaf8c', w:1, h:1, price:2400, lux:2, cat:'appliance' },
+    { id:'furn_s77_record_console', name:'黑胶唱机柜', emoji:'🎵', color:'#be8660', w:2, h:1, price:7800, lux:4, cat:'appliance' },
+    { id:'furn_s77_sewing_machine_stand', name:'电动缝纫工作台', emoji:'🧵', color:'#d3a07a', w:2, h:1, price:12000, lux:4, cat:'appliance' },
+    { id:'furn_s77_stove_oven', name:'珐琅烤箱炉', emoji:'🍳', color:'#bf977f', w:2, h:1, price:26000, lux:7, cat:'appliance' },
+    { id:'furn_s77_laundry_pair', name:'洗烘叠叠机', emoji:'🫧', color:'#c9a28b', w:1, h:1, price:55000, lux:11, cat:'appliance' },
+    { id:'furn_s77_braided_runner', name:'麻花长廊毯', emoji:'🟫', color:'#c78a72', w:1, h:3, price:750, lux:1, layer:'rug', cat:'rug' },
+    { id:'furn_s77_patchwork_flower_rug', name:'拼布花园毯', emoji:'🌼', color:'#db9382', w:3, h:3, price:3800, lux:2, layer:'rug', cat:'rug' },
+    { id:'furn_s77_quilt_island_rug', name:'厚绒云岛毯', emoji:'☁️', color:'#e7c5b4', w:3, h:2, price:15000, lux:4, layer:'rug', cat:'rug' },
+    { id:'furn_s77_embroidery_hoops', name:'刺绣圆绷组', emoji:'🪡', color:'#c89b7b', w:2, h:1, price:500, lux:1, wall:true, cat:'wall' },
+    { id:'furn_s77_wood_cuckoo', name:'木屋布谷钟', emoji:'🕰️', color:'#bb8668', w:1, h:2, price:2500, lux:2, wall:true, cat:'wall' },
+    { id:'furn_s77_quilt_wall', name:'拼布故事挂毯', emoji:'🧶', color:'#d2a688', w:2, h:2, price:4800, lux:2, wall:true, cat:'wall' },
+    { id:'furn_s77_pressed_flower_frame', name:'压花玻璃框', emoji:'🌸', color:'#c49972', w:1, h:2, price:1300, lux:2, wall:true, cat:'wall' },
+    { id:'furn_s77_family_silhouette', name:'纸雕合影灯框', emoji:'🖼️', color:'#cca071', w:2, h:1, price:12000, lux:4, wall:true, cat:'wall' },
+    { id:'furn_s77_watering_stand', name:'小水壶花架', emoji:'🪴', color:'#c1875f', w:1, h:1, price:1100, lux:2, cat:'plant' },
+    { id:'furn_s77_knitting_basket', name:'毛线编织篮', emoji:'🧶', color:'#c27653', w:1, h:1, price:450, lux:1, cat:'plant' },
+    { id:'furn_s77_olive_planter', name:'橄榄木桶盆', emoji:'🫒', color:'#987f61', w:1, h:1, price:6200, lux:4, cat:'plant' },
+    { id:'furn_s77_mini_greenhouse', name:'玻璃小温室', emoji:'🌱', color:'#bba16a', w:2, h:1, price:24000, lux:7, cat:'plant' },
+    { id:'furn_pearl_tea_daybed', name:'茶歇藤编榻', emoji:'🛏️', color:'#c9ab88', w:3, h:1, price:2400, lux:2, cat:'bed' },
+    { id:'furn_pearl_pearl_bed', name:'贝壳软包床', emoji:'🛏️', color:'#a8a78f', w:2, h:2, price:8000, lux:4, cat:'bed' },  // 11w 熊大拍板 2×3→2×2，脚底锚定；FURN_UP 382/400
+    // 11w：packs 13/16/19/27/30/33/36/39 的 34 件；名称/价格/豪华度/占地按 200 件公共资产索引提案（旧版，熊大确认参数与新版一致）
+    { id:'furn_pearl_cup_carousel', name:'旋转茶杯塔', emoji:'☕', color:'#ac9975', w:1, h:1, price:6800, lux:4, cat:'cabinet' },
+    { id:'furn_pearl_bakery_display', name:'弧玻璃甜点柜', emoji:'🍰', color:'#a3845e', w:2, h:1, price:18000, lux:7, cat:'cabinet' },
+    { id:'furn_pearl_sideboard_island', name:'茶台中岛柜', emoji:'🍵', color:'#a49873', w:3, h:2, price:42000, lux:11, cat:'cabinet' },
+    { id:'furn_pearl_archive_apothecary', name:'百格茶香斗柜', emoji:'🗄️', color:'#8e764e', w:3, h:1, price:90000, lux:11, cat:'cabinet' },
+    { id:'furn_pearl_conversation_pit', name:'环形茶会沙发', emoji:'🛋️', color:'#a5a182', w:3, h:2, price:75000, lux:11, cat:'seat' },  // 索引提案 3×3；宽扁正面图（600×335）实测改 3×2，同花瓣转角沙发
+    { id:'furn_pearl_tea_gongfu_desk', name:'石槽功夫茶案', emoji:'🍵', color:'#b5a187', w:3, h:1, price:145000, lux:16, cat:'seat' },
+    { id:'furn_pearl_paper_pear_lamp', name:'梨形纸罩灯', emoji:'🍐', color:'#e6c998', w:1, h:1, price:700, lux:1, cat:'lamp' },
+    { id:'furn_pearl_tea_glass_lamp', name:'茶玻璃立柱灯', emoji:'💡', color:'#c59c65', w:1, h:1, price:2600, lux:2, cat:'lamp' },
+    { id:'furn_pearl_boba_globe_lamp', name:'珍珠串球灯', emoji:'🧋', color:'#d3c996', w:1, h:1, price:5800, lux:4, cat:'lamp' },
+    { id:'furn_pearl_tea_mat', name:'竹编茶席地垫', emoji:'🎋', color:'#c5a67b', w:2, h:2, price:450, lux:1, layer:'rug', cat:'rug' },
+    { id:'furn_pearl_scallop_rug', name:'扇贝绒边毯', emoji:'🐚', color:'#afb292', w:2, h:2, price:1600, lux:2, layer:'rug', cat:'rug' },
+    { id:'furn_pearl_tea_river_runner', name:'曲水茶径长毯', emoji:'🌊', color:'#bfbb9e', w:1, h:3, price:5500, lux:4, layer:'rug', cat:'rug' },
+    { id:'furn_otaku_floor_chair', name:'折背地板椅', emoji:'🪑', color:'#656d82', w:1, h:1, price:1300, lux:2, cat:'seat' },
+    { id:'furn_otaku_modular_couch', name:'积木拼接沙发', emoji:'🛋️', color:'#7a7e8d', w:3, h:2, price:18000, lux:7, cat:'seat' },
+    { id:'furn_otaku_arcade_bench', name:'街机双座长凳', emoji:'🕹️', color:'#a8abb0', w:2, h:1, price:3200, lux:2, cat:'seat' },
+    { id:'furn_otaku_streaming_desk', name:'双翼直播桌', emoji:'🎙️', color:'#8d949f', w:3, h:2, price:36000, lux:7, cat:'seat' },
+    { id:'furn_otaku_panel_rug', name:'四格漫画地毯', emoji:'💬', color:'#8e97a2', w:2, h:2, price:650, lux:1, layer:'rug', cat:'rug' },
+    { id:'furn_otaku_controller_rug', name:'手柄轮廓绒毯', emoji:'🎮', color:'#60677b', w:3, h:2, price:2800, lux:2, layer:'rug', cat:'rug' },
+    { id:'furn_otaku_speed_runner', name:'速度线闪电毯', emoji:'⚡', color:'#717c8a', w:1, h:3, price:6800, lux:4, layer:'rug', cat:'rug' },
+    { id:'furn_otaku_pixel_succulent', name:'方块多肉群盆', emoji:'🌵', color:'#727e7d', w:1, h:1, price:1800, lux:2, cat:'plant' },
+    { id:'furn_otaku_manga_book_stack', name:'漫画山展示墩', emoji:'📚', color:'#8c8891', w:1, h:1, price:500, lux:1, cat:'plant' },
+    { id:'furn_otaku_robot_planter', name:'行走机器人花盆', emoji:'🤖', color:'#5b6f62', w:1, h:1, price:12500, lux:4, cat:'plant' },
+    { id:'furn_otaku_aquatic_pixel_tank', name:'像素水草缸', emoji:'🐠', color:'#5d857e', w:2, h:1, price:58000, lux:11, cat:'plant' },
+    { id:'furn_rocket_field_cot', name:'折叠行军床', emoji:'🛏️', color:'#485670', w:2, h:3, price:1500, lux:2, cat:'bed' },
+    { id:'furn_rocket_cargo_crate', name:'太空货箱柜', emoji:'📦', color:'#524d4e', w:1, h:1, price:1900, lux:2, cat:'cabinet' },
+    { id:'furn_rocket_mesh_rack', name:'钢网通透货架', emoji:'🗄️', color:'#3c4144', w:2, h:1, price:2800, lux:2, cat:'cabinet' },
+    { id:'furn_rocket_airlock_wardrobe', name:'气闸圆门衣柜', emoji:'🚪', color:'#474649', w:2, h:1, price:26000, lux:7, cat:'cabinet' },
+    { id:'furn_rocket_rail_bench', name:'轨枕钢架长凳', emoji:'🪑', color:'#523b2f', w:3, h:1, price:6500, lux:4, cat:'seat' },
+    { id:'furn_rocket_mission_table', name:'环形任务会议桌', emoji:'🛰️', color:'#555051', w:3, h:3, price:82000, lux:11, cat:'seat' },
+    { id:'furn_rocket_zero_g_lounger', name:'弓架悬挂躺椅', emoji:'🪐', color:'#595453', w:2, h:3, price:190000, lux:16, cat:'seat' },
+    { id:'furn_rocket_cage_lamp', name:'防护网工作灯', emoji:'💡', color:'#665a4d', w:1, h:1, price:800, lux:1, cat:'lamp' },
+    { id:'furn_rocket_tripod_searchlight', name:'三脚探照灯', emoji:'🔦', color:'#6d6055', w:1, h:1, price:3400, lux:2, cat:'lamp' },
+    { id:'furn_rocket_pipe_valve_lamp', name:'阀门水管灯', emoji:'🔧', color:'#624939', w:1, h:1, price:6800, lux:4, cat:'lamp' },
+    { id:'furn_rocket_rocket_nozzle_light', name:'喷口氛围灯', emoji:'🚀', color:'#6c635c', w:1, h:1, price:14000, lux:4, cat:'lamp' },
+    { id:'furn_pearl_tea_loft', name:'茶点高架床', emoji:'🛏️', color:'#c9ab88', w:2, h:1, price:24000, lux:7, cat:'bed' },  // 11z 熊大占地审查 2×3→2×1，底边锚定（fpMig11z）；整图/FURN_UP/价格/豪华度不变
+    { id:'furn_pearl_canopy_lounge', name:'凉亭帘幕床', emoji:'🛏️', color:'#a8a78f', w:3, h:3, price:52000, lux:11, cat:'bed' },
+    { id:'furn_pearl_capsule_daybed', name:'珍珠泡泡躺舱', emoji:'🛏️', color:'#ac9975', w:2, h:2, price:110000, lux:16, cat:'bed' },  // 11z 熊大占地审查 2×3→2×2，底边锚定（fpMig11z）；整图/FURN_UP/价格/豪华度不变
+    { id:'furn_pearl_tea_cat_hammock', name:'茶篮猫吊床', emoji:'🛏️', color:'#a3845e', w:1, h:1, price:1600, lux:2, cat:'bed' },
+    { id:'furn_pearl_tea_cubby', name:'茶罐九宫格柜', emoji:'🗄️', color:'#a49873', w:2, h:1, price:2400, lux:2, cat:'cabinet' },
+    { id:'furn_pearl_glass_wardrobe', name:'长虹玻璃衣柜', emoji:'🗄️', color:'#bfbb9e', w:2, h:1, price:11000, lux:4, cat:'cabinet' },
+    { id:'furn_pearl_rattan_bookcase', name:'藤网拱顶书柜', emoji:'🗄️', color:'#afb292', w:2, h:1, price:5600, lux:4, cat:'cabinet' },
+    { id:'furn_pearl_tea_trolley_shelf', name:'双层茶点推架', emoji:'🗄️', color:'#c5a67b', w:1, h:1, price:1500, lux:2, cat:'cabinet' },
+    { id:'furn_pearl_tea_stool', name:'茶席竹矮凳', emoji:'🪑', color:'#b8a88a', w:1, h:1, price:500, lux:1, cat:'seat' },
+    { id:'furn_pearl_cafe_chair', name:'弯木咖啡椅', emoji:'🪑', color:'#9a9078', w:1, h:1, price:1300, lux:2, cat:'seat' },
+    { id:'furn_pearl_round_tea_table', name:'单柱圆茶桌', emoji:'🪵', color:'#c9ab88', w:2, h:2, price:3200, lux:2, cat:'seat' },
+    { id:'furn_pearl_scallop_sofa', name:'扇贝三人沙发', emoji:'🪑', color:'#a8a78f', w:3, h:1, price:14000, lux:4, cat:'seat' },
+    { id:'furn_pearl_tea_bar', name:'弧形调茶吧台', emoji:'🪵', color:'#ac9975', w:3, h:2, price:28000, lux:7, cat:'seat' },
+    { id:'furn_pearl_bar_stool', name:'旋脚吧凳', emoji:'🪑', color:'#a3845e', w:1, h:1, price:2700, lux:2, cat:'seat' },
+    { id:'furn_pearl_picnic_table', name:'折叠野餐桌', emoji:'🪵', color:'#a49873', w:2, h:1, price:1700, lux:2, cat:'seat' },  // 11z 熊大占地审查 2×2→2×1，底边锚定（fpMig11z）；整图/FURN_UP/价格/豪华度不变
+    { id:'furn_pearl_egg_swing', name:'藤壳秋千椅', emoji:'🪑', color:'#bfbb9e', w:2, h:2, price:22000, lux:7, cat:'seat' },
+    { id:'furn_pearl_fan_shade_lamp', name:'竹扇伞面灯', emoji:'💡', color:'#afb292', w:1, h:1, price:8200, lux:4, cat:'lamp' },
+    { id:'furn_pearl_tea_arc_lamp', name:'茶勺弧光灯', emoji:'💡', color:'#c5a67b', w:1, h:2, price:18000, lux:7, cat:'lamp' },
+    { id:'furn_pearl_fountain_light', name:'水纹玻璃灯泉', emoji:'💡', color:'#b8a88a', w:2, h:1, price:48000, lux:11, cat:'lamp' },
+    { id:'furn_pearl_tea_kettle_cart', name:'电热茶炉车', emoji:'🔌', color:'#9a9078', w:1, h:1, price:1500, lux:2, cat:'appliance' },
+    { id:'furn_pearl_juice_press', name:'柑橘榨汁柜', emoji:'🗄️', color:'#c9ab88', w:1, h:1, price:4200, lux:2, cat:'appliance' },
+    { id:'furn_pearl_milk_frother_bar', name:'奶泡双杯机台', emoji:'🪵', color:'#a8a78f', w:2, h:1, price:9500, lux:4, cat:'appliance' },
+    { id:'furn_pearl_tea_brewer', name:'多壶自动泡茶台', emoji:'🪵', color:'#ac9975', w:2, h:1, price:32000, lux:7, cat:'appliance' },
+    { id:'furn_pearl_dessert_chiller', name:'旋盘甜点冰柜', emoji:'🗄️', color:'#a3845e', w:2, h:1, price:78000, lux:11, cat:'appliance' },
+    { id:'furn_pearl_marble_pearl_rug', name:'珍珠镶嵌圆毯', emoji:'🟥', color:'#a49873', w:3, h:3, price:21000, lux:7, layer:'rug', cat:'rug' },
+    { id:'furn_pearl_tea_menu_board', name:'手写茶单牌', emoji:'🔌', color:'#bfbb9e', w:1, h:2, price:350, lux:1, wall:true, cat:'wall' },
+    { id:'furn_pearl_cup_wall_rack', name:'茶杯挂壁架', emoji:'🗄️', color:'#afb292', w:2, h:1, price:1800, lux:2, wall:true, cat:'wall' },
+    { id:'furn_pearl_sunburst_mirror', name:'藤编放射镜', emoji:'🖼️', color:'#c5a67b', w:2, h:2, price:4800, lux:2, wall:true, cat:'wall' },
+    { id:'furn_pearl_tea_leaf_relief', name:'茶叶陶片浮雕', emoji:'🖼️', color:'#b8a88a', w:2, h:1, price:9500, lux:4, wall:true, cat:'wall' },
+    { id:'furn_pearl_moon_window_art', name:'月窗水纹灯画', emoji:'💡', color:'#9a9078', w:2, h:2, price:35000, lux:7, wall:true, cat:'wall' },
+    { id:'furn_pearl_herb_crate', name:'香草木箱园', emoji:'🗄️', color:'#c9ab88', w:1, h:1, price:650, lux:1, cat:'plant' },
+    { id:'furn_pearl_tea_bonsai', name:'茶树浅钵盆景', emoji:'🪴', color:'#a8a78f', w:1, h:1, price:2600, lux:2, cat:'plant' },
+    { id:'furn_pearl_ceramic_cup_stack', name:'叠杯陶瓷摆件', emoji:'🪴', color:'#ac9975', w:1, h:1, price:950, lux:1, cat:'plant' },
+    { id:'furn_pearl_terrarium_orb', name:'玻璃球微花园', emoji:'🪴', color:'#a3845e', w:1, h:1, price:8800, lux:4, cat:'plant' },
+    { id:'furn_pearl_tea_tree_screen', name:'茶树连盆屏风', emoji:'🪴', color:'#a49873', w:3, h:1, price:28000, lux:7, cat:'plant' },
+    { id:'furn_otaku_floor_futon', name:'漫画地铺', emoji:'🖼️', color:'#656d82', w:2, h:2, price:1200, lux:2, cat:'bed' },  // 11z 熊大占地审查 2×3→2×2，底边锚定（fpMig11z）；整图/FURN_UP/价格/豪华度不变
+    { id:'furn_otaku_sofa_sleeper', name:'翻折懒人床', emoji:'🛏️', color:'#7a7e8d', w:2, h:3, price:5200, lux:4, cat:'bed' },
+    { id:'furn_otaku_bunk_manga', name:'上下铺漫画床', emoji:'🛏️', color:'#a8abb0', w:2, h:1, price:15000, lux:4, cat:'bed' },  // 11z 熊大占地审查 2×3→2×1，底边锚定（fpMig11z）；整图/FURN_UP/价格/豪华度不变
+    { id:'furn_otaku_gaming_pod', name:'游戏休息舱', emoji:'🛏️', color:'#8d949f', w:2, h:3, price:42000, lux:11, cat:'bed' },
+    { id:'furn_otaku_projector_bed', name:'投影帷幕床', emoji:'🛏️', color:'#8e97a2', w:3, h:3, price:85000, lux:11, cat:'bed' },
+    { id:'furn_otaku_cat_keyboard_cave', name:'键帽猫山洞', emoji:'🛏️', color:'#60677b', w:1, h:1, price:3600, lux:2, cat:'bed' },
+    { id:'furn_otaku_locker_wardrobe', name:'储物柜式衣柜', emoji:'🗄️', color:'#717c8a', w:2, h:1, price:4300, lux:2, cat:'cabinet' },
+    { id:'furn_otaku_disc_tower', name:'光盘旋转塔', emoji:'💡', color:'#727e7d', w:1, h:1, price:1700, lux:2, cat:'cabinet' },
+    { id:'furn_otaku_figure_vitrine', name:'阶梯手办柜', emoji:'🗄️', color:'#8c8891', w:2, h:1, price:13000, lux:4, cat:'cabinet' },
+    { id:'furn_otaku_comic_wheel_cart', name:'漫画箱轮车', emoji:'🗄️', color:'#5b6f62', w:1, h:1, price:900, lux:1, cat:'cabinet' },
+    { id:'furn_otaku_controller_drawers', name:'手柄抽屉柜', emoji:'🗄️', color:'#656d82', w:2, h:1, price:6800, lux:4, cat:'cabinet' },
+    { id:'furn_otaku_modular_pixel_shelf', name:'像素阶梯书架', emoji:'🗄️', color:'#7a7e8d', w:3, h:1, price:25000, lux:7, cat:'cabinet' },
+    { id:'furn_otaku_server_display_rack', name:'透侧收藏机柜', emoji:'🗄️', color:'#a8abb0', w:2, h:1, price:68000, lux:11, cat:'cabinet' },
+    { id:'furn_otaku_beanbag', name:'团子懒人袋', emoji:'🪑', color:'#8d949f', w:1, h:1, price:850, lux:1, cat:'seat' },
+    { id:'furn_otaku_kotatsu', name:'被炉矮桌', emoji:'🪵', color:'#8e97a2', w:2, h:1, price:5800, lux:4, cat:'seat' },  // 11z 熊大占地审查 2×2→2×1，仍为实体家具层，底边锚定（fpMig11z）；整图/FURN_UP/价格/豪华度不变
+    { id:'furn_otaku_gaming_chair', name:'高背电竞椅', emoji:'🪑', color:'#60677b', w:1, h:2, price:8800, lux:4, cat:'seat' },
+    { id:'furn_otaku_manga_desk', name:'斜面画稿桌', emoji:'🪵', color:'#717c8a', w:2, h:1, price:4600, lux:2, cat:'seat' },
+    { id:'furn_otaku_snack_sidecar', name:'零食侧边桌', emoji:'🪵', color:'#727e7d', w:1, h:1, price:550, lux:1, cat:'seat' },
+    { id:'furn_otaku_cocoon_lounger', name:'环抱阅读躺椅', emoji:'🪑', color:'#8c8891', w:2, h:2, price:98000, lux:11, cat:'seat' },
+    { id:'furn_otaku_panel_lamp', name:'分镜格落地灯', emoji:'💡', color:'#5b6f62', w:1, h:1, price:950, lux:1, cat:'lamp' },
+    { id:'furn_otaku_gooseneck_stand', name:'长颈阅读灯', emoji:'💡', color:'#656d82', w:1, h:1, price:1400, lux:2, cat:'lamp' },
+    { id:'furn_otaku_pixel_cube_light', name:'像素积木灯柱', emoji:'💡', color:'#7a7e8d', w:1, h:1, price:4200, lux:2, cat:'lamp' },
+    { id:'furn_otaku_arcade_marquee_lamp', name:'游戏厅招牌灯架', emoji:'🗄️', color:'#a8abb0', w:2, h:1, price:12000, lux:4, cat:'lamp' },
+    { id:'furn_otaku_orbital_neon_floor', name:'漫画速度线灯', emoji:'💡', color:'#8d949f', w:1, h:1, price:22000, lux:7, cat:'lamp' },
+    { id:'furn_otaku_sleep_timer_totem', name:'睡眠倒计时灯塔', emoji:'💡', color:'#8e97a2', w:1, h:1, price:48000, lux:11, cat:'lamp' },
+    { id:'furn_otaku_mini_fridge', name:'床边小冰柜', emoji:'🛏️', color:'#60677b', w:1, h:1, price:2800, lux:2, cat:'appliance' },
+    { id:'furn_otaku_console_station', name:'双手柄游戏台', emoji:'🪵', color:'#717c8a', w:2, h:1, price:15000, lux:4, cat:'appliance' },
+    { id:'furn_otaku_arcade_cabinet', name:'原创街机柜', emoji:'🗄️', color:'#727e7d', w:1, h:1, price:38000, lux:7, cat:'appliance' },
+    { id:'furn_otaku_projector_cart', name:'短焦投影推车', emoji:'🔌', color:'#8c8891', w:1, h:1, price:21000, lux:7, cat:'appliance' },
+    { id:'furn_otaku_triple_monitor_station', name:'三屏环抱主机台', emoji:'🪵', color:'#5b6f62', w:3, h:1, price:125000, lux:16, cat:'appliance' },
+    { id:'furn_otaku_pixel_map_rug', name:'像素小镇拼毯', emoji:'🟥', color:'#656d82', w:3, h:3, price:24000, lux:7, layer:'rug', cat:'rug' },
+    { id:'furn_otaku_speech_bubble_board', name:'对白气泡留言板', emoji:'🖼️', color:'#7a7e8d', w:2, h:1, price:550, lux:1, wall:true, cat:'wall' },
+    { id:'furn_otaku_manga_page_triptych', name:'原创分镜三联画', emoji:'🖼️', color:'#a8abb0', w:3, h:1, price:4300, lux:2, wall:true, cat:'wall' },
+    { id:'furn_otaku_controller_wall_mount', name:'手柄收藏壁架', emoji:'🗄️', color:'#8d949f', w:2, h:1, price:8500, lux:4, wall:true, cat:'wall' },
+    { id:'furn_otaku_pixel_city_lightbox', name:'像素夜城灯箱', emoji:'🗄️', color:'#8e97a2', w:3, h:2, price:46000, lux:11, wall:true, cat:'wall' },
+    { id:'furn_otaku_cactus_cartridge', name:'卡带仙人掌盆', emoji:'🪴', color:'#60677b', w:1, h:1, price:700, lux:1, cat:'plant' },
+    { id:'furn_rocket_steel_platform_bed', name:'钢架平台床', emoji:'🛏️', color:'#485670', w:2, h:2, price:6800, lux:4, cat:'bed' },  // 11z 熊大占地审查 2×3→2×2，底边锚定（fpMig11z）；整图/FURN_UP/价格/豪华度不变
+    { id:'furn_rocket_cryo_rest_pod', name:'透明罩休息舱', emoji:'🛏️', color:'#524d4e', w:2, h:2, price:65000, lux:11, cat:'bed' },  // 11z 熊大占地审查 2×3→2×2，底边锚定（fpMig11z）；整图/FURN_UP/价格/豪华度不变
+    { id:'furn_rocket_observatory_bed', name:'观星圆顶床', emoji:'🛏️', color:'#3c4144', w:3, h:3, price:160000, lux:16, cat:'bed' },
+    { id:'furn_rocket_landing_cat_pod', name:'着陆舱猫窝', emoji:'🛏️', color:'#474649', w:1, h:1, price:4800, lux:2, cat:'bed' },
+    { id:'furn_rocket_steel_locker', name:'铆钉更衣柜', emoji:'🗄️', color:'#523b2f', w:2, h:1, price:3600, lux:2, cat:'cabinet' },
+    { id:'furn_rocket_pipe_bookcase', name:'水管书架', emoji:'🗄️', color:'#555051', w:2, h:1, price:4800, lux:2, cat:'cabinet' },
+    { id:'furn_rocket_tool_chest', name:'滚轮工具斗柜', emoji:'🗄️', color:'#595453', w:2, h:1, price:7600, lux:4, cat:'cabinet' },
+    { id:'furn_rocket_specimen_drawer', name:'矿石标本斗柜', emoji:'🗄️', color:'#665a4d', w:2, h:1, price:52000, lux:11, cat:'cabinet' },
+    { id:'furn_rocket_orbital_archive', name:'轨道旋转档案架', emoji:'🗄️', color:'#6d6055', w:3, h:2, price:145000, lux:16, cat:'cabinet' },
+    { id:'furn_rocket_bolt_stool', name:'螺栓三脚凳', emoji:'🪑', color:'#624939', w:1, h:1, price:600, lux:1, cat:'seat' },
+    { id:'furn_rocket_workbench', name:'铆钉检修台', emoji:'🪵', color:'#485670', w:2, h:1, price:3500, lux:2, cat:'seat' },
+    { id:'furn_rocket_drafting_chair', name:'机械制图椅', emoji:'🪑', color:'#524d4e', w:1, h:1, price:4800, lux:2, cat:'seat' },
+    { id:'furn_rocket_pipe_sofa', name:'钢管皮垫沙发', emoji:'🪑', color:'#3c4144', w:3, h:1, price:12000, lux:4, cat:'seat' },
+    { id:'furn_rocket_oil_drum_table', name:'油桶圆桌', emoji:'🪵', color:'#474649', w:2, h:2, price:1800, lux:2, cat:'seat' },
+    { id:'furn_rocket_captain_chair', name:'舰桥指挥椅', emoji:'🪑', color:'#523b2f', w:1, h:1, price:36000, lux:7, cat:'seat' },  // 11z 熊大占地审查 1×2→1×1，底边锚定（fpMig11z）；整图/FURN_UP/价格/豪华度不变
+    { id:'furn_rocket_cantilever_desk', name:'悬臂作图桌', emoji:'🪵', color:'#555051', w:2, h:1, price:18000, lux:7, cat:'seat' },
+    { id:'furn_rocket_orbital_ring_lamp', name:'三环轨道灯', emoji:'💡', color:'#595453', w:1, h:1, price:32000, lux:7, cat:'lamp' },
+    { id:'furn_rocket_solar_array_lamp', name:'太阳帆翼灯', emoji:'💡', color:'#665a4d', w:2, h:1, price:88000, lux:11, cat:'lamp' },
+    { id:'furn_rocket_industrial_fan', name:'网笼工业风扇', emoji:'🔌', color:'#6d6055', w:1, h:1, price:1300, lux:2, cat:'appliance' },
+    { id:'furn_rocket_vacuum_dock', name:'扫地机器人基站', emoji:'🔌', color:'#624939', w:1, h:1, price:7200, lux:4, cat:'appliance' },
+    { id:'furn_rocket_coffee_pressure_unit', name:'压力咖啡机台', emoji:'🪵', color:'#485670', w:2, h:1, price:19000, lux:7, cat:'appliance' },
+    { id:'furn_rocket_air_purifier', name:'滤芯净化塔', emoji:'🔌', color:'#524d4e', w:1, h:1, price:11000, lux:4, cat:'appliance' },
+    { id:'furn_rocket_hydroponic_unit', name:'水培循环机', emoji:'🔌', color:'#3c4144', w:2, h:1, price:58000, lux:11, cat:'appliance' },
+    { id:'furn_rocket_planetarium_console', name:'家用星象投影台', emoji:'🪵', color:'#474649', w:2, h:2, price:175000, lux:16, cat:'appliance' },
+    { id:'furn_rocket_workshop_mat', name:'防滑检修地垫', emoji:'🟥', color:'#523b2f', w:2, h:2, price:550, lux:1, layer:'rug', cat:'rug' },
+    { id:'furn_rocket_orbit_rug', name:'轨道线圆毯', emoji:'🟥', color:'#555051', w:2, h:2, price:2400, lux:2, layer:'rug', cat:'rug' },
+    { id:'furn_rocket_runway_runner', name:'着陆跑道长毯', emoji:'🟥', color:'#595453', w:1, h:3, price:7800, lux:4, layer:'rug', cat:'rug' },
+    { id:'furn_rocket_lunar_relief_rug', name:'月坑浮雕绒毯', emoji:'🟥', color:'#665a4d', w:3, h:3, price:38000, lux:7, layer:'rug', cat:'rug' },
+    { id:'furn_rocket_blueprint_frame', name:'原创火箭蓝图框', emoji:'🖼️', color:'#6d6055', w:2, h:1, price:900, lux:1, wall:true, cat:'wall' },
+    { id:'furn_rocket_gear_clock', name:'齿轮壁钟', emoji:'🖼️', color:'#624939', w:2, h:2, price:3800, lux:2, wall:true, cat:'wall' },
+    { id:'furn_rocket_mission_patch_board', name:'任务徽章壁板', emoji:'🖼️', color:'#485670', w:2, h:1, price:8800, lux:4, wall:true, cat:'wall' },
+    { id:'furn_rocket_moon_sample_relief', name:'月岩切面浮雕', emoji:'🖼️', color:'#524d4e', w:2, h:2, price:28000, lux:7, wall:true, cat:'wall' },
+    { id:'furn_rocket_orbital_map_panel', name:'轨道星图灯板', emoji:'💡', color:'#3c4144', w:3, h:2, price:98000, lux:11, wall:true, cat:'wall' },
+    { id:'furn_rocket_concrete_succulent', name:'水泥多肉钵', emoji:'🪴', color:'#474649', w:1, h:1, price:800, lux:1, cat:'plant' },
+    { id:'furn_rocket_pipe_vase', name:'铜管苔藓瓶', emoji:'🪴', color:'#523b2f', w:1, h:1, price:2400, lux:2, cat:'plant' },
   ];
   const FURN_BY_ID = {}; FURNITURE.forEach(f => FURN_BY_ID[f.id] = f);
   const HOME_MAX = HOME_TIERS.length;
@@ -544,6 +738,15 @@
     inv[fid]--; if (inv[fid] <= 0) delete inv[fid]; return true;
   }
   function homeOpen(st, id) { return !!(CEO_BY_ID[id] && st.ceos[id] && st.ceos[id].unlocked); }
+  // 生活模式点家具的互动：按类别 / 明确能力，不认死 ID（新床、新书架等自动接上）。f.act 可显式覆盖
+  function furnLiveAct(fid) {
+    const f = FURN_BY_ID[fid]; if (!f) return 'walk';
+    if (f.act) return f.act;
+    if (f.cat === 'bed') return 'rest';
+    if (f.sub === 'bookshelf') return 'read';
+    if (f.sub === 'wardrobe') return 'dress';
+    return 'walk';
+  }
   function furnSize(fid, rot) { const f = FURN_BY_ID[fid]; return (rot & 1) ? { w:f.h, h:f.w } : { w:f.w, h:f.h }; }
   const boxOverlap = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
   function itemSurf(p, fid) {
@@ -561,7 +764,7 @@
     if (!Number.isInteger(x) || !Number.isInteger(y)) return { ok:false, why:'位置不对' };
     const rows = surf === 'wall' ? WALL_ROWS : T.rows, cols = T.cols;
     if (x < 0 || y < 0 || x + sz.w > cols || y + sz.h > rows) return { ok:false, why:surf === 'wall' ? '超出墙面了' : '超出房间了' };
-    if (surf === 'wall' && hitsWallBlock(st, id, x, y, sz.w, sz.h)) return { ok:false, why:'这里有窗户 / 房名牌，换个位置挂' };
+    if (surf === 'wall' && hitsWallBlock(st, id, x, y, sz.w, sz.h)) return { ok:false, why:'这里有窗户 / 墙上装饰，换块空墙挂' };
     const me = { x, y, w:sz.w, h:sz.h }, rug = f.layer === 'rug';
     for (const p of h.placed) {
       if (p.uid === ignoreUid) continue;
@@ -650,6 +853,91 @@
       takeInv(inv, it.fid); h.placed.push({ uid:it.uid, fid:it.fid, x:it.x, y:it.y, rot:it.rot, surf }); return { ok:true }; }
     return { ok:false, why:'未知操作' };
   }
+
+  // 11w：4 件占地只缩小深度 h（抽屉床/贝壳床 2×3→2×2，摇椅/拼布灯 1×2→1×1）。旧档若只改定义不挪坐标，脚会往上飘。
+  // 按「旧占地底边」锚定：newY = oldY + oldSize.h - newSize.h；宽变窄时保持 x。只跑一次（st.fpMig11w）。
+  // 不合法（越界/重叠）→ 找空位；再不行完整退仓库。不擦存档、不改金币、不丢件数。
+  const FP_OLD_11W = {
+    furn_s77_drawer_bed: { ow:2, oh:3 },
+    furn_pearl_pearl_bed: { ow:2, oh:3 },
+    furn_s77_rocking_chair: { ow:1, oh:2 },
+    furn_s77_quilt_shade_lamp: { ow:1, oh:2 },
+  };
+  function oldSize11w(ow, oh, rot) { return (rot & 1) ? { w:oh, h:ow } : { w:ow, h:oh }; }
+  // 11w 修：先把「全部未迁移家具」占位预留，再分两轮安排迁移件——①原底边锚定位（只对预留件 + 已定迁移件校验）；
+  // ②锚定失败的才找空位（此时所有锚定件已占好位，不会抢到后面家具的格子）；③最后全局校验，迁移件若仍与任何家具重叠就整件退仓。
+  // 与记录顺序无关：迁移件排在前面还是后面，结果一致。
+  function migrateFootprintBy(st, OLD, flag) {
+    if (st[flag]) return { shifted:0, stored:0, skipped:true };
+    let shifted = 0, stored = 0;
+    CEOS.forEach(c => {
+      const h = homeOf(st, c.id), all = (h.placed || []).slice();
+      const isMig = p => !!(OLD[p.fid] && FURN_BY_ID[p.fid]);
+      const fixed = all.filter(p => !isMig(p));
+      const placedMig = new Map();   // uid -> 新记录
+      const pend = [];
+      const tryAt = (fid, x, y, rot, surf, others) => {
+        const saved = h.placed; h.placed = others;
+        const ok = Number.isInteger(x) && Number.isInteger(y) && canPlace(st, c.id, fid, x, y, rot, null, surf).ok;
+        h.placed = saved; return ok;
+      };
+      const freeAt = (fid, rot, surf, others) => { const saved = h.placed; h.placed = others; const sp = findFree(st, c.id, fid, rot, surf); h.placed = saved; return sp; };
+      const occupied = () => fixed.concat(Array.from(placedMig.values()));
+      // ① 锚定
+      all.filter(isMig).forEach(p => {
+        const old = OLD[p.fid];
+        const rot = Number.isInteger(p.rot) ? p.rot & 3 : 0;
+        const oSz = oldSize11w(old.ow, old.oh, rot), nSz = furnSize(p.fid, rot);
+        const nx = p.x, ny = p.y + oSz.h - nSz.h;
+        const surf = p.surf === 'wall' ? 'wall' : 'floor';
+        if (tryAt(p.fid, nx, ny, rot, surf, occupied())) placedMig.set(p.uid, { uid:p.uid, fid:p.fid, x:nx, y:ny, rot, surf });
+        else pend.push({ p, rot, surf });
+      });
+      // ② 锚定失败的回退找空位
+      pend.forEach(({ p, rot, surf }) => {
+        const sp = freeAt(p.fid, rot, surf, occupied());
+        if (sp) placedMig.set(p.uid, { uid:p.uid, fid:p.fid, x:sp.x, y:sp.y, rot, surf });
+      });
+      // 按原记录顺序重建；没位的退仓
+      const out = [];
+      all.forEach(p => {
+        if (!isMig(p)) { out.push(p); return; }
+        const q = placedMig.get(p.uid);
+        if (q) out.push(q); else { addInv(furnInvOf(st), p.fid, 1); stored++; }
+      });
+      // ③ 全局校验：迁移件与任何其他家具重叠 → 退仓（兜底，正常不会触发）
+      const drop = new Set();
+      out.forEach(q => {
+        if (!placedMig.has(q.uid)) return;
+        const others = out.filter(o => o !== q && !drop.has(o));
+        if (tryAt(q.fid, q.x, q.y, q.rot, q.surf, others)) { const src = all.find(p => p.uid === q.uid); if (src && (src.x !== q.x || src.y !== q.y)) shifted++; }
+        else { drop.add(q); addInv(furnInvOf(st), q.fid, 1); stored++; }
+      });
+      h.placed = out.filter(q => !drop.has(q));
+    });
+    st[flag] = 1;
+    return { shifted, stored, skipped:false };
+  }
+  function migrateFootprint11w(st) { return migrateFootprintBy(st, FP_OLD_11W, 'fpMig11w'); }
+  // 11z：熊大 10 件占地审查，9 件收紧深度（宽不变）；香草木箱园保持 1×1。独立标记 fpMig11z（已跑过 11w 的档也要跑这次）。
+  // 同一套：先预留全部非迁移件 → 按旋转后真实高差锚底边 newY = oldY + 旧高 − 新高（x 不变）→ 失败找空位 → 全局重叠退仓。
+  const FP_OLD_11Z = {
+    furn_pearl_tea_loft: { ow:2, oh:3 },
+    furn_pearl_capsule_daybed: { ow:2, oh:3 },
+    furn_pearl_picnic_table: { ow:2, oh:2 },
+    furn_otaku_floor_futon: { ow:2, oh:3 },
+    furn_otaku_bunk_manga: { ow:2, oh:3 },
+    furn_otaku_kotatsu: { ow:2, oh:2 },
+    furn_rocket_steel_platform_bed: { ow:2, oh:3 },
+    furn_rocket_cryo_rest_pod: { ow:2, oh:3 },
+    furn_rocket_captain_chair: { ow:1, oh:2 },
+  };
+  function migrateFootprint11z(st) { return migrateFootprintBy(st, FP_OLD_11Z, 'fpMig11z'); }
+  function migrateFootprints(st) {   // 读档时按顺序跑：11w 再 11z，各自只跑一次
+    const a = migrateFootprint11w(st), b = migrateFootprint11z(st);
+    return { shifted:a.shifted + b.shifted, stored:a.stored + b.stored, skipped:a.skipped && b.skipped, w11:a, z11:b };
+  }
+
   // 旧档：地板上的挂画迁到墙面；墙面没位 → 完整退回公共仓库（不丢、不重复、不多算豪华度）
   function migrateWallPaintings(st) {
     let moved = 0, stored = 0;
@@ -722,6 +1010,10 @@
             else addInv(inv, p.fid, 1); }
         } else if (Number.isInteger(p.x) && Number.isInteger(p.y) && canPlace(tmp, c.id, p.fid, p.x, p.y, rot, null, surf).ok) {
           h.placed.push({ uid, fid:p.fid, x:p.x, y:p.y, rot, surf }); seen[uid] = true;
+        } else if (f.wall) {   // 挂画原位置现在是禁区（例：旧版自动摆放盖住了窗户）→ 挪到空墙，墙满了才退仓库
+          const spot = findFree(tmp, c.id, p.fid, rot, 'wall');
+          if (spot) { h.placed.push({ uid, fid:p.fid, x:spot.x, y:spot.y, rot, surf:'wall' }); seen[uid] = true; }
+          else addInv(inv, p.fid, 1);
         } else addInv(inv, p.fid, 1);
         const m = /^u(\d+)$/.exec(uid); if (m) h.next = Math.max(h.next, +m[1] + 1);
       });
@@ -826,6 +1118,6 @@
     canOpen, openShop, hireEmp, upgradeEmp, upgradeCeo, upgradeShop,
     dayKey, nextResetTs, clockRolledBack, computeOffline, settleOffline, canDouble, claimOffline,
     gachaUnlocked, gachaRemaining, gachaOdds, gachaPrice, gachaDraw, cardsComplete, newState, migrate, nextGoal,
-    HOME_TIERS, HOME_MAX, WALL_ROWS, WALL_BLOCK, MALL_CATS, FURNITURE, FURN_BY_ID, newHome, homeTier, homeOf, furnInvOf, homeOpen, furnSize, itemSurf, canPlace, findFree, homeUpgradeCost,
-    buyFurniture, upgradeHome, placeItem, moveItem, rotateItem, storeItem, undoHome, migrateWallPaintings, homeLuxury, invCount, furnStats, normHomes, normFurnInv, normHomeBundle };
+    HOME_TIERS, HOME_MAX, WALL_ROWS, WALL_BLOCK, wallBlockedCells, MALL_CATS, FURNITURE, FURN_BY_ID, newHome, homeTier, homeOf, furnInvOf, homeOpen, furnLiveAct, furnSize, itemSurf, canPlace, findFree, homeUpgradeCost,
+    buyFurniture, upgradeHome, placeItem, moveItem, rotateItem, storeItem, undoHome, migrateWallPaintings, migrateFootprint11w, migrateFootprint11z, migrateFootprints, FP_OLD_11Z, homeLuxury, invCount, furnStats, normHomes, normFurnInv, normHomeBundle };
 });
