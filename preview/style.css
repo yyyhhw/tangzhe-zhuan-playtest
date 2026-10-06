@@ -371,6 +371,7 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 .room.tier-apt .room-floor{background-size:calc(100% / var(--cols)) calc(100% / var(--rows)),calc(100% / var(--cols)) calc(100% / var(--rows)),calc(200% / var(--cols)) calc(200% / var(--rows))}
 .room.tier-villa{border-color:#6b4f00;box-shadow:5px 5px 0 var(--ink),inset 0 0 0 3px #ffd23f}
 .room.tier-villa .room-wall{background:linear-gradient(180deg,#fff8dc,var(--wall));border-bottom:6px double var(--trim)}
+.room.has-art .room-wall{border-bottom-color:transparent!important}  /* 12b3：豪宅的金色双线踢脚边压在底图踢脚线上（12b1 起 Lv3 有底图），有底图时隐掉；无底图照旧 */
 .room.tier-villa .room-floor{background-image:linear-gradient(to right,rgba(120,90,0,.28) 1.5px,transparent 1.5px),linear-gradient(to bottom,rgba(120,90,0,.28) 1.5px,transparent 1.5px),
   linear-gradient(135deg,rgba(255,255,255,.45),transparent 40%,rgba(255,255,255,.3) 60%,transparent)}
 .room.tier-villa .room-floor{background-size:calc(100% / var(--cols)) calc(100% / var(--rows)),calc(100% / var(--cols)) calc(100% / var(--rows)),100% 100%}
@@ -624,9 +625,10 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 .swap-box,.pv-tags div{border-color:var(--ink);border-width:var(--lw-2)}
 .swap-box{background:var(--tone-yel),var(--panel-2)}
 .cx-close{position:absolute;top:8px;right:8px;z-index:3;width:36px;height:36px;padding:0;border:var(--lw-2) solid var(--ink);border-radius:50%;background:#fff;box-shadow:var(--sh-1);display:grid;place-items:center}
-.cx-close::before{content:"";position:absolute;inset:-5px}  /* 触控区 46px */
+.cx-close::before{content:"";position:absolute;inset:-7px}  /* 12b3：触控区实测 46×46px（36px 按钮减 2×2px 边框 = 32px 内框，四边各外扩 7px；原 -5px 只有 42px），中心 ±23px 内都命中 */
 .cx-close .ic{width:18px;height:18px}
 .cx-close:active{transform:translate(2px,2px);box-shadow:none}
+.cx-close:active::before{transform:translate(-2px,-2px)}  /* 12b3：按下时按钮右下移 2px，热区反向移回，按住滑到边缘也不丢 */
 /* 底部抽屉（调任选店 / 选 CEO）：同一套格子 + 页眉线 + 关闭钮 */
 .sheet-panel{background:var(--tone-ink),var(--panel);border-top:var(--lw-3) solid var(--ink);box-shadow:0 -4px 0 rgba(20,20,20,.18)}
 .sheet-title{padding:0 44px 9px 0;margin-bottom:12px;border-bottom:var(--lw-2) solid var(--ink);font-size:16px}
@@ -705,7 +707,9 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 #dailyChip{position:relative}
 #dailyChip::after{content:"";position:absolute;inset:-8px 0}
 .icon-btn{position:relative}
-.icon-btn::after{content:"";position:absolute;inset:-4px}
+.icon-btn::after{content:"";position:absolute;inset:-4px}  /* 44px 按钮减 2×2px 边框 = 40px 内框 + 2×4px = 48px（矮屏 40px 按钮 → 44px） */
+/* 12b3：同样「伪元素扩热区 + :active 位移」的写法一并补反向位移（声音按钮 / 每日双倍芯片），按住时热区不跟着跑 */
+.icon-btn:active::after,#dailyChip:active::after{transform:translate(-2px,-2px)}
 /* 图标跟随选中态：未选中的页签 / 模式签图标淡色，选中后整套变回主色（底栏 / 家宅翻页签 / 生活·布置） */
 .book-tabs button.on,.mode-tabs .mt.on{--ica:var(--red);--icy:var(--yellow);--icf:#fff}
 /* 黄色按钮里的金币：原来是黄圈套在黄按钮上像空圈，改成深金币 + 高光 */

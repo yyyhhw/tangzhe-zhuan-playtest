@@ -149,7 +149,8 @@ const SHOP_STYLE = [
 ];
 const LOOKS = {
   // 12c1：四位 CEO 店内小人沿用熊大立绘的发型 / 配饰 / 主色（77 高马尾+粉蝴蝶结+红 T 棕围裙；珍珠姐及颌卷发+珍珠发夹+薄荷衬衫杏色围裙；阿宅乱发+圆眼镜+藏青连帽衫；火箭老板背头+黑西装+火箭胸针）
-  c77:    { skin:'#ffe0c7', hair:'#3a2418', style:'pony', bow:'#ff8fab', top:'#d93a32', short:true, apron:'#7a4a2e', female:true, tag:'77' },
+  // 12b3：77 换熊大漫画新形象后（12b2 头像 / 立绘），店内小人配色同步：粉蝴蝶结高马尾 + 红 T + 粉围裙 + 深棕长裤 + 棕靴（取色自 ceo77_fullbody_comic_v1）
+  c77:    { skin:'#ffe0c7', hair:'#4a2c22', style:'pony', bow:'#f4837a', top:'#e84d3c', short:true, apron:'#f0a08e', pants:'#4a2f26', shoe:'#835233', female:true, tag:'77' },
   pearl:  { skin:'#ffe0c7', hair:'#7a4a2a', style:'wavy', pin:true, top:'#bfe3c4', apron:'#e3a35f', female:true, lips:true },
   otaku:  { skin:'#ffe6d0', hair:'#1e1e1e', style:'messy', glasses:true, top:'#25335c', hood:true },
   rocket: { skin:'#ffe0c7', hair:'#5a3a26', style:'swept', top:'#2b2b2b', inner:'#141414', lapel:true, rocketLogo:true, smug:true },
@@ -174,7 +175,7 @@ function wearOf(id) { return (state.wear && state.wear[id]) || {}; }
 function lookOf(id) {
   const base = LOOKS[id]; if (!E.CEO_BY_ID[id]) return base;
   const L = Object.assign({}, base), eq = wearOf(id);
-  if (eq.clothes && CLOTHES[eq.clothes]) Object.assign(L, CLOTHES[eq.clothes], { rocketLogo:false, hood:false, tie:false, inner:null, lapel:false, short:false, tag:id === 'c77' ? base.tag : null });
+  if (eq.clothes && CLOTHES[eq.clothes]) Object.assign(L, CLOTHES[eq.clothes], { rocketLogo:false, hood:false, tie:false, inner:null, lapel:false, short:false, pants:null, tag:id === 'c77' ? base.tag : null });   // 12b3：换衣服时裤子回到衣服自己的默认色（背带裤蓝 / 深灰），不沿用 77 的深棕长裤
   if (eq.hat) L.hat = eq.hat;
   return L;
 }
@@ -1099,7 +1100,7 @@ const thumbCache = {};
 function itemThumb(id) {
   if (thumbCache[id]) return thumbCache[id];
   const it = E.ITEM_BY_ID[id] || {}, o = document.createElement('canvas'); o.width = o.height = 96; const c = o.getContext('2d');
-  if (it.type === 'clothes' || id === 'c_gold') { c.translate(48, 108); c.scale(0.85, 0.85); drawPerson(c, 0, 0, 1, Object.assign({}, LOOKS.c77, CLOTHES[id], { bow:null }), {}); }
+  if (it.type === 'clothes' || id === 'c_gold') { c.translate(48, 108); c.scale(0.85, 0.85); drawPerson(c, 0, 0, 1, Object.assign({}, LOOKS.c77, CLOTHES[id], { bow:null, pants:null }), {}); }
   else if (it.type === 'hat' || id === 'h_gold') { c.translate(48, 150); c.scale(1.05, 1.05); drawHead(c, Object.assign({}, LOOKS.c77, { hat:id }), {}); }
   else return null;
   return (thumbCache[id] = o.toDataURL());

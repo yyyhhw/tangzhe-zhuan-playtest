@@ -1032,11 +1032,37 @@ with sync_playwright() as p:
         intro = S(sp, """(()=>{const m=document.getElementById('mpanel'), lines=e=>{if(!e) return 0; const r=document.createRange(); r.selectNodeContents(e); return new Set([...r.getClientRects()].filter(q=>q.width>1).map(q=>Math.round(q.top))).size;};
           return {open:!m.closest('.hidden'), x:!!m.querySelector('#mX'), ok:(m.querySelector('#mOk')||{}).textContent, bub:lines(m.querySelector('.mbubble')), title:lines(m.querySelector('.mtitle'))};})()""")
         check(intro['open'] and intro['x'] and '开摊' in (intro['ok'] or '') and intro['bub'] == 1 and intro['title'] == 1, f"12c1 {dname}：开摊介绍弹窗对白泡和标题都是一行（不在 × 旁折行）{intro}")
-        xl = S(sp, "(()=>{const x=document.querySelector('#mpanel #mX'), r=x.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height/2, hit=(dx,dy)=>{const e=document.elementFromPoint(cx+dx,cy+dy); return !!e && (e===x || x.contains(e));}; return {label:x.getAttribute('aria-label'), w:r.width, h:r.height, cx, cy, hits:[[0,0],[-15,0],[15,0],[0,-15],[0,15]].map(d=>hit(d[0],d[1]))};})()")
-        check(xl['label'] == '关闭' and all(xl['hits']), f"12c3 {dname}：开摊介绍 × 朗读标签是「关闭」（不叫「开摊」），× 中心和上下左右 15px 实测点得到 × 本身 {xl}")
+        xl = S(sp, "(()=>{const x=document.querySelector('#mpanel #mX'), r=x.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height/2, hit=(dx,dy)=>{const e=document.elementFromPoint(cx+dx,cy+dy); return !!e && (e===x || x.contains(e));}; return {label:x.getAttribute('aria-label'), w:r.width, h:r.height, cx, cy, hits:[[0,0],[-15,0],[15,0],[0,-15],[0,15],[-21.5,0],[21.5,0],[0,-21.5],[0,21.5],[-22,0],[22,0],[0,-22],[0,22]].map(d=>hit(d[0],d[1])), ins:getComputedStyle(x,'::before').top};})()")
+        check(xl['label'] == '关闭' and len(xl['hits']) == 13 and all(xl['hits']), f"12c3/12b3 {dname}：开摊介绍 × 朗读标签是「关闭」（不叫「开摊」），× 中心和上下左右 15 / 21.5 / 22px 实测点（elementFromPoint）都得到 × 本身（热区 46px）{xl}")
         b0 = S(sp, "__tzz.bubble.until"); sp.mouse.click(xl['cx'], xl['cy']); sp.wait_for_timeout(400)
         xi = S(sp, "({open:!document.getElementById('modal').classList.contains('hidden'), au:__tzz.audioState(), same:__tzz.bubble.until===" + json.dumps(b0) + "})")
         check(not xi['open'] and xi['au'] == 'none' and xi['same'], f"12c1/12c3 {dname}：开摊介绍按坐标实点 × 只关窗——不解锁音频、77 不新说开摊台词 {xi}")
+        # 12b3：板砖 16:28 × 边缘——WebKit 按下→松开：在 ±22px 边缘按下（:active 让按钮右下移 2px），按住时四个方向 ±21.5 / ±22px 仍命中 ×，原地松开只关窗、不解锁音频、77 不说开摊台词
+        for ex, ey in [(-22, 0), (22, 0), (0, -22), (0, 22)]:
+            sp.evaluate("localStorage.clear()"); sp.reload(); sp.wait_for_timeout(800)
+            r0 = S(sp, "(()=>{const r=document.querySelector('#mpanel #mX').getBoundingClientRect(); return {cx:r.left+r.width/2, cy:r.top+r.height/2};})()")
+            b0 = S(sp, "__tzz.bubble.until"); sp.mouse.move(r0['cx'] + ex, r0['cy'] + ey); sp.mouse.down(); sp.wait_for_timeout(120)
+            pr = S(sp, "(()=>{const x=document.querySelector('#mpanel #mX'), cx=" + json.dumps(r0['cx']) + ", cy=" + json.dumps(r0['cy']) + ", hit=(dx,dy)=>{const e=document.elementFromPoint(cx+dx,cy+dy); return !!e && (e===x || x.contains(e));}; return {act:x.matches(':active'), tf:getComputedStyle(x).transform, bt:getComputedStyle(x,'::before').transform, hits:[[-22,0],[22,0],[0,-22],[0,22],[-21.5,0],[21.5,0],[0,-21.5],[0,21.5]].map(d=>hit(d[0],d[1]))};})()")
+            sp.mouse.up(); sp.wait_for_timeout(400)
+            xr = S(sp, "({open:!document.getElementById('modal').classList.contains('hidden'), au:__tzz.audioState(), same:__tzz.bubble.until===" + json.dumps(b0) + "})")
+            check(pr['act'] and pr['tf'] != 'none' and all(pr['hits']), f"12b3 {dname}：× 在 ({ex},{ey}) 边缘按住（:active 位移 {pr['tf']}，热区反向 {pr['bt']}）时四方向 ±21.5 / ±22px 仍命中 × {pr['hits']}")
+            check(not xr['open'] and xr['au'] == 'none' and xr['same'], f"12b3 {dname}：× 在 ({ex},{ey}) 边缘按下→松开只关窗——不解锁音频、77 不说开摊台词 {xr}")
+        # 12b3：同写法的声音按钮 / 每日双倍芯片：按住（:active 位移 2px）时 ±21.5 / ±22px 四个方向的命中结果和松手时一模一样（热区不跟着跑）
+        mc = b.new_context(**p.devices[dname]); mp = mc.new_page(); hook(mp, 'press12b3-' + dname)
+        mp.goto(URL); mp.evaluate("localStorage.clear()"); mp.reload(); mp.wait_for_timeout(800); close_modals(mp)
+        PT = "[[-21.5,0],[21.5,0],[0,-21.5],[0,21.5],[-22,0],[22,0],[0,-22],[0,22]]"
+        for sel in ['#mute', '#dailyChip']:
+            HJ = "(()=>{const x=document.querySelector('" + sel + "'), r=x.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height/2, hit=(dx,dy)=>{const e=document.elementFromPoint(cx+dx,cy+dy); return !!e && (e===x || x.contains(e));}; return {act:x.matches(':active'), tf:getComputedStyle(x).transform, cx, cy, w:r.width, h:r.height, hits:" + PT + ".map(d=>hit(d[0],d[1]))};})()"
+            r0 = S(mp, HJ); pts = json.loads(PT); k = next((i for i, h in enumerate(r0['hits']) if h and pts[i][0] != 0), 0)
+            mp.mouse.move(r0['cx'] + pts[k][0], r0['cy'] + pts[k][1]); mp.mouse.down(); mp.wait_for_timeout(120)
+            r1 = S(mp, HJ.replace("cx=r.left+r.width/2, cy=r.top+r.height/2", "cx=" + json.dumps(r0['cx']) + ", cy=" + json.dumps(r0['cy'])))
+            mp.mouse.up(); mp.wait_for_timeout(300); close_modals(mp)
+            if sel == '#mute': mp.click('#mute'); mp.wait_for_timeout(200)
+            check(r1['act'] and r1['tf'] != 'none' and r1['hits'] == r0['hits'] and all(r0['hits'][:2]), f"12b3 {dname}：{sel}（{round(r0['w'])}×{round(r0['h'])}）按住时热区不跑——±21.5 / ±22px 命中 松手 {r0['hits']} = 按住 {r1['hits']}（位移 {r1['tf']}）")
+        if dname == 'iPhone 15':
+            lk3 = S(mp, "(()=>{const L=__tzz.LOOKS.c77, s=__tzz.state; s.wear=s.wear||{}; const w=s.wear.c77; s.wear.c77={clothes:'c_work'}; const a=__tzz.lookOf('c77').pants; if(w===undefined) delete s.wear.c77; else s.wear.c77=w; return [L.apron,L.pants,L.shoe,a];})()")
+            check(lk3 == ['#f0a08e', '#4a2f26', '#835233', None], f"12b3 77 店内小人跟新形象：粉围裙 / 深棕长裤 / 棕靴；换上背带裤等衣服时裤子回衣服默认色 {lk3}")
+        mc.close()
         if dname == 'iPhone SE':
             sp.reload(); sp.wait_for_timeout(800); b0 = S(sp, "__tzz.bubble.until"); sp.click('#mOk'); sp.wait_for_timeout(400)
             ki = S(sp, "({au:__tzz.audioState(), line:__tzz.bubble.txt, changed:__tzz.bubble.until!==" + json.dumps(b0) + "})")
@@ -1112,8 +1138,8 @@ with sync_playwright() as p:
     lk = fig.pop('looks')
     check(all(2.7 <= v['ratio'] <= 3.3 for v in fig.values()), f"12c1 店内人物约 3 头身（全身高 ÷ 头径 38）{ {k: v['ratio'] for k, v in fig.items()} }")
     check(all(v['pants'] and v['sleeve'] and v['skin'] for v in fig.values()), f"12c1 店内人物有裤腿（两条裤管取色）、袖子（上臂是衣服色）、袖口下露小臂肤色 { {k: (v['pants'], v['sleeve'], v['skin']) for k, v in fig.items()} }")
-    check(lk == {'c77': ['pony', '#d93a32', '#ff8fab'], 'pearl': ['wavy', '#bfe3c4', True], 'otaku': ['messy', '#25335c', True], 'rocket': ['swept', '#2b2b2b', True]},
-          f'12c1 四位 CEO 店内小人沿用立绘：77 高马尾 + 粉蝴蝶结 + 红 T，珍珠姐卷发 + 珍珠发夹 + 薄荷衬衫，阿宅乱发 + 圆眼镜 + 藏青连帽衫，火箭老板背头 + 黑西装翻领 {lk}')
+    check(lk == {'c77': ['pony', '#e84d3c', '#f4837a'], 'pearl': ['wavy', '#bfe3c4', True], 'otaku': ['messy', '#25335c', True], 'rocket': ['swept', '#2b2b2b', True]},
+          f'12c1/12b3 四位 CEO 店内小人沿用立绘：77 高马尾 + 粉蝴蝶结 + 红 T（12b3 按漫画新形象换色），珍珠姐卷发 + 珍珠发夹 + 薄荷衬衫，阿宅乱发 + 圆眼镜 + 藏青连帽衫，火箭老板背头 + 黑西装翻领 {lk}')
     wear = S(pp, "(()=>{const s=__tzz.state; const old=s.wear&&s.wear.rocket; s.wear=s.wear||{}; s.wear.rocket={clothes:'c_suit'}; const L=__tzz.lookOf('rocket'); if(old) s.wear.rocket=old; else delete s.wear.rocket; return [L.top, !!L.lapel, !!L.inner];})()")
     check(wear == ['#264653', False, False], f'12c1 换装覆盖立绘专属的内搭 / 翻领（穿 c_suit 不叠两层西装）{wear}')
     pp.locator('#bottomNav [data-tab="shop"]').click(); pp.wait_for_timeout(1500)
