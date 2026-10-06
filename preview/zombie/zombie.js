@@ -87,7 +87,7 @@ function newRun(mode, n) {
     t: 0, over: false, win: false, kills: 0, spawnAcc: 0,
     p: { x: W / 2, y: H * 0.62, r: 15 * U, hp: maxHp, maxHp, face: 1, inv: 0, fireCd: 0.3, walk: 0, moving: false },
     dmg: 10 * 1.15 ** lv.atk, interval: fireInterval(lv.rate), ultMul: 1.2 ** lv.ult,
-    skewers: 3, ult: 0, ring: null, shake: 0,
+    skewers: 3, ult: 0, ring: null, frost: null, shake: 0,
     zs: [], bs: [], fx: [], txt: [], seed: 1,
   };
 }
@@ -123,7 +123,23 @@ function nearest() {
   for (const z of G.zs) { if (z.x < -10 || z.x > W + 10 || z.y < -10 || z.y > H + 10) continue; const d = (z.x - p.x) ** 2 + (z.y - p.y) ** 2; if (d < bd) { bd = d; best = z; } }
   return best;
 }
-function fire() {
+const fire = () => (G.ceo === 'pearl' ? firePearl() : fire77());
+// 珍珠姐普攻：两颗珍珠，打中后弹向附近下一只（弹跳次数随击倒数涨，和 77 的飞串根数同档）
+function firePearl() {
+  const z = nearest(); if (!z) return false;
+  const p = G.p, a0 = Math.atan2(z.y - p.y, z.x - p.x), sp = 380 * U;
+  for (const off of [-0.09, 0.09]) G.bs.push({ kind: 'pearl', x: p.x, y: p.y, vx: Math.cos(a0 + off) * sp, vy: Math.sin(a0 + off) * sp, a: a0, life: 0.9, dmg: G.dmg, pierce: 0, bounce: G.skewers - 1, hit: new Set() });
+  p.face = Math.cos(a0) >= 0 ? 1 : -1;
+  return true;
+}
+function bounceTo(b) {
+  let best = null, bd = (170 * U) ** 2;
+  for (const z of G.zs) { if (b.hit.has(z) || z.hp <= 0) continue; const d = (z.x - b.x) ** 2 + (z.y - b.y) ** 2; if (d < bd) { bd = d; best = z; } }
+  if (!best) return false;
+  const a = Math.atan2(best.y - b.y, best.x - b.x), sp = Math.hypot(b.vx, b.vy);
+  b.vx = Math.cos(a) * sp; b.vy = Math.sin(a) * sp; b.a = a; b.life = 0.6; b.bounce--; return true;
+}
+function fire77() {
   const z = nearest(); if (!z) return false;
   const p = G.p, a0 = Math.atan2(z.y - p.y, z.x - p.x), n = G.skewers, spread = 0.2;
   for (let i = 0; i < n; i++) {
@@ -134,7 +150,8 @@ function fire() {
   return true;
 }
 function castUlt() {
-  if (!G || G.over || paused || G.ult < 100 || G.ring) return false;
+  if (!G || G.over || paused || G.ult < 100 || G.ring || G.frost) return false;
+  if (G.ceo === 'pearl') { G.ult = 0; G.frost = { t: 0, dur: 3, tick: 0 }; G.shake = 0.25; G.p.inv = Math.max(G.p.inv, 0.6); toast('冰沙风暴！'); return true; }
   G.ult = 0; G.ring = { t: 0, dur: 3.5, tick: 0 }; G.shake = 0.35; G.p.inv = Math.max(G.p.inv, 0.6);
   toast('火圈！'); return true;
 }
@@ -148,7 +165,7 @@ function killZ(i) {
   for (let k = 0; k < 6; k++) G.fx.push({ x: z.x, y: z.y, vx: (rnd() - 0.5) * 160 * U, vy: (rnd() - 0.5) * 160 * U, t: 0.4, c: z.col });
   G.zs.splice(i, 1);
   const want = Math.min(7, 3 + Math.floor(G.kills / 30));
-  if (want > G.skewers) { G.skewers = want; toast(`飞串 +1（×${want}）`); }
+  if (want > G.skewers) { G.skewers = want; toast(G.ceo === 'pearl' ? `珍珠多弹一下（×${want - 1}）` : `飞串 +1（×${want}）`); }
   if (z.type === 'boss') toast('僵尸王倒了！');
 }
 function step(dt) {
@@ -172,6 +189,7 @@ function step(dt) {
       if (b.hit.has(z)) continue;
       if ((z.x - b.x) ** 2 + (z.y - b.y) ** 2 < (z.r + 5 * U) ** 2) {
         b.hit.add(z); hurtZ(z, b.dmg, b.vx * 0.02, b.vy * 0.02);
+        if (b.bounce > 0 && bounceTo(b)) break;
         if (--b.pierce < 0) { dead = true; break; }
       }
     }
@@ -190,14 +208,21 @@ function step(dt) {
     }
     if (R.t >= R.dur) G.ring = null;
   }
+  // 冰沙风暴：全屏冻住（Boss 只减速），每 0.5 秒冰伤一次
+  if (G.frost) {
+    const F = G.frost; F.t += dt; F.tick -= dt;
+    if (F.tick <= 0) { F.tick = 0.5; for (const z of G.zs) { z.slow = Math.max(z.slow, 0.6); hurtZ(z, 24 * G.ultMul * (1 + G.t / 90), 0, 0); } }
+    if (F.t >= F.dur) G.frost = null;
+  }
   // 僵尸
   for (let i = G.zs.length - 1; i >= 0; i--) {
     const z = G.zs[i];
     if (z.hp <= 0) { killZ(i); continue; }
     const dx = p.x - z.x, dy = p.y - z.y, d = Math.hypot(dx, dy) || 1;
-    z.x += (dx / d * z.sp + z.kx * 10) * dt; z.y += (dy / d * z.sp + z.ky * 10) * dt;
+    const frz = z.slow > 0, sp = z.sp * (frz ? (z.type === 'boss' ? 0.4 : 0.08) : 1); z.slow = Math.max(0, z.slow - dt);
+    z.x += (dx / d * sp + z.kx * 10) * dt; z.y += (dy / d * sp + z.ky * 10) * dt;
     z.kx *= 0.85; z.ky *= 0.85; z.flash = Math.max(0, z.flash - dt); z.wob += dt * 6;
-    if (d < z.r + p.r && p.inv <= 0) {
+    if (d < z.r + p.r && p.inv <= 0 && !(frz && z.type !== 'boss')) {
       p.hp -= z.dmg; p.inv = 0.8; G.shake = 0.15;
       if (p.hp <= 0) { p.hp = 0; end(false); return; }
     }
@@ -240,13 +265,14 @@ function draw() {
   const drawHero = HERO_DRAW[G.ceo] || draw77;
   const ents = [...G.zs.map(z => ({ y: z.y, f: () => drawZ(z) })), { y: G.p.y, f: () => drawHero(G.p) }].sort((a, b) => a.y - b.y);
   for (const e of ents) e.f();
-  for (const b of G.bs) drawSkewer(b);
+  for (const b of G.bs) (b.kind === 'pearl' ? drawPearl : drawSkewer)(b);
   for (const f of G.fx) { ctx.globalAlpha = Math.max(0, f.t / 0.4); ctx.fillStyle = f.c; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(f.x, f.y, 4 * U, 0, 7); ctx.fill(); ctx.stroke(); }
   ctx.globalAlpha = 1;
   ctx.font = `900 ${Math.round(13 * U)}px -apple-system,sans-serif`; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = '#fff';
   for (const f of G.txt) { ctx.globalAlpha = Math.min(1, f.t / 0.3); ctx.strokeText(f.v, f.x, f.y); ctx.fillStyle = INK; ctx.fillText(f.v, f.x, f.y); }
   ctx.globalAlpha = 1;
   ctx.restore();
+  if (G.frost) { ctx.fillStyle = `rgba(150,215,255,${0.22 * (1 - G.frost.t / G.frost.dur) + 0.06})`; ctx.fillRect(0, 0, W, H); }
   if (joy.on) {
     ctx.lineWidth = 3; ctx.strokeStyle = INK; ctx.fillStyle = 'rgba(255,250,240,.6)';
     ctx.beginPath(); ctx.arc(joy.ox, joy.oy, JR, 0, 7); ctx.fill(); ctx.stroke();
@@ -276,7 +302,36 @@ function draw77(p) {
   ctx.fillStyle = '#f4a3a8'; ctx.beginPath(); ctx.ellipse(x - f * 7 * s, hy - 11 * s, 4 * s, 3 * s, 0.4, 0, 7); ctx.ellipse(x - f * 1 * s, hy - 12 * s, 4 * s, 3 * s, -0.4, 0, 7); ctx.fill(); outline(1.5 * s); // 粉蝴蝶结
   ctx.globalAlpha = 1;
 }
-const HERO_DRAW = { c77: draw77 };
+// 珍珠姐：棕色短卷发 + 珍珠发夹、薄荷绿衬衫、橙色围裙、手拿珍珠奶茶（同 ceo_pearl.webp）
+function drawPearlCeo(p) {
+  const s = U, x = p.x, y = p.y, bob = p.moving ? Math.sin(p.walk) * 2 * s : 0, f = p.face;
+  if (p.inv > 0 && Math.floor(p.inv * 20) % 2) ctx.globalAlpha = 0.5;
+  ctx.fillStyle = 'rgba(20,20,20,.18)'; ctx.beginPath(); ctx.ellipse(x, y + 16 * s, 15 * s, 5 * s, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#5a4636'; const lg = p.moving ? Math.sin(p.walk) * 4 * s : 0;
+  ctx.beginPath(); ctx.roundRect(x - 7 * s, y + 6 * s - lg * 0.3, 5 * s, 10 * s + lg * 0.3, 2 * s); ctx.fill(); outline(2 * s);
+  ctx.beginPath(); ctx.roundRect(x + 2 * s, y + 6 * s + lg * 0.3, 5 * s, 10 * s - lg * 0.3, 2 * s); ctx.fill(); outline(2 * s);
+  ctx.fillStyle = '#b9d8b0'; ctx.beginPath(); ctx.roundRect(x - 11 * s, y - 8 * s + bob, 22 * s, 18 * s, 6 * s); ctx.fill(); outline();
+  ctx.fillStyle = '#e8a25c'; ctx.beginPath(); ctx.roundRect(x - 7 * s, y - 5 * s + bob, 14 * s, 16 * s, 3 * s); ctx.fill(); outline(2 * s);
+  // 奶茶杯 + 吸管
+  const cx = x + f * 15 * s, cy = y - 2 * s + bob;
+  ctx.fillStyle = '#e9cfa6'; ctx.beginPath(); ctx.moveTo(cx - 5 * s, cy - 7 * s); ctx.lineTo(cx + 5 * s, cy - 7 * s); ctx.lineTo(cx + 4 * s, cy + 6 * s); ctx.lineTo(cx - 4 * s, cy + 6 * s); ctx.closePath(); ctx.fill(); outline(1.8 * s);
+  ctx.fillStyle = '#3a2418'; for (const [dx, dy] of [[-2, 3.5], [1.5, 4], [0, 1.5]]) { ctx.beginPath(); ctx.arc(cx + dx * s, cy + dy * s, 1.3 * s, 0, 7); ctx.fill(); }
+  ctx.strokeStyle = '#e8a6a0'; ctx.lineWidth = 2 * s; ctx.beginPath(); ctx.moveTo(cx + f * 1 * s, cy - 7 * s); ctx.lineTo(cx + f * 3 * s, cy - 13 * s); ctx.stroke();
+  const hy = y - 18 * s + bob;
+  ctx.fillStyle = '#8a5a3a'; ctx.beginPath(); ctx.arc(x, hy + 1 * s, 14 * s, Math.PI * 0.9, Math.PI * 2.1); ctx.fill(); outline(2 * s); // 卷发外圈
+  ctx.fillStyle = '#f6d7c3'; ctx.beginPath(); ctx.arc(x, hy + 1 * s, 10.5 * s, 0, 7); ctx.fill(); outline();
+  ctx.fillStyle = '#8a5a3a'; ctx.beginPath(); ctx.arc(x - f * 2 * s, hy - 2 * s, 11 * s, Math.PI * 1.05, Math.PI * 1.95); ctx.closePath(); ctx.fill(); outline(2 * s); // 刘海
+  for (const sx of [-12, 12]) { ctx.beginPath(); ctx.arc(x + sx * s, hy + 6 * s, 4 * s, 0, 7); ctx.fill(); outline(1.8 * s); } // 发尾卷
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(x + f * 3 * s - 3 * s, hy + 2 * s, 1.6 * s, 0, 7); ctx.arc(x + f * 3 * s + 3 * s, hy + 2 * s, 1.6 * s, 0, 7); ctx.fill();
+  ctx.fillStyle = '#d9534f'; ctx.beginPath(); ctx.arc(x + f * 3 * s, hy + 6.5 * s, 2.2 * s, 0, Math.PI); ctx.fill(); // 笑口
+  ctx.fillStyle = '#fffaf0'; for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(x + f * (5 + i * 2.5) * s, hy - (8 + i * 1.5) * s, 1.6 * s, 0, 7); ctx.fill(); ctx.lineWidth = 1 * s; ctx.strokeStyle = INK; ctx.stroke(); } // 珍珠发夹
+  ctx.globalAlpha = 1;
+}
+function drawPearl(b) {
+  const s = U; ctx.fillStyle = '#3a2418'; ctx.beginPath(); ctx.arc(b.x, b.y, 5 * s, 0, 7); ctx.fill(); ctx.lineWidth = 1.5 * s; ctx.strokeStyle = INK; ctx.stroke();
+  ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.beginPath(); ctx.arc(b.x - 1.6 * s, b.y - 1.6 * s, 1.4 * s, 0, 7); ctx.fill();
+}
+const HERO_DRAW = { c77: draw77, pearl: drawPearlCeo };
 function drawZ(z) {
   const s = z.r / 13, x = z.x, y = z.y, w = Math.sin(z.wob) * 1.5 * s;
   ctx.fillStyle = 'rgba(20,20,20,.18)'; ctx.beginPath(); ctx.ellipse(x, y + z.r * 0.9, z.r, z.r * 0.35, 0, 0, 7); ctx.fill();
@@ -288,6 +343,7 @@ function drawZ(z) {
   ctx.strokeStyle = INK; ctx.lineWidth = 1.6 * s; ctx.beginPath();
   for (const ex of [-3.5, 3.5]) { const cx = x + w + ex * s + dir * s, cy = y - 11 * s; ctx.moveTo(cx - 1.8 * s, cy - 1.8 * s); ctx.lineTo(cx + 1.8 * s, cy + 1.8 * s); ctx.moveTo(cx + 1.8 * s, cy - 1.8 * s); ctx.lineTo(cx - 1.8 * s, cy + 1.8 * s); }
   ctx.stroke();
+  if (z.slow > 0) { ctx.fillStyle = 'rgba(160,220,255,.55)'; ctx.beginPath(); ctx.roundRect(x - 11 * s, y - 20 * s, 22 * s, 34 * s, 6 * s); ctx.fill(); ctx.lineWidth = 1.5 * U; ctx.strokeStyle = '#4a90c2'; ctx.stroke(); }
   if (z.type === 'boss' || z.type === 'tank') {
     const bw = z.r * 1.8; ctx.fillStyle = '#fff'; ctx.fillRect(x - bw / 2, y - z.r - 14 * U, bw, 5 * U);
     ctx.fillStyle = RED; ctx.fillRect(x - bw / 2, y - z.r - 14 * U, bw * Math.max(0, z.hp / z.maxHp), 5 * U);
@@ -321,8 +377,8 @@ function hud() {
   $('#hpFill').style.width = (p.hp / p.maxHp * 100) + '%'; $('#hpTxt').textContent = `${Math.ceil(p.hp)} / ${p.maxHp}`;
   $('#clock').textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
   $('#lvlTxt').textContent = G.mode === 'level' ? `第 ${G.n} 关${isBossLv(G.n) ? '·Boss' : ''}` : `无尽 难度 ${Math.floor(diff())}`;
-  $('#killTxt').textContent = `击倒 ${G.kills}`; $('#skewTxt').textContent = `飞串 ×${G.skewers}`;
-  const ub = $('#ultBtn'), ready = G.ult >= 100 && !G.ring;
+  $('#killTxt').textContent = `击倒 ${G.kills}`; $('#skewTxt').textContent = G.ceo === 'pearl' ? `珍珠弹跳 ×${G.skewers - 1}` : `飞串 ×${G.skewers}`;
+  const ub = $('#ultBtn'), ready = G.ult >= 100 && !G.ring && !G.frost;
   $('#ultFill').style.height = G.ult + '%'; ub.disabled = !ready; ub.classList.toggle('ready', ready);
 }
 function renderLv() {
@@ -334,13 +390,19 @@ function renderLv() {
   const eb = $('#endlessBtn'), open = proto.cleared >= MAX_LV;
   eb.disabled = !open || !canPlay(); eb.textContent = open ? `无尽模式·最好 ${Math.floor(proto.endBest.t)} 秒` : `无尽·通关 ${MAX_LV} 关开放`;
 }
+const HERO_DESC = {
+  c77: '拖动屏幕走位，自动扔飞串；能量满了放<b>火圈</b>。撑到倒计时结束就过关，共 50 关，通关后开放无尽模式。',
+  pearl: '拖动屏幕走位，自动弹珍珠：打中会弹到下一只僵尸；能量满了放<b>冰沙风暴</b>，全屏冻住僵尸。撑到倒计时结束就过关，共 50 关，通关后开放无尽模式。',
+};
 function renderHero() {
   const id = proto.ceo, h = id && ZB.HEROES[id], name = h ? h.name : 'CEO';
   $('#heroName').textContent = `${name} 打僵尸`; document.title = `${name} 打僵尸`;
   const img = $('.hero img'), src = `../art/face_${id || 'c77'}.webp`; if (img.getAttribute('src') !== src) { img.setAttribute('src', src); img.alt = name; }
   $('#heroNote').textContent = !proto.ready ? '' : !id ? '烧烤摊还没派 CEO：回经营页派一位再来打。' : skilled(id) ? `本局由 ${name} 上场，开打后不换人。` : `${name} 上场：专属技能还在做，这局先用 77 的飞串和火圈。`;
   const sb = $('#startBtn'); sb.disabled = !canPlay(); sb.textContent = proto.ready && !id ? '烧烤摊没有 CEO，先回经营页派一位' : '开打！';
-  const ub = $('#ultBtn .ult-lbl'); if (ub && h && h.ult) ub.textContent = h.ult;
+  const sk = skilled(id) ? id : 'c77';
+  $('#ultBtn .ult-lbl').textContent = ZB.HEROES[sk].btn || ZB.HEROES[sk].ult; $('#ultBtn').setAttribute('aria-label', `大招：${ZB.HEROES[sk].ult}`);
+  $('#heroDesc').innerHTML = HERO_DESC[sk];
 }
 function renderTrain() {
   renderLv(); renderHero();

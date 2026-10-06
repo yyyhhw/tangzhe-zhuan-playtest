@@ -103,8 +103,19 @@ with sync_playwright() as p:
         check(bad['c'] == 5e10 and bad['lv'] == {'atk': 0, 'rate': 30, 'hp': 0, 'ult': 0} and bad['best'] == 0 and bad['cl'] == 50 and bad['eb'] == {'t': 0, 'kills': 0}, f'{dn} 坏档：非法字段回默认 / 截到范围，不报错 {bad}')
         # 上场角色：?ceo= 模拟烧烤店在任 CEO；技能没做的显示即将开放，没人在任提示去派人，两种都开不了局
         hero = lambda: S(pg, "({h: document.getElementById('heroName').textContent, n: document.getElementById('heroNote').textContent, s: document.getElementById('startBtn').disabled, e: document.getElementById('endlessBtn').disabled, img: document.querySelector('.hero img').getAttribute('src'), st: __zb.start('level', 1), g: !!__zb.G})")
+        pg.goto(URL + '?ceo=otaku'); pg.wait_for_timeout(400); ho = hero()
+        check(ho['h'] == '阿宅店长 打僵尸' and '先用 77' in ho['n'] and not ho['s'] and ho['img'].endswith('face_otaku.webp') and ho['g'], f'{dn} 阿宅在任：技能没做先用 77 的打法，可以开打 {ho}')
         pg.goto(URL + '?ceo=pearl'); pg.wait_for_timeout(400); hp_ = hero()
-        check(hp_['h'] == '珍珠姐 打僵尸' and '先用 77' in hp_['n'] and not hp_['s'] and hp_['img'].endswith('face_pearl.webp') and hp_['st'] is not False and hp_['g'], f'{dn} 珍珠姐在任：显示珍珠姐头像，技能没做先用 77 的打法，可以开打 {hp_}')
+        check(hp_['h'] == '珍珠姐 打僵尸' and '本局由 珍珠姐' in hp_['n'] and hp_['img'].endswith('face_pearl.webp') and hp_['g'] and S(pg, "__zb.G.ceo") == 'pearl', f'{dn} 珍珠姐在任：显示珍珠姐、可以开打 {hp_}')
+        pk = S(pg, """(()=>{ const G = __zb.G; G.p.hp = 1e9; const k = new Set(); let bounced = 0;
+          for (let i = 0; i < 600; i++) { __zb.step(1/30); for (const b of G.bs) { k.add(b.kind || 'skewer'); if (b.bounce < G.skewers - 1) bounced++; } }
+          return { kinds: [...k], bounced, kills: G.kills, lbl: document.querySelector('#ultBtn .ult-lbl').textContent, desc: document.getElementById('heroDesc').textContent, skew: document.getElementById('skewTxt').textContent }; })()""")
+        check(pk['kinds'] == ['pearl'] and pk['bounced'] > 0 and pk['kills'] > 0 and pk['lbl'] == '冰沙' and '珍珠' in pk['desc'] and '弹跳' in pk['skew'], f'{dn} 珍珠姐普攻：只出珍珠弹、打中会弹到下一只、能击倒 {pk}')
+        pu = S(pg, """(()=>{ const G = __zb.G; G.ult = 100; const ok = __zb.castUlt(); __zb.step(0.05); const n = G.zs.length, fz = G.zs.filter(z => z.slow > 0).length;
+          const x0 = G.zs.filter(z => z.type !== 'boss').map(z => [z.x, z.y]); __zb.step(0.2); const mv = G.zs.filter(z => z.type !== 'boss').slice(0, x0.length).reduce((m, z, i) => Math.max(m, x0[i] ? Math.hypot(z.x - x0[i][0], z.y - x0[i][1]) : 0), 0);
+          const ring = !!G.ring; for (let i = 0; i < 100; i++) __zb.step(1/30); return { ok, n, fz, mv, ring, end: G.frost === null }; })()""")
+        check(pu['ok'] and pu['n'] > 0 and pu['fz'] == pu['n'] and pu['mv'] < 6 and not pu['ring'] and pu['end'], f'{dn} 珍珠姐大招冰沙风暴：全屏冻住、僵尸几乎不动、不出火圈、3 秒后结束 {pu}')
+        pg.screenshot(path=f'{OUT}/{tag}_pearl.png')
         pg.goto(URL + '?ceo=nobody'); pg.wait_for_timeout(400); hn = hero()
         check('派' in hn['n'] and hn['s'] and hn['st'] is False and not hn['g'], f'{dn} 没人在任：提示回经营派 CEO，开不了局 {hn}')
         pg.goto(URL); pg.wait_for_timeout(400); h7 = S(pg, "({h: document.getElementById('heroName').textContent, s: document.getElementById('startBtn').disabled, c: __zb.proto.ceo})")
