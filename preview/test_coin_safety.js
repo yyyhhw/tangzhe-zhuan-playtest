@@ -30,6 +30,13 @@ t('上限：差 5 到上限时团单 +100 → 停在正好 1e15，零头清 0，
 t('上限：到 1e15 后继续入账 → 余额不再增长', () => { const st = full(CAP); E.settleOrder(st, 1e9); E.settleSpecial(st, 3); return st.coins === CAP; });
 t('上限：到上限后照样能花钱，花完继续赚', () => { const st = full(CAP); const r = E.upgradeShop(st, 0); E.settleOrder(st, 10); return r.ok && st.coins === CAP - r.cost + 10; });
 
+/* ===== 1b. 熊大清单第 5 条：几十亿 / 几百亿量级照常（小额累计、团单、升级、存档往返都精确）===== */
+for (const B of [5e9, 3.7e10, 5e10, 8.8e11]) {
+  t(`${B / 1e8} 亿余额：每帧 0.6/秒小额收入 1 分钟 +36，一点不丢`, () => { const st = full(B); for (let k = 0; k < 3750; k++) E.addCoins(st, 0.6 * 0.016); return Math.abs(bal(st) - (B + 36)) < 1e-4; });
+  t(`${B / 1e8} 亿余额：团单 + 升级扣款后余额精确（整数部分是整数）`, () => { const st = full(B); E.settleOrder(st, 123456.789); const c = E.upgradeCost(1, st.shops[1].lv); const r = E.upgradeShop(st, 1); return r.ok && Number.isInteger(st.coins) && Math.abs(bal(st) - (B + 123456.789 - c)) < 1e-4; });
+  t(`${B / 1e8} 亿余额：存档往返（JSON → loadSave）余额 / 零头逐位相同`, () => { const st = full(B); E.addCoins(st, 0.37); const r = E.loadSave(JSON.stringify(st), null, T0); return r.source === 'main' && r.st.coins === st.coins && r.st.coinFrac === st.coinFrac; });
+}
+
 /* ===== 2. 旧档超上限：保留余额和等级，停止增长，读档不降级 ===== */
 {
   const legacy = { v:3, rev:7, coins:3e16, totalEarned:4e16, shops:[{ open:true, lv:150, emp:40 }, { open:true, lv:120, emp:38 }, { open:true, lv:99, emp:30 }, { open:true, lv:88, emp:30 }],
