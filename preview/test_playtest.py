@@ -1116,6 +1116,74 @@ with sync_playwright() as p:
     check(not [e for e in errs if 'person12c1' in e or 'spec12c1' in e], '12c1 新人物 / 图标绘制无控制台报错')
     pc.close()
 
+    print('== 12c2. 家具：面板灯等比显示（不拉变形）/ 竖放选图（有侧面图用侧面图，没有保持正面图兜底）==')
+    import struct, zlib
+    def png_bytes(w, h):
+        raw = b''.join(b'\x00' + bytes([230, 57, 70, 255]) * w for _ in range(h))
+        def chunk(t, d): return struct.pack('>I', len(d)) + t + d + struct.pack('>I', zlib.crc32(t + d) & 0xffffffff)
+        return b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', w, h, 8, 6, 0, 0, 0)) + chunk(b'IDAT', zlib.compress(raw)) + chunk(b'IEND', b'')
+    GEO_JS = """(uid=>{const e=document.querySelector('#roomFloor .furn[data-uid="'+uid+'"]'); if(!e) return null; const i=e.querySelector('img'), fi=e.querySelector('.fi'), rm=document.querySelector('#room'), rr=rm.getBoundingClientRect(), bt=parseFloat(getComputedStyle(rm).borderTopWidth)||0; if(!i) return {noimg:true, cls:e.className};
+      const eb=e.getBoundingClientRect(), b=i.getBoundingClientRect(), sc=Math.min(b.width/i.naturalWidth,b.height/i.naturalHeight), dw=i.naturalWidth*sc, dh=i.naturalHeight*sc, cs=getComputedStyle(i);
+      return {src:i.getAttribute('src'), cls:i.className, art:e.classList.contains('art'), nw:i.naturalWidth, nh:i.naturalHeight, ew:eb.width, eh:eb.height, dw, dh, dcx:b.left+b.width/2, ecx:eb.left+eb.width/2, foot:Math.abs(b.bottom-eb.bottom), top:b.bottom-dh, roomTop:rr.top+bt, fit:cs.objectFit, tf:cs.transform, fiH:fi.style.height}})"""
+    def place12c2(pg, items):
+        return S(pg, "(()=>{const s=__tzz.state,E=__tzz.E; s.coins=1e9; s.homes.c77.placed.slice().forEach(q=>E.storeItem(s,'c77',q.uid)); const items=" + json.dumps(items) + "; items.forEach(([f])=>E.buyFurniture(s,f)); const r=items.map(([f,x,y,rot])=>{const q=E.placeItem(s,'c77',f,x,y,rot); return q.ok?q.uid:q.why}); __tzz.persist(); __tzz.renderTab(); return r;})()")
+    def wait_imgs(pg): pg.wait_for_function("[...document.querySelectorAll('#roomFloor .furn img')].every(i=>i.complete&&i.naturalWidth)", timeout=15000)
+    # 1) 面板灯：素材 240×1331（5.55:1），占地 1×1；房间顶边封顶 = 占地 1 + 后墙 2 = 3 格高 → 等比最宽 ≈ 0.54 格。三机型锁住：比例不变、高 = 3 格、贴底居中、不出房间顶
+    for dname in ['iPhone SE', 'iPhone SE (3rd gen)', 'iPhone 15']:
+        lc = b.new_context(**p.devices[dname]); lp = lc.new_page(); hook(lp, '12c2-lamp-' + dname)
+        lp.goto(URL); lp.evaluate("localStorage.clear()"); lp.reload(); lp.wait_for_timeout(800); close_modals(lp)
+        lp.locator('#bottomNav [data-tab="home"]').click(); lp.wait_for_timeout(600); close_modals(lp)
+        u = place12c2(lp, [['furn_otaku_panel_lamp', 0, 0, 0], ['furn_otaku_panel_lamp', 3, 3, 1], ['furn_lamp', 1, 0, 0]])
+        check(all(isinstance(x, str) and len(x) > 0 and x == x.strip() for x in u) and len(set(u)) == 3, f'12c2 {dname}：面板灯 ×2（靠后墙 / 前排转 90°）+ 普通落地灯摆好 {u}')
+        wait_imgs(lp)
+        for uid, where in [(u[0], '靠后墙'), (u[1], '前排转 90°')]:
+            g = S(lp, GEO_JS + "('" + uid + "')")
+            ok = g and g['nw'] == 240 and g['nh'] == 1331 and g['fit'] == 'contain' and g['tf'] == 'none' \
+                and abs((g['dh'] / g['dw']) - 1331 / 240) < 0.06 and abs(g['dh'] - 3 * g['eh']) < 1.5 \
+                and g['dw'] / g['ew'] >= 0.53 and g['dw'] <= g['ew'] + 0.5 and abs(g['dcx'] - g['ecx']) < 1 and g['foot'] < 1.5 and g['top'] >= g['roomTop'] - 1
+            check(ok, f"12c2 {dname} 面板灯（{where}）：等比 {round(g['dh']/g['dw'],2) if g else '?'}≈5.55、高 3 格（封顶到房间顶）、宽 {round(g['dw']/g['ew']*100) if g else '?'}% 格（等比最大）、贴底居中、不越顶 {g and {k: round(v,1) if isinstance(v,float) else v for k,v in g.items() if k in ('ew','eh','dw','dh','top','roomTop','foot')}}")
+        if dname == 'iPhone 15':
+            g2 = S(lp, GEO_JS + "('" + u[2] + "')")
+            check(g2 and abs(g2['dw'] - g2['ew']) < 1 and abs(g2['dh'] / g2['dw'] - 468 / 240) < 0.03, f"12c2 普通落地灯不受影响：满 1 格宽、等比 468/240 {g2 and (round(g2['dw'],1), round(g2['dh'],1))}")
+        lc.close()
+    # 2) 选图（纯函数，全 200 件 × 4 个方向）：rot 1/3 且 FURN_SIDE 登记了 → 侧面图；其余 → 正面图（原兜底）
+    sc = b.new_context(**dev); sp = sc.new_page(); hook(sp, '12c2-side')
+    sp.goto(URL); sp.evaluate("localStorage.clear()"); sp.reload(); sp.wait_for_timeout(800); close_modals(sp)
+    sel = S(sp, """(()=>{const E=__tzz.E, A=__tzz.FURN_ART, SD=__tzz.FURN_SIDE, all=Object.values(E.FURN_BY_ID), bad=[]; let n=0;
+      for (const f of all) { const nm=f.id.replace(/^furn_/,''); if(!A[nm]) continue; for (const r of [0,1,2,3]) { const h=__tzz.furnInner(f.id,r,true), side=(r&1)&&SD[nm]&&__tzz.FURN_UP[nm]; n++;
+        const want=side?'art/furn_'+nm+'_side.webp':'art/furn_'+nm+'.webp'; if(!h.includes('src="'+want)) bad.push(f.id+'@'+r); } }
+      const tallOdd=all.filter(f=>!f.wall&&f.layer!=='rug'&&f.w!==f.h&&__tzz.FURN_UP[f.id.replace(/^furn_/,'')]).length;
+      return {n, bad, side:Object.keys(SD), tallOdd}})()""")
+    check(sel['n'] >= 700 and sel['bad'] == [], f"12c2 选图：有图家具 × 4 方向共 {sel['n']} 组，竖放登记侧面图的用侧面图、其余都用正面图（侧面图登记 {sel['side']}；非方形、往上伸的家具 {sel['tallOdd']} 件目前都没侧面图 → 正面图兜底）{sel['bad'][:5]}")
+    sp.locator('#bottomNav [data-tab="home"]').click(); sp.wait_for_timeout(600); close_modals(sp)
+    # 3) 沙发竖放，没侧面图：保持原兜底（正面图、1 格宽、等比 225/600、贴底）
+    u = place12c2(sp, [['furn_sofa', 5, 1, 1], ['furn_rocket_pipe_sofa', 4, 1, 1], ['furn_sofa', 0, 3, 0]])
+    check(len(u) == 3 and all(isinstance(x, str) and x for x in u), f'12c2 沙发竖放 (5,1) / 钢管沙发竖放 (4,1) / 沙发横放 (0,3) 摆好 {u}')
+    wait_imgs(sp)
+    g = S(sp, GEO_JS + "('" + u[0] + "')")
+    check(g and g['src'].startswith('art/furn_sofa.webp') and abs(g['dw'] - g['ew']) < 1 and abs(g['dh'] / g['dw'] - 225 / 600) < 0.02 and g['foot'] < 1.5 and abs(g['eh'] - 3 * g['ew']) < 2, f"12c2 沙发竖放、没侧面图：保持正面图兜底（1 格宽、等比、贴底）{g and (g['src'], round(g['dw'],1), round(g['dh'],1))}")
+    # 4) 模拟熊大补了 furn_sofa_side.webp（240×800）：竖放换侧面图、1 格宽、高 800/240 格、贴底；rot 3 镜像；横放仍正面图
+    sp.route('**/art/furn_sofa_side.webp*', lambda r: r.fulfill(status=200, content_type='image/png', body=png_bytes(240, 800)))
+    S(sp, "__tzz.FURN_SIDE.sofa = 800/240; __tzz.FURN_SIDE.rocket_pipe_sofa = 3; __tzz.renderTab()")
+    sp.wait_for_function("(()=>{const e=document.querySelector('#roomFloor .furn[data-uid=\"" + u[1] + "\"] img'); return e&&e.complete&&e.naturalWidth&&!e.dataset.front})()", timeout=15000)
+    wait_imgs(sp)
+    g = S(sp, GEO_JS + "('" + u[0] + "')")
+    check(g and g['src'].startswith('art/furn_sofa_side.webp') and g['nw'] == 240 and g['nh'] == 800 and 'mir' not in g['cls'] and abs(g['dw'] - g['ew']) < 1 and abs(g['dh'] - g['ew'] * 800 / 240) < 1.5 and g['foot'] < 1.5,
+          f"12c2 登记侧面图后：沙发竖放（rot 1）用 furn_sofa_side.webp、1 格宽、高 {round(g['dh']/g['ew'],2) if g else '?'} 格（=800/240）、贴底 {g and g['src']}")
+    gh = S(sp, GEO_JS + "('" + u[2] + "')")
+    check(gh and gh['src'].startswith('art/furn_sofa.webp') and abs(gh['dw'] - gh['ew']) < 1, f"12c2 同一件沙发横放仍用正面图 {gh and gh['src']}")
+    # 4b) 侧面图加载失败（钢管沙发登记了但没这张图）→ 自动回正面图、高度回正面比例、不丢图
+    gp = S(sp, GEO_JS + "('" + u[1] + "')")
+    check(gp and gp['src'].startswith('art/furn_rocket_pipe_sofa.webp') and gp['art'] and abs(gp['dh'] / gp['dw'] - 337 / 600) < 0.02 and abs(gp['dw'] - gp['ew']) < 1 and gp['foot'] < 1.5, f"12c2 侧面图缺失/加载失败 → 回正面图兜底（不变 emoji、比例 337/600）{gp and (gp['src'], gp['fiH'])}")
+    r3 = S(sp, "(()=>{const s=__tzz.state,E=__tzz.E,q=s.homes.c77.placed.find(x=>x.uid==='" + u[0] + "'); q.rot=3; const ok=E.canPlace(s,'c77',q.fid,q.x,q.y,3,q.uid).ok; __tzz.persist(); __tzz.renderTab(); return ok})()")
+    wait_imgs(sp)
+    g = S(sp, GEO_JS + "('" + u[0] + "')")
+    check(r3 and g and g['src'].startswith('art/furn_sofa_side.webp') and 'mir' in g['cls'] and g['tf'].startswith('matrix(-1'), f"12c2 rot 3：同一张侧面图水平镜像 {g and (g['cls'], g['tf'])}")
+    sp.locator('#room').screenshot(path=f'{SHOTS}/12c2_side_sim.png')
+    S(sp, "delete __tzz.FURN_SIDE.sofa; delete __tzz.FURN_SIDE.rocket_pipe_sofa; __tzz.renderTab()")
+    sc.close()
+    errs[:] = [e for e in errs if not (e.startswith('12c2-side') and ('_side.webp' in e or '404' in e))]  # 4b 故意请求不存在的侧面图
+
     print('== 9. 各尺寸 iPhone 视口 ==')
     for name in ['iPhone SE', 'iPhone SE (3rd gen)', 'iPhone 13 Mini', 'iPhone 15', 'iPhone 15 Pro Max', 'iPhone 16 Pro Max']:
         c = b.new_context(**p.devices[name]); q = c.new_page(); hook(q, name)

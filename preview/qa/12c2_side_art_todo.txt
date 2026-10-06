@@ -1,0 +1,90 @@
+# 12c2 竖放侧面图缺图清单（自动生成：地上、非方形、按 FURN_UP 往上伸、目前没有侧面图的家具）
+# 规格：art/furn_<名>_side.webp；宽 = 竖放后的占地宽（原占地「深」h：1 格 → 240px，2 格 → 400px，3 格 → 600px），高随画面（竖放占地有 w 格深，往上伸部分另算）；背景透明、底边贴地、朝右（rot 3 程序镜像）
+# 交图后在 preview/app.js 的 FURN_SIDE 登记「图高 / 图宽」即可生效；没交的保持正面图等比兜底
+# 优先级 P1 = 竖放最难看（正面图塞进 1 格宽后只剩占地 ≤20% 面积）的坐具/床
+
+## 坐具/沙发（21）
+P1  furn_s77_window_bench  飘窗阅读长榻  占地 3×1 → 竖放 1×3  侧面图宽 240px  （现竖放正面图只占占地 8%）
+P1  furn_rocket_rail_bench  轨枕钢架长凳  占地 3×1 → 竖放 1×3  侧面图宽 240px  （现竖放正面图只占占地 10%）
+P1  furn_pearl_tea_gongfu_desk  石槽功夫茶案  占地 3×1 → 竖放 1×3  侧面图宽 240px  （现竖放正面图只占占地 12%）
+P1  furn_sofa  沙发  占地 3×1 → 竖放 1×3  侧面图宽 240px  （现竖放正面图只占占地 12%）
+P1  furn_pearl_scallop_sofa  扇贝三人沙发  占地 3×1 → 竖放 1×3  侧面图宽 240px  （现竖放正面图只占占地 13%）
+P1  furn_s77_heart_bench  爱心靠背长凳  占地 3×1 → 竖放 1×3  侧面图宽 240px  （现竖放正面图只占占地 14%）
+P1  furn_rocket_pipe_sofa  钢管皮垫沙发  占地 3×1 → 竖放 1×3  侧面图宽 240px  （现竖放正面图只占占地 19%）
+P2  furn_pearl_picnic_table  折叠野餐桌  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 21%）
+P2  furn_otaku_kotatsu  被炉矮桌  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 25%）
+P2  furn_rocket_workbench  铆钉检修台  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 27%）
+P2  furn_otaku_modular_couch  积木拼接沙发  占地 3×2 → 竖放 2×3  侧面图宽 400px  （现竖放正面图只占占地 29%）
+P2  furn_otaku_arcade_bench  街机双座长凳  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 32%）
+P2  furn_otaku_streaming_desk  双翼直播桌  占地 3×2 → 竖放 2×3  侧面图宽 400px  （现竖放正面图只占占地 32%）
+P2  furn_pearl_tea_bar  弧形调茶吧台  占地 3×2 → 竖放 2×3  侧面图宽 400px  （现竖放正面图只占占地 33%）
+P2  furn_s77_sewing_desk  手摇缝纫桌  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 34%）
+P2  furn_s77_curved_sectional  花瓣转角沙发  占地 3×2 → 竖放 2×3  侧面图宽 400px  （现竖放正面图只占占地 37%）
+P2  furn_pearl_conversation_pit  环形茶会沙发  占地 3×2 → 竖放 2×3  侧面图宽 400px  （现竖放正面图只占占地 37%）
+P2  furn_rocket_cantilever_desk  悬臂作图桌  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 41%）
+P2  furn_otaku_manga_desk  斜面画稿桌  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 46%）
+P2  furn_rocket_zero_g_lounger  弓架悬挂躺椅  占地 2×3 → 竖放 3×2  侧面图宽 600px  （现竖放正面图只占占地 147%）
+P2  furn_otaku_gaming_chair  高背电竞椅  占地 1×2 → 竖放 2×1  侧面图宽 400px  （现竖放正面图只占占地 274%）
+
+## 床（8）
+P1  furn_pearl_tea_daybed  茶歇藤编榻  占地 3×1 → 竖放 1×3  侧面图宽 240px  （现竖放正面图只占占地 9%）
+P1  furn_s77_quilt_daybed  拼布午睡榻  占地 3×1 → 竖放 1×3  侧面图宽 240px  （现竖放正面图只占占地 9%）
+P2  furn_rocket_capsule_bunk  舱式单层床  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 23%）
+P2  furn_pearl_tea_loft  茶点高架床  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 52%）
+P2  furn_otaku_bunk_manga  上下铺漫画床  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 59%）
+P2  furn_rocket_field_cot  折叠行军床  占地 2×3 → 竖放 3×2  侧面图宽 600px  （现竖放正面图只占占地 161%）
+P2  furn_otaku_sofa_sleeper  翻折懒人床  占地 2×3 → 竖放 3×2  侧面图宽 600px  （现竖放正面图只占占地 189%）
+P2  furn_otaku_gaming_pod  游戏休息舱  占地 2×3 → 竖放 3×2  侧面图宽 600px  （现竖放正面图只占占地 189%）
+
+## 柜架（26）
+P2  furn_pearl_archive_apothecary  百格茶香斗柜  占地 3×1 → 竖放 1×3  侧面图宽 240px  （现竖放正面图只占占地 20%）
+P2  furn_pearl_sideboard_island  茶台中岛柜  占地 3×2 → 竖放 2×3  侧面图宽 400px  （现竖放正面图只占占地 25%）
+P2  furn_otaku_modular_pixel_shelf  像素阶梯书架  占地 3×1 → 竖放 1×3  侧面图宽 240px  （现竖放正面图只占占地 29%）
+P2  furn_rocket_tool_chest  滚轮工具斗柜  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 31%）
+P2  furn_rocket_specimen_drawer  矿石标本斗柜  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 31%）
+P2  furn_pearl_bakery_display  弧玻璃甜点柜  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 32%）
+P2  furn_otaku_controller_drawers  手柄抽屉柜  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 35%）
+P2  furn_otaku_figure_vitrine  阶梯手办柜  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 39%）
+P2  furn_s77_attic_trunk  阁楼旅行箱柜  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 40%）
+P2  furn_rocket_mesh_rack  钢网通透货架  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 41%）
+P2  furn_s77_basket_cabinet  编篮收纳柜  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 41%）
+P2  furn_s77_sewing_cabinet  针线折门柜  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 45%）
+P2  furn_rocket_steel_locker  铆钉更衣柜  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 52%）
+P2  furn_rocket_pipe_bookcase  水管书架  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 52%）
+P2  furn_s77_round_corner_chest  圆角五斗柜  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 53%）
+P2  furn_otaku_server_display_rack  透侧收藏机柜  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 54%）
+P2  furn_pearl_tea_cubby  茶罐九宫格柜  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 56%）
+P2  furn_pearl_glass_wardrobe  长虹玻璃衣柜  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 57%）
+P2  furn_otaku_locker_wardrobe  储物柜式衣柜  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 64%）
+P2  furn_s77_ladder_shelf  梯形置物架  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 67%）
+P2  furn_bookshelf  书架  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 75%）
+P2  furn_wardrobe  衣柜  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 75%）
+P2  furn_rocket_airlock_wardrobe  气闸圆门衣柜  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 79%）
+P2  furn_s77_pantry_hutch  玻璃餐具柜  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 87%）
+P2  furn_pearl_rattan_bookcase  藤网拱顶书柜  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 87%）
+P2  furn_rocket_orbital_archive  轨道旋转档案架  占地 3×2 → 竖放 2×3  侧面图宽 400px  （现竖放正面图只占占地 104%）
+
+## 电器/台（11）
+P2  furn_otaku_triple_monitor_station  三屏环抱主机台  占地 3×1 → 竖放 1×3  侧面图宽 240px  （现竖放正面图只占占地 18%）
+P2  furn_pearl_tea_brewer  多壶自动泡茶台  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 28%）
+P2  furn_rocket_hydroponic_unit  水培循环机  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 30%）
+P2  furn_pearl_milk_frother_bar  奶泡双杯机台  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 35%）
+P2  furn_tv  电视  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 36%）
+P2  furn_otaku_console_station  双手柄游戏台  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 36%）
+P2  furn_s77_record_console  黑胶唱机柜  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 37%）
+P2  furn_s77_sewing_machine_stand  电动缝纫工作台  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 45%）
+P2  furn_rocket_coffee_pressure_unit  压力咖啡机台  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 64%）
+P2  furn_s77_stove_oven  珐琅烤箱炉  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 67%）
+P2  furn_pearl_dessert_chiller  旋盘甜点冰柜  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 89%）
+
+## 灯具（5）
+P2  furn_s77_hearth_light  微光壁炉灯  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 24%）
+P2  furn_pearl_fountain_light  水纹玻璃灯泉  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 26%）
+P2  furn_rocket_solar_array_lamp  太阳帆翼灯  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 46%）
+P2  furn_otaku_arcade_marquee_lamp  游戏厅招牌灯架  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 50%）
+P2  furn_pearl_tea_arc_lamp  茶勺弧光灯  占地 1×2 → 竖放 2×1  侧面图宽 400px  （现竖放正面图只占占地 299%）
+
+## 绿植（3）
+P2  furn_otaku_aquatic_pixel_tank  像素水草缸  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 20%）
+P2  furn_pearl_tea_tree_screen  茶树连盆屏风  占地 3×1 → 竖放 1×3  侧面图宽 240px  （现竖放正面图只占占地 22%）
+P2  furn_s77_mini_greenhouse  玻璃小温室  占地 2×1 → 竖放 1×2  侧面图宽 240px  （现竖放正面图只占占地 59%）
