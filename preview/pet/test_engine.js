@@ -567,6 +567,51 @@ section('21. p4b：屋里没地方站 = 等待安置（不崩）；坏档逐字�
   const w5 = world(305); const r5 = tryDo(() => PE.restore(w5, { v: 1, t: 'abc', savedAt: 'x', dog: { energy: '50', affinity: NaN } }, 5000));
   ok(!r5.err && w5.t === 0 && w5.dog.energy === C.ENERGY0 && w5.dog.affinity === C.AFF0 && !PE.bodyOverlap(w5), '字符串 t / savedAt、字符串精力、NaN 亲密：按默认（t 0、精力 70、亲密 40），站在安全处');
 }
+section('22. p4c：合法读档边界——满屋存档读进只空 1 格的房间不穿家具；满屋早退保留疲倦（熊大 15:20 p4b 复核）');
+{
+  const cells = (cols, rows, skip) => { const a = []; for (let y = 0; y < rows; y++) for (let x = 0; x < cols; x++) if (!(skip || []).some(([i, j]) => i === x && j === y)) a.push({ uid: 'p' + x + '_' + y, fid: 'furn_plant', x, y }); return a; };
+  const room = (cols, rows, items) => ({ cols, rows, wallRows: 2, front: { x: cols / 2, y: rows - 0.3 }, bed: { x: 0, y: rows - 0.9, w: 1.3, h: 0.9 }, bowl: null, items });
+  const firstFrame = (w) => !bodyHit(w);
+  // (1) 恢复朝向：6×4 摆满 24 盆绿植 → 等待安置存档 → 读进只空 (2,1) 的房间
+  for (const [cols, rows] of [[6, 4], [8, 5], [10, 6]]) {
+    const wf = world(401, room(cols, rows, cells(cols, rows))); run(wf, 1);
+    for (const dir of ['E', 'W', 'N', 'S']) for (const now of [2000, 60000]) {
+      const s = PE.serialize(wf, 1000); s.dog.dir = dir; s.dog.x = 2.5; s.dog.y = 1.5;
+      const w = world(402, room(cols, rows, cells(cols, rows, [[2, 1]]))); const res = PE.restore(w, s, now);
+      const f0 = firstFrame(w), vd0 = visDir(w), sideOk = (w.dog.dir !== 'E' && w.dog.dir !== 'W') || w.dog.side === w.dog.dir;
+      const r1 = run(w, 0.5), r2 = run(w, 3);
+      ok(res.ok && !w.noRoom && f0 && clean(r1) && clean(r2) && sideOk && PE.bodyFree(w, w.dog.x, w.dog.y, w.dog.dir, 1e-6),
+        `${cols}×${rows} 存档朝 ${dir}（离线 ${(now - 1000) / 1000}s）读进只空 (2,1)：首帧（${vd0}）/ 0.5 秒 / 3.5 秒都不穿家具，side 同步（${JSON.stringify(r1)} ${JSON.stringify(r2)}）`);
+    }
+  }
+  { // 宽敞处存档朝向放得下 → 原样沿用（不乱改）
+    const w0 = world(403); run(w0, 3); w0.dog.dir = 'W'; const s = PE.serialize(w0, 1000);
+    const w = world(404); PE.restore(w, s, 1500);
+    ok(!PE.bodyFree(w, w.dog.x, w.dog.y, 'W', 1e-9) || w.dog.dir === 'W', '宽敞处读档：存档朝向放得下就沿用');
+  }
+  { // 只有 E/W 一侧放得下：换另一侧，不硬转南北
+    const w = world(405, room(6, 4, cells(6, 4, [[2, 1], [3, 1]])));
+    const s = PE.serialize(world(406, room(6, 4, cells(6, 4))), 1000); s.dog.dir = 'E'; s.dog.x = 3; s.dog.y = 1.5;
+    PE.restore(w, s, 1500); const r = run(w, 1);
+    ok(clean(r) && PE.bodyFree(w, w.dog.x, w.dog.y, w.dog.dir, 1e-6) && (w.dog.dir === 'N' || w.dog.dir === 'S' || w.dog.side === w.dog.dir), '空出 2 格横条读档：朝向放得下、不穿（' + w.dog.dir + '）');
+  }
+  // (2) 满屋早退前恢复疲倦：精力 20 睡到约 50、tired=true 时摆满存档
+  const full = () => world(410, room(6, 4, cells(6, 4)));
+  const tiredSave = (energy) => { const w = full(); const s = PE.serialize(w, 1000); s.dog.energy = energy; s.dog.tired = true; s.dog.asleep = false; return s; };
+  { const w = full(); const res = PE.restore(w, tiredSave(50), 2000);
+    ok(res.waiting && w.noRoom && w.dog.tired === true && Math.abs(w.dog.energy - 50.8) < 1e-6, '精力 50 / tired 存档 → 满屋读档：等待安置且保留 tired（精力 50.8）');
+    const ser = PE.serialize(w, 3000); ok(ser.dog.tired === true, '等待中再存档：tired 仍写进存档');
+    const w2 = full(); PE.restore(w2, ser, 3500); ok(w2.noRoom && w2.dog.tired === true, '等待中存档再满屋读入：tired 不丢');
+    PE.setLayout(w2, { items: cells(6, 4, [[1, 1], [2, 1], [3, 1], [4, 1], [1, 2], [2, 2], [3, 2], [4, 2]]) });
+    let rest = false, explore = false; const r = run(w2, 4, (ww) => { if (ww.dog.activity === 'rest') rest = true; if (['explore', 'sniff', 'play', 'wander'].includes(ww.dog.activity)) explore = true; });
+    ok(!w2.noRoom && rest && !explore && clean(r), '腾出空地出来后继续休息，不去探索（activity=' + w2.dog.activity + '）'); }
+  { const w = full(); PE.restore(w, tiredSave(50), 1000 + 30000);   // 离线 30 秒：50 + 24 = 74 ≥ 70
+    ok(w.noRoom && w.dog.energy >= C.RESTED && w.dog.tired === false, '离线后精力已回到 70 以上：满屋读档不延续疲倦'); }
+  { const w = full(); const s = tiredSave(30); s.dog.tired = false; PE.restore(w, s, 2000);
+    ok(w.noRoom && w.dog.tired === true, '精力 30（低于 35）没标 tired：满屋读档也按精力进疲倦'); }
+  { const w = full(); const s = tiredSave(60); s.dog.tired = false; PE.restore(w, s, 2000);
+    ok(w.noRoom && w.dog.tired === false, '精力 60、没疲倦：满屋读档不凭空疲倦'); }
+}
 
 console.log(`\n引擎测试：${pass} 过 / ${fail} 挂`);
 process.exit(fail ? 1 : 0);

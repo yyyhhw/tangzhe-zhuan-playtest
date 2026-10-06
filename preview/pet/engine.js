@@ -855,6 +855,16 @@
     if (Array.isArray(s.items)) out.items = s.items.filter(isObj);
     return out;
   }
+  /* p4c：读档恢复朝向——startStep 之前先验恢复出来的朝向放不放得下身子（safeSpot 可能选到只有南北站姿放得下的点）。
+     存档朝向放得下 → 沿用；E/W 放不下 → 先试另一侧；两侧都不行 → 南北（先 S 后 N）；side 跟着同步（E/W 时 = dir，南北时保留上次侧面）。 */
+  function restoreFace(w, dir) {
+    const d = w.dog, x = d.x, y = d.y, pref = DIRS4.includes(dir) ? dir : 'S';
+    const order = pref === 'E' || pref === 'W' ? [pref, pref === 'E' ? 'W' : 'E', 'S', 'N'] : [pref, pref === 'S' ? 'N' : 'S', 'E', 'W'];
+    let pick = order.find(c => bodyFree(w, x, y, c, 1e-9)) || 'S';
+    if (pick !== pref) w.stats.restoreFace = (w.stats.restoreFace || 0) + 1;
+    d.dir = pick; if (pick === 'E' || pick === 'W') d.side = pick;
+    return pick;
+  }
   // 回来：离线 = 自己在窝里休息（只回精力），不扣亲密、不动金币（本来就不接经济）、不复制小狗或球
   function restore(w, raw, nowMs) {
     const s = sanitizeSave(raw);
@@ -872,7 +882,9 @@
     const inBed = (elapsed >= CFG.OFFLINE_BED_AFTER || s.dog.asleep) && bed && bed.free;
     const inRoom = (p) => p.x != null && p.y != null && p.x >= 0 && p.y >= 0 && p.x <= w.cols && p.y <= w.rows;
     const spot = inBed ? null : (inRoom(s.dog) ? safeSpot(w, s.dog, 4) : null) || safeSpot(w, callSpot(w), Math.max(w.cols, w.rows));
-    if (!inBed && !spot) {   // p4b：屋里摆满了 → 等待安置（精力 / 亲密照常保留）
+    // p4c：疲倦状态先按离线后的精力恢复（满屋早退也要带上）；已回到 RESTED（70）以上就不再延续疲倦
+    d.tired = !inBed && (s.dog.tired || d.energy < CFG.TIRED) && d.energy < CFG.RESTED;
+    if (!inBed && !spot) {   // p4b：屋里摆满了 → 等待安置（精力 / 亲密 / 疲倦照常保留）
       setNoRoom(w);
       const b = w.ball; b.state = 'floor'; b.z = 0; b.vx = b.vy = 0; b.flight = null; const q = ballSpot(w, d, 3); b.x = q.x; b.y = q.y;
       return { ok: true, elapsed, energyGain: d.energy - e0, inBed: false, waiting: true, reverted: layout.reverted };
@@ -883,7 +895,7 @@
       d.tired = d.energy < CFG.RESTED;
       setPlan(w, 'rest', [{ k: 'sleep', label: '在窝里睡着（你不在时自己休息了）' }, { k: 'anim', clip: 'getup', label: '你回来了，伸懒腰起来' }, { k: 'fn', fn: (w) => { w.dog.tired = false; } }]);
     } else {
-      d.x = spot.x; d.y = spot.y; d.dir = s.dog.dir; d.tired = (s.dog.tired || d.energy < CFG.TIRED) && d.energy < CFG.RESTED;
+      d.x = spot.x; d.y = spot.y; restoreFace(w, s.dog.dir);
       setPlan(w, 'idle', [{ k: 'wait', dur: 1, label: '你回来了' }]);
     }
     d.step = d.plan.shift(); startStep(w, d.step);   // 回来第一帧就是安全姿势（窝里睡 / 站着），不等下一帧

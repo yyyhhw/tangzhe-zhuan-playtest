@@ -715,3 +715,6 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 .mall-count .mc-num b{margin:0 2px;color:var(--ink)}
 /* SE 最小屏：弹窗对白泡在 × 旁边不折行 */
 @media (max-width:360px){ .mpanel.has-x .mbubble{font-size:13px;padding:5px 10px;max-width:calc(100% - 56px);letter-spacing:0} }
+
+/* 12c2：竖放侧面图（art/furn_<名>_side.webp，登记在 app.js FURN_SIDE）；rot 3 水平镜像。没侧面图的保持正面图等比兜底 */
+.furn .fi img.mir{transform:scaleX(-1)}

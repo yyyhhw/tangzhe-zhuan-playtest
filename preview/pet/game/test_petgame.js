@@ -338,6 +338,37 @@ section('11. p4b：坏档逐字段容错（NaN / 无穷 / 字符串 / 负数 / �
   ok(!rr.err && rr.v.ok && !ser.err && finAll(ser.v) && [W0.dog.x, W0.dog.y, W0.dog.energy, W0.t].every(Number.isFinite), '引擎 restore 一堆坏字段：不报错，serialize 全是有限数值（' + (rr.err || ser.err || '') + '）');
 } catch (e) { ok(false, '11 整段报错：' + (e.message || e)); } }
 
+section('11b. p4c：合法读档边界（熊大 15:20 p4b 复核）——满屋存档读进只空 1 格不穿家具；满屋读档保留疲倦');
+{
+  const guard = (name, fn) => { try { fn(); } catch (e) { ok(false, name + ' 整段报错：' + (e.message || e)); } };
+  function fill(st, id) { const t = E.homeTier(E.homeOf(st, id).lv), c0 = st.coins; for (let y = 0; y < t.rows; y++) for (let x = 0; x < t.cols; x++) { st.coins = 1e9; E.buyFurniture(st, 'furn_plant'); E.placeItem(st, id, 'furn_plant', x, y, 0, 'floor'); } st.coins = c0; }
+  const visD = (w) => PA.IN_PLACE.includes(w.dog.anim.name) ? (w.dog.dir === 'W' ? 'W' : 'E') : w.dog.dir;
+  for (const dir of ['E', 'W', 'N', 'S']) guard('11b-1 ' + dir, () => {
+    clock = T0; const st = fresh(); st.coins = 9000; PG.buy(st, E, 'c77', T0, M);
+    const r = rt(); r.sync(st); tick(r, st, 3); fill(st, 'c77'); tick(r, st, 1);
+    r.w.dog.dir = dir; r.beforePersist(st); const coins = st.coins, aff = r.w.dog.affinity;
+    const s2 = reload(st); const H = E.homeOf(s2, 'c77'); E.storeItem(s2, 'c77', H.placed.find(p => p.x === 2 && p.y === 1).uid);
+    clock += 1000; const r2 = rt(); r2.sync(s2);
+    const f0 = r2.w && !r2.waiting && bodyOK(r2.w), v0 = r2.w && visD(r2.w);
+    let bad = 0; for (let n = 0; n < 5; n++) { tick(r2, s2, 0.1); if (!bodyOK(r2.w)) bad++; }
+    let bad2 = 0; for (let n = 0; n < 30; n++) { tick(r2, s2, 0.1); if (!bodyOK(r2.w)) bad2++; }
+    ok(f0 && bad === 0 && bad2 === 0 && Math.floor(r2.w.dog.x) === 2 && Math.floor(r2.w.dog.y) === 1, `小屋满屋存档（朝 ${dir}）读进只空 (2,1)：首帧（${v0}）/ 0.5 秒 / 3.5 秒都不穿家具（${bad}/${bad2}）`);
+    ok(s2.coins === coins && PG.owned(s2) && r2.w.dog.affinity === aff, `朝 ${dir}：金币 / 所有权 / 亲密不变`);
+  });
+  guard('11b-2', () => {
+    clock = T0; const st = fresh(); st.coins = 9000; PG.buy(st, E, 'c77', T0, M);
+    const r = rt(); r.sync(st); tick(r, st, 3); r.w.dog.energy = 50; r.w.dog.tired = true;
+    fill(st, 'c77'); tick(r, st, 0.5); ok(r.waiting, '精力 50 / 疲倦时摆满：等待安置');
+    r.beforePersist(st); const s2 = reload(st); clock += 1000; const r2 = rt(); r2.sync(s2); tick(r2, s2, 0.5);
+    ok(r2.waiting && r2.w.dog.tired === true, '满屋读档：疲倦保留（精力 ' + r2.w.dog.energy.toFixed(1) + '）');
+    const H = E.homeOf(s2, 'c77'); for (const p of H.placed.filter(p => p.y >= 1 && p.y <= 2 && p.x >= 1 && p.x <= 4)) E.storeItem(s2, 'c77', p.uid);
+    let rest = false, explore = false; for (let n = 0; n < 40; n++) { tick(r2, s2, 0.1); if (r2.w.dog.activity === 'rest') rest = true; if (r2.w.dog.activity === 'explore') explore = true; }
+    ok(!r2.waiting && rest && !explore && bodyOK(r2.w), '腾出空地出来后继续休息，不去探索（' + r2.w.dog.activity + '）');
+    r.w.dog.energy = 50; r.w.dog.tired = true; r.beforePersist(st); const s3 = reload(st); clock += 40000; const r3 = rt(); r3.sync(s3);   // 离线 41 秒：精力回到 70 以上
+    ok(r3.waiting && r3.w.dog.energy >= 70 && r3.w.dog.tired === false, '离线后精力已回到 70 以上：满屋读档不延续疲倦（精力 ' + r3.w.dog.energy.toFixed(1) + '）');
+  });
+}
+
 section('12. 静态检查：存档键 / 主线不受影响');
 {
   const pg = fs.readFileSync(path.join(__dirname, 'petgame.js'), 'utf8'), app = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
@@ -352,5 +383,5 @@ section('12. 静态检查：存档键 / 主线不受影响');
   ok(/PetGame\.norm\(m\.st, E\)/.test(app) && /petBeforePersist\(\);/.test(app), '读档 norm / 存档 beforePersist 两个钩子在');
 }
 
-console.log(`\n宠物 p4/p4b 游戏接入：${pass} 过 / ${fail} 失败`);
+console.log(`\n宠物 p4/p4b/p4c 游戏接入：${pass} 过 / ${fail} 失败`);
 process.exit(fail ? 1 : 0);

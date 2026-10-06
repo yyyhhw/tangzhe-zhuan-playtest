@@ -1,6 +1,6 @@
 # 从 preview/ 生成 preview/pet/game/ 的快照副本 + 宠物钩子（可重跑；每处替换都断言命中次数）
 import re, pathlib
-SRC = pathlib.Path(__file__).resolve().parents[3]; DST = SRC / 'pet' / 'game'; V = 'p4b'
+SRC = pathlib.Path(__file__).resolve().parents[3]; DST = SRC / 'pet' / 'game'; V = 'p4c'
 def rep(s, old, new, n=1):
     c = s.count(old); assert c == n, (old[:80], c); return s.replace(old, new)
 base = (SRC / 'version.json').read_text().strip()
@@ -13,7 +13,7 @@ bv = re.search(r'"v"\s*:\s*"([^"]+)"', base).group(1)
 (DST / 'version.json').write_text('{"v":"%s"}\n' % V)
 # ---------- index.html ----------
 h = (SRC / 'index.html').read_text()
-h = rep(h, '<title>躺着也能赚（预览·未上线）</title>', '<title>躺着也能赚（宠物 p4b 预览·未上线）</title>')
+h = rep(h, '<title>躺着也能赚（预览·未上线）</title>', '<title>躺着也能赚（宠物 p4c 预览·未上线）</title>')
 h = rep(h, 'href="icon.svg"', 'href="../../icon.svg"')
 h = rep(h, 'href="apple-touch-icon.png"', 'href="../../apple-touch-icon.png"')
 h = rep(h, f'<link rel="stylesheet" href="style.css?v={bv}">', f'<link rel="stylesheet" href="style.css?v={V}">\n<link rel="stylesheet" href="petgame.css?v={V}">')
@@ -25,7 +25,7 @@ h = h.replace('<head>', f'<head>\n<!-- 宠物 p4：预览 {bv} 的快照副本�
 # ---------- app.js ----------
 a = (SRC / 'app.js').read_text()
 a = a.replace('(() => {\n', f'/* 宠物 p4 副本：基于预览 {bv} 的 app.js，只加小狗钩子（搜「宠物 p4」）；存档键不变，小狗只占 state.pet 一个字段 */\n(() => {{\n', 1)
-a = rep(a, '`art/', '`../../art/', 4)
+a = rep(a, '`art/', '`../../art/', 5)
 a = rep(a, 'src="art/', 'src="../../art/', 2)
 a = rep(a, '  const m = E.migrate(raw, now());\n', '  const m = E.migrate(raw, now());\n  if (window.PetGame) PetGame.norm(m.st, E);   // 宠物 p4：没有 pet 字段 = 没买，旧档原样\n')
 a = rep(a, '  state.maxSeen = Math.max(state.maxSeen || 0, state.lastSeen);\n  state.rev++;\n', '  state.maxSeen = Math.max(state.maxSeen || 0, state.lastSeen);\n  petBeforePersist();   // 宠物 p4：小狗状态写进 state.pet.eng（同一份存档）\n  state.rev++;\n')
