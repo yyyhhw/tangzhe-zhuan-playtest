@@ -1,13 +1,13 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-<!-- 打僵尸 z2：独立原型（未上线）。只用模拟余额，不读写经营存档；角色造型复用 ../art。 -->
+<!-- 打僵尸 z3：单独打开 = 原型（模拟余额，只存 tangzhe-zombie-proto）；经营页用 ?embed=1 嵌入 = 共用经营金币，由经营页扣款写档。角色造型复用 ../art。 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#f7f1e3">
 <meta name="format-detection" content="telephone=no">
-<title>77 打僵尸（原型 z2·未上线）</title>
+<title>77 打僵尸</title>
 <link rel="icon" href="../icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="zombie.css?v=z2">
 </head>
@@ -26,6 +26,7 @@
 </div>
 
 <section id="menu" class="screen">
+  <button class="buy hidden" id="exitBtn" type="button">‹ 返回经营</button>
   <div class="card hero">
     <img src="../art/face_c77.webp" alt="77" width="96" height="96">
     <div>
@@ -39,8 +40,8 @@
     <button class="buy" id="endlessBtn" type="button" disabled>无尽模式</button>
   </div>
   <div class="card">
-    <div class="row"><h2>战斗训练</h2><span class="wallet">模拟余额 <b id="walletTxt">0</b></span></div>
-    <p class="note">原型用模拟金币，价格待金币安全方案定稿后再接经营金币。</p>
+    <div class="row"><h2>战斗训练</h2><span class="wallet"><span id="walletLbl">模拟余额</span> <b id="walletTxt">0</b></span></div>
+    <p class="note" id="trainNote">单独打开是原型模式：用模拟金币，不碰经营存档。</p>
     <div id="train"></div>
   </div>
   <button class="buy big red" id="startBtn" type="button">开打！</button>
@@ -63,6 +64,7 @@
   </div>
 </section>
 
-<script src="zombie.js?v=z2"></script>
+<script src="zbcore.js?v=z3"></script>
+<script src="zombie.js?v=z3"></script>
 </body>
 </html>

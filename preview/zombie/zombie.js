@@ -1,43 +1,55 @@
 'use strict';
-// 打僵尸 z1 原型：只有 77。存档只用 PROTO_KEY（模拟余额 + 训练等级），不碰 tangzhe-save / tangzhe-preview-save。
+// 打僵尸：只有 77。单独打开 = 原型模式（模拟余额，只存 PROTO_KEY）；?embed=1 嵌在经营页里 = 金币、训练、进度都由经营页管（postMessage），本页不写任何存档。
 (() => {
+const ZB = window.ZBCore;
+const EMBED = /[?&]embed=1(&|$)/.test(location.search) && window.parent !== window;
 const PROTO_KEY = 'tangzhe-zombie-proto';
-const MAX_LV = 50, HP_G = 1.085;
-const levelDur = n => Math.min(150, 60 + (n - 1) * 2);
+const MAX_LV = ZB.MAX_LV, HP_G = 1.085;
+const levelDur = ZB.levelDur;
 const isBossLv = n => n % 10 === 0;
 const INK = '#141414', PAPER = '#f7f1e3', RED = '#e63946', YEL = '#ffd23f';
 const $ = s => document.querySelector(s);
 const fin = (v, d) => (typeof v === 'number' && isFinite(v) ? v : d);
 
-// ---- 模拟钱包（接口与将来的统一钱包一致：balance / canSpend / spend）----
+// ---- 训练（价格 / 上限在 zbcore.js）----
 const TRAIN = [
-  { id: 'atk',  name: '串串火候', desc: lv => `普攻伤害 ×${(1.15 ** lv).toFixed(2)}`, base: 1e6 },
-  { id: 'rate', name: '翻串手速', desc: lv => `出串间隔 ${fireInterval(lv).toFixed(2)} 秒`, base: 1.5e6 },
-  { id: 'hp',   name: '摊主体力', desc: lv => `生命 ${Math.round(100 * 1.12 ** lv)}`, base: 1.2e6 },
-  { id: 'ult',  name: '火圈加柴', desc: lv => `火圈伤害 ×${(1.2 ** lv).toFixed(2)}`, base: 2e6 },
+  { id: 'atk',  name: '串串火候', desc: lv => `普攻伤害 ×${(1.15 ** lv).toFixed(2)}` },
+  { id: 'rate', name: '翻串手速', desc: lv => `出串间隔 ${fireInterval(lv).toFixed(2)} 秒` },
+  { id: 'hp',   name: '摊主体力', desc: lv => `生命 ${Math.round(100 * 1.12 ** lv)}` },
+  { id: 'ult',  name: '火圈加柴', desc: lv => `火圈伤害 ×${(1.2 ** lv).toFixed(2)}` },
 ];
-const MAX_TRAIN = 30;
-const price = (t, lv) => Math.round(t.base * 1.9 ** lv);
+const MAX_TRAIN = ZB.MAX_TRAIN;
+const price = (t, lv) => ZB.price(t.id, lv);
 function fireInterval(lv) { return Math.max(0.2, 0.55 * 0.95 ** lv); }
 function loadProto() {
+  if (EMBED) return Object.assign({ coins: 0, ready: false, blocked: false }, ZB.norm(null));
   let raw = null; try { raw = JSON.parse(localStorage.getItem(PROTO_KEY) || 'null'); } catch (e) { raw = null; }
-  const p = { coins: 5e10, lv: { atk: 0, rate: 0, hp: 0, ult: 0 }, best: 0, cleared: 0, endBest: { t: 0, kills: 0 } };
-  if (raw && typeof raw === 'object') {
-    p.coins = Math.max(0, Math.min(1e15, fin(raw.coins, p.coins)));
-    for (const k in p.lv) p.lv[k] = Math.max(0, Math.min(MAX_TRAIN, Math.floor(fin(raw.lv && raw.lv[k], 0))));
-    p.best = Math.max(0, fin(raw.best, 0));
-    p.cleared = Math.max(0, Math.min(MAX_LV, Math.floor(fin(raw.cleared, 0))));
-    const eb = raw.endBest || {}; p.endBest = { t: Math.max(0, fin(eb.t, 0)), kills: Math.max(0, Math.floor(fin(eb.kills, 0))) };
-  }
+  const p = Object.assign({ coins: 5e10, ready: true, blocked: false }, ZB.norm(raw));
+  if (raw && typeof raw === 'object') p.coins = Math.max(0, Math.min(1e15, fin(raw.coins, 5e10)));
   return p;
 }
 const proto = loadProto();
-const saveProto = () => { try { localStorage.setItem(PROTO_KEY, JSON.stringify(proto)); } catch (e) {} };
+const saveProto = () => { if (EMBED) return; try { localStorage.setItem(PROTO_KEY, JSON.stringify(proto)); } catch (e) {} };
+let pend = false, firstSync = true;
+let port = null;
+const host = m => { if (port) port.postMessage(m); };
 const Wallet = {
   balance: () => proto.coins,
-  canSpend: n => isFinite(n) && n > 0 && proto.coins >= n,
-  spend(n) { if (!Wallet.canSpend(n)) return false; proto.coins -= n; saveProto(); return true; },
+  canSpend: n => proto.ready && !pend && !proto.blocked && isFinite(n) && n > 0 && proto.coins >= n,
+  spend(n) { if (EMBED || !Wallet.canSpend(n)) return false; proto.coins -= n; saveProto(); return true; },
 };
+// 经营页回的权威状态：金币余额 + 训练 / 进度
+if (EMBED) window.addEventListener('message', e => {
+  if (port || e.source !== window.parent || e.origin !== location.origin || !e.data || e.data.zb !== 'port' || !e.ports[0]) return;
+  port = e.ports[0]; port.onmessage = ev => onState(ev.data);
+});
+function onState(d) {
+  if (!d || d.zb !== 'state') return;
+  pend = false; proto.coins = Math.max(0, fin(d.coins, 0)); proto.blocked = !!d.blocked; Object.assign(proto, ZB.norm(d.z)); proto.ready = true;
+  if (firstSync) { firstSync = false; selLv = Math.min(MAX_LV, proto.cleared + 1); }
+  $('#trainNote').textContent = d.why || (proto.blocked ? '存档异常或已在别的页面打开，暂时不能花金币。' : '和经营共用金币：训练只花钱，打僵尸本身不产金币。');
+  renderTrain();
+}
 function fmt(n) {
   if (!isFinite(n)) return '—';
   if (n < 1e4) return String(Math.floor(n));
@@ -316,7 +328,7 @@ function renderLv() {
 }
 function renderTrain() {
   renderLv();
-  $('#walletTxt').textContent = fmt(Wallet.balance());
+  $('#walletTxt').textContent = proto.ready ? fmt(Wallet.balance()) : '读取中…';
   $('#train').innerHTML = TRAIN.map(t => {
     const lv = proto.lv[t.id], max = lv >= MAX_TRAIN, c = price(t, lv);
     return `<div class="tr"><div class="t"><b>${t.name} Lv${lv}</b><small>${t.desc(lv)}</small></div>
@@ -327,7 +339,8 @@ $('#train').addEventListener('click', e => {
   const b = e.target.closest('[data-tr]'); if (!b) return;
   const t = TRAIN.find(x => x.id === b.dataset.tr), lv = proto.lv[t.id];
   if (lv >= MAX_TRAIN) return;
-  if (Wallet.spend(price(t, lv))) { proto.lv[t.id] = lv + 1; saveProto(); }
+  if (EMBED) { if (Wallet.canSpend(price(t, lv))) { pend = true; host({ zb: 'buy', id: t.id }); } }
+  else if (Wallet.spend(price(t, lv))) { proto.lv[t.id] = lv + 1; saveProto(); }
   renderTrain();
 });
 function show(id) { for (const s of ['#menu', '#pause', '#result']) $(s).classList.toggle('hidden', s !== id); $('#hud').classList.toggle('hidden', id === '#menu'); }
@@ -348,6 +361,7 @@ function end(win) {
     again = G.n >= MAX_LV ? '进入无尽' : '下一关';
   } else title = `第 ${G.n} 关失败…`;
   saveProto();
+  if (EMBED) host({ zb: 'result', mode: G.mode, n: G.n, win, t: G.t, kills: G.kills });
   $('#resTitle').textContent = title; $('#againBtn').textContent = again;
   $('#resStats').textContent = G.mode === 'endless' ? `坚持 ${Math.floor(G.t)} 秒 · 击倒 ${G.kills} · 最好 ${Math.floor(proto.endBest.t)} 秒`
     : `坚持 ${Math.floor(G.t)} / ${G.dur} 秒 · 击倒 ${G.kills}`;
@@ -376,8 +390,12 @@ $('#quitBtn').addEventListener('click', () => { paused = false; end(false); });
 $('#ultBtn').addEventListener('click', () => { castUlt(); hud(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) setPause(true); });
 
+if (EMBED) {
+  $('#walletLbl').textContent = '金币'; $('#exitBtn').classList.remove('hidden');
+  $('#exitBtn').addEventListener('click', () => host({ zb: 'close' }));
+}
 selLv = Math.min(MAX_LV, proto.cleared + 1);
 resize(); renderTrain(); draw();
 // 测试钩子：只读状态 + 固定步长推进
-window.__zb = { get G() { return G; }, proto, Wallet, step, castUlt, start, setPause, joy, PROTO_KEY, price, TRAIN, levelDur, renderTrain, saveProto, MAX_LV };
+window.__zb = { EMBED, send: host, get pend() { return pend; }, get G() { return G; }, proto, Wallet, step, castUlt, start, setPause, joy, PROTO_KEY, price, TRAIN, levelDur, renderTrain, saveProto, MAX_LV };
 })();

@@ -2,6 +2,7 @@
 (() => {
 'use strict';
 const E = window.Economy, CFG = E.CFG;
+const ZB = window.ZBCore; var zbOpen = false, zbPort = null;
 const SAVE_KEY = 'tangzhe-preview-save', BAK_KEY = 'tangzhe-preview-save-bak', LOCK_KEY = 'tangzhe-preview-tab-lock';
 // 12b2 测试房间：只有网址带 ?test=homes 才进；整局放在内存里，不读、不写任何 localStorage（真存档 / 备份 / 多标签锁都不碰），刷新就重置
 // &lv=3 → 四家都是豪宅，默认四家都是公寓
@@ -67,7 +68,7 @@ function atomic(fn) {
 function claimLock() { if (TEST_MODE) return; try { localStorage.setItem(LOCK_KEY, JSON.stringify({ tab:TAB, t:now() })); } catch (e) {} }
 function lockMine() { if (TEST_MODE) return true; try { const v = JSON.parse(localStorage.getItem(LOCK_KEY) || 'null'); return !v || v.tab === TAB; } catch (e) { return true; } }
 function freeze() {
-  if (frozen) return; frozen = true;
+  if (frozen) return; frozen = true; if (zbOpen) closeZombie();
   $('#lockOverlay').classList.remove('hidden'); audioPause();
 }
 window.addEventListener('storage', e => {
@@ -1089,6 +1090,7 @@ function doUpgradeShop(i, btn) {
 function act(a, arg, btn) {
   const i = state.cur;
   switch (a) {
+    case 'zombie': openZombie(); return;
     case 'open': { const r = E.openShop(state, +arg); if (!r.ok) return failBuy(btn, r.why); afterBuy(btn, E.SHOPS[+arg].name + ' 开张啦！'); signAnim = { shop:+arg, from:'招租中', t0:clock }; handleUnlocks(r.unlocked); break; }
     case 'up': return doUpgradeShop(+arg, btn);
     case 'hire': { const r = E.hireEmp(state, +arg); if (!r.ok) return failBuy(btn, r.why); afterBuy(btn, '雇到 ' + E.SHOPS[+arg].emp.name + '！开始自动赚钱'); sayLine('e', E.SHOPS[+arg].emp.line, 3); if (+arg === 3) queueModal(showGachaOpen); break; }
@@ -1178,6 +1180,7 @@ function renderShop() {
       ? `<br>店铺 ${fmt(E.shopBase(i, s.lv))} × 员工 ×${E.empMult(s.emp).toFixed(2)} × CEO ×${info.mult.toFixed(2)}${E.hasSuper(state, i) ? ` × 超级装饰 ×${CFG.SUPER_RATE}` : ''}`
       : '<br>还没员工：不会自动赚钱（可以点画面手动赚）'}
     ${critLine(i)}</div>`;
+  h += zbCard();
   if (E.hasSuper(state, i)) { const sp = E.ITEM_BY_ID[E.SUPER_OF_SHOP[i]];
     h += `<div class="card super"><div class="ava sq">${SUPER_ICON[sp.id]}</div><div class="info"><div class="name">${sp.name}<span class="tag match">超级装饰</span></div><div class="desc">${sp.desc}</div></div></div>`; }
   h += `<div class="row-head"><div class="sec-title">店铺</div><div class="buyamt">${[1, 10, 'max'].map(a => `<button data-act="amt" data-arg="${a}" class="${buyAmt === a ? 'on' : ''}">${a === 'max' ? 'MAX' : 'x' + a}</button>`).join('')}</div></div>`;
@@ -2030,4 +2033,51 @@ window.__tzz = { TEST_MODE, TEST_LV, SAVE_KEY, BAK_KEY, get saveBlocked() { retu
   hitBig, modalOpen, closeModal, get frozen() { return frozen; },
   audioState() { return AU.ctx ? AU.ctx.state : 'none'; }, showPreview, openAssign, JOB_ART, jobShown, jobURL, showJobArt,
   HOME_ART, FURN_ART, FURN_UP, homeAct, get homeWho() { return homeWho; }, get homeSub() { return homeSub; }, get homeMode() { return homeMode; }, set homeMode(v) { homeMode = v === 'decor' ? 'decor' : 'live'; }, get homeSel() { return homeSel; }, get homeDrag() { return homeDrag; }, homeActor, LIVE_LINES, homeUndo, resize, get canvasSize() { return { W, H }; }, lookOf, drawPerson, drawHead, LOOKS, get bubble() { return bubble; } };
+/* ================= 打僵尸（zombie/?embed=1，全屏 iframe）=================
+   只和经营共用金币：价格、等级上限、进度校验都在这边按 ZBCore 算，扣款只走 E.spendCoins + atomic（写档失败回滚）。
+   小游戏页不写任何存档，也不能加金币；iframe 加载后经营页递给它一个 MessageChannel 端口，只认这个端口发来的 hello / buy / result / close。 */
+function zbState() { return (state.zombie = ZB.norm(state.zombie)); }
+function zbCard() { return `<div class="card zb-card"><div class="ava sq">🧟</div><div class="info"><div class="name">77 打僵尸<span class="tag">小游戏</span></div><div class="desc">花金币练战斗力 · 已通关 <b>${ZB.norm(state.zombie).cleared} / ${ZB.MAX_LV}</b></div></div><button class="buy" data-act="zombie" data-arg="0">去打</button></div>`; }
+function zbReply(why) {
+  if (!zbOpen || !zbPort) return;
+  const ok = !frozen && E.walletOk(state) && !(loadInfo && loadInfo.unsafe);
+  zbPort.postMessage({ zb:'state', coins: ok ? E.balance(state) : 0, z: zbState(), blocked: !ok, why: why || '' });
+}
+function openZombie() {
+  if (frozen || zbOpen || !ZB) return;
+  zbOpen = true; const f = $('#zbFrame');
+  f.onload = () => {
+    if (!zbOpen || zbPort || !/\/zombie\//.test(f.src)) return;
+    const ch = new MessageChannel(); zbPort = ch.port1; zbPort.onmessage = e => zbMsg(e.data);
+    f.contentWindow.postMessage({ zb:'port' }, location.origin, [ch.port2]); zbReply();
+  };
+  f.src = 'zombie/?embed=1&v=12e'; $('#zbOverlay').classList.remove('hidden'); audioPause();
+}
+function closeZombie() {
+  if (!zbOpen) return; zbOpen = false; if (zbPort) { zbPort.close(); zbPort = null; }
+  $('#zbOverlay').classList.add('hidden'); $('#zbFrame').src = 'about:blank'; dirty = true; audioResume();
+}
+function zbMsg(d) {
+  if (!zbOpen || !d || typeof d !== 'object') return;
+  if (d.zb === 'close') return closeZombie();
+  if (d.zb === 'hello') return zbReply();
+  if (frozen) return zbReply('游戏已在别的页面打开，这里不能花金币');
+  if (d.zb === 'buy') {
+    if (!ZB.IDS.includes(d.id)) return zbReply();
+    const r = atomic(() => {
+      const z = zbState(), lv = z.lv[d.id];
+      if (lv >= ZB.MAX_TRAIN) return { ok:false, why:'已满级' };
+      const pay = E.spendCoins(state, ZB.price(d.id, lv)); if (!pay.ok) return pay;
+      z.lv[d.id] = lv + 1; return { ok:true };
+    });
+    dirty = true;
+    return zbReply(r && r.ok === false ? (r.why === 'saveFailed' ? '存档失败，没扣金币' : r.why) : '');
+  }
+  if (d.zb === 'result') {
+    const r = atomic(() => { const z = zbState(), before = JSON.stringify(z); return ZB.applyResult(z, d) && JSON.stringify(z) !== before ? { ok:true } : { ok:false }; });
+    if (r.ok) dirty = true;
+    return zbReply(r.why === 'saveFailed' ? '存档失败，这局进度没记上' : '');
+  }
+}
+Object.defineProperties(window.__tzz, { openZombie:{ value:openZombie }, closeZombie:{ value:closeZombie }, zbOpen:{ get:() => zbOpen } });
 })();
