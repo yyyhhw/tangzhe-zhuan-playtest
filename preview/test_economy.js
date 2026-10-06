@@ -714,5 +714,79 @@ ok(E.CROSS['rocket@0'].effect === 'bigFreq' && E.CROSS['c77@3'].effect === 'offl
   ok(pl.ok && mn.skipped && ln.homes.c77.placed.find(p => p.fid === 'furn_pearl_tea_loft').y === 0, '新档按新占地摆的高架床读档后不被误挪');
 }
 
+
+// 12a 家宅 Lv2/Lv3 底图接入前置：墙面整理（升级 / 读档 / 底图禁区变化）不丢件、不重叠、不踩禁区、可重复跑
+{
+  const T0 = 1e12, ids = ['c77', 'pearl', 'otaku', 'rocket'];
+  const mk = (extra) => E.migrate(Object.assign({ v:3, coins:1e12, ceos:{ c77:{ unlocked:true, at:0 }, pearl:{ unlocked:true, at:1 }, otaku:{ unlocked:true, at:2 }, rocket:{ unlocked:true, at:3 } } }, extra || {}), T0).st;
+  const tally = (s) => { const t = {}; for (const id of ids) for (const p of s.homes[id].placed) t[p.fid] = (t[p.fid] || 0) + 1; for (const k in s.furnInv) t[k] = (t[k] || 0) + s.furnInv[k]; return JSON.stringify(Object.keys(t).sort().map(k => [k, t[k]])); };
+  const wallSane = (s, id) => { const h = s.homes[id], w = h.placed.filter(p => E.itemSurf(p) === 'wall'); return w.every(p => E.canPlace(s, id, p.fid, p.x, p.y, p.rot, p.uid, 'wall').ok); };
+  const snap = (s) => JSON.stringify(s.homes) + JSON.stringify(s.furnInv) + s.coins;
+  const saved = Object.assign({}, E.WALL_BLOCK), restore = () => { for (const k of Object.keys(E.WALL_BLOCK)) if (!(k in saved)) delete E.WALL_BLOCK[k]; Object.assign(E.WALL_BLOCK, saved); };
+  const blk = (cols, rows) => { const o = []; for (const y of rows || [0, 1]) for (const x of cols) o.push([x, y]); return o; };
+  try {
+    // 1) Lv1 左两列挂好的画，升 Lv2 / Lv3（新底图右边画满墙饰、左两列留空）→ 原位不动
+    for (const id of ids) {
+      E.WALL_BLOCK[id + '_2'] = blk([2, 3, 4, 5, 6, 7]); E.WALL_BLOCK[id + '_3'] = blk([2, 3, 4, 5, 6, 7, 8, 9]);
+      const s = mk(); for (const y of [0, 1]) { E.buyFurniture(s, 'furn_painting'); ok(E.placeItem(s, id, 'furn_painting', 0, y, 0, 'wall').ok, id + '：Lv1 左墙挂画 ' + y); }
+      const before = tally(s), pos = JSON.stringify(s.homes[id].placed.map(p => [p.uid, p.x, p.y]));
+      let c0 = s.coins, r = E.upgradeHome(s, id);
+      ok(r.ok && r.wallMoved === 0 && r.wallStored === 0 && s.coins === c0 - E.HOME_TIERS[1].cost && JSON.stringify(s.homes[id].placed.map(p => [p.uid, p.x, p.y])) === pos, id + '：升 Lv2 左两列挂画原位保留，只扣房钱');
+      c0 = s.coins; r = E.upgradeHome(s, id);
+      ok(r.ok && r.wallMoved === 0 && r.wallStored === 0 && s.coins === c0 - E.HOME_TIERS[2].cost && JSON.stringify(s.homes[id].placed.map(p => [p.uid, p.x, p.y])) === pos && tally(s) === before, id + '：升 Lv3 挂画原位、件数不变');
+    }
+    restore();
+    // 2) 底图把左上角也画了东西（坏情况）：升级时被压的画挪到最近空墙，不丢
+    {
+      E.WALL_BLOCK.c77_2 = blk([0, 1], [0]).concat(blk([5, 6, 7]));
+      const s = mk(); E.buyFurniture(s, 'furn_painting'); E.placeItem(s, 'c77', 'furn_painting', 0, 0, 0, 'wall'); E.buyFurniture(s, 'furn_painting'); E.placeItem(s, 'c77', 'furn_painting', 0, 1, 0, 'wall');
+      const before = tally(s), c0 = s.coins, r = E.upgradeHome(s, 'c77'), w = s.homes.c77.placed.filter(p => p.fid === 'furn_painting');
+      ok(r.ok && r.wallMoved === 1 && r.wallStored === 0 && w.length === 2 && wallSane(s, 'c77') && tally(s) === before && s.coins === c0 - E.HOME_TIERS[1].cost, '升级后新底图压到左上挂画：挪到最近空墙 (' + w.map(p => p.x + ',' + p.y).join(' ') + ')，件数 / 金币守恒');
+      const k = snap(s), r2 = E.migrateWallPaintings(s); ok(r2.moved === 0 && r2.stored === 0 && snap(s) === k, '再整理一遍不再动');
+      restore();
+    }
+    // 3) 旧档 Lv2 / Lv3 墙上挂满，换上新底图（禁区变多）→ 放得下的保留或挪，放不下的退仓库；件数守恒、全部合法、可重复
+    for (const [lv, cols] of [[2, 8], [3, 10]]) for (const id of ids) {
+      const s = mk(); s.homes[id].lv = lv;
+      let n = 0; for (let k = 0; k < 20; k++) { const sp = E.findFree(s, id, 'furn_painting', 0, 'wall'); if (!sp) break; E.buyFurniture(s, 'furn_painting'); E.placeItem(s, id, 'furn_painting', sp.x, sp.y, 0, 'wall'); n++; }
+      const before = tally(s), c0 = s.coins;
+      E.WALL_BLOCK[id + '_' + lv] = blk(Array.from({ length:cols - 4 }, (_, i) => i + 4));   // 新底图：右边 cols-4 列都画了东西，只剩左 4 列空墙 = 每排 2 幅
+      const r = E.migrateWallPaintings(s), w = s.homes[id].placed.filter(p => p.fid === 'furn_painting');
+      ok(n > 4 && w.length === 4 && r.stored === n - 4 && wallSane(s, id) && tally(s) === before && s.coins === c0, id + ' Lv' + lv + '：挂满 ' + n + ' 幅 → 新禁区下留 4 幅、退仓 ' + r.stored + '，件数 / 金币守恒');
+      const k = snap(s), r2 = E.migrateWallPaintings(s); ok(r2.moved === 0 && r2.stored === 0 && snap(s) === k, id + ' Lv' + lv + '：重复整理不再动');
+      delete E.WALL_BLOCK[id + '_' + lv];   // 禁区变少（比如底图坏了没配）：已挂的都还合法，不动
+      const r3 = E.migrateWallPaintings(s); ok(r3.moved === 0 && r3.stored === 0 && snap(s) === k, id + ' Lv' + lv + '：禁区变少不乱动');
+    }
+    restore();
+    // 4) 挪动的件不能落到后面本来合法的件上（两遍整理）
+    {
+      const s = mk(); s.homes.c77.lv = 2;
+      s.homes.c77.placed = [{ uid:'ua', fid:'furn_painting', x:5, y:0, rot:0, surf:'wall' }, { uid:'uc', fid:'furn_painting', x:3, y:0, rot:0, surf:'wall' }];
+      const r = E.migrateWallPaintings(s), c = s.homes.c77.placed.find(p => p.uid === 'uc');
+      ok(r.moved === 1 && c.x === 3 && c.y === 0 && wallSane(s, 'c77') && s.homes.c77.placed.length === 2, '挪走的画不压后面的合法画（' + s.homes.c77.placed.map(p => p.uid + '@' + p.x + ',' + p.y).join(' ') + '）');
+    }
+    // 5) 地板家具不受墙面整理影响
+    {
+      const s = mk(); E.buyFurniture(s, 'furn_sofa'); E.placeItem(s, 'c77', 'furn_sofa', 0, 3, 0); const fl = JSON.stringify(s.homes.c77.placed);
+      E.upgradeHome(s, 'c77'); ok(JSON.stringify(s.homes.c77.placed) === fl, '升级时地板家具原位不动');
+    }
+  } finally { restore(); }
+  // 6) 底图尺寸：每张 home_<ceo>_<lv>.webp 必须 = 列×200 × (2+行)×200（Lv1 1200×1200、Lv2 1600×1400、Lv3 2000×1600），墙地分界 y=400
+  const fs = require('fs'), path = require('path');
+  const webpSize = (f) => { const b = fs.readFileSync(f), t = b.toString('ascii', 12, 16);
+    if (t === 'VP8X') return [1 + b.readUIntLE(24, 3), 1 + b.readUIntLE(27, 3)];
+    if (t === 'VP8 ') return [b.readUInt16LE(26) & 0x3fff, b.readUInt16LE(28) & 0x3fff];
+    if (t === 'VP8L') { const v = b.readUInt32LE(21); return [1 + (v & 0x3fff), 1 + ((v >> 14) & 0x3fff)]; }
+    return null; };
+  const appSrc = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8'), m = appSrc.match(/const HOME_ART = \{([^}]*)\}/);
+  const keys = m ? [...m[1].matchAll(/(\w+_\d)\s*:/g)].map(x => x[1]) : [];
+  ok(keys.length >= 4, 'HOME_ART 读得到（' + keys.join(' ') + '）');
+  for (const k of keys) {
+    const lv = +k.slice(-1), T = E.homeTier(lv), f = path.join(__dirname, 'art', 'home_' + k + '.webp'), sz = fs.existsSync(f) ? webpSize(f) : null;
+    ok(sz && sz[0] === T.cols * 200 && sz[1] === (E.WALL_ROWS + T.rows) * 200, k + ' 底图尺寸 ' + (sz ? sz.join('×') : '缺文件') + ' 应为 ' + T.cols * 200 + '×' + (E.WALL_ROWS + T.rows) * 200);
+    if (lv > 1) ok(!!E.WALL_BLOCK[k], k + ' 有底图就必须配墙面禁区（按实图校准）');
+  }
+}
+
 console.log(`economy tests: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

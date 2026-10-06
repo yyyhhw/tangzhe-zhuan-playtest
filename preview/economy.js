@@ -795,8 +795,9 @@
     if (!homeOpen(st, id)) return { ok:false, why:'这位 CEO 还没加入' };
     const h = homeOf(st, id); if (h.lv >= HOME_MAX) return { ok:false, why:'已经是' + homeTier(h.lv).name + '了' };
     const c = HOME_TIERS[h.lv].cost; if (st.coins < c) return { ok:false, why:'金币不够' };
-    st.coins -= c; h.lv++;   // 格子只会变大、坐标不动，原来摆好的家具都还合法
-    return { ok:true, cost:c, lv:h.lv, tier:homeTier(h.lv) };
+    st.coins -= c; h.lv++;   // 地板格子只会变大、坐标不动；新房型底图的墙面禁区可能不同 → 墙面整理一遍（挪空墙 / 退仓库，不丢件）
+    const w = reconcileWall(st, id);
+    return { ok:true, cost:c, lv:h.lv, tier:homeTier(h.lv), wallMoved:w.moved, wallStored:w.stored };
   }
   function placeItem(st, id, fid, x, y, rot, surf) {
     rot = (rot | 0) & 3;
@@ -938,36 +939,40 @@
     return { shifted:a.shifted + b.shifted, stored:a.stored + b.stored, skipped:a.skipped && b.skipped, w11:a, z11:b };
   }
 
-  // 旧档：地板上的挂画迁到墙面；墙面没位 → 完整退回公共仓库（不丢、不重复、不多算豪华度）
+  // 墙面整理（读档 + 升级房子 + 换底图禁区都走这一个）：
+  // 第 1 遍：先留下所有合法的墙面件（相对已留下的件检查：不出界、不踩禁区、不互相重叠）；
+  // 第 2 遍：不合法的（旧地板挂画 / 踩到新禁区 / 重叠 / 出界）在墙上找离原位最近的空位挪过去，没位就完整退回公共仓库。
+  // 两遍分开，挪动的件不会落到后面本来合法的件身上；件数守恒、不碰金币；重复跑结果不变
+  function reconcileWall(st, id) {
+    const h = homeOf(st, id), all = h.placed || [], keep = [], fix = [];
+    let moved = 0, stored = 0;
+    for (const p of all) {
+      const f = FURN_BY_ID[p.fid]; if (!f) continue;
+      if (!f.wall) { p.surf = p.surf === 'wall' ? 'floor' : (p.surf || 'floor'); keep.push(p); continue; }
+      h.placed = keep;
+      const legal = p.surf === 'wall' && canPlace(st, id, p.fid, p.x, p.y, p.rot, p.uid, 'wall').ok;
+      h.placed = all;
+      if (legal) keep.push(p); else fix.push(p);
+    }
+    h.placed = keep;
+    const T = homeTier(h.lv);
+    for (const p of fix) {
+      const tx = num(p.x, 0), ty = p.surf === 'wall' ? num(p.y, 0) : 0;
+      let best = null, bd = Infinity;
+      for (let y = 0; y < WALL_ROWS; y++) for (let x = 0; x < T.cols; x++) {
+        const d = Math.abs(x - tx) + Math.abs(y - ty);
+        if (d < bd && canPlace(st, id, p.fid, x, y, p.rot || 0, null, 'wall').ok) { best = { x, y }; bd = d; }
+      }
+      if (best) { keep.push({ uid:p.uid, fid:p.fid, x:best.x, y:best.y, rot:p.rot || 0, surf:'wall' }); moved++; }
+      else { addInv(furnInvOf(st), p.fid, 1); stored++; }
+    }
+    h.placed = keep;
+    return { moved, stored };
+  }
+  // 旧档：地板上的挂画迁到墙面；踩到窗户 / 底图墙饰的挪到空墙；墙面没位 → 完整退回公共仓库（不丢、不重复、不多算豪华度）
   function migrateWallPaintings(st) {
     let moved = 0, stored = 0;
-    CEOS.forEach(c => {
-      const h = homeOf(st, c.id), keep = [];
-      (h.placed || []).forEach(p => {
-        const f = FURN_BY_ID[p.fid]; if (!f) return;
-        if (!f.wall) { p.surf = p.surf === 'wall' ? 'floor' : (p.surf || 'floor'); keep.push(p); return; }
-        // 已是墙面且合法 → 保留
-        if (p.surf === 'wall' && canPlace(st, c.id, p.fid, p.x, p.y, p.rot, p.uid, 'wall').ok) { keep.push(p); return; }
-        // 试原 x 贴到墙排 0，再找空位
-        let spot = canPlace(st, c.id, p.fid, p.x, 0, p.rot, p.uid, 'wall').ok ? { x:p.x, y:0 } : findFree(st, c.id, p.fid, p.rot, 'wall');
-        // findFree 会看到 keep 里还没有的旧件；临时把 keep 当作当前 placed
-        if (!spot) {
-          const saved = h.placed; h.placed = keep.slice();
-          spot = findFree(st, c.id, p.fid, p.rot, 'wall');
-          h.placed = saved;
-        } else {
-          // 验证时也要相对 keep
-          const saved = h.placed; h.placed = keep.slice();
-          if (!canPlace(st, c.id, p.fid, spot.x, spot.y, p.rot, null, 'wall').ok) {
-            spot = findFree(st, c.id, p.fid, p.rot, 'wall');
-          }
-          h.placed = saved;
-        }
-        if (spot) { keep.push({ uid:p.uid, fid:p.fid, x:spot.x, y:spot.y, rot:p.rot || 0, surf:'wall' }); moved++; }
-        else { addInv(furnInvOf(st), p.fid, 1); stored++; }
-      });
-      h.placed = keep;
-    });
+    CEOS.forEach(c => { const r = reconcileWall(st, c.id); moved += r.moved; stored += r.stored; });
     return { moved, stored };
   }
   function homeLuxury(st, id) {
@@ -1119,5 +1124,5 @@
     dayKey, nextResetTs, clockRolledBack, computeOffline, settleOffline, canDouble, claimOffline,
     gachaUnlocked, gachaRemaining, gachaOdds, gachaPrice, gachaDraw, cardsComplete, newState, migrate, nextGoal,
     HOME_TIERS, HOME_MAX, WALL_ROWS, WALL_BLOCK, wallBlockedCells, MALL_CATS, FURNITURE, FURN_BY_ID, newHome, homeTier, homeOf, furnInvOf, homeOpen, furnLiveAct, furnSize, itemSurf, canPlace, findFree, homeUpgradeCost,
-    buyFurniture, upgradeHome, placeItem, moveItem, rotateItem, storeItem, undoHome, migrateWallPaintings, migrateFootprint11w, migrateFootprint11z, migrateFootprints, FP_OLD_11Z, homeLuxury, invCount, furnStats, normHomes, normFurnInv, normHomeBundle };
+    buyFurniture, upgradeHome, placeItem, moveItem, rotateItem, storeItem, undoHome, migrateWallPaintings, reconcileWall, WALL_BLOCK, migrateFootprint11w, migrateFootprint11z, migrateFootprints, FP_OLD_11Z, homeLuxury, invCount, furnStats, normHomes, normFurnInv, normHomeBundle };
 });

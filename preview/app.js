@@ -1647,7 +1647,7 @@ function confirmHomeUp(id) {
   const H = E.homeOf(state, id), c = E.CEO_BY_ID[id]; if (H.lv >= E.HOME_MAX) return;
   const T = E.homeTier(H.lv), N = E.HOME_TIERS[H.lv], bal = state.coins, can = bal >= N.cost;
   openModal(`<div class="mbubble">房子升级</div><div class="mtitle">${c.name}：${T.name} → ${N.name}</div>
-    <div class="mnote">${T.cols}×${T.rows} 格 → <b>${N.cols}×${N.rows} 格</b>，房型豪华 ${T.bonus} → ${N.bonus}。摆好的家具原位保留。</div>
+    <div class="mnote">${T.cols}×${T.rows} 格 → <b>${N.cols}×${N.rows} 格</b>，房型豪华 ${T.bonus} → ${N.bonus}。摆好的家具原位保留；挂画如果挡到新房的窗户 / 墙饰，会自动挪到空墙，挂不下就退回仓库，不会丢。</div>
     <table class="pv-table"><tr><td>价格</td><td>${fmt(N.cost)}</td></tr><tr><td>当前余额</td><td>${fmt(bal)}</td></tr><tr class="total"><td>升级后余额</td><td class="${can ? '' : 'down'}">${can ? fmt(bal - N.cost) : '还差 ' + fmt(N.cost - bal)}</td></tr></table>
     <div class="mbtns two"><button class="buy ghost" id="mNo">再想想</button><button class="buy red" id="huYes" ${can ? '' : 'disabled'}>${can ? '确认升级' : '金币不够'}</button></div>`, false);
   $('#mNo').addEventListener('click', closeModal, { once:true });
@@ -1655,6 +1655,7 @@ function confirmHomeUp(id) {
     const r = atomic(() => E.upgradeHome(state, id)); closeModal();
     if (!r.ok) { if (r.why !== 'saveFailed') failBuy(null, r.why); return; }
     afterBuy(null, `${c.name} 搬进${r.tier.name}啦！${r.tier.cols}×${r.tier.rows} 格`); sfx('mile');
+    if (r.wallMoved || r.wallStored) setTimeout(() => toast(r.wallStored ? `新房墙面不一样：${r.wallMoved} 幅挂画挪到空墙，${r.wallStored} 幅挂不下已退回仓库` : `新房墙面不一样：${r.wallMoved} 幅挂画已挪到空墙`, 3200), 900);
   }, { once:true });
 }
 function homeCommit(r, msg) {
