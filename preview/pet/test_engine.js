@@ -1,4 +1,4 @@
-// 宠物原型 p1 — 引擎单元测试（Node）：node preview/pet/test_engine.js
+// 宠物原型 p3 — 引擎单元测试（Node）：node preview/pet/test_engine.js
 'use strict';
 const EC = require('../economy.js'), PE = require('./engine.js'), PA = require('./art.js'), PR = require('./room.js');
 const M = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, 'art', 'manifest.json'), 'utf8'));
@@ -9,21 +9,31 @@ const H = 1 / 60, C = PE.CFG;
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const world = (seed, room, start) => PE.createWorld({ catalog: EC.FURNITURE, room: room || PR.ROOM, interact: PR.INTERACT, manifest: M, seed: seed || 1, start });
 const emptyRoom = (items) => ({ cols: 10, rows: 8, wallRows: 2, front: { x: 5, y: 7.5 }, bed: { x: 0.25, y: 0.3, w: 1.5, h: 1.05 }, bowl: { x: 9.0, y: 0.4, w: 0.62, h: 0.42 }, items: items || [], wall: [] });
-// 每帧都查：不压家具、不出房间、单帧位移 ≤ 跑速×dt（不瞬移）
+// p3 身体盒（独立于引擎实现，直接用 p3 逐帧量出的占位小狗外形，源帧像素 → 格）：鼻尖 / 尾巴尖 / 耳朵都算
+const BODY_PX = { E: [46, 217], N: [92, 164], S: [88, 169] }, PXK = 1.8 / 256;
+const BOX = { E: { l: (128 - 46) * PXK, r: (217 - 128) * PXK }, N: { l: (128 - 92) * PXK, r: (164 - 128) * PXK }, S: { l: (128 - 88) * PXK, r: (169 - 128) * PXK } };
+BOX.W = { l: BOX.E.r, r: BOX.E.l };
+const visDir = (w) => PA.IN_PLACE.includes(w.dog.anim.name) ? (w.dog.dir === 'W' ? 'W' : 'E') : w.dog.dir;
+function boxOf(x, y, dir) { const b = BOX[dir]; return { x: x - b.l, y: y - C.R, w: b.l + b.r, h: 2 * C.R }; }
+const ovl = (a, b, e) => a.x < b.x + b.w - e && b.x < a.x + a.w - e && a.y < b.y + b.h - e && b.y < a.y + a.h - e;
+// 小狗身体盒压到哪件实体家具（自己的碗除外：吃饭时嘴要伸到碗上）
+function bodyHit(w, dir) { const bx = boxOf(w.dog.x, w.dog.y, dir || visDir(w)); for (const p of w.items) if (PE.isSolid(w, p) && ovl(bx, PE.itemRect(w, p), 1e-6)) return p; return null; }
+// 每帧都查：不压家具、不出房间、单帧位移 ≤ 跑速×dt（不瞬移）；p3 起还查身体盒（鼻尖 / 尾巴不进家具）
 function run(w, sec, each) {
-  const bad = { overlap: 0, teleport: 0, outside: 0 }; let maxD = 0;
+  const bad = { overlap: 0, teleport: 0, outside: 0, body: 0 }; let maxD = 0;
   for (let n = Math.round(sec / H); n-- > 0;) {
     const ox = w.dog.x, oy = w.dog.y;
     PE.update(w, H);
     const d = Math.hypot(w.dog.x - ox, w.dog.y - oy); maxD = Math.max(maxD, d);
     if (d > C.RUN * H + 1e-9) bad.teleport++;
     if (PE.minClearance(w) < C.R - 1e-6) bad.overlap++;
+    if (bodyHit(w)) bad.body++;
     if (w.dog.x < C.R - 1e-6 || w.dog.y < C.R - 1e-6 || w.dog.x > w.cols - C.R + 1e-6 || w.dog.y > w.rows - C.R + 1e-6) bad.outside++;
     if (each && each(w) === false) break;
   }
   return { ...bad, maxD };
 }
-const clean = (r) => r.overlap === 0 && r.teleport === 0 && r.outside === 0;
+const clean = (r) => r.overlap === 0 && r.teleport === 0 && r.outside === 0 && r.body === 0;
 
 section('1. 规格数值');
 ok(C.WALK === 0.65 && C.RUN === 1.30 && C.R === 0.22, '走 0.65 / 跑 1.30 / 半径 0.22');
@@ -41,7 +51,7 @@ ok(M.source.origin[0] === 128 && M.source.origin[1] === 208 && M.atlas.size[0] =
 for (const [mut, why] of [
   [(m) => { m.source.origin = [128, 200]; }, '原点改了'], [(m) => { delete m.clips.sniff; }, '缺片段'], [(m) => { m.clips.walk_N.frames.pop(); }, '帧数不对'],
   [(m) => { m.source.perFrameCrop = true; }, '每帧裁边'], [(m) => { m.actions.pick_ball.events = []; }, '缺抓球事件'], [(m) => { m.clips.sleep.dir = 'S'; }, '原地动作不是东向'],
-  [(m) => { m.clips.eat.frames[0].cell = m.clips.eat.frames[1].cell; }, 'cell 重复'], [(m) => { m.placeholder = false; m.atlas.image = null; }, '真图缺 atlas.image'], [(m) => { m.directions.mirror.W = 'N'; }, '西不是东镜像'],
+  [(m) => { m.clips.eat.frames[0].cell = m.clips.eat.frames[1].cell; }, 'cell 重复'], [(m) => { delete m.body; }, '缺身体外形 body'], [(m) => { m.body = m.body || {}; m.body.E = [130, 217]; }, 'body 没包住原点'], [(m) => { m.placeholder = false; m.atlas.image = null; }, '真图缺 atlas.image'], [(m) => { m.directions.mirror.W = 'N'; }, '西不是东镜像'],
 ]) { const m = clone(M); mut(m); ok(!PA.validateManifest(m).ok, '坏 manifest 会被拦：' + why); }
 { const m = clone(M); m.placeholder = false; m.atlas.image = 'puppy_atlas.webp'; ok(PA.validateManifest(m).ok, '换真图集只改 placeholder/atlas.image 就合格'); }
 { const a = new PA.Animator(M); a.play('sniff', { frames: M.actions.pick_ball.frames, events: M.actions.pick_ball.events, loop: false });
@@ -176,7 +186,8 @@ section('9. 路被挡：搬家具时停下，放好后绕路');
 { // 走的时候障碍突然变化（不经过暂停）也不会穿过去
   const w = world(8, emptyRoom([{ fid: 'furn_s77_heart_bench', x: 0, y: 7 }]), { x: 1, y: 4 });
   w.dog.plan = [{ k: 'goto', to: { x: 9, y: 4 }, speed: 'run' }, { k: 'wait', dur: 30 }];
-  run(w, 2); PE.moveItem(w, 'f0', 4, 2, 1); const res = run(w, 15);
+  // p3：小狗跑到 x≈3.6 时鼻尖在 x≈4.2，长凳不能再放 x=4（会压到鼻子），改放 x=5 横在前方
+  run(w, 2); const mv2 = PE.moveItem(w, 'f0', 5, 2, 1); ok(mv2.ok, '跑动中把长凳竖着放到前方'); const res = run(w, 15);
   ok(clean(res) && Math.hypot(w.dog.x - 9, w.dog.y - 4) < 0.01 && w.stats.replans >= 1, '障碍中途变化：重算并绕过去'); }
 
 section('10. 累了：回窝 → 趴下 → 呼吸睡 → 起身');
@@ -297,6 +308,127 @@ for (const [bad, why] of [[undefined, '缺失'], [null, 'null'], ['abc', '字符
 { const w = world(25); run(w, 3); w.dog.energy = 0; const s = JSON.parse(JSON.stringify(PE.serialize(w, 5000)));
   const w2 = world(25); PE.restore(w2, s, 5000); ok(w2.dog.energy === 0, '真实 serialize → JSON → restore 链路：0 精力保持 0'); }
 
+section('16. 回归 (a)：互动目标绑定家具，搬走后不在旧位置闻（熊大 p2 复核）');
+// 旧代码没有 PE.visit：按旧的 visit 计划结构手动排（去站位 → 朝东 → 闻 → 再闻 → 守着）
+function startVisit(w, uid) {
+  if (PE.visit) return PE.visit(w, uid);
+  const p = w.items.find(q => q.uid === uid), s = PE.interactSpot(w, p.fid);
+  w.dog.plan = [{ k: 'goto', to: s.spot, speed: 'walk' }, { k: 'face', dir: 'E' }, { k: 'anim', clip: 'sniff' }, { k: 'anim', clip: 'sniff' }, { k: 'wait', dur: 3 }]; w.dog.step = null; w.dog.activity = 'visit';
+  return { ok: true, spot: s.spot };
+}
+const spotOf = (w, uid) => { const p = w.items.find(q => q.uid === uid); const s = p && PE.interactSpot(w, p.fid, uid); return s && s.spot; };
+// 搬完之后：旧站位 0.3 格内一帧都不许闻；要么跟到新站位闻，要么取消
+function afterMove(w, oldSpot, sec) {
+  const r = { oldSniff: 0, newSniff: 0, cancel: false, body: 0, overlap: 0, teleport: 0, outside: 0 };
+  const rr2 = run(w, sec, (w) => {
+    const sn = w.dog.anim.name === 'sniff';
+    if (sn && Math.hypot(w.dog.x - oldSpot.x, w.dog.y - oldSpot.y) < 0.3) r.oldSniff++;
+    const ns = spotOf(w, CAT);
+    if (sn && ns && Math.hypot(w.dog.x - ns.x, w.dog.y - ns.y) < 0.05) r.newSniff++;
+    if (w.dog.activity !== 'visit') { r.cancel = true; }
+  });
+  return { ...r, ...rr2 };
+}
+const CAT = 'f8';   // 测试房间的猫窝 furn_catbed (9,4)
+for (const phase of ['sniffing', 'walking']) for (const seed of [3, 11]) {
+  const w = world(seed, null, { x: 2.0, y: 2.6 }); run(w, 0.2);
+  const v = startVisit(w, CAT); ok(v.ok, `[${phase}/${seed}] 让它去猫窝`);
+  const old = { ...spotOf(w, CAT) };
+  if (phase === 'sniffing') run(w, 20, (w) => !(w.dog.anim.name === 'sniff' && w.dog.activity === 'visit'));
+  else run(w, 1.2);
+  ok(phase === 'walking' ? w.dog.step && w.dog.step.k === 'goto' : w.dog.anim.name === 'sniff', `[${phase}/${seed}] 搬之前它正在${phase === 'walking' ? '走过去' : '闻'}`);
+  PE.setRearrange(w, true); const mv = PE.moveItem(w, CAT, 5, 5); PE.setRearrange(w, false);
+  ok(mv.ok, `[${phase}/${seed}] 把猫窝从 (9,4) 搬到 (5,5)`);
+  const r = afterMove(w, old, 40);
+  ok(r.oldSniff === 0, `[${phase}/${seed}] 搬走后不在旧位置闻（旧位置闻了 ${r.oldSniff} 帧）`);
+  ok(r.newSniff > 0, `[${phase}/${seed}] 跟到新位置闻（新位置闻了 ${r.newSniff} 帧）`);
+  ok(clean(r), `[${phase}/${seed}] 过程中不压家具 / 鼻尖不进家具 / 不瞬移`);
+}
+{ // 目标被拿掉 → 立刻取消
+  const w = world(5, null, { x: 2.0, y: 2.6 }); run(w, 0.2); startVisit(w, CAT); const old = { ...spotOf(w, CAT) }; run(w, 1.0);
+  const i = w.items.findIndex(p => p.uid === CAT); w.items.splice(i, 1); w.obsVer++;
+  const r = afterMove(w, old, 12);
+  ok(r.oldSniff === 0 && r.cancel, `猫窝被拿走：取消计划，不去空地闻（旧位置闻了 ${r.oldSniff} 帧）`); }
+{ // 搬到走不到 / 站不下的地方 → 取消
+  const w = world(6, null, { x: 2.0, y: 2.6 }); run(w, 0.2); startVisit(w, CAT); const old = { ...spotOf(w, CAT) }; run(w, 1.0);
+  const mv = PE.moveItem(w, CAT, 9, 6); ok(mv.ok, '把猫窝塞到着陆舱猫窝上面那格 (9,6)');
+  const ns = PE.interactSpot(w, 'furn_catbed', CAT);
+  const r = afterMove(w, old, 12);
+  ok(r.oldSniff === 0 && r.cancel && r.newSniff === 0, `新站位站不下（${ns && ns.free ? '能站' : '站不下'}）→ 取消计划，哪儿都不闻（旧 ${r.oldSniff} / 新 ${r.newSniff}）`);
+  ok(clean(r), '取消过程不压家具不瞬移'); }
+{ // 别的家具动了、站位没变：计划照常；同款两件按 uid 认，不会认错
+  const room = emptyRoom([{ fid: 'furn_catbed', x: 3, y: 2 }, { fid: 'furn_catbed', x: 7, y: 5 }, { fid: 'furn_plant', x: 0, y: 7 }]);
+  const w = world(7, room, { x: 2, y: 6 }); run(w, 0.2);
+  const v = startVisit(w, 'f1'); ok(v.ok, '同款两个猫窝，指定去第二个');
+  run(w, 0.8); PE.moveItem(w, 'f2', 1, 7); const sp = spotOf(w, 'f1');
+  let at2 = 0, at1 = 0; const sp1 = spotOf(w, 'f0');
+  run(w, 20, (w) => { if (w.dog.anim.name === 'sniff') { if (Math.hypot(w.dog.x - sp.x, w.dog.y - sp.y) < 0.05) at2++; if (Math.hypot(w.dog.x - sp1.x, w.dog.y - sp1.y) < 0.3) at1++; } });
+  ok(at2 > 0 && at1 === 0, `别的家具搬动不打断；按 uid 去的是第二个猫窝（第二个 ${at2} 帧 / 第一个 ${at1} 帧）`); }
+
+section('17. 回归 (b)：合法交换 / 轮换后读档不被打回默认（熊大 p2 复核）');
+const posOf = (w, uid) => { const p = w.items.find(q => q.uid === uid); return [p.x, p.y]; };
+function swapWorld() {   // 摇椅 f10 (2,5) ↔ 绿植 f12 (0,6)，都是 1×1，经过一个临时空位合法交换
+  const w = world(31, null, { x: 6, y: 2.6 });
+  ok(PE.moveItem(w, 'f12', 1, 7).ok && PE.moveItem(w, 'f10', 0, 6).ok && PE.moveItem(w, 'f12', 2, 5).ok, '（摇椅 ↔ 绿植合法交换）');
+  return w;
+}
+for (const order of ['原顺序', '倒序', '打乱']) {
+  const w = swapWorld(); const s = JSON.parse(JSON.stringify(PE.serialize(w, 1000)));
+  if (order === '倒序') s.items.reverse(); if (order === '打乱') s.items.sort((a, b) => (a.uid.length * 7 + a.uid.charCodeAt(a.uid.length - 1)) % 5 - (b.uid.length * 7 + b.uid.charCodeAt(b.uid.length - 1)) % 5);
+  const w2 = world(31); PE.restore(w2, s, 2000);
+  ok(posOf(w2, 'f10').join() === '0,6' && posOf(w2, 'f12').join() === '2,5', `交换后读档保留（存档${order}）：摇椅 ${posOf(w2, 'f10')}、绿植 ${posOf(w2, 'f12')}`);
+}
+{ // 三件轮换：猫窝 f8 (9,4) → 光盘塔位 (9,2)，光盘塔 f5 → 着陆舱位 (9,7)，着陆舱 f13 → 猫窝位 (9,4)
+  const w = world(32, null, { x: 5, y: 2.6 });
+  ok(PE.moveItem(w, 'f8', 8, 3).ok && PE.moveItem(w, 'f5', 8, 6).ok && PE.moveItem(w, 'f13', 9, 4).ok && PE.moveItem(w, 'f8', 9, 2).ok && PE.moveItem(w, 'f5', 9, 7).ok, '（三件合法轮换）');
+  const s = PE.serialize(w, 0); s.items.reverse();
+  const w2 = world(32); PE.restore(w2, s, 1000);
+  ok(posOf(w2, 'f8').join() === '9,2' && posOf(w2, 'f5').join() === '9,7' && posOf(w2, 'f13').join() === '9,4', '三件轮换读档全保留（与记录顺序无关）'); }
+for (const rev of [false, true]) { // 真异常的只回退那一件：台灯 f1 被改到绿植新位置上（坏档）
+  const w = swapWorld(); const s = PE.serialize(w, 0); s.items.find(i => i.uid === 'f1').x = 2; s.items.find(i => i.uid === 'f1').y = 5;
+  s.items.find(i => i.uid === 'f11').x = 12;   // 豆袋出界（坏档）
+  if (rev) s.items.reverse();
+  const w2 = world(31); const r = PE.restore(w2, s, 1000);
+  ok(posOf(w2, 'f1').join() === '3,0' && posOf(w2, 'f11').join() === '3,6', `坏档：重叠的台灯 / 出界的豆袋回默认位（${rev ? '倒序' : '原顺序'}）`);
+  ok(posOf(w2, 'f10').join() === '0,6' && posOf(w2, 'f12').join() === '2,5', `坏档里合法交换的两件照样保留（${rev ? '倒序' : '原顺序'}）`);
+  const sol = w2.items.filter(p => PE.isSolid(w2, p)); let ovn = 0; for (let i = 0; i < sol.length; i++) for (let j = i + 1; j < sol.length; j++) if (ovl(PE.itemRect(w2, sol[i]), PE.itemRect(w2, sol[j]), 0)) ovn++;
+  ok(ovn === 0 && PE.circleFree(w2, w2.dog.x, w2.dog.y, C.R) && !bodyHit(w2, 'E') && !bodyHit(w2, 'W'), '读档后没有重叠的家具，小狗站在空地（左右转身都不碰家具）'); }
+
+section('18. 回归 (c)：碰撞按小狗身体外形，鼻尖 / 尾巴不进家具（各朝向）');
+if (M.body) ok(['E', 'N', 'S'].every(d => M.body[d][0] <= BODY_PX[d][0] && M.body[d][1] >= BODY_PX[d][1]), 'manifest.body 包住逐帧量出的外形（E/N/S）');
+else ok(false, 'manifest 没有身体外形 body');
+{ // 贴着每件实体家具的四面走过去：每个朝向都不进家具
+  const w0 = world(40); const dirsSeen = { E: 0, W: 0, N: 0, S: 0 }, hit = { E: 0, W: 0, N: 0, S: 0 }; let tries = 0, closeE = Infinity;
+  for (const p of w0.items.filter(q => PE.isSolid(w0, q))) {
+    const r = PE.itemRect(w0, p);
+    for (const [tx, ty] of [[r.x - 0.25, r.y + r.h / 2], [r.x + r.w + 0.25, r.y + r.h / 2], [r.x + r.w / 2, r.y - 0.25], [r.x + r.w / 2, r.y + r.h + 0.25]]) {
+      if (tx < 0.2 || ty < 0.2 || tx > 9.8 || ty > 7.8) continue;
+      const w = world(40); w.dog.plan = [{ k: 'goto', to: { x: tx, y: ty }, speed: 'walk', near: 0.9 }, { k: 'face', dir: null, toward: { x: r.x + r.w / 2, y: 0 } }, { k: 'anim', clip: 'sniff' }, { k: 'wait', dur: 0.5 }]; w.dog.step = null; w.dog.activity = 'test'; tries++;
+      run(w, 25, (w) => { const d = visDir(w); dirsSeen[d]++; if (bodyHit(w, d)) hit[d]++; if (!w.dog.plan.length && w.dog.step && w.dog.step.k === 'wait') return false; });
+      if (visDir(w) === 'E' && w.dog.y > r.y && w.dog.y < r.y + r.h && w.dog.x < r.x) closeE = Math.min(closeE, r.x - (w.dog.x + BOX.E.r));
+    }
+  }
+  for (const d of ['E', 'W', 'N', 'S']) ok(dirsSeen[d] > 0 && hit[d] === 0, `朝${d}：${dirsSeen[d]} 帧，鼻尖 / 尾巴进家具 ${hit[d]} 帧`);
+  ok(tries >= 30, `贴着 ${tries} 个家具侧面走过去测`); }
+{ // 互动站位：站好朝向后鼻尖不进家具，也不离太远（贴边 ≤ 0.1 格）
+  const w = world(41);
+  for (const k of Object.keys(PR.INTERACT).filter(k => k.startsWith('furn_'))) {
+    const s = PE.interactSpot(w, k); const p = w.items.find(q => q.fid === k), r = PE.itemRect(w, p);
+    const bx = boxOf(s.spot.x, s.spot.y, PR.INTERACT[k].face || 'E');
+    const hitAny = w.items.some(q => PE.isSolid(w, q) && ovl(bx, PE.itemRect(w, q), 1e-6));
+    const gap = Math.max(r.x - (bx.x + bx.w), 0) + Math.max(r.y - (bx.y + bx.h), 0, bx.y - (r.y + r.h));
+    ok(!hitAny && gap <= 0.1 + 1e-9, `${k} 站位朝东：鼻尖不进家具、离边 ${gap.toFixed(2)} 格`);
+  } }
+{ // 原地动作 / 东张西望转身也不进家具：放着不管 + 扔球 + 摸，各 3 分钟
+  for (const seed of [42, 43, 44]) {
+    const w = world(seed); const r = run(w, 180, (w) => { if (Math.round(w.t * 60) % (25 * 60) === 0 && w.ball.state === 'floor') PE.throwBall(w); if (Math.round(w.t * 60) % (37 * 60) === 0) PE.pet(w, 'button'); });
+    ok(clean(r), `种子${seed}：3 分钟自由活动 + 扔球 + 摸，身体盒压家具 ${r.body} 帧、圆 ${r.overlap} 帧`);
+  } }
+{ // 搬家具不能压到小狗鼻子 / 尾巴
+  const w = world(45, emptyRoom([{ fid: 'furn_plant', x: 0, y: 7 }]), { x: 4.5, y: 4.5 }); w.dog.dir = 'E'; w.dog.plan = [{ k: 'wait', dur: 30 }]; w.dog.step = null; run(w, 0.1);
+  ok(!PE.moveItem(w, 'f0', 5, 4).ok, '朝东站着：家具不能放到鼻子上（x=5 那格）');
+  w.dog.dir = 'W'; ok(!PE.moveItem(w, 'f0', 3, 4).ok, '朝西站着：家具不能放到鼻子上（x=3 那格）'); }
+
 section('15. 压力：40 个种子 × 4 分钟，随机搬家具 + 扔球');
 { let stuckWorlds = 0, worst = 0, bad = 0, guard = 0; let lcg = 987654321; const R = () => ((lcg = (Math.imul(lcg, 1103515245) + 12345) >>> 0) / 4294967296);
   for (let seed = 1; seed <= 40; seed++) {
@@ -305,7 +437,7 @@ section('15. 压力：40 个种子 × 4 分钟，随机搬家具 + 扔球');
       if (f % (20 * 60) === 0 && f > 0) { const it = w.items[Math.floor(R() * w.items.length)]; PE.setRearrange(w, true); for (let k = 0; k < 30; k++) if (PE.moveItem(w, it.uid, Math.floor(R() * 10), Math.floor(R() * 8)).ok) break; PE.setRearrange(w, false); }
       if (f % (9 * 60) === 0 && w.ball.state === 'floor') PE.throwBall(w);
       const ox = w.dog.x, oy = w.dog.y; PE.update(w, H);
-      if (Math.hypot(w.dog.x - ox, w.dog.y - oy) > C.RUN * H + 1e-9 || PE.minClearance(w) < C.R - 1e-6) bad++;
+      if (Math.hypot(w.dog.x - ox, w.dog.y - oy) > C.RUN * H + 1e-9 || PE.minClearance(w) < C.R - 1e-6 || bodyHit(w)) bad++;
       const moving = w.dog.step && (w.dog.step.k === 'goto' || w.dog.step.k === 'chase') && w.ball.state !== 'air';
       if (!moving || Math.hypot(w.dog.x - lp.x, w.dog.y - lp.y) > 0.05) { lp = { x: w.dog.x, y: w.dog.y }; lastProg = w.t; }
       maxStill = Math.max(maxStill, w.t - lastProg);
@@ -313,7 +445,7 @@ section('15. 压力：40 个种子 × 4 分钟，随机搬家具 + 扔球');
     if (maxStill > 3) stuckWorlds++; worst = Math.max(worst, maxStill); guard += w.stats.stuck;
   }
   ok(stuckWorlds === 0, `没有原地踏步卡住的（最长 ${worst.toFixed(1)} 秒没前进）`);
-  ok(bad === 0, '160 分钟模拟：0 帧压家具 / 0 帧瞬移');
+  ok(bad === 0, '160 分钟模拟：0 帧压家具（含鼻尖 / 尾巴）/ 0 帧瞬移');
   console.log(`  （保险机制触发 ${guard} 次）`); }
 
 console.log(`\n引擎测试：${pass} 过 / ${fail} 挂`);

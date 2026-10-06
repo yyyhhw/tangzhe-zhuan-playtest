@@ -1,8 +1,10 @@
-/* 宠物原型 p1 — 小狗行为引擎（纯逻辑，不碰 DOM / localStorage，浏览器 / Node 通用）
+/* 宠物原型 p3 — 小狗行为引擎（纯逻辑，不碰 DOM / localStorage，浏览器 / Node 通用）
    坐标：地板格，x 向右、y 向前（y=0 贴后墙），1 = 1 格；小狗位置 = 落地点（影子中心）。
    规则（熊大规格）：走 0.65 格/秒、跑 1.30、碰撞半径 0.22；精力起始 70，<35 优先休息、睡到 70 再活动；
    走/跑/玩 每秒 −0.06/−0.30/−0.20，睡觉 +0.80；亲密起始 40，有效互动 +1（60 秒冷却），离线 / 冷落永不扣；
-   收益加成 0（不接经济）。只在「目标或障碍变了」时重算路径（带间隙网格 A* + 拉直）。 */
+   收益加成 0（不接经济）。只在「目标或障碍变了」时重算路径（带间隙网格 A* + 拉直）。
+   p3：碰撞 = 脚下圆（半径 0.22）+ 按朝向的身体盒（横向范围来自 manifest.body 逐帧量出的鼻尖 / 尾巴尖，纵深 ±0.22）；
+       互动目标绑定家具 uid，布局一变重算站位，目标没了 / 走不到就取消；读档整组恢复布局再统一查冲突。 */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory(require('./art.js'));
   else root.PetEngine = factory(root.PetArt);
@@ -40,7 +42,7 @@
     const byId = {};
     for (const f of catalog) byId[f.id] = f;
     const w = {
-      cfg: CFG, byId, manifest, interact,
+      cfg: CFG, byId, manifest, interact, body: bodyBoxes(manifest),
       cols: room.cols, rows: room.rows, wallRows: room.wallRows || 2,
       front: { ...room.front }, bed: { ...room.bed }, bowl: { ...room.bowl },
       items: room.items.filter(p => byId[p.fid] && !byId[p.fid].wall).map((p, i) => ({ uid: 'f' + i, fid: p.fid, x: p.x, y: p.y, rot: p.rot || 0 })),
@@ -60,7 +62,7 @@
       plan: [], step: null, anim: new Art.Animator(manifest), petCdUntil: 0,
       move: null, lastEat: -1e9,
     };
-    const sp = nearestFreePoint(w, w.dog, CFG.R, 3);
+    const sp = nearestDogPoint(w, w.dog, 3);
     if (sp) { w.dog.x = sp.x; w.dog.y = sp.y; }
     const bp = nearestFreePoint(w, { x: room.front.x + 1.2, y: room.rows - 1.2 }, CFG.BALL_R, 3);
     w.ball.x = bp.x; w.ball.y = bp.y;
@@ -110,13 +112,54 @@
     for (const o of obstacles(w)) if (segRectDist(a, b, o) < rad) return false;
     return true;
   }
+  /* ---------- 身体盒（p3）：按朝向的地面占地，鼻尖 / 尾巴尖不进家具 ----------
+     E/W：x 向前到鼻尖、向后到尾巴尖（W = E 镜像）；N/S：x 左右到耳朵 / 尾巴；纵深都 ±R。
+     V = N∪S（规划用），H = 左右对称取大（站着能随便转身 / 原地动作用）。小狗自己的饭碗只按脚下圆算（吃饭时嘴要伸到碗上）。 */
+  function bodyBoxes(m) {
+    const k = m.runtime.displayTiles / m.source.frameSize[0], o = m.source.origin[0], b = m.body || {};
+    const ext = (r) => r ? { l: (o - r[0]) * k, r: (r[1] - o) * k } : { l: CFG.R, r: CFG.R };
+    const E = ext(b.E), N = ext(b.N), S = ext(b.S);
+    const V = { l: Math.max(N.l, S.l), r: Math.max(N.r, S.r) }, hw = Math.max(E.l, E.r, V.l, V.r);
+    return { E, W: { l: E.r, r: E.l }, N, S, V, H: { l: hw, r: hw }, D: CFG.R };
+  }
+  // 当前画出来的朝向：原地动作只画东向（西 = 镜像），所以 N/S 时播原地动作也按东向算
+  function visDir(w) { const d = w.dog; return Art.IN_PLACE.includes(d.anim.name) ? (d.dir === 'W' ? 'W' : 'E') : d.dir; }
+  function boxAt(w, x, y, cls) { const b = w.body[cls], D = w.body.D; return { x: x - b.l, y: y - D, w: b.l + b.r, h: 2 * D }; }
+  const rectsOverlap = (a, b, e) => a.x < b.x + b.w - e && b.x < a.x + a.w - e && a.y < b.y + b.h - e && b.y < a.y + a.h - e;
+  // tol > 0：运行时检查，贴边（浮点误差）不算压
+  function bodyFree(w, x, y, cls, tol) {
+    const e = tol || 0, bx = boxAt(w, x, y, cls);
+    if (bx.x < -e || bx.y < -e || bx.x + bx.w > w.cols + e || bx.y + bx.h > w.rows + e) return false;
+    if (!circleFree(w, x, y, CFG.R - e)) return false;
+    for (const o of obstacles(w)) if (o.uid !== 'pet_bowl' && rectsOverlap(bx, o, e)) return false;
+    return true;
+  }
+  // 这一段走的时候画哪个朝向：横向分量大于竖向 → 侧身 E/W，否则 N/S（45° 算竖着）。tickMove 用同一条规则（moveDir）
+  function moveDir(dx, dy) { return Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'E' : 'W') : (dy > 0 ? 'S' : 'N'); }
+  function segCls(a, b) { const c = moveDir(b.x - a.x, b.y - a.y); return c === 'N' || c === 'S' ? 'V' : c; }
+  function segBodyClear(w, a, b, cls) {
+    if (!segClear(w, a, b, CFG.R)) return false;
+    const bb = w.body[cls], D = w.body.D;
+    for (const p of [a, b]) if (p.x - bb.l < 0 || p.x + bb.r > w.cols || p.y - D < 0 || p.y + D > w.rows) return false;
+    const e = 1e-9;
+    for (const o of obstacles(w)) {
+      if (o.uid === 'pet_bowl') continue;
+      if (segHitsRect(a.x, a.y, b.x, b.y, { x: o.x - bb.r + e, y: o.y - D + e, w: o.w + bb.l + bb.r - 2 * e, h: o.h + 2 * D - 2 * e })) return false;
+    }
+    return true;
+  }
+  const segOK = (w, a, b) => segBodyClear(w, a, b, segCls(a, b));
+  // 小狗身体盒压到实体家具（测试 / 调试用）
+  function bodyOverlap(w) { return !bodyFree(w, w.dog.x, w.dog.y, visDir(w), 1e-6); }
+
   /* ---------- 网格 A*（带间隙） ---------- */
   function grid(w) {
     obstacles(w);
     if (w._grid) return w._grid;
-    const R = CFG.RES, nx = Math.round(w.cols / R), ny = Math.round(w.rows / R), free = new Uint8Array(nx * ny);
-    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) free[j * nx + i] = circleFree(w, (i + 0.5) * R, (j + 0.5) * R, CFG.R) ? 1 : 0;
-    w._grid = { nx, ny, free, R };
+    const R = CFG.RES, nx = Math.round(w.cols / R), ny = Math.round(w.rows / R), free = new Uint8Array(nx * ny), freeH = new Uint8Array(nx * ny);
+    // free = 竖着（N/S 身体盒）站得下；freeH = 横着（E/W，左右对称取大）也站得下 → 能在这儿转身 / 播原地动作
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) { const x = (i + 0.5) * R, y = (j + 0.5) * R; free[j * nx + i] = bodyFree(w, x, y, 'V') ? 1 : 0; freeH[j * nx + i] = free[j * nx + i] && bodyFree(w, x, y, 'H') ? 1 : 0; }
+    w._grid = { nx, ny, free, freeH, R };
     return w._grid;
   }
   const nodePt = (g, n) => ({ x: (n % g.nx + 0.5) * g.R, y: (Math.floor(n / g.nx) + 0.5) * g.R });
@@ -138,6 +181,12 @@
       for (let a = 0; a < 24; a++) { const x = p.x + Math.cos(a / 24 * 6.2832) * r, y = p.y + Math.sin(a / 24 * 6.2832) * r; if (circleFree(w, x, y, rad)) return { x, y }; }
     return null;
   }
+  function nearestDogPoint(w, p, maxD) {
+    if (bodyFree(w, p.x, p.y, 'H')) return { x: p.x, y: p.y };
+    for (let r = 0.05; r <= (maxD || 3); r += 0.05)
+      for (let a = 0; a < 24; a++) { const x = p.x + Math.cos(a / 24 * 6.2832) * r, y = p.y + Math.sin(a / 24 * 6.2832) * r; if (bodyFree(w, x, y, 'H')) return { x, y }; }
+    return nearestFreePoint(w, p, CFG.R, maxD);
+  }
   function astar(w, s, goal) {
     const g = grid(w), N = g.nx * g.ny, gs = new Float64Array(N).fill(Infinity), came = new Int32Array(N).fill(-1), closed = new Uint8Array(N);
     const gx = goal % g.nx, gy = Math.floor(goal / g.nx);
@@ -146,7 +195,7 @@
     const push = (n, f) => { heap.push([f, n]); let i = heap.length - 1; while (i > 0) { const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
     const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === i) break; [heap[m], heap[i]] = [heap[i], heap[m]]; i = m; } } return top; };
     gs[s] = 0; push(s, h(s));
-    const midFree = (a, b) => segClear(w, nodePt(g, a), nodePt(g, b), CFG.R);
+    const midFree = (a, b) => segOK(w, nodePt(g, a), nodePt(g, b));
     while (heap.length) {
       const [, n] = pop();
       if (closed[n]) continue; closed[n] = 1;
@@ -168,12 +217,12 @@
   function planPath(w, from, to, near) {
     w.stats.plans++;
     const R = CFG.R;
-    let fin = circleFree(w, to.x, to.y, R) ? { x: to.x, y: to.y } : null;
+    let fin = bodyFree(w, to.x, to.y, 'V') ? { x: to.x, y: to.y } : null;
     if (!fin) { const c = nearestNodes(w, to, near == null ? 0.6 : near, 1)[0]; if (!c) return null; fin = c.q; }
-    if (segClear(w, from, fin, R)) return [fin];
-    const starts = nearestNodes(w, from, 0.9, 12).filter(c => segClear(w, from, c.q, R));
+    if (segOK(w, from, fin)) return [fin];
+    const starts = nearestNodes(w, from, 0.9, 12).filter(c => segOK(w, from, c.q));
     if (!starts.length) return null;
-    const goals = nearestNodes(w, fin, 0.6, 6).filter(c => segClear(w, c.q, fin, R));
+    const goals = nearestNodes(w, fin, 0.6, 6).filter(c => segOK(w, c.q, fin));
     if (!goals.length) return null;
     const path = astar(w, starts[0].n, goals[0].n);
     if (!path) return null;
@@ -182,7 +231,7 @@
     const out = []; let i = 0;
     while (i < pts.length - 1) {
       let j = pts.length - 1;
-      while (j > i + 1 && !segClear(w, pts[i], pts[j], R)) j--;
+      while (j > i + 1 && !segOK(w, pts[i], pts[j])) j--;
       out.push(pts[j]); i = j;
     }
     return out;
@@ -190,20 +239,25 @@
   function reachable(w, from, to, near) { return !!planPath(w, from, to, near); }
 
   /* ---------- 互动点（只有 INTERACT 里配了的才有） ---------- */
-  function interactSpot(w, key) {
+  // 家具互动绑定 uid（同款摆两件也不会认错）；不给 uid 就找第一件这个款的
+  // 站位：cfg.nose = 鼻尖相对占地左上角的位置（按身体盒倒推脚下站位，鼻尖刚好贴到不进图）；cfg.spot = 直接给脚下站位（自己的窝 / 碗）
+  function interactSpot(w, key, uid) {
     const cfg = w.interact[key]; if (!cfg) return null;
-    let base;
+    let base, item = null;
     if (key === 'pet_bed') base = w.bed; else if (key === 'pet_bowl') base = w.bowl;
-    else { const p = w.items.find(q => q.fid === key); if (!p) return null; base = itemRect(w, p); }
-    const spot = { x: base.x + cfg.spot[0], y: base.y + cfg.spot[1] };
-    return { key, cfg, spot, center: { x: base.x + base.w / 2, y: base.y + base.h / 2 }, free: circleFree(w, spot.x, spot.y, CFG.R) };
+    else { item = uid ? w.items.find(q => q.uid === uid && q.fid === key) : w.items.find(q => q.fid === key); if (!item) return null; base = itemRect(w, item); }
+    const face = cfg.face || 'E', fb = w.body[face];
+    const spot = cfg.nose ? { x: base.x + cfg.nose[0] + (face === 'W' ? fb.l : -fb.r), y: base.y + cfg.nose[1] } : { x: base.x + cfg.spot[0], y: base.y + cfg.spot[1] };
+    return { key, uid: item ? item.uid : key, cfg, spot, center: { x: base.x + base.w / 2, y: base.y + base.h / 2 }, free: bodyFree(w, spot.x, spot.y, face) && bodyFree(w, spot.x, spot.y, 'V') };
   }
 
   /* ---------- 计划 / 步骤 ---------- */
-  function setPlan(w, kind, steps, label) {
+  // tgt：这个计划绑定的家具目标（visit 用）；换计划就解绑
+  function setPlan(w, kind, steps, label, tgt) {
     const d = w.dog;
     if (d.step && d.step.k === 'sleep' && kind !== 'rest') d.lastWake = w.t;
     d.plan = steps; d.step = null; d.activity = kind; if (label) d.label = label;
+    d.tgt = tgt || null;
     w.log.push({ t: +w.t.toFixed(2), kind }); if (w.log.length > 300) w.log.shift();
   }
   const faceStep = (dir, toward) => ({ k: 'face', dir, toward });
@@ -224,13 +278,44 @@
   function randomSpot(w, minD) {
     for (let i = 0; i < 40; i++) {
       const p = { x: rr(w, 0.4, w.cols - 0.4), y: rr(w, 0.4, w.rows - 0.4) };
-      if (!circleFree(w, p.x, p.y, CFG.R + 0.04)) continue;
+      if (!circleFree(w, p.x, p.y, CFG.R + 0.04) || !bodyFree(w, p.x, p.y, 'H')) continue;   // 到了要原地闻，左右都转得开
       if (dist(p, w.dog) < (minD || 1.5)) continue;
       if (w.failed.some(f => f.until > w.t && dist(f, p) < 1)) continue;
       return p;
     }
     return null;
   }
+  /* ---------- 互动目标（p3）：绑定家具 uid，布局一变就重算站位 ---------- */
+  function visitSteps(w, s, stay, label) {
+    const steps = [{ k: 'goto', to: { ...s.spot }, tgt: true, speed: 'walk', label: label || '去' + s.cfg.label + '那边看看' }, faceStep(s.cfg.face || 'E'), { k: 'anim', clip: 'sniff', label: '闻闻' + s.cfg.label + '（有猫味？）' }];
+    if (stay) steps.push({ k: 'anim', clip: 'sniff', label: '再闻闻' + s.cfg.label }, { k: 'wait', dur: rr(w, 2, 4), label: '守在' + s.cfg.label + '旁边' });
+    return steps;
+  }
+  // 测试 / 以后正式接入用：让它去某件家具（按 uid）
+  function visit(w, uid, stay) {
+    const p = w.items.find(q => q.uid === uid); if (!p || !w.interact[p.fid]) return { ok: false, why: 'noInteract' };
+    const s = interactSpot(w, p.fid, uid); if (!s || !s.free || !reachable(w, w.dog, s.spot, 0.05)) return { ok: false, why: 'unreachable' };
+    setPlan(w, 'visit', visitSteps(w, s, stay !== false), null, { uid, key: p.fid, spot: { ...s.spot }, ver: w.obsVer });
+    return { ok: true, spot: s.spot };
+  }
+  function cancelTarget(w, why) {
+    const d = w.dog; w.stats.tgtCancel = (w.stats.tgtCancel || 0) + 1;
+    setPlan(w, 'confused', [...inPlace('attention', { label: why }), { k: 'wait', dur: 0.6 }]); fx(w, 'q');
+  }
+  // 布局变了（obsVer 变）：目标家具还在吗、站位挪了吗、还走得到吗
+  function checkTarget(w) {
+    const d = w.dog, T = d.tgt; if (!T || T.ver === w.obsVer) return;
+    T.ver = w.obsVer; w.stats.tgtChecks = (w.stats.tgtChecks || 0) + 1;
+    const s = interactSpot(w, T.key, T.uid), label = (w.interact[T.key] || {}).label || '那件家具';
+    if (!s) return cancelTarget(w, label + '不见了，愣了一下');
+    if (!s.free || !reachable(w, d, s.spot, 0.05)) return cancelTarget(w, label + '挪到过不去的地方了，算了');
+    if (dist(s.spot, T.spot) < 1e-6) return;   // 别的家具动了，站位没变
+    T.spot = { ...s.spot }; w.stats.tgtMoved = (w.stats.tgtMoved || 0) + 1;
+    if (d.step && d.step.k === 'goto' && d.step.tgt) { d.step.to = { ...s.spot }; d.step.path = null; d.step.ver = -1; d.step.progAt = w.t; d.step.progPos = { x: d.x, y: d.y }; return; }
+    // 已经在闻 / 守着了：跟到新位置重新闻（旧位置不再闻）
+    setPlan(w, 'visit', visitSteps(w, s, false, label + '挪地方了，跟过去'), null, T);
+  }
+
   // 自己待着时挑下一件事：按个性 + 精力加权，最近做过的降权（让它像在「有目的地过日子」）
   function choose(w) {
     const d = w.dog, P = CFG.PERSONALITY;
@@ -245,12 +330,10 @@
       if (rnd(w) < P.curious * 0.55) steps.push({ k: 'wait', dur: rr(w, 2, 4.5), label: '在这儿待一会' });
       return steps;
     });
-    const visits = Object.keys(w.interact).filter(k => k.startsWith('furn_')).map(k => interactSpot(w, k)).filter(s => s && s.free && !w.failed.some(f => f.until > w.t && dist(f, s.spot) < 0.5));
+    const visits = w.items.filter(p => p.fid.startsWith('furn_') && w.interact[p.fid]).map(p => interactSpot(w, p.fid, p.uid)).filter(s => s && s.free && !w.failed.some(f => f.until > w.t && dist(f, s.spot) < 0.5));
     if (visits.length) add('visit', 0.9 * P.curious, () => {
       const s = visits[Math.floor(rnd(w) * visits.length)];
-      const steps = [{ k: 'goto', to: s.spot, speed: 'walk', label: '去' + s.cfg.label + '那边看看' }, faceStep(s.cfg.face), { k: 'anim', clip: 'sniff', label: '闻闻' + s.cfg.label + '（有猫味？）' }];
-      if (rnd(w) < (s.cfg.stay || 0.5)) steps.push({ k: 'anim', clip: 'sniff', label: '再闻闻' + s.cfg.label }, { k: 'wait', dur: rr(w, 2, 4), label: '守在' + s.cfg.label + '旁边' });
-      return steps;
+      return { steps: visitSteps(w, s, rnd(w) < (s.cfg.stay || 0.5)), tgt: { uid: s.uid, key: s.key, spot: { ...s.spot }, ver: w.obsVer } };
     });
     const bowl = interactSpot(w, 'pet_bowl');
     if (bowl && bowl.free && w.t - d.lastEat > 45) add('eat', 0.45, () => [{ k: 'goto', to: bowl.spot, speed: 'walk', label: '去饭碗那边' }, faceStep('E'), { k: 'anim', clip: 'eat', label: '吧唧吧唧吃两口' }, { k: 'anim', clip: 'eat', label: '吧唧吧唧' }, { k: 'fn', fn: (w) => { w.dog.lastEat = w.t; } }]);
@@ -267,7 +350,7 @@
     let r = rnd(w) * tot;
     for (const o of opts) {
       r -= o.wt;
-      if (r <= 0) { const steps = o.build(); if (steps) { setPlan(w, o.kind, steps); return; } }
+      if (r <= 0) { const b = o.build(); if (b) { if (Array.isArray(b)) setPlan(w, o.kind, b); else setPlan(w, o.kind, b.steps, null, b.tgt); return; } }
     }
     setPlan(w, 'idle', [{ k: 'wait', dur: 1.5, look: 'random', label: '发会呆' }]);
   }
@@ -296,15 +379,33 @@
       const v = DIRV[w.dog.dir]; b.x = w.dog.x + v[0] * 0.3; b.y = w.dog.y + v[1] * 0.12; b.z = 0;
     }
   }
-  function ballApproach(w) {
+  const REACH = CFG.R + CFG.BALL_R + 0.32;
+  // 叼球 / 拨球站位：站在球的左边或右边、侧身朝球（原地动作只画侧面），身体盒不进家具
+  const sideTowardBall = (w, p) => (w.ball.x >= p.x ? 'E' : 'W');
+  const ballPoseOK = (w, p) => dist(p, w.ball) <= REACH - 0.01 && bodyFree(w, p.x, p.y, 'V') && (bodyFree(w, p.x, p.y, sideTowardBall(w, p)) || bodyFree(w, p.x, p.y, sideTowardBall(w, p) === 'E' ? 'W' : 'E'));
+  // 球停在 p 时有没有能叼的侧身站位（抛球挑落点用）
+  function pickableAt(w, p) {
+    for (const off of [0.46, 0.54, 0.62]) for (const dy of [0, 0.12, -0.12, 0.22, -0.22]) for (const sg of [-1, 1]) {
+      const q = { x: p.x + sg * off, y: p.y + dy };
+      if (Math.hypot(off, dy) <= REACH - 0.02 && bodyFree(w, q.x, q.y, 'V') && bodyFree(w, q.x, q.y, sg < 0 ? 'E' : 'W')) return true;
+    }
+    return false;
+  }
+  function ballApproach(w, cur) {
     const b = w.ball, d = w.dog;
-    let dx = d.x - b.x, dy = d.y - b.y; const L = Math.hypot(dx, dy) || 1;
-    const p = { x: b.x + dx / L * 0.32, y: b.y + dy / L * 0.32 };
-    if (circleFree(w, p.x, p.y, CFG.R)) return p;
+    if (cur && ballPoseOK(w, cur)) return cur;
+    let best = null;
+    for (const off of [0.46, 0.54, 0.62]) for (const dy of [0, 0.12, -0.12, 0.22, -0.22]) for (const sg of [-1, 1]) {
+      const p = { x: b.x + sg * off, y: b.y + dy };
+      if (Math.hypot(off, dy) > REACH - 0.02 || !bodyFree(w, p.x, p.y, 'V') || !bodyFree(w, p.x, p.y, sg < 0 ? 'E' : 'W')) continue;
+      const c = dist(p, d) + off * 0.5 + Math.abs(dy);
+      if (!best || c < best.c) best = { p, c };
+    }
+    if (best) return best.p;
+    if (b.state === 'floor') return null;   // 球停在左右都放不下侧身的地方：叼不了 → 放弃（不硬挤）
     const c = nearestNodes(w, b, 0.62, 1)[0];
     return c ? c.q : { x: b.x, y: b.y };
   }
-  const REACH = CFG.R + CFG.BALL_R + 0.32;
 
   /* ---------- 每帧 ---------- */
   function playAnim(w, base, opt) {
@@ -318,11 +419,11 @@
     switch (s.k) {
       case 'goto': case 'chase': s.path = null; s.ver = -1; break;
       case 'face': {
-        let want = s.dir;
-        if (!want) {   // 侧面：朝目标那边；没目标就沿用上次的侧面
-          const tx = s.toward ? s.toward.x : null;
-          want = tx != null && Math.abs(tx - d.x) > 0.05 ? (tx > d.x ? 'E' : 'W') : (d.dir === 'E' || d.dir === 'W' ? d.dir : d.side);
-          if (s.towardBall) want = w.ball.x >= d.x ? 'E' : 'W';
+        let want = faceWant(w, s);
+        // 转过去鼻子 / 尾巴会进家具：侧面就换另一侧；还不行就不转（runDog 会先挪到宽敞处）
+        if (!bodyFree(w, d.x, d.y, want, 1e-9)) {
+          const alt = want === 'E' ? 'W' : want === 'W' ? 'E' : null;
+          want = !s.dir && alt && bodyFree(w, d.x, d.y, alt, 1e-9) ? alt : d.dir;
         }
         s.want = want; s.dur = want === d.dir ? 0 : 0.16; break;
       }
@@ -338,6 +439,25 @@
       case 'wait': playAnim(w, 'idle'); s.nextLook = w.t + rr(w, 0.8, 1.6); break;
       case 'sleep': d.anim.play('sleep', { loop: true }); fx(w, 'zz'); break;
     }
+  }
+  function faceWant(w, s) {
+    const d = w.dog; let want = s.dir;
+    if (!want) {   // 侧面：朝目标那边；没目标就沿用上次的侧面
+      const tx = s.toward ? s.toward.x : null;
+      want = tx != null && Math.abs(tx - d.x) > 0.05 ? (tx > d.x ? 'E' : 'W') : (d.dir === 'E' || d.dir === 'W' ? d.dir : d.side);
+      if (s.towardBall) want = w.ball.x >= d.x ? 'E' : 'W';
+    }
+    return want;
+  }
+  // 要转侧身但这里左右都放不下身子（比如卡在竖向窄道）：先挪到最近的宽敞处（走得到的才去）
+  function faceFix(w, s) {
+    if (s.k !== 'face' || s.fixed) return null; s.fixed = true;
+    const d = w.dog, want = faceWant(w, s);
+    if (want === 'N' || want === 'S') return null;
+    if (bodyFree(w, d.x, d.y, want, 1e-9) || (!s.dir && bodyFree(w, d.x, d.y, want === 'E' ? 'W' : 'E', 1e-9))) return null;
+    const g = grid(w);
+    for (const c of nearestNodes(w, d, 1.8).filter(c => g.freeH[c.n]).slice(0, 6)) if (planPath(w, d, c.q, 0)) { w.stats.reloc = (w.stats.reloc || 0) + 1; return { k: 'goto', to: c.q, speed: 'walk', label: '挪到宽敞点的地方' }; }
+    return null;
   }
   // 返回 'run' | 'done' | 'fail'
   function tickStep(w, s, dt) {
@@ -359,7 +479,7 @@
         return 'run';
       }
       case 'wait': {
-        if (s.look === 'random' && w.t >= s.nextLook) { const ds = ['E', 'W', 'S', 'N', 'S']; d.dir = ds[Math.floor(rnd(w) * ds.length)]; if (d.dir === 'E' || d.dir === 'W') d.side = d.dir; s.nextLook = w.t + rr(w, 0.8, 1.6); }
+        if (s.look === 'random' && w.t >= s.nextLook) { const ds = ['E', 'W', 'S', 'N', 'S'], nd = ds[Math.floor(rnd(w) * ds.length)]; if (bodyFree(w, d.x, d.y, nd, 1e-9)) { d.dir = nd; if (nd === 'E' || nd === 'W') d.side = nd; } s.nextLook = w.t + rr(w, 0.8, 1.6); }
         playAnim(w, 'idle'); d.anim.tick(dt);
         return w.t - s.t0 >= s.dur ? 'done' : 'run';
       }
@@ -383,23 +503,28 @@
     if (s.k === 'chase') {
       if (w.ball.state === 'carried') return 'fail';
       if (w.ball.state === 'air') { playAnim(w, 'idle'); d.anim.tick(dt); return 'run'; }
-      if (dist(d, w.ball) <= REACH && segClear(w, d, d, CFG.R)) { s.goal = null; return 'done'; }
-      const g = ballApproach(w);
+      if (ballPoseOK(w, d)) { s.goal = null; return 'done'; }
+      const g = ballApproach(w, s.goal);
+      if (!g) { w.stats.ballNoPose = (w.stats.ballNoPose || 0) + 1; w.failed.push({ x: w.ball.x, y: w.ball.y, until: w.t + 15 }); return 'fail'; }
       if (!s.goal || dist(g, s.goal) > 0.3) { s.goal = g; s.path = null; }
     } else s.goal = s.to;
     if (!s.path || s.ver !== w.obsVer) {
       if (s.path) w.stats.replans++;
-      s.path = planPath(w, d, s.goal, s.near); s.ver = w.obsVer; s.progAt = w.t; s.progPos = { x: d.x, y: d.y };
+      s.path = planPath(w, d, s.goal, s.near); s.ver = w.obsVer;
+      if (!s.progPos) { s.progAt = w.t; s.progPos = { x: d.x, y: d.y }; }   // 重算路径不清进度计时（追球时目标一直变也逃不过 2.5 秒保险）
       if (!s.path) { w.failed.push({ x: s.goal.x, y: s.goal.y, until: w.t + 15 }); if (w.failed.length > 20) w.failed.shift(); return 'fail'; }
     }
     const spd = s.speed === 'run' ? CFG.RUN : CFG.WALK;
-    let budget = spd * dt; const ox = d.x, oy = d.y; let mvx = 0, mvy = 0;
+    let budget = spd * dt; const ox = d.x, oy = d.y;
     while (budget > 1e-9 && s.path.length) {
       const wp = s.path[0], dx = wp.x - d.x, dy = wp.y - d.y, L = Math.hypot(dx, dy);
       if (L < 1e-6) { s.path.shift(); continue; }
+      // 朝向按「正在走的这一段」定（整段直线，朝向不会来回闪）；和规划时 segCls 同一条规则，规划查过的身体盒就是实际画的
+      const nd = moveDir(dx, dy);
       const stepL = Math.min(L, budget), nx = d.x + dx / L * stepL, ny = d.y + dy / L * stepL;
-      if (!circleFree(w, nx, ny, CFG.R - 1e-9)) { s.path = null; s.ver = -1; break; }   // 被挡（障碍刚变过）→ 下帧重算
-      d.x = nx; d.y = ny; budget -= stepL; mvx += dx / L * stepL; mvy += dy / L * stepL;
+      if (!bodyFree(w, nx, ny, nd, 1e-9)) { s.path = null; s.ver = -1; break; }   // 被挡（障碍刚变过）→ 下帧重算
+      d.dir = nd; if (nd === 'E' || nd === 'W') d.side = nd;
+      d.x = nx; d.y = ny; budget -= stepL;
       if (stepL >= L - 1e-9) s.path.shift();
     }
     const moved = Math.hypot(d.x - ox, d.y - oy);
@@ -408,23 +533,20 @@
     else if (w.t - s.progAt > 2.5) { w.stats.stuck = (w.stats.stuck || 0) + 1; w.failed.push({ x: s.goal.x, y: s.goal.y, until: w.t + 15 }); return 'fail'; }
     if (moved > 1e-6) {
       d.drainMode = s.speed;
-      // 朝向：横竖哪个分量大就朝哪边（带一点迟滞，免得斜走时来回闪）
-      const ax = Math.abs(mvx), ay = Math.abs(mvy), cur = d.dir;
-      const horiz = cur === 'E' || cur === 'W';
-      let nd = cur;
-      if (ax > ay * (horiz ? 0.8 : 1.25)) nd = mvx > 0 ? 'E' : 'W'; else nd = mvy > 0 ? 'S' : 'N';
-      d.dir = nd; if (nd === 'E' || nd === 'W') d.side = nd;
       playAnim(w, s.speed === 'run' ? 'run' : 'walk'); d.anim.tick(dt);
     } else if (s.path) { playAnim(w, 'idle'); d.anim.tick(dt); }
-    if (s.path && !s.path.length) return s.k === 'chase' ? (dist(d, w.ball) <= REACH ? 'done' : (s.path = null, 'run')) : 'done';
+    if (s.path && !s.path.length) return s.k === 'chase' ? (ballPoseOK(w, d) ? 'done' : (s.path = null, s.goal = null, 'run')) : 'done';
     return 'run';
   }
   function runDog(w, dt) {
     const d = w.dog;
+    checkTarget(w);
     for (let guard = 0; guard < 6; guard++) {
       if (!d.step) {
         if (!d.plan.length) { if (w.paused) { playAnim(w, 'idle'); d.anim.tick(dt); return; } choose(w); }
-        d.step = d.plan.shift(); startStep(w, d.step);
+        d.step = d.plan.shift();
+        const fix = faceFix(w, d.step); if (fix) { d.plan.unshift(d.step); d.step = fix; }
+        startStep(w, d.step);
       }
       if (w.paused && d.step.k !== 'sleep' && d.step.k !== 'anim') { playAnim(w, 'idle'); d.anim.tick(dt); return; }   // 搬家具时停下来等
       const r = tickStep(w, d.step, dt);
@@ -452,11 +574,11 @@
   /* ---------- 三个操作 ---------- */
   const callSpot = (w) => ({ x: w.front.x, y: w.front.y - 0.55 });
   function dropBallSteps() {
-    return [faceStep('S'), { k: 'anim', action: 'drop_ball', label: '把球放你面前', onEvent: (w, e) => { if (e === 'ball_drop') dropBall(w); } }];
+    return [faceStep(null), { k: 'anim', action: 'drop_ball', label: '把球放你面前', onEvent: (w, e) => { if (e === 'ball_drop') dropBall(w); } }];
   }
   // 原地放球（不走去你面前）：放球动作 + 兜底 fn（动作被打断 / 没触发事件也一定放下）
   function dropHereSteps(label) {
-    return [{ k: 'anim', action: 'drop_ball', label: label || '把球放下', onEvent: (w, e) => { if (e === 'ball_drop') dropBall(w); } }, { k: 'fn', fn: dropBall }];
+    return [faceStep(null), { k: 'anim', action: 'drop_ball', label: label || '把球放下', onEvent: (w, e) => { if (e === 'ball_drop') dropBall(w); } }, { k: 'fn', fn: dropBall }];
   }
   function dropBall(w) {
     const b = w.ball, d = w.dog; if (b.state !== 'carried') return;
@@ -501,7 +623,13 @@
     if (b.state === 'air') return { ok: false, why: 'flying' };
     let t = target;
     if (!t || !ballFree(w, t.x, t.y)) {
-      for (let i = 0; i < 60; i++) { const p = { x: rr(w, 0.4, w.cols - 0.4), y: rr(w, 0.5, w.rows - 1.4) }; if (ballFree(w, p.x, p.y) && dist(p, w.front) > 2.2) { t = p; break; } }
+      for (let i = 0; i < 80; i++) {
+        const p = { x: rr(w, 0.4, w.cols - 0.4), y: rr(w, 0.5, w.rows - 1.4) }; if (!ballFree(w, p.x, p.y) || dist(p, w.front) <= 2.2) continue;
+        // 落地后还会顺着飞的方向滚约 0.25 格：落点和滚停点都要叼得到（不往窄缝里扔）
+        const L = Math.hypot(p.x - w.front.x, p.y - w.front.y) || 1, q = { x: p.x + (p.x - w.front.x) / L * 0.26, y: p.y + (p.y - w.front.y) / L * 0.26 };
+        if (i < 60 && !(pickableAt(w, p) && pickableAt(w, q))) continue;
+        t = p; break;
+      }
     }
     if (!t) return { ok: false, why: 'nowhere' };
     const sx = w.front.x, sy = w.front.y, L = Math.hypot(t.x - sx, t.y - sy);
@@ -545,7 +673,7 @@
     if (!rug) {
       if (ov(me, w.bowl)) return { ok: false, why: '压到饭碗了' };
       if (ov(me, w.bed)) return { ok: false, why: '压到小狗的窝了' };
-      if (rectDist(w.dog.x, w.dog.y, me) < CFG.R) return { ok: false, why: '小狗站在这儿' };
+      if (rectDist(w.dog.x, w.dog.y, me) < CFG.R || rectsOverlap(boxAt(w, w.dog.x, w.dog.y, visDir(w)), me, 0)) return { ok: false, why: '小狗站在这儿' };
       if (w.ball.state !== 'carried' && rectDist(w.ball.x, w.ball.y, me) < CFG.BALL_R) return { ok: false, why: '压到球了' };
     }
     return { ok: true };
@@ -572,10 +700,7 @@
   // 回来：离线 = 自己在窝里休息（只回精力），不扣亲密、不动金币（本来就不接经济）、不复制小狗或球
   function restore(w, s, nowMs) {
     if (!s || s.v !== CFG.SAVE_V || !s.dog) return { ok: false };
-    for (const it of s.items || []) {
-      const p = w.items.find(q => q.uid === it.uid && q.fid === it.fid);
-      if (p && Number.isInteger(it.x) && Number.isInteger(it.y)) { const ox = p.x, oy = p.y, orot = p.rot; p.x = it.x; p.y = it.y; p.rot = it.rot || 0; w.obsVer++; const c = canPlaceStatic(w, p); if (!c) { p.x = ox; p.y = oy; p.rot = orot; w.obsVer++; } }
-    }
+    const layout = restoreLayout(w, s.items);
     const elapsed = clamp(((nowMs || 0) - (s.savedAt || 0)) / 1000, 0, 86400 * 30);
     const d = w.dog;
     w.t = (s.t || 0) + elapsed; if (s.rs) w.rs = s.rs >>> 0;
@@ -593,7 +718,7 @@
       d.tired = d.energy < CFG.RESTED;
       setPlan(w, 'rest', [{ k: 'sleep', label: '在窝里睡着（你不在时自己休息了）' }, { k: 'anim', clip: 'getup', label: '你回来了，伸懒腰起来' }, { k: 'fn', fn: (w) => { w.dog.tired = false; } }]);
     } else {
-      const p = nearestFreePoint(w, { x: +s.dog.x, y: +s.dog.y }, CFG.R, 4) || nearestFreePoint(w, callSpot(w), CFG.R, 4);
+      const p = nearestDogPoint(w, { x: +s.dog.x, y: +s.dog.y }, 4) || nearestDogPoint(w, callSpot(w), 4);
       d.x = p.x; d.y = p.y; d.dir = ['E', 'W', 'N', 'S'].includes(s.dog.dir) ? s.dog.dir : 'S'; d.tired = (!!s.dog.tired || d.energy < CFG.TIRED) && d.energy < CFG.RESTED;
       setPlan(w, 'idle', [{ k: 'wait', dur: 1, label: '你回来了' }]);
     }
@@ -602,17 +727,37 @@
     let bp = s.ball && !s.ball.carried ? { x: +s.ball.x, y: +s.ball.y } : { x: d.x + 0.4, y: d.y + 0.2 };
     bp = nearestFreePoint(w, bp, CFG.BALL_R, 4) || nearestFreePoint(w, { x: w.front.x + 1, y: w.front.y }, CFG.BALL_R, 6);
     b.x = bp.x; b.y = bp.y;
-    return { ok: true, elapsed, energyGain: d.energy - e0, inBed: !!inBed };
+    return { ok: true, elapsed, energyGain: d.energy - e0, inBed: !!inBed, reverted: layout.reverted };
   }
-  function canPlaceStatic(w, p) {
-    const s = sizeOf(w, p), me = { x: p.x, y: p.y, w: s.w, h: s.h };
-    if (p.x < 0 || p.y < 0 || p.x + s.w > w.cols || p.y + s.h > w.rows) return false;
+  // p3 读档布局：先把存档里的位置整组放上（合法交换 / 轮换都成立），再统一查冲突；
+  // 只把真正有问题的件放回默认位：先查单件（出界 / 压窝压碗），再处理两两重叠——每轮挑冲突最多的「不在默认位」的件放回，
+  // 平手时优先放回「默认位空着」的那件，再按 uid；结果和存档里的记录顺序无关。
+  function restoreLayout(w, saved) {
+    const def = {}; for (const p of w.items) def[p.uid] = { x: p.x, y: p.y, rot: p.rot };
+    const atDef = (p) => p.x === def[p.uid].x && p.y === def[p.uid].y && p.rot === def[p.uid].rot;
+    const back = (p) => { Object.assign(p, def[p.uid]); reverted.push(p.uid); };
+    const reverted = [];
+    for (const it of Array.isArray(saved) ? saved : []) {
+      const p = it && w.items.find(q => q.uid === it.uid && q.fid === it.fid);
+      if (p && Number.isInteger(it.x) && Number.isInteger(it.y)) { p.x = it.x; p.y = it.y; p.rot = it.rot === 1 || it.rot === 2 || it.rot === 3 ? it.rot : 0; }
+    }
     const ov = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
-    for (const q of w.items) if (q !== p && isRug(w, q) === isRug(w, p) && ov(me, itemRect(w, q))) return false;
-    if (!isRug(w, p) && (ov(me, w.bowl) || ov(me, w.bed))) return false;
-    return true;
+    for (const p of w.items) {
+      const r = itemRect(w, p);
+      if (!atDef(p) && (r.x < 0 || r.y < 0 || r.x + r.w > w.cols || r.y + r.h > w.rows || (!isRug(w, p) && (ov(r, w.bowl) || ov(r, w.bed))))) back(p);
+    }
+    const conflicts = (p, at) => { const r = at ? itemRect(w, { ...p, ...at }) : itemRect(w, p); let n = 0; for (const q of w.items) if (q !== p && isRug(w, q) === isRug(w, p) && ov(r, itemRect(w, q))) n++; return n; };
+    const uidN = (u) => parseInt(String(u).replace(/\D/g, ''), 10) || 0;
+    for (let guard = 0; guard <= w.items.length; guard++) {
+      const cand = w.items.filter(p => !atDef(p)).map(p => ({ p, n: conflicts(p) })).filter(c => c.n > 0);
+      if (!cand.length) break;
+      for (const c of cand) c.defFree = conflicts(c.p, def[c.p.uid]) === 0 ? 1 : 0;
+      cand.sort((a, b) => (b.n - a.n) || (b.defFree - a.defFree) || (uidN(a.p.uid) - uidN(b.p.uid)));
+      back(cand[0].p);
+    }
+    w.obsVer++;
+    return { reverted };
   }
-
   /* ---------- 给测试 / 渲染看的 ---------- */
   function snapshot(w) {
     const d = w.dog, b = w.ball;
@@ -636,6 +781,7 @@
   function overlapsFurniture(w, x, y) { return !circleFree(w, x, y, CFG.R - 1e-6) && x >= CFG.R - 1e-6 && y >= CFG.R - 1e-6 && x <= w.cols - CFG.R + 1e-6 && y <= w.rows - CFG.R + 1e-6; }
   function minClearance(w) { let m = Infinity; for (const o of obstacles(w)) m = Math.min(m, rectDist(w.dog.x, w.dog.y, o)); return m; }
 
-  return { CFG, createWorld, update, step, call, pet, throwBall, setRearrange, moveItem, canPlace, serialize, restore, snapshot, drawOrder,
-    planPath, reachable, circleFree, segClear, obstacles, itemRect, sizeOf, isSolid, isRug, interactSpot, minClearance, overlapsFurniture, rectDist, callSpot, grid };
+  return { CFG, createWorld, update, step, call, pet, throwBall, setRearrange, moveItem, canPlace, serialize, restore, restoreLayout, snapshot, drawOrder, visit,
+    planPath, reachable, circleFree, segClear, obstacles, itemRect, sizeOf, isSolid, isRug, interactSpot, minClearance, overlapsFurniture, rectDist, callSpot, grid,
+    bodyFree, bodyOverlap, boxAt, visDir, segOK };
 });

@@ -1,4 +1,4 @@
-# 宠物原型 p2 — 手机端端到端测试（WebKit = iPhone Safari 内核）
+# 宠物原型 p3 — 手机端端到端测试（WebKit = iPhone Safari 内核）
 # 用法：在仓库根目录起静态服务（python3 -m http.server 49761），再 /workspace/.pwvenv/bin/python preview/pet/test_pet_e2e.py [URL]
 import sys, os, json
 from playwright.sync_api import sync_playwright
@@ -8,10 +8,28 @@ KEY = 'tangzhe-pet-proto'
 results = []
 def check(c, msg): results.append((bool(c), msg)); print(('  ✓ ' if c else '  ✗ ') + msg)
 # 在页面里按帧推进并逐帧检查：不压家具、不瞬移
-STEP_JS = """([sec, watch]) => { const P = __pet, w = P.w, PE = P.PE, C = PE.CFG; const out = { overlap: 0, teleport: 0, seq: [], carriedFrames: 0, maxGap: 0, petStarts0: w.stats.petStarts };
+# p3：页面里逐帧量占位小狗每帧的像素外形（不看 manifest.body，独立核对），算屏幕上的鼻尖 / 尾巴范围
+P3_SETUP = """() => { if (window.__p3) return true; const P = __pet, M = P.M, PE = P.PE, C = PE.CFG;
+  const bb = {}; for (const [name, c] of Object.entries(M.clips)) bb[name] = c.frames.map((f, i) => { const cv = document.createElement('canvas'); cv.width = 256; cv.height = 256; const x = cv.getContext('2d');
+    PetPuppy.drawFrame(x, M, name, i); const d = x.getImageData(0, 0, 256, 256).data; let a = 999, b = -1;
+    for (let y = 0; y < 256; y++) for (let xx = 0; xx < 256; xx++) if (d[(y * 256 + xx) * 4 + 3] > 8) { if (xx < a) a = xx; if (xx > b) b = xx; } return [a, b + 1]; });
+  const K = 1.8 / 256, PX = { E: [46, 217], N: [92, 164], S: [88, 169] };
+  const visDir = (w) => PetArt.IN_PLACE.includes(w.dog.anim.name) ? (w.dog.dir === 'W' ? 'W' : 'E') : w.dog.dir;
+  window.__p3 = { bb, visDir,
+    // 地面身体盒（逐帧量出的外形 → 格）压到实体家具
+    boxHit(w) { const dir = visDir(w), e = PX[dir === 'W' ? 'E' : dir]; let l = (128 - e[0]) * K, r = (e[1] - 128) * K; if (dir === 'W') [l, r] = [r, l];
+      const d = w.dog; for (const p of w.items) { if (!PE.isSolid(w, p)) continue; const q = PE.itemRect(w, p); if (d.x - l < q.x + q.w - 1e-6 && d.x + r > q.x + 1e-6 && d.y - C.R < q.y + q.h - 1e-6 && d.y + C.R > q.y + 1e-6) return p.uid; } return null; },
+    // 屏幕像素级：小狗这一帧画出来的左右范围 和 同一纵深带里家具图的左右范围 有没有交叠
+    visHit(w) { const d = w.dog, t = P.tile, k = M.runtime.displayTiles * t / 256, fi = d.anim.frame(), ab = bb[d.anim.name][fi], gx = d.x * t;
+      const lo = d.dir === 'W' ? gx - (ab[1] - 128) * k : gx + (ab[0] - 128) * k, hi = d.dir === 'W' ? gx - (ab[0] - 128) * k : gx + (ab[1] - 128) * k;
+      for (const p of w.items) { if (!PE.isSolid(w, p)) continue; const q = PE.itemRect(w, p); if (!(d.y - C.R < q.y + q.h - 1e-6 && d.y + C.R > q.y + 1e-6)) continue;
+        const ir = P.itemDrawRect ? P.itemDrawRect(p.uid) : { x: q.x * t, w: q.w * t }; if (hi > ir.x + 0.5 && lo < ir.x + ir.w - 0.5) return p.uid; } return null; } };
+  return true; }"""
+STEP_JS = """([sec, watch]) => { const P = __pet, w = P.w, PE = P.PE, C = PE.CFG; const out = { overlap: 0, teleport: 0, body: 0, vis: 0, dirs: {}, seq: [], carriedFrames: 0, maxGap: 0, petStarts0: w.stats.petStarts };
   for (let i = 0; i < Math.round(sec * 60); i++) { const ox = w.dog.x, oy = w.dog.y; PE.update(w, 1 / 60);
     if (Math.hypot(w.dog.x - ox, w.dog.y - oy) > C.RUN / 60 + 1e-9) out.teleport++;
     if (PE.minClearance(w) < C.R - 1e-6) out.overlap++;
+    if (window.__p3) { if (__p3.boxHit(w)) out.body++; if (__p3.visHit(w)) out.vis++; const vd = __p3.visDir(w); out.dirs[vd] = (out.dirs[vd] || 0) + 1; }
     const c = w.dog.anim.name; if (out.seq[out.seq.length - 1] !== c) out.seq.push(c);
     if (w.ball.state === 'carried') { out.carriedFrames++; out.maxGap = Math.max(out.maxGap, Math.hypot(w.ball.x - w.dog.x, w.ball.y - w.dog.y)); }
     if (watch && w.dog.activity !== watch) break; }
@@ -31,6 +49,7 @@ with sync_playwright() as p:
         pg.goto(URL + '?seed=5'); pg.wait_for_function("document.body.dataset.ready==='1'", timeout=15000)
         pg.wait_for_function("__pet.imagesReady().ok === __pet.imagesReady().total", timeout=15000)
         pg.wait_for_timeout(600)
+        pg.evaluate(P3_SETUP)
         vp = pg.viewport_size
         lay = pg.evaluate("""() => { const r = (s) => document.querySelector(s).getBoundingClientRect(); return { cv: r('#room'), move: r('#bMove'), call: r('#bCall'), ball: r('#bBall'), sw: document.documentElement.scrollWidth, iw: innerWidth, label: r('#label') }; }""")
         check(lay['cv']['left'] >= 0 and lay['cv']['right'] <= vp['width'] + 0.5, f'房间画布在屏幕宽度内（{lay["cv"]["width"]:.0f}×{lay["cv"]["height"]:.0f}）')
@@ -46,8 +65,9 @@ with sync_playwright() as p:
             kinds = sorted(set(pg.evaluate("__pet.w.log.map(l => l.kind)")))
             check(len(kinds) >= 4, f'放着 2 分钟（加速）做了 {len(kinds)} 种事：{"/".join(kinds)}')
             check(r['overlap'] == 0 and r['teleport'] == 0, '2 分钟里不压家具、不瞬移')
+            check(r['body'] == 0 and r['vis'] == 0, f'p3：2 分钟里鼻尖 / 尾巴不进家具（地面盒 {r["body"]} 帧，屏幕像素交叠 {r["vis"]} 帧，朝向 {r["dirs"]}）')
             # 呼唤：点按钮
-            pg.evaluate("(() => { const w = __pet.w; w.dog.x = 8.6; w.dog.y = 2.0; w.dog.plan = []; w.dog.step = null; w.dog.activity = 'idle'; })()")
+            pg.evaluate("(() => { const w = __pet.w; w.dog.x = 8.2; w.dog.y = 2.0; w.dog.plan = []; w.dog.step = null; w.dog.activity = 'idle'; })()")
             aff0 = pg.evaluate("__pet.w.dog.affinity")
             pg.tap('#bCall')
             r = pg.evaluate(STEP_JS, [15, 'called'])
@@ -55,7 +75,7 @@ with sync_playwright() as p:
             check('attention' in seq and mv and seq.index('attention') < mv[0], '点「呼唤」：先扭头（attention）再走过来 ' + '>'.join(seq[:5]))
             cs = pg.evaluate("__pet.PE.callSpot(__pet.w)"); d = r['snap']['dog']
             check(abs(d['x'] - cs['x']) < 0.05 and abs(d['y'] - cs['y']) < 0.05 and d['dir'] == 'S', '走到你面前、面朝你')
-            check(r['overlap'] == 0 and r['teleport'] == 0, '绕家具过来，没穿过去')
+            check(r['overlap'] == 0 and r['teleport'] == 0 and r['body'] == 0 and r['vis'] == 0, '绕家具过来，没穿过去（鼻尖 / 尾巴也没进家具）')
             check(d['affinity'] == aff0 + 1, f'亲密 {aff0} → {d["affinity"]}')
             # 抛球：点按钮
             pg.tap('#bBall')
@@ -70,7 +90,7 @@ with sync_playwright() as p:
             check(r3['carriedFrames'] > 30 and r3['maxGap'] < 0.35, f'叼着球走回来（{r3["carriedFrames"]} 帧，球一直在嘴边）')
             check(bl['state'] in ('floor', 'roll') and ((bl['x'] - cs['x']) ** 2 + (bl['y'] - cs['y']) ** 2) ** 0.5 < 1.2, '球放在你面前')
             check(r3['snap']['stats']['fetches'] >= 1, '叼回计数 +1')
-            check(r3['overlap'] == 0 and r3['teleport'] == 0, '追球 / 叼回不压家具不瞬移')
+            check(r3['overlap'] == 0 and r3['teleport'] == 0 and r3['body'] == 0 and r3['vis'] == 0, '追球 / 叼回不压家具不瞬移（鼻尖 / 尾巴也没进家具）')
             # 点小狗连摸 12 下
             pg.evaluate(STEP_JS, [2, None])
             pg.evaluate("(() => { const w = __pet.w; w.dog.plan = [{ k: 'wait', dur: 20 }]; w.dog.step = null; w.dog.activity = 'idle'; w.dog.petCdUntil = 0; })()"); pg.evaluate("__pet.advance(0.05)")
@@ -147,6 +167,50 @@ with sync_playwright() as p:
             pg.wait_for_function("__pet.imagesReady().ok === __pet.imagesReady().total", timeout=15000)
             e0 = pg.evaluate("({ e: __pet.w.dog.energy, tired: __pet.w.dog.tired, flag: sessionStorage.getItem('tz_e0') })")
             check(e0['flag'] == '2' and e0['e'] < 0.5 and e0['tired'], f'回归：0 精力即时读档保留 0（{e0["e"]:.3f}，累={e0["tired"]}）')
+            # ===== p3 回归（熊大 p2 复核三项）=====
+            pg.goto(URL + '?fresh=1&seed=7'); pg.wait_for_function("document.body.dataset.ready==='1'"); pg.evaluate("__pet.manual(true)")
+            pg.wait_for_function("__pet.imagesReady().ok === __pet.imagesReady().total", timeout=15000); pg.evaluate(P3_SETUP)
+            # (c) 身体外形校准：每个片段每一帧画出来的左右范围都在 manifest.body 里（各朝向）
+            cal = pg.evaluate("""() => { const M = __pet.M, out = { ok: true, bad: [] }; if (!M.body) return { ok: false, bad: ['manifest 没有 body'] };
+              for (const [name, c] of Object.entries(M.clips)) __p3.bb[name].forEach((ab, i) => { const b = M.body[c.dir]; if (ab[0] < b[0] || ab[1] > b[1]) { out.ok = false; out.bad.push(name + '#' + i + ' ' + ab); } }); return out; }""")
+            check(cal['ok'], 'p3 (c)：108 帧每帧画出来的鼻尖 / 尾巴 / 耳朵都在 manifest.body 范围里' + ('' if cal['ok'] else '：' + '；'.join(cal['bad'][:3])))
+            # (a) 小狗正在闻猫窝 → 点「搬家具」把猫窝拖走 → 不在旧位置闻，跟到新位置闻
+            pg.evaluate("""() => { const w = __pet.w, PE = __pet.PE; w.dog.energy = 90; w.dog.tired = false; w.dog.x = 2.0; w.dog.y = 2.6; w.dog.plan = []; w.dog.step = null;
+              if (PE.visit) PE.visit(w, 'f8'); else { const s = PE.interactSpot(w, 'furn_catbed'); w.dog.plan = [{ k: 'goto', to: s.spot, speed: 'walk' }, { k: 'face', dir: 'E' }, { k: 'anim', clip: 'sniff' }, { k: 'anim', clip: 'sniff' }, { k: 'wait', dur: 3 }]; w.dog.activity = 'visit'; }
+              for (let i = 0; i < 30 * 60; i++) { PE.update(w, 1 / 60); if (w.dog.anim.name === 'sniff' && w.dog.activity === 'visit') break; } __pet.advance(0); }""")
+            old = pg.evaluate("(() => { const w = __pet.w; return { x: w.dog.x, y: w.dog.y, clip: w.dog.anim.name }; })()")
+            check(old['clip'] == 'sniff', f'p3 (a)：小狗在猫窝边闻（{old["x"]:.2f},{old["y"]:.2f}）')
+            pg.tap('#bMove'); pg.evaluate("__pet.advance(0.05)")
+            def drag(fx, fy, tx, ty):
+                a = pg.evaluate(f"__pet.screenOf({fx}, {fy})"); t = pg.evaluate(f"__pet.screenOf({tx}, {ty})")
+                pg.mouse.move(a['x'], a['y']); pg.mouse.down()
+                for k in range(1, 9): pg.mouse.move(a['x'] + (t['x'] - a['x']) * k / 8, a['y'] + (t['y'] - a['y']) * k / 8)
+                pg.mouse.up(); pg.evaluate("__pet.advance(0.05)")
+            drag(9.5, 4.5, 5.5, 5.5)
+            cb = pg.evaluate("__pet.w.items.find(p => p.uid === 'f8')")
+            check(cb['x'] == 5 and cb['y'] == 5, f'p3 (a)：拖动把猫窝 (9,4) → ({cb["x"]},{cb["y"]})')
+            pg.tap('#bMove'); pg.evaluate("__pet.advance(0.05)")
+            ra = pg.evaluate("""([ox, oy]) => { const P = __pet, w = P.w, PE = P.PE, out = { oldS: 0, newS: 0, body: 0, vis: 0 };
+              for (let i = 0; i < 40 * 60; i++) { PE.update(w, 1 / 60); const sn = w.dog.anim.name === 'sniff', s = PE.interactSpot(w, 'furn_catbed', 'f8');
+                if (sn && Math.hypot(w.dog.x - ox, w.dog.y - oy) < 0.3) out.oldS++; if (sn && s && Math.hypot(w.dog.x - s.spot.x, w.dog.y - s.spot.y) < 0.05) out.newS++;
+                if (__p3.boxHit(w)) out.body++; if (__p3.visHit(w)) out.vis++; if (out.newS > 30) break; } P.advance(0); return out; }""", [old['x'], old['y']])
+            pg.screenshot(path=f'{SHOTS}/{tag}_8_catbed_moved.png')
+            check(ra['oldS'] == 0 and ra['newS'] > 0, f'p3 (a)：搬走后不在旧位置闻（旧 {ra["oldS"]} 帧），跟到新位置闻（新 {ra["newS"]} 帧）')
+            check(ra['body'] == 0 and ra['vis'] == 0, f'p3 (c)：去新猫窝一路 + 闻的时候鼻尖不进家具图（地面 {ra["body"]} / 屏幕 {ra["vis"]}）')
+            # (b) 拖动交换摇椅 (2,5) ↔ 绿植 (0,6)（经临时空位），刷新后保留
+            pg.evaluate("(() => { const w = __pet.w; w.dog.plan = [{ k: 'wait', dur: 60 }]; w.dog.step = null; })()")
+            pg.tap('#bMove'); pg.evaluate("__pet.advance(0.05)")
+            drag(0.5, 6.5, 1.5, 7.5); drag(2.5, 5.5, 0.5, 6.5); drag(1.5, 7.5, 2.5, 5.5)
+            pg.tap('#bMove'); pg.evaluate("__pet.advance(0.05)")
+            sw = pg.evaluate("(() => { const w = __pet.w, f = (u) => { const p = w.items.find(q => q.uid === u); return [p.x, p.y]; }; return { chair: f('f10'), plant: f('f12') }; })()")
+            check(sw['chair'] == [0, 6] and sw['plant'] == [2, 5], f'p3 (b)：拖动交换 摇椅→{sw["chair"]}、绿植→{sw["plant"]}')
+            pg.goto(URL + '?seed=7'); pg.wait_for_function("document.body.dataset.ready==='1'"); pg.evaluate("__pet.manual(true)")
+            pg.wait_for_function("__pet.imagesReady().ok === __pet.imagesReady().total", timeout=15000); pg.evaluate("__pet.advance(0)")
+            sw2 = pg.evaluate("(() => { const w = __pet.w, f = (u) => { const p = w.items.find(q => q.uid === u); return [p.x, p.y]; }; return { chair: f('f10'), plant: f('f12'), cat: f('f8') }; })()")
+            pg.screenshot(path=f'{SHOTS}/{tag}_9_swap_reload.png')
+            check(sw2['chair'] == [0, 6] and sw2['plant'] == [2, 5] and sw2['cat'] == [5, 5], f'p3 (b)：刷新后交换保留（摇椅 {sw2["chair"]}、绿植 {sw2["plant"]}、猫窝 {sw2["cat"]}），没被打回默认')
+            pg.evaluate(P3_SETUP); r = pg.evaluate(STEP_JS, [60, None])
+            check(r['overlap'] == 0 and r['teleport'] == 0 and r['body'] == 0 and r['vis'] == 0, f'p3：新摆设下活动 1 分钟，鼻尖 / 尾巴不进家具（地面 {r["body"]} / 屏幕 {r["vis"]}，朝向 {r["dirs"]}）')
         check(not errs, '控制台 0 报错 / 0 警告 / 0 坏请求' + ('' if not errs else '：' + '；'.join(errs[:4])))
         ctx.close()
     # 换真图集那条路：把占位帧烘成 2048×1024 图集再按 cell 画

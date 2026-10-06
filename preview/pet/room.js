@@ -1,4 +1,4 @@
-/* 宠物原型 p1 — 测试房间：家具全部来自正式目录（../economy.js 的 FURNITURE，占地 w×h 用目录里的），只挑一组摆样。
+/* 宠物原型 p3 — 测试房间：家具全部来自正式目录（../economy.js 的 FURNITURE，占地 w×h 用目录里的），只挑一组摆样。
    坐标：地板格，x 向右、y 向前（y=0 靠后墙），单位 = 1 格。家具 (x,y) 是占地左上角。 */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
@@ -32,13 +32,16 @@
     ],
   };
   // 只有这里配了「站位 / 朝向 / 动作」的家具才有专门互动；其余家具只当障碍。
-  // spot = 相对占地左上角的站位（格）；face = 站好后面朝哪边（原地动作只画东向，所以站在侧面）
+  // face = 站好后面朝哪边（原地动作只画东向，所以站在侧面）。
+  // nose = 鼻尖相对占地左上角的位置（格）：引擎按 manifest.body 的身体盒倒推脚下站位，鼻尖刚好贴边、不进家具图（p3）。
+  //   着陆舱猫窝站在左边（鼻尖离左边 0.04 格）；猫窝、猫吊床左右离别的家具只有 1 格放不下侧身，改站它前面偏左（脚在前沿外，画在它前面）。
+  // spot = 直接给脚下站位（只给自己的窝 / 碗：窝能踩上去，碗只按脚下圆算，吃饭时嘴要伸到碗上）。
   const INTERACT = {
     pet_bed:  { spot: [0.75, 0.55], face: 'E', action: 'sleep', label: '小窝' },
     pet_bowl: { spot: [-0.38, 0.24], face: 'E', action: 'eat', label: '饭碗' },
-    furn_catbed: { spot: [-0.36, 0.55], face: 'E', action: 'sniff', stay: 0.6, label: '猫窝' },
-    furn_pearl_tea_cat_hammock: { spot: [-0.36, 0.62], face: 'E', action: 'sniff', stay: 0.5, label: '茶篮猫吊床' },
-    furn_rocket_landing_cat_pod: { spot: [-0.36, 0.55], face: 'E', action: 'sniff', stay: 0.6, label: '着陆舱猫窝' },
+    furn_catbed: { nose: [0.30, 1.26], face: 'E', action: 'sniff', stay: 0.6, label: '猫窝' },
+    furn_pearl_tea_cat_hammock: { nose: [0.30, 1.26], face: 'E', action: 'sniff', stay: 0.5, label: '茶篮猫吊床' },
+    furn_rocket_landing_cat_pod: { nose: [-0.04, 0.55], face: 'E', action: 'sniff', stay: 0.6, label: '着陆舱猫窝' },
   };
   return { ROOM, INTERACT };
 });

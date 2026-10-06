@@ -1,4 +1,4 @@
-/* 宠物原型 p2 — 页面：画房间 / 小狗、三个操作、搬家具、独立存档（tangzhe-pet-proto），测试钩子。
+/* 宠物原型 p3 — 页面：画房间 / 小狗、三个操作、搬家具、独立存档（tangzhe-pet-proto），测试钩子。
    不碰正式游戏存档（tangzhe-save / tangzhe-preview-save），不接经济，收益加成 0。 */
 (function () {
   'use strict';
@@ -137,6 +137,8 @@
     drawItem({ ...p, x: drag.gx, y: drag.gy }, 0.75);
   }
   function drawDebug() {
+    const d = W.dog, bx = PE.boxAt(W, d.x, d.y, PE.visDir(W));   // 身体盒（p3：鼻尖 / 尾巴尖）
+    ctx.save(); ctx.strokeStyle = PE.bodyOverlap(W) ? '#d64545' : '#2f9e5b'; ctx.lineWidth = 1.5; ctx.strokeRect(sx(bx.x), sy(bx.y), bx.w * tile, bx.h * tile); ctx.restore();
     const s = W.dog.step; if (!s || !s.path) return;
     ctx.save(); ctx.strokeStyle = '#d64545'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(sx(W.dog.x), sy(W.dog.y));
     for (const p of s.path) ctx.lineTo(sx(p.x), sy(p.y)); ctx.stroke(); ctx.restore();
@@ -182,7 +184,7 @@
   });
   cv.addEventListener('pointermove', (e) => {
     if (!drag) return; const p = toTile(e);
-    drag.gx = Math.round(p.x - drag.offX); drag.gy = Math.round(p.y - drag.offY); render();
+    drag.gx = Math.round(p.x - drag.offX) || 0; drag.gy = Math.round(p.y - drag.offY) || 0; render();
   });
   const endDrag = () => {
     if (!drag) return; const d = drag; drag = null;
@@ -235,6 +237,9 @@
     get artMode() { return artMode; }, get rearrange() { return rearrange; },
     screenOf(x, y) { const b = cv.getBoundingClientRect(); return { x: b.left + sx(x), y: b.top + sy(y) }; },
     get tile() { return tile; },
+    // 家具图实际画在哪（CSS 像素，相对画布左上角）：测「鼻尖 / 尾巴不进家具图」用
+    itemDrawRect(uid) { const p = W.items.find(q => q.uid === uid), r = PE.itemRect(W, p), im = imgs[p.fid], x = sx(r.x), y = sy(r.y), w = r.w * tile, h = r.h * tile;
+      if (!ok(im) || PE.isRug(W, p)) return { x, y, w, h }; const ar = im.naturalHeight / im.naturalWidth; let dw = w, dh = w * ar; const cap = (r.h + W.wallRows) * tile; if (dh > cap) { dh = cap; dw = dh / ar; } return { x: x + (w - dw) / 2, y: y + h - dh, w: dw, h: dh }; },
     imagesReady() { const all = [...W.items, ...W.wall].map(p => imgs[p.fid]); return { total: all.length, ok: all.filter(ok).length }; },
   };
   window.advanceTime = (ms) => { PE.step(W, ms / 1000); render(); };
@@ -247,13 +252,13 @@
     const v = PA.validateManifest(m); if (!v.ok) throw new Error(v.errors.join('；'));
     M = m;
     const res = makeWorld(true); resize(); welcomeBack(res);
-    if (!m.placeholder && m.atlas.image) { const im = new Image(); im.onload = () => { atlas = im; artMode = 'atlas'; }; im.onerror = () => console.warn('图集没加载到，先用占位小狗'); im.src = 'art/' + m.atlas.image + '?v=p2'; }
+    if (!m.placeholder && m.atlas.image) { const im = new Image(); im.onload = () => { atlas = im; artMode = 'atlas'; }; im.onerror = () => console.warn('图集没加载到，先用占位小狗'); im.src = 'art/' + m.atlas.image + '?v=p3'; }
     if (Q.get('art') === 'atlas') window.__pet.bakeAtlas();
     document.body.dataset.ready = '1';
     requestAnimationFrame(frame);
   }
   function loadManifest(tryN) {
-    fetch('art/manifest.json?v=p2').then(r => { if (!r.ok) throw new Error('manifest ' + r.status); return r.json(); }).then(boot).catch(e => {
+    fetch('art/manifest.json?v=p3').then(r => { if (!r.ok) throw new Error('manifest ' + r.status); return r.json(); }).then(boot).catch(e => {
       if (leaving) return;
       if (tryN < 3) { $('label').textContent = '加载中…'; setTimeout(() => loadManifest(tryN + 1), 500 * (tryN + 1)); return; }
       $('label').textContent = '加载失败：' + e.message + '（下拉刷新试试）'; console.error(e);

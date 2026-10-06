@@ -66,6 +66,8 @@ const manifest = {
   atlas: { image: null, size: [COLS * CELL, ROWS * CELL], cols: COLS, rows: ROWS },
   directions: { drawn: ['E', 'N', 'S'], mirror: { W: 'E' } },
   shadow: { cell: shadowCell, radius: [52, 13] },
+  // 身体外形：每个真画朝向所有帧（含描边 / 尾巴尖 / 鼻尖）的横向像素范围，p3 用占位小狗逐帧量出来（test_pet_e2e 会再量一遍核对）
+  body: { E: [46, 217], N: [92, 164], S: [88, 169] },
   clips,
   actions: {
     pick_ball: { clip: 'sniff', frames: [0, 1, 2, 3], events: [{ frame: 3, name: 'ball_pick' }] },

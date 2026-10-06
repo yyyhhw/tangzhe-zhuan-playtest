@@ -62,6 +62,12 @@
       });
     }
     for (const name of Object.keys(clips)) if (!(name in REQUIRED)) err('多余片段 ' + name + '（不在约定里）');
+    // 身体外形（p3）：每个真画朝向的横向像素范围 [最左, 最右]（源帧坐标，含描边 / 尾巴 / 鼻子），引擎按它算碰撞盒
+    const bd = m.body || {};
+    for (const dn of ['E', 'N', 'S']) {
+      const r = bd[dn];
+      if (!(Array.isArray(r) && r.length === 2 && r.every(v => Number.isFinite(v) && v >= 0 && v <= 256) && r[0] < (src.origin || [128])[0] && r[1] > (src.origin || [128])[0])) err('body.' + dn + ' 应为 [最左像素, 最右像素]，且包住落地原点');
+    }
     if (!m.shadow || !(m.shadow.radius && m.shadow.radius.length === 2)) err('缺 shadow.radius');
     else useCell(m.shadow.cell, 'shadow');
     const acts = m.actions || {};
