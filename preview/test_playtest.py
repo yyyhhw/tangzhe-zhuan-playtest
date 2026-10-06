@@ -825,6 +825,69 @@ with sync_playwright() as p:
             zp.click('#mOk'); zp.wait_for_timeout(200)
         zc.close()
 
+    print('== 8z1. 11z1：4 张跨行漫画弹窗标题完整可见（刚打开 / 滚到底再回顶）+ 点图放大复用大图弹窗 ==')
+    TITLE_JS = """(()=>{const mp=document.querySelector('#mpanel'), R=mp.getBoundingClientRect(), bl=mp.clientTop||0;
+      const vis=e=>{const r=e.getBoundingClientRect(); return {t:Math.round(r.top), b:Math.round(r.bottom), ok:r.top>=Math.max(0,R.top+bl)-0.5 && r.bottom<=Math.min(innerHeight,R.bottom-bl)+0.5 && r.height>0};};
+      const t=document.querySelector('#mpanel .mtitle'), bb=document.querySelector('#mpanel .mbubble'), ok=document.querySelector('#mOk');
+      return {title:t.innerText, tv:vis(t), bv:vis(bb), okv:vis(ok), st:Math.round(mp.scrollTop), sh:mp.scrollHeight, ch:mp.clientHeight, vh:innerHeight};})()"""
+    for dname in ['iPhone SE', 'iPhone SE (3rd gen)', 'iPhone 15']:
+        dn = dname.replace(' ', '_').replace('(', '').replace(')', '')
+        zc = b.new_context(**p.devices[dname]); zp = zc.new_page(); hook(zp, 'zoom-' + dname)
+        zp.goto(URL); zp.evaluate("localStorage.clear()"); zp.reload(); zp.wait_for_timeout(800); close_modals(zp)
+        zp.evaluate("(()=>{const s=__tzz.state; ['c77','pearl','otaku','rocket'].forEach(id=>s.ceos[id].unlocked=true); __tzz.persist();})()")
+        for k, (fn, title) in CROSS4.items():
+            kk = k.replace('@', '')
+            zp.evaluate(f"__tzz.showComic('{k}', true)")
+            zp.wait_for_function("(()=>{const i=document.querySelector('#mpanel .cross-art img'); return i&&i.complete&&i.naturalWidth>0})()", timeout=8000); zp.wait_for_timeout(600)
+            a = S(zp, TITLE_JS)
+            check(a['st'] == 0 and a['tv']['ok'] and a['bv']['ok'] and title in a['title'], f"{dname} {title} 刚打开：标题「{a['title']}」和角标完整可见（标题 y {a['tv']['t']}–{a['tv']['b']}，弹窗可滚 {a['sh']-a['ch']}px）")
+            zp.screenshot(path=f"{SHOTS}/z1_{dn}_{kk}_1open.png")
+            zp.evaluate("(()=>{const mp=document.querySelector('#mpanel'); mp.scrollTop=mp.scrollHeight;})()"); zp.wait_for_timeout(300)
+            bt = S(zp, TITLE_JS)
+            check(bt['okv']['ok'], f"{dname} {title} 滚到底：「知道了」完整可见（滚了 {bt['st']}px）")
+            zp.screenshot(path=f"{SHOTS}/z1_{dn}_{kk}_2bottom.png")
+            zp.evaluate("document.querySelector('#mpanel').scrollTop=0"); zp.wait_for_timeout(300)
+            tp = S(zp, TITLE_JS)
+            check(tp['st'] == 0 and tp['tv']['ok'] and tp['bv']['ok'], f"{dname} {title} 滚回顶部：标题和角标完整可见")
+            zp.screenshot(path=f"{SHOTS}/z1_{dn}_{kk}_3top.png")
+            # 点图放大
+            sw = S(zp, "document.querySelector('#mpanel .cross-art img').getBoundingClientRect().width")
+            hint = S(zp, "(()=>{const z=document.querySelector('#crossZoom'); return z&&z.tagName==='BUTTON'&&z.innerText.includes('点图放大')})()")
+            zp.click('#crossZoom'); zp.wait_for_function("(()=>{const i=document.querySelector('#crossBigImg'); return i&&i.complete&&i.naturalWidth>0})()", timeout=8000); zp.wait_for_timeout(400)
+            zb = S(zp, """(()=>{const i=document.querySelector('#crossBigImg'), r=i.getBoundingClientRect(), mp=document.querySelector('#mpanel'), M=mp.getBoundingClientRect(), ok=document.querySelector('#mOk').getBoundingClientRect();
+              return {nw:i.naturalWidth, src:i.getAttribute('src'), w:r.width, h:r.height, inV:r.left>=0&&r.right<=innerWidth&&r.top>=0&&r.bottom<=innerHeight, panelIn:M.top>=-0.5&&M.bottom<=innerHeight+0.5&&M.left>=0&&M.right<=innerWidth,
+                okIn:ok.top>=0&&ok.bottom<=innerHeight, okTxt:document.querySelector('#mOk').innerText, bigWrap:!!i.closest('.job-big'), zoom:mp.classList.contains('zoom'), scroll:mp.scrollHeight-mp.clientHeight, vw:innerWidth}})()""")
+            check(hint and zb['nw'] == 480 and fn in zb['src'] and zb['bigWrap'] and zb['zoom'] and zb['w'] >= sw * 1.1 and abs(zb['w'] - zb['h']) < 1.5 and zb['inV'] and zb['panelIn'] and zb['okIn'] and zb['scroll'] <= 1 and '返回' in zb['okTxt'],
+                  f"{dname} {title} 点图放大：大图弹窗 {round(sw)}px → {round(zb['w'])}px（屏宽 {zb['vw']}），整图和「返回漫画」都在屏内不用滚")
+            zp.screenshot(path=f"{SHOTS}/z1_{dn}_{kk}_4zoom.png")
+            zp.click('#mOk'); zp.wait_for_timeout(350)
+            bk = S(zp, "(()=>({b:document.querySelector('#mpanel .mbubble').innerText, t:document.querySelector('#mpanel .mtitle').innerText, img:!!document.querySelector('#mpanel .cross-art img'), st:document.querySelector('#mpanel').scrollTop, zoom:document.querySelector('#mpanel').classList.contains('zoom')}))()")
+            check('跨行事件' in bk['b'] and title in bk['t'] and bk['img'] and bk['st'] == 0 and not bk['zoom'], f"{dname} {title} 放大后「返回漫画」：回到原漫画（角标仍是「{bk['b']}」、标题在顶部）")
+            zp.click('#mOk'); zp.wait_for_timeout(250)
+            check(not modal_visible(zp), f"{dname} {title}：「知道了」关闭弹窗")
+        if dname == 'iPhone 15':
+            # 连弹两张时放大再返回，排队的下一张不丢；点大图本身也能返回；放大不重复记已看
+            zp.evaluate("(()=>{const s=__tzz.state; delete s.crossSeen['rocket@0']; delete s.crossSeen['c77@3']; __tzz.persist(); __tzz.queueModal(()=>__tzz.showComic('rocket@0', true)); __tzz.queueModal(()=>__tzz.showComic('c77@3', true));})()")
+            zp.wait_for_timeout(500); zp.click('#crossZoom'); zp.wait_for_timeout(400)
+            zp.click('#crossBigImg'); zp.wait_for_timeout(350)
+            q1 = S(zp, "document.querySelector('#mpanel .mtitle').innerText"); zp.click('#mOk'); zp.wait_for_timeout(600)
+            q2 = S(zp, "(()=>({t:document.querySelector('#mpanel .mtitle')&&document.querySelector('#mpanel .mtitle').innerText, vis:!document.querySelector('#modal').classList.contains('hidden')}))()")
+            check('火箭烤炉' in q1 and q2['vis'] and '麻辣服务器' in (q2['t'] or ''), f"连弹两张：第一张放大→点大图返回→知道了，第二张「麻辣服务器」照常弹出 {q1} / {q2}")
+            zp.click('#mOk'); zp.wait_for_timeout(250)
+            # 重看（非首次）也能放大，返回仍是「跨行组合」
+            zp.locator('#bottomNav [data-tab="ceo"]').click(); zp.wait_for_timeout(400)
+            zp.locator('.cross-item[data-arg="pearl@2"]').scroll_into_view_if_needed(); zp.locator('.cross-item[data-arg="pearl@2"]').click(); zp.wait_for_timeout(400)
+            zp.click('#crossZoom'); zp.wait_for_timeout(400); zp.click('#mOk'); zp.wait_for_timeout(300)
+            check('跨行组合' in S(zp, "document.querySelector('#mpanel .mbubble').innerText"), '跨行组合重看也能放大，返回仍是「跨行组合」')
+            zp.click('#mOk'); zp.wait_for_timeout(250)
+            # 坏图：文字兜底时没有放大入口
+            ne = len(errs); zp.evaluate("__tzz.CROSS_ART['otaku@1']='cross_missing_test'; __tzz.showComic('otaku@1', false)"); zp.wait_for_timeout(1200)
+            errs[ne:] = [e for e in errs[ne:] if not ('cross_missing_test' in e or 'Failed to load resource' in e)]
+            fz = S(zp, "(()=>({z:!!document.querySelector('#crossZoom'), panels:[...document.querySelectorAll('#mpanel .comic.two .panel4')].filter(e=>e.offsetParent).length}))()")
+            check(not fz['z'] and fz['panels'] == 2, f'整图坏了退回文字版时，放大入口一起去掉 {fz}')
+            zp.click('#mOk'); zp.wait_for_timeout(200)
+        zc.close()
+
     # 11z 占地迁移：已跑过 11w 的档（fpMig11w=1）读入 → 9 件按旋转后真实高差锚底边；刷新两次幂等；金币、件数、休息不变
     zc = b.new_context(**dev); zp = zc.new_page(); hook(zp, 'mig11z')
     zp.goto(URL.replace('index.html', 'icon.svg'))

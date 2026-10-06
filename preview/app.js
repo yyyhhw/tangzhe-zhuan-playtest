@@ -1293,7 +1293,7 @@ const modal = $('#modal'), mpanel = $('#mpanel'), sheet = $('#sheet'), sheetPane
 const mq = [];
 function modalOpen() { return !modal.classList.contains('hidden') || !sheet.classList.contains('hidden'); }
 function queueModal(fn) { if (modalOpen()) mq.push(fn); else fn(); }
-function openModal(html, burst = true) { mpanel.innerHTML = html; modal.querySelector('.burst').style.display = burst ? '' : 'none'; modal.classList.remove('hidden'); mpanel.scrollTop = 0; }
+function openModal(html, burst = true) { mpanel.classList.remove('zoom'); mpanel.innerHTML = html; modal.querySelector('.burst').style.display = burst ? '' : 'none'; modal.classList.remove('hidden'); mpanel.scrollTop = 0; }
 function closeModal() { modal.classList.add('hidden'); mpanel.innerHTML = ''; if (mq.length && !modalOpen()) setTimeout(() => { if (!modalOpen() && mq.length) mq.shift()(); }, 120); }
 function openSheet(html) { sheetPanel.innerHTML = html; sheet.classList.remove('hidden'); }
 function closeSheet() { sheet.classList.add('hidden'); sheetPanel.innerHTML = ''; }
@@ -1390,19 +1390,30 @@ function showPreview(id, target) {
     renderTab();
   }, { once:true });
 }
-function showComic(k, fresh) {
+function showComic(k, fresh, back) { // back：从放大图返回，只重画，不重复记已看/音效
   const x = E.CROSS[k], [id, shop] = k.split('@'), c = E.CEO_BY_ID[id];
-  if (!state.ceos[id].unlocked && !fresh) { toast('这位 CEO 还没加入'); return; }
-  if (fresh) { state.crossSeen[k] = true; persist(); sfx('mile'); }
+  if (!back && !state.ceos[id].unlocked && !fresh) { toast('这位 CEO 还没加入'); return; }
+  if (fresh && !back) { state.crossSeen[k] = true; persist(); sfx('mile'); }
   openModal(`<div class="mbubble">${fresh ? '跨行事件！' : '跨行组合'}</div><div class="mtitle">${c.name} × ${E.SHOPS[+shop].short}：「${x.title}」</div>
     <div class="comic-sfx">${x.sfx}</div>
     <div class="cross-wrap${CROSS_ART[k] ? ' has-art' : ''}">
-    ${CROSS_ART[k] ? `<div class="cross-art"><img src="${crossURL(k)}" alt="${x.title}" onerror="var w=this.closest('.cross-wrap');if(w)w.classList.remove('has-art');this.parentNode.remove()"></div>
+    ${CROSS_ART[k] ? `<div class="cross-art"><button class="cross-zoom" id="crossZoom" aria-label="放大看「${x.title}」整图"><img src="${crossURL(k)}" alt="${x.title}" onerror="var w=this.closest('.cross-wrap');if(w)w.classList.remove('has-art');var a=this.closest('.cross-art');if(a)a.remove()"><span class="zoom-hint">🔍 点图放大</span></button></div>
     <div class="cross-cap">${x.panels.map(p => `<div>${p[1]} ${p[2]}</div>`).join('')}</div>` : ''}
     <div class="comic two">${x.panels.map((p, n) => `<div class="panel4"><span class="pn">${n + 1}</span><div class="pchar"><div class="pimg">${faceImg(p[0])}</div><span class="pe">${p[1]}</span></div><div class="pt">${p[2]}</div></div>`).join('')}</div></div>
     <div class="mnote"><b>专属效果：</b>${x.desc}${E.crossActive(state, k) ? '（生效中）' : ''}</div>
-    <button class="buy big" id="mOk">知道了</button>`);
+    <button class="buy big" id="mOk">知道了</button>`, !back);
+  const z = $('#crossZoom'); if (z) z.addEventListener('click', () => showCrossBig(k, fresh), { once:true });
   $('#mOk').addEventListener('click', closeModal, { once:true });
+}
+// 跨行漫画点图放大：复用 CEO 任职照的大图弹窗（.job-big），返回时回到原漫画（不关弹窗，排队中的下一张不会丢）
+function showCrossBig(k, fresh) {
+  const x = E.CROSS[k], [id, shop] = k.split('@'), c = E.CEO_BY_ID[id];
+  openModal(`<div class="mtitle">${c.name} × ${E.SHOPS[+shop].short}：「${x.title}」</div><div class="job-big"><img src="${crossURL(k)}" alt="${x.title}" id="crossBigImg"
+    onerror="this.replaceWith(Object.assign(document.createElement('div'),{className:'mnote',textContent:'整图没加载出来，返回看文字版'}))"></div><button class="buy big" id="mOk">返回漫画</button>`, false);
+  mpanel.classList.add('zoom');
+  const back = () => showComic(k, fresh, true);
+  $('#mOk').addEventListener('click', back, { once:true });
+  const im = $('#crossBigImg'); if (im) im.addEventListener('click', back, { once:true });
 }
 function showCeoJoin(id) {
   const c = E.CEO_BY_ID[id], s = state.ceos[id]; sfx('mile');
@@ -1901,7 +1912,7 @@ function boot() {
 boot();
 
 // 测试/调试钩子（不影响玩家）
-window.__tzz = { E, get combo() { return combo; }, get critFx() { return critFx; }, critLine, refreshCrit, showComic, CROSS_ART, crossURL, showCeoJoin, get state() { return state; }, set state(v) { state = v; }, persist, onReturn, tapShop, act, setTab, switchShop, renderTab,
+window.__tzz = { E, get combo() { return combo; }, get critFx() { return critFx; }, critLine, refreshCrit, showComic, showCrossBig, queueModal, CROSS_ART, crossURL, showCeoJoin, get state() { return state; }, set state(v) { state = v; }, persist, onReturn, tapShop, act, setTab, switchShop, renderTab,
   forceBig() { nextBigAt = 0; if (order) order = null; }, clearVisitors() { order = null; special = null; nextBigAt = clock + 9999; nextSpecialAt = clock + 9999; }, forceSpecial() { nextSpecialAt = 0; special = null; },
   forceSupers() { for (const k in superNext) superNext[k] = 0; updateSupers(); renderTab(); },
   get big() { return order; }, get order() { return order; }, get special() { return special; }, get guests() { return guests; },
