@@ -56,6 +56,13 @@
     FOUNTAIN_EVERY: 180, FOUNTAIN_SEC: 20, FOUNTAIN_MULT: 3,   // 珍珠喷泉：每 3 分钟连续爆单 20 秒，奶茶店 ×3、手点必暴击
     PORTAL_EVERY: 240, PORTAL_SEC: 90,                         // 次元传送门：每 4 分钟送书店 90 秒产量
     SUN_EVERY: 300, SUN_SEC: 30, SUN_MULT: 3, SUN_CRIT_X: 2, // 人造太阳反应堆：每 5 分钟超频 30 秒，科技 ×3、三档暴击倍率翻倍
+    // 12d 金币安全 v1（熊大 16:49 / 16:50 定）：余额上限 1000 万亿；整数金币 coins + 不足 1 的零头 coinFrac 分开存
+    COIN_CAP: 1e15,
+    // 「最后一笔单价不超过余额上限」的等级边界（熊大 16:50 按现有价格公式算；test_coin_safety.js 用公式复核）
+    SHOP_LV_MAX: [110, 93, 79, 69],                       // 店铺最高等级：烧烤 / 奶茶 / 书店 / 科技
+    EMP_LV_MAX: [35, 31, 26, 22],                         // 员工可买到的等级（EMP_MAX 40 只用来收旧档）
+    CEO_LV_MAX: { c77:30, pearl:30, otaku:30, rocket:25 },// CEO 可买到的等级
+    MAX_BUY_STEPS: 200,                                   // MAX 批量购买一次最多循环次数
   };
 
   /* ===== 火箭老板：名字只在这一处配置（公开上架前再评估真名/肖像权） ===== */
@@ -120,6 +127,68 @@
   function empMult(e) { return e > 0 ? 1 + CFG.EMP_LV_BONUS * (e - 1) : 0; }
   function shopBase(i, lv) { return lv > 0 ? SHOPS[i].rate * lv * milestoneMult(lv) : 0; }
 
+  /* ================= 12d 金币安全 v1：统一钱包（所有加钱 / 花钱只走这里） ================= */
+  // 余额 = coins（整数）+ coinFrac（0 ≤ 零头 < 1）。整数部分到 1e15 也是精确整数，小额收入攒在零头里不会被吞。
+  // 坏值（NaN / Infinity / 负数 / 非数字）一律拒绝，余额原样不动；到上限就停在上限；旧档已超上限的余额保留、不再增长。
+  const COIN_CAP = () => CFG.COIN_CAP;
+  const isAmt = x => typeof x === 'number' && isFinite(x) && x >= 0;
+  function walletOk(st) {
+    return !!st && isAmt(st.coins) && (st.coinFrac === undefined || st.coinFrac === null || (isAmt(st.coinFrac) && st.coinFrac < 1));
+  }
+  // 把合法但没拆开的余额（旧档 / 测试直接写的 123.45）拆成整数 + 零头；坏值返回 false、一点不改
+  function normWallet(st) {
+    if (!walletOk(st)) return false;
+    let c = st.coins, f = st.coinFrac == null ? 0 : st.coinFrac;
+    if (c !== Math.floor(c)) { const w = Math.floor(c); f += c - w; c = w; }
+    if (f >= 1) { const w = Math.floor(f); c += w; f -= w; }
+    st.coins = c; st.coinFrac = f;
+    return true;
+  }
+  function balance(st) { return walletOk(st) ? st.coins + (st.coinFrac || 0) : NaN; }
+  function overCap(st) { return walletOk(st) && st.coins >= COIN_CAP(); }
+  // 入账：返回 { ok, added, capped, why }；added = 实际进账（到上限后多出来的不算）
+  function addCoins(st, amt) {
+    if (!isAmt(amt)) return { ok:false, added:0, why:'bad' };
+    if (!normWallet(st)) return { ok:false, added:0, why:'badWallet' };
+    if (amt === 0) return { ok:true, added:0, capped:st.coins >= COIN_CAP() };
+    if (st.coins >= COIN_CAP()) return { ok:true, added:0, capped:true };   // 已到 / 旧档已超上限：保留，不再增长
+    const b0 = st.coins + st.coinFrac, t = st.coinFrac + amt, w = Math.floor(t);
+    let added;
+    if (w >= COIN_CAP() - st.coins) { added = COIN_CAP() - b0; st.coins = COIN_CAP(); st.coinFrac = 0; }
+    else { st.coins += w; st.coinFrac = t - w; added = amt; }
+    st.totalEarned = isAmt(st.totalEarned) ? st.totalEarned + added : st.coins;
+    return { ok:true, added, capped:st.coins >= COIN_CAP() };
+  }
+  // 价格校验：非数字 / 无穷 / 负数 → 拒绝；超过余额上限 → 不能买（不压低价格）
+  function priceOk(price) { return isAmt(price) && Math.ceil(price) <= COIN_CAP(); }
+  function canAfford(st, price) { return priceOk(price) && walletOk(st) && st.coins + (st.coinFrac || 0) >= Math.ceil(price); }
+  // 扣款：返回 { ok, cost, why }；失败时余额一点不动
+  function spendCoins(st, price) {
+    if (!isAmt(price)) return { ok:false, why:'价格异常' };
+    const c = Math.ceil(price);
+    if (c > COIN_CAP()) return { ok:false, why:'超出金币上限，不能买', over:true };
+    if (!normWallet(st)) return { ok:false, why:'金币数据异常' };
+    if (st.coins < c) return { ok:false, why:'金币不够' };
+    st.coins -= c; return { ok:true, cost:c };
+  }
+  // 等级上限（到顶显示满级；旧档已超过的保留但不能再升）
+  function shopMaxLv(i) { return CFG.SHOP_LV_MAX[i]; }
+  function empMaxLv(i) { return Math.min(CFG.EMP_MAX, CFG.EMP_LV_MAX[i]); }
+  function ceoMaxLv(id) { return Math.min(CFG.CEO_MAX, CFG.CEO_LV_MAX[id] || CFG.CEO_MAX); }
+  function shopMaxed(st, i) { return st.shops[i].lv >= shopMaxLv(i); }
+  function empMaxed(st, i) { return st.shops[i].emp >= empMaxLv(i); }
+  function ceoMaxed(st, id) { return st.ceos[id].lv >= ceoMaxLv(id); }
+  // 店铺批量升级能买几级：want = 1 / 10 / 'max'。不超过等级上限；MAX 最多循环 MAX_BUY_STEPS 次、单价超上限即停
+  function shopBuyCount(st, i, want) {
+    const s = st.shops[i], room = Math.max(0, shopMaxLv(i) - s.lv);
+    if (!room) return 0;
+    if (want !== 'max') return Math.max(1, Math.min(room, Math.floor(Number(want)) || 1));
+    const bal = balance(st); let k = 0, c = 0;
+    const lim = Math.min(room, CFG.MAX_BUY_STEPS);
+    while (k < lim) { const n = upgradeCost(i, s.lv + k); if (!priceOk(n) || !(c + n <= bal)) break; c += n; k++; }
+    return Math.max(1, k);
+  }
+
   /* ===== 超级装饰（每店一件，只能从盲盒抽到；效果常驻，不用摆放） ===== */
   const SUPER_OF_SHOP = ['s_panda', 's_fountain', 's_portal', 's_sun'];
   function hasSuper(st, i) { return !!(st.gacha && st.gacha.owned && st.gacha.owned.indexOf(SUPER_OF_SHOP[i]) >= 0); }
@@ -166,7 +235,8 @@
   }
   function shopRate(st, i) {
     const s = st.shops[i]; if (!s || !s.open || s.emp <= 0) return 0;
-    return shopBase(i, s.lv) * empMult(s.emp) * ceoInfo(st, i).mult * superMult(st, i);
+    const r = shopBase(i, s.lv) * empMult(s.emp) * ceoInfo(st, i).mult * superMult(st, i);
+    return isAmt(r) ? r : 0;   // 12d：产速只认有限非负数（坏档 / 内存坏值不会产出 NaN / ∞）
   }
   function baseRate(st) { let r = 0; for (let i = 0; i < SHOPS.length; i++) r += shopRate(st, i); return r; }
   // 旧版「×5 持续 30 秒」已废弃；保留 boostActive 只为读旧档不报错，永远按未激活算
@@ -180,10 +250,11 @@
   // 团单一次性收入 = 旧「30 秒 ×5」多出来的部分（产速 ×4 ×30），总收益与旧版一致、不会和自动收入算两次
   function orderPayout(rate) { return Math.max(0, rate) * (CFG.BOOST_MULT - 1) * CFG.BOOST_SEC; }
   function settleOrder(st, payout) {
-    const amt = Math.max(0, payout); if (!(amt > 0)) return 0;
-    st.coins += amt; st.totalEarned += amt; st.bigCustomers = (st.bigCustomers || 0) + 1;
+    if (!isAmt(payout) || !(payout > 0)) return 0;          // 12d：坏团单金额拒绝，余额不动
+    const r = addCoins(st, payout); if (!r.ok) return 0;
+    st.bigCustomers = (st.bigCustomers || 0) + 1;
     st.boostEnd = 0; // 清掉旧档可能残留的 ×5
-    return amt;
+    return r.added;
   }
 
   /* ===== 跨行效果 ===== */
@@ -234,8 +305,9 @@
   function creditOnline(st, now) {
     const gap = (now - st.lastSeen) / 1000;
     if (!(gap > 0) || gap > 5) return 0;
-    const amt = onlineRate(st, now) * gap; st.coins += amt; st.totalEarned += amt; st.lastSeen = now; if (now > st.maxSeen) st.maxSeen = now;
-    return amt;
+    const r = addCoins(st, onlineRate(st, now) * gap); if (!r.ok) return 0;   // 12d：调任结清也走统一入账
+    st.lastSeen = now; if (now > st.maxSeen) st.maxSeen = now;
+    return r.added;
   }
   function assignCeoWithPayout(st, id, target, now) {
     const paid = creditOnline(st, now);
@@ -266,49 +338,49 @@
   }
 
   /* ================= 购买（成功则直接改 st） ================= */
-  function canOpen(st, i) { const s = st.shops[i]; return !s.open && (i === 0 || st.shops[i - 1].open) && st.coins >= SHOPS[i].open; }
+  function canOpen(st, i) { const s = st.shops[i]; return !s.open && (i === 0 || st.shops[i - 1].open) && canAfford(st, SHOPS[i].open); }
   function openShop(st, i) {
     const s = st.shops[i];
     if (s.open) return { ok:false, why:'已开张' };
     if (i > 0 && !st.shops[i - 1].open) return { ok:false, why:'先开前一家店' };
-    if (st.coins < SHOPS[i].open) return { ok:false, why:'金币不够' };
-    st.coins -= SHOPS[i].open; s.open = true; s.lv = Math.max(1, s.lv);
+    const pay = spendCoins(st, SHOPS[i].open); if (!pay.ok) return { ok:false, why:pay.why };
+    s.open = true; s.lv = Math.max(1, s.lv);
     return { ok:true, cost:SHOPS[i].open, unlocked:checkUnlocks(st) };
   }
   function hireEmp(st, i) {
     const s = st.shops[i];
     if (!s.open) return { ok:false, why:'还没开店' };
     if (s.emp > 0) return { ok:false, why:'每家店 1 位员工' };
-    if (st.coins < SHOPS[i].hire) return { ok:false, why:'金币不够' };
-    st.coins -= SHOPS[i].hire; s.emp = 1; return { ok:true, cost:SHOPS[i].hire };
+    const pay = spendCoins(st, SHOPS[i].hire); if (!pay.ok) return { ok:false, why:pay.why };
+    s.emp = 1; return { ok:true, cost:SHOPS[i].hire };
   }
   function upgradeEmp(st, i) {
     const s = st.shops[i];
     if (!s.open || s.emp <= 0) return { ok:false, why:'先雇员工' };
-    if (s.emp >= CFG.EMP_MAX) return { ok:false, why:'已满级' };
-    const c = empCost(i, s.emp); if (st.coins < c) return { ok:false, why:'金币不够' };
-    st.coins -= c; s.emp++; return { ok:true, cost:c, lv:s.emp };
+    if (s.emp >= empMaxLv(i)) return { ok:false, why:'已满级', max:true };
+    const c = empCost(i, s.emp), pay = spendCoins(st, c); if (!pay.ok) return { ok:false, why:pay.why };
+    s.emp++; return { ok:true, cost:c, lv:s.emp };
   }
   function upgradeCeo(st, id) {
     const s = st.ceos[id];
     if (!s || !s.unlocked) return { ok:false, why:'还没加入' };
-    if (s.lv >= CFG.CEO_MAX) return { ok:false, why:'已满级' };
-    const c = ceoCost(id, s.lv); if (st.coins < c) return { ok:false, why:'金币不够' };
-    st.coins -= c; s.lv++; return { ok:true, cost:c, lv:s.lv };
+    if (s.lv >= ceoMaxLv(id)) return { ok:false, why:'已满级', max:true };
+    const c = ceoCost(id, s.lv), pay = spendCoins(st, c); if (!pay.ok) return { ok:false, why:pay.why };
+    s.lv++; return { ok:true, cost:c, lv:s.lv };
   }
   function upgradeShop(st, i) {
     const s = st.shops[i];
     if (!s.open) return { ok:false, why:'还没开店' };
+    if (s.lv >= shopMaxLv(i)) return { ok:false, why:'已满级', max:true };   // 12d：店铺有限等级；旧档超过的保留、不能再升
     const c = upgradeCost(i, s.lv);
-    if (st.coins < c) return { ok:false, why:'金币不够' };
+    const pay = spendCoins(st, c); if (!pay.ok) return { ok:false, why:pay.why };
     const before = s.lv;
-    st.coins -= c; s.lv++;
+    s.lv++;
     const milestone = milestoneMult(s.lv) > milestoneMult(before) ? milestoneMult(s.lv) : 0;
     let bonus = 0, panel = false;
     if (milestone && i === 1 && crossActive(st, 'otaku@1')) {   // 漫画杯套：一次性小红包
       panel = true;
-      bonus = Math.max(CFG.AZHAI_BONUS_MIN, Math.round(shopRate(st, 1) * CFG.AZHAI_BONUS_SEC));
-      st.coins += bonus; st.totalEarned += bonus;
+      bonus = addCoins(st, Math.max(CFG.AZHAI_BONUS_MIN, Math.round(shopRate(st, 1) * CFG.AZHAI_BONUS_SEC))).added;
     }
     return { ok:true, cost:c, lv:s.lv, milestone, bonus, panel, unlocked:checkUnlocks(st) };
   }
@@ -326,18 +398,20 @@
     const from = Math.max(st.lastSeen || now, st.maxSeen || 0);
     const gap = Math.max(0, (now - from) / 1000);
     const cap = offlineCap(st);
-    const already = st.pending ? st.pending.sec : 0;
+    const already = st.pending && isAmt(st.pending.sec) ? st.pending.sec : 0;
     const eff = Math.max(0, Math.min(gap, cap - already));
-    return { gapSec:gap, effSec:eff, amount:offlineRate(st) * eff, cap, rolledBack:false };
+    const amount = offlineRate(st) * eff;
+    return { gapSec:gap, effSec:eff, amount:isAmt(amount) ? amount : 0, cap, rolledBack:false };
   }
   // 把离线结算写进 st.pending（调用方随后立刻保存）；返回 pending 或 null
   function settleOffline(st, now, idGen) {
+    if (st.pending && !pendingOk(st.pending)) st.pending = null;   // 12d：坏的待领取收益丢掉，不入账、不拿它累加
     const off = computeOffline(st, now);
     if (off.rolledBack) { st.lastSeen = now; return { rolledBack:true }; }
     st.lastSeen = now; st.maxSeen = Math.max(st.maxSeen || 0, now);
     if (off.effSec <= 0 && !st.pending) return null;
     if (off.gapSec < CFG.OFFLINE_MIN && !st.pending) {   // 很短的离开：静默入账
-      st.coins += off.amount; st.totalEarned += off.amount; return null;
+      addCoins(st, off.amount); return null;
     }
     const p = st.pending || { id:idGen ? idGen() : String(now), sec:0, gap:0, amount:0, from:now - off.gapSec * 1000 };
     p.sec += off.effSec; p.gap += off.gapSec; p.amount += off.amount; p.cap = off.cap;
@@ -345,16 +419,20 @@
   }
   function canDouble(st, now) { return !clockRolledBack(st, now) && st.dailyDoubleDay !== dayKey(now); }
   // 领取：入账 + 领取记录 + 清 pending 在同一个对象里改完，调用方一次性保存
+  function pendingOk(p) { return !!p && typeof p === 'object' && isAmt(p.amount) && isAmt(p.sec) && (typeof p.id === 'string' || typeof p.id === 'number'); }
   function claimOffline(st, now, useDouble) {
     const p = st.pending; if (!p) return { ok:false, why:'已经领过了' };
+    if (!pendingOk(p)) { st.pending = null; return { ok:false, why:'离线收益数据异常，没有入账', bad:true }; }   // 12d：坏值拒绝，余额不动
+    if (!Array.isArray(st.claimLog)) st.claimLog = [];
     if (st.claimLog.some(c => c.id === p.id)) { st.pending = null; return { ok:false, why:'已经领过了' }; }
+    if (!walletOk(st)) return { ok:false, why:'金币数据异常' };
     const dbl = !!useDouble && canDouble(st, now);
     const amt = p.amount * (dbl ? 2 : 1);
-    st.coins += amt; st.totalEarned += amt;
+    const got = addCoins(st, amt); if (!got.ok) return { ok:false, why:'离线收益数据异常，没有入账', bad:true };
     if (dbl) st.dailyDoubleDay = dayKey(now);
     st.claimLog.push({ id:p.id, amt:Math.round(amt), dbl, t:now }); if (st.claimLog.length > 20) st.claimLog.splice(0, st.claimLog.length - 20);
     st.pending = null;
-    return { ok:true, amount:amt, doubled:dbl, sec:p.sec };
+    return { ok:true, amount:amt, added:got.added, capped:got.capped, doubled:dbl, sec:p.sec };
   }
 
 
@@ -378,8 +456,9 @@
   ];
   function specialReward(st, shop) { return shopRate(st, shop) * CFG.SPECIAL_REWARD_SEC; }
   function settleSpecial(st, shop) {
-    const amt = specialReward(st, shop); if (!(amt > 0)) { st.specialCustomers = (st.specialCustomers || 0) + 1; return 0; }
-    st.coins += amt; st.totalEarned += amt; st.specialCustomers = (st.specialCustomers || 0) + 1; return amt;
+    const amt = specialReward(st, shop); st.specialCustomers = (st.specialCustomers || 0) + 1;
+    if (!isAmt(amt) || !(amt > 0)) return 0;
+    return addCoins(st, amt).added;
   }
   function specialInterval(st, rnd) { return CFG.SPECIAL_MIN + (CFG.SPECIAL_MAX - CFG.SPECIAL_MIN) * rnd; }
 
@@ -447,12 +526,14 @@
     if (!gachaUnlocked(st)) return { ok:false, why:'摸鱼科技公司雇到员工后开放' };
     const rem = gachaRemaining(st);
     if (!rem.length) return { ok:false, why:'已集齐', complete:true };
-    if (st.coins < price) return { ok:false, why:'金币不够' };
+    if (!priceOk(price)) return { ok:false, why:'价格异常' };
+    if (!canAfford(st, price)) return { ok:false, why:walletOk(st) ? '金币不够' : '金币数据异常' };
     const o = gachaOdds(st), isSuper = rnd < o.superP;
     const pool = rem.filter(it => (it.type === 'super') === isSuper);
     const u = isSuper ? rnd / o.superP : (rnd - o.superP) / (1 - o.superP);
     const pick = pool[Math.min(pool.length - 1, Math.max(0, Math.floor(u * pool.length)))];
-    st.coins -= price; st.gacha.owned.push(pick.id); st.gacha.draws++;
+    const pay = spendCoins(st, price); if (!pay.ok) return { ok:false, why:pay.why };
+    st.gacha.owned.push(pick.id); st.gacha.draws++;
     st.gacha.pity = isSuper ? 0 : (st.gacha.pity || 0) + 1;
     const setDone = pick.type === 'card' && cardsComplete(st);
     const odds = isSuper ? (o.guaranteed && o.superP === 1 && o.remReg ? '保底必出超级装饰 · 这件 1/' + pool.length : '超级 ' + pct(o.superP) + ' · 这件 1/' + pool.length)
@@ -797,15 +878,15 @@
   // 下面这些都直接改 st；只有「买家具 / 升级房子」花金币，摆放/移动/旋转/收回/撤销永远不碰金币
   function buyFurniture(st, fid) {
     const f = FURN_BY_ID[fid]; if (!f) return { ok:false, why:'没有这件家具' };
-    if (st.coins < f.price) return { ok:false, why:'金币不够' };
-    const inv = furnInvOf(st); st.coins -= f.price; addInv(inv, fid, 1);
+    const pay = spendCoins(st, f.price); if (!pay.ok) return { ok:false, why:pay.why };
+    const inv = furnInvOf(st); addInv(inv, fid, 1);
     return { ok:true, cost:f.price, count:inv[fid] };
   }
   function upgradeHome(st, id) {
     if (!homeOpen(st, id)) return { ok:false, why:'这位 CEO 还没加入' };
     const h = homeOf(st, id); if (h.lv >= HOME_MAX) return { ok:false, why:'已经是' + homeTier(h.lv).name + '了' };
-    const c = HOME_TIERS[h.lv].cost; if (st.coins < c) return { ok:false, why:'金币不够' };
-    st.coins -= c; h.lv++;   // 地板格子只会变大、坐标不动；新房型底图的墙面禁区可能不同 → 墙面整理一遍（挪空墙 / 退仓库，不丢件）
+    const c = HOME_TIERS[h.lv].cost, pay = spendCoins(st, c); if (!pay.ok) return { ok:false, why:pay.why };
+    h.lv++;   // 地板格子只会变大、坐标不动；新房型底图的墙面禁区可能不同 → 墙面整理一遍（挪空墙 / 退仓库，不丢件）
     const w = reconcileWall(st, id);
     return { ok:true, cost:c, lv:h.lv, tier:homeTier(h.lv), wallMoved:w.moved, wallStored:w.stored };
   }
@@ -1060,7 +1141,13 @@
     if (!raw || typeof raw !== 'object') return { st:base, from:null };
     const from = raw.v || 0;
     const st = Object.assign(base, raw);
-    st.coins = Math.max(0, num(raw.coins, 0)); st.totalEarned = num(raw.totalEarned, st.coins);
+    // 12d：余额拆成整数 + 零头；坏值在 loadSave 里先挡掉（走备份），这里只做兜底清洗，不截上限（旧档超上限的保留）
+    st.coins = isAmt(raw.coins) ? raw.coins : 0;
+    st.coinFrac = isAmt(raw.coinFrac) && raw.coinFrac < 1 ? raw.coinFrac : 0;
+    normWallet(st);
+    st.totalEarned = isAmt(raw.totalEarned) ? raw.totalEarned : st.coins;
+    const badPending = raw.pending != null && !pendingOk(raw.pending);
+    st.pending = raw.pending != null && !badPending ? Object.assign({}, raw.pending) : null;
     st.shops = SHOPS.map((_, i) => {
       const o = (raw.shops && raw.shops[i]) || {};
       const open = i === 0 ? true : !!o.open;
@@ -1099,7 +1186,48 @@
     st.rev = num(raw.rev, 0);
     delete st.hired;
     st.v = CFG.SAVE_VERSION;
-    return { st, from, wall:hb.wall };   // wall：读档时墙面整理挪了几幅 / 退了几幅（给页面提示用）
+    return { st, from, wall:hb.wall, badPending };   // wall：读档时墙面整理挪了几幅 / 退了几幅（给页面提示用）；badPending：坏的待领取收益已丢弃
+  }
+
+  /* ===== 12d：存档校验 / 备份恢复 ===== */
+  // 读档前检查「会动到金币 / 等级」的字段：有坏值 = 坏档（不归零、不降级），交给 loadSave 走备份
+  function checkSave(raw) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return ['save'];
+    const bad = [];
+    if (!isAmt(raw.coins)) bad.push('coins');
+    if (raw.coinFrac !== undefined && !(isAmt(raw.coinFrac) && raw.coinFrac < 1)) bad.push('coinFrac');
+    if (raw.shops !== undefined && !Array.isArray(raw.shops)) bad.push('shops');
+    else (raw.shops || []).forEach((o, i) => { if (!o || typeof o !== 'object') return;
+      if (o.lv !== undefined && !isAmt(o.lv)) bad.push('shops[' + i + '].lv');
+      if (o.emp !== undefined && !isAmt(o.emp)) bad.push('shops[' + i + '].emp'); });
+    if (raw.ceos && typeof raw.ceos === 'object') CEOS.forEach(c => { const o = raw.ceos[c.id];
+      if (o && typeof o === 'object' && o.lv !== undefined && !isAmt(o.lv)) bad.push('ceos.' + c.id + '.lv'); });
+    return bad;
+  }
+  // 内存里的整档在写盘前校验（坏了就不写，调用方恢复上一份好档）
+  function validState(st) {
+    if (!st || typeof st !== 'object') return ['state'];
+    const bad = [];
+    if (!normWallet(st)) bad.push('coins');
+    if (!isAmt(st.totalEarned)) bad.push('totalEarned');
+    if (!Array.isArray(st.shops) || st.shops.length !== SHOPS.length) bad.push('shops');
+    else st.shops.forEach((o, i) => { if (!o || !isAmt(o.lv) || !isAmt(o.emp)) bad.push('shops[' + i + ']'); });
+    if (!st.ceos || typeof st.ceos !== 'object') bad.push('ceos');
+    else CEOS.forEach(c => { const o = st.ceos[c.id]; if (!o || !isAmt(o.lv)) bad.push('ceos.' + c.id); });
+    if (st.pending != null && !pendingOk(st.pending)) bad.push('pending');
+    return bad;
+  }
+  // 读档：主档好 → 用主档；主档坏（JSON 读不了 / 金币或等级坏值）→ 用完整备份；备份也不行 → blocked（调用方不覆盖原档、提示）
+  function loadSave(mainStr, bakStr, now) {
+    const parse = sv => { if (sv == null || sv === '') return { none:true }; try { const r = JSON.parse(sv); return r == null ? { none:true } : { raw:r }; } catch (e) { return { err:true }; } };
+    const m = parse(mainStr);
+    if (m.none) return Object.assign(migrate(null, now), { source:'new', bad:[], raw:null });
+    const mBad = m.err ? ['json'] : checkSave(m.raw);
+    if (!mBad.length) return Object.assign(migrate(m.raw, now), { source:'main', bad:[], raw:m.raw });
+    const mainRev = m.raw && isAmt(m.raw.rev) ? m.raw.rev : 0;
+    const b = parse(bakStr), bBad = b.none ? ['none'] : b.err ? ['json'] : checkSave(b.raw);
+    if (!bBad.length) return Object.assign(migrate(b.raw, now), { source:'bak', bad:mBad, raw:b.raw, mainRev });
+    return Object.assign(migrate(m.err ? null : m.raw, now), { source:'broken', bad:mBad, bakBad:bBad, raw:m.raw || null, mainRev, blocked:true });
   }
 
   /* ================= 12b2：测试房间（只给 ?test=homes 用，不读不写真存档） ================= */
@@ -1150,6 +1278,8 @@
 
   return { CFG, ROCKET_NAME, TYPES, SHOPS, CEOS, CEO_BY_ID, SIGNS, CROSS, ITEMS, ITEM_BY_ID, REGULAR_ITEMS, SUPER_ITEMS, CARD_COUNT, SET_REWARD, MILESTONES,
     SUPER_OF_SHOP, hasSuper, superMult, rushActive, rushMult, startRush, critChance, critMult, portalReward, gachaComplete,
+    COIN_CAP:CFG.COIN_CAP, walletOk, normWallet, balance, overCap, addCoins, spendCoins, canAfford, priceOk, pendingOk,
+    shopMaxLv, empMaxLv, ceoMaxLv, shopMaxed, empMaxed, ceoMaxed, shopBuyCount, checkSave, validState, loadSave,
     milestoneMult, nextMilestone, upgradeCost, bulkUpgradeCost, empCost, ceoCost, empMult, shopBase,
     ceoAt, ceoInfo, shopRate, baseRate, onlineRate, offlineRate, rushOnlineRate, boostActive, orderPayout, settleOrder,
     BIG_ORDERS, SPECIAL_GUESTS, specialReward, settleSpecial, specialInterval,
