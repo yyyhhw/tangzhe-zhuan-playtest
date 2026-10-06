@@ -3,9 +3,9 @@ const PG = window.PetGame, PET_LIBS = !!(PG && window.PetEngine && window.PetArt
 let petRt = null, petView = null, petM = null, petHiddenAt = 0, petManual = false, petShown = '';
 function petInit(tryN) {
   if (!PET_LIBS) return;
-  fetch('../art/manifest.json?v=p4').then(r => { if (!r.ok) throw new Error('manifest ' + r.status); return r.json(); }).then(m => {
+  fetch('../art/manifest.json?v=p4a').then(r => { if (!r.ok) throw new Error('manifest ' + r.status); return r.json(); }).then(m => {
     const v = window.PetArt.validateManifest(m); if (!v.ok) throw new Error(v.errors.join('；'));
-    petM = m; petRt = PG.createRuntime({ E, manifest: m }); petView = PG.createView({ manifest: m, PA: window.PetArt, PP: window.PetPuppy, atlasBase: '../art/', ver: 'p4' });
+    petM = m; petRt = PG.createRuntime({ E, manifest: m }); petView = PG.createView({ manifest: m, PA: window.PetArt, PP: window.PetPuppy, atlasBase: '../art/', ver: 'p4a' });
     document.body.dataset.petReady = '1'; dirty = true;
   }).catch(e => { if ((tryN || 0) < 3) setTimeout(() => petInit((tryN || 0) + 1), 600 * ((tryN || 0) + 1)); else console.warn('小狗没加载到：' + e.message); });
 }

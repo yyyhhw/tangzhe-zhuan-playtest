@@ -271,7 +271,7 @@
   }
   function restPlan(w, why) {
     const s = interactSpot(w, 'pet_bed'), steps = [];
-    if (s && s.free) steps.push({ k: 'goto', to: s.spot, speed: 'walk', label: why === 'tired' ? '困了，慢慢走回小窝' : '想回窝眯一会' });
+    if (s && s.free && reachable(w, w.dog, s.spot, 0.05)) steps.push({ k: 'goto', to: s.spot, speed: 'walk', label: why === 'tired' ? '困了，慢慢走回小窝' : '想回窝眯一会' });   // p4a：窝走不到（死胡同）就原地休息，不反复撞
     steps.push(faceStep('E'), { k: 'anim', clip: 'liedown', label: '趴下' }, { k: 'sleep', label: '呼呼睡' }, { k: 'anim', clip: 'getup', label: '伸个懒腰起来' }, { k: 'fn', fn: (w) => { w.dog.tired = false; } });
     return steps;
   }
@@ -437,7 +437,7 @@
         break;
       }
       case 'wait': playAnim(w, 'idle'); s.nextLook = w.t + rr(w, 0.8, 1.6); break;
-      case 'sleep': d.anim.play('sleep', { loop: true }); fx(w, 'zz'); break;
+      case 'sleep': if (s.upright) playAnim(w, 'idle'); else d.anim.play('sleep', { loop: true }); fx(w, 'zz'); break;
     }
   }
   function faceWant(w, s) {
@@ -458,6 +458,55 @@
     const g = grid(w);
     for (const c of nearestNodes(w, d, 1.8).filter(c => g.freeH[c.n]).slice(0, 6)) if (planPath(w, d, c.q, 0)) { w.stats.reloc = (w.stats.reloc || 0) + 1; return { k: 'goto', to: c.q, speed: 'walk', label: '挪到宽敞点的地方' }; }
     return null;
+  }
+  /* ---------- 侧身守卫（p4a，熊大 p3 复核：1 格宽竖走廊里转不开身还播侧身动作，身体两侧穿墙） ----------
+     原地动作（抚摸 / 张望 / 闻 / 蹦 / 拨球 / 吃 / 趴下 / 睡 / 起身 / 叼放球）只画侧面：开播前统一查侧身身体盒。
+     顺序：当前侧面放得下 → 播；另一侧放得下 → 换那侧播；都放不下 → 自主类动作先挪到整间屋最近、走得到的能转身处再播（每步只挪一次）；
+     还不行（死胡同 / 被围住）→ 保持原朝向（南北站姿，身体盒本来就合法）用替代：抚摸 = 原地摇尾巴（照样冒爱心、加亲密），放球 = 直接放下，
+     睡觉 = 站着打盹（照样回精力），其余（张望 / 闻 / 蹦 / 拨球 / 吃 / 趴下 / 起身）= 取消，只站一下。抚摸 / 呼唤 / 抛球 / 自主行为都走这里。 */
+  const stepClip = (w, s) => s.k === 'sleep' ? (s.upright ? null : 'sleep') : s.k === 'anim' ? (s.action ? w.manifest.actions[s.action].clip : s.clip) : null;
+  const NO_DEFER = ['petted', 'attention', 'getup'];   // 抚摸 / 回应你 / 起身：当场就要回应，不为了转身走开
+  // 按「走过去的路程」找最近的能转身格（网格 Dijkstra，和 A* 同样的邻接 / 不切角 / 段检查）；走不到返回 null
+  function turnSpot(w) {
+    const d = w.dog, g = grid(w), N = g.nx * g.ny;
+    const st = nearestNodes(w, d, 0.9, 12).filter(c => segOK(w, d, c.q)); if (!st.length) return null;
+    const dist0 = new Float64Array(N).fill(Infinity), done = new Uint8Array(N), heap = [];
+    const push = (n, f) => { heap.push([f, n]); let i = heap.length - 1; while (i > 0) { const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
+    const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === i) break; [heap[m], heap[i]] = [heap[i], heap[m]]; i = m; } } return top; };
+    for (const c of st) if (c.d < dist0[c.n]) { dist0[c.n] = c.d; push(c.n, c.d); }
+    while (heap.length) {
+      const [f, n] = pop(); if (done[n]) continue; done[n] = 1;
+      if (g.freeH[n]) { const q = nodePt(g, n); return planPath(w, d, q, 0) ? q : null; }
+      const i = n % g.nx, j = Math.floor(n / g.nx);
+      for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+        if (!di && !dj) continue; const a = i + di, b = j + dj; if (a < 0 || b < 0 || a >= g.nx || b >= g.ny) continue;
+        const m = b * g.nx + a; if (!g.free[m] || done[m]) continue;
+        if (di && dj && (!g.free[j * g.nx + a] || !g.free[b * g.nx + i])) continue;
+        if (!segOK(w, nodePt(g, n), nodePt(g, m))) continue;
+        const nf = f + (di && dj ? Math.SQRT2 : 1) * g.R; if (nf < dist0[m]) { dist0[m] = nf; push(m, nf); }
+      }
+    }
+    return null;
+  }
+  function upright(w) {   // 保持原朝向：南北站姿（身体盒最窄）；原来就是南北就不动
+    const d = w.dog;
+    for (const dir of [d.dir === 'N' || d.dir === 'S' ? d.dir : null, 'S', 'N']) if (dir && bodyFree(w, d.x, d.y, dir, 1e-9)) { d.dir = dir; return; }
+  }
+  function sideGuard(w, s) {
+    const clip = stepClip(w, s); if (!clip || !Art.IN_PLACE.includes(clip)) return null;
+    const d = w.dog, side = d.dir === 'W' ? 'W' : 'E', alt = side === 'E' ? 'W' : 'E';
+    if (bodyFree(w, d.x, d.y, side, 1e-9)) { if (d.dir !== side) { d.dir = side; d.side = side; } return null; }
+    if (bodyFree(w, d.x, d.y, alt, 1e-9)) { d.dir = alt; d.side = alt; w.stats.sideFlip = (w.stats.sideFlip || 0) + 1; return null; }
+    const ballStep = s.action === 'pick_ball' || s.action === 'drop_ball' || s.towardBall;
+    if (!s.sideTried && !ballStep && !NO_DEFER.includes(clip)) {
+      s.sideTried = true; const q = turnSpot(w);
+      if (q) { w.stats.sideDefer = (w.stats.sideDefer || 0) + 1; d.plan.unshift(faceStep(side), s); return { k: 'goto', to: q, speed: 'walk', label: '这儿转不开身，挪到宽敞点再' + (clip === 'sniff' ? '闻' : clip === 'liedown' || clip === 'sleep' ? '躺' : '玩') }; }
+    }
+    w.stats.sideBlocked = (w.stats.sideBlocked || 0) + 1; upright(w);
+    if (clip === 'petted') return { k: 'fn', fn: (w) => { const d = w.dog; d.label = '窄道里转不开身，站着摇尾巴让你摸'; d.petCdUntil = w.t + CFG.PET_CD; w.stats.petStarts++; fx(w, 'heart'); } };
+    if (s.action === 'drop_ball') return { k: 'fn', fn: dropBall };
+    if (clip === 'sleep') return { k: 'sleep', upright: true, label: '转不开身，站着打个盹' };
+    return { k: 'wait', dur: clip === 'liedown' || clip === 'getup' ? 0 : 0.5, label: s.label ? '转不开身：' + s.label.replace(/^(转不开身：)+/, '') + '（先不做）' : '这儿转不开身' };
   }
   // 返回 'run' | 'done' | 'fail'
   function tickStep(w, s, dt) {
@@ -490,6 +539,7 @@
         return w.t - s.t0 > 4 ? 'done' : 'run';
       }
       case 'sleep': {
+        if (s.upright) playAnim(w, 'idle');
         d.anim.tick(dt); d.drainMode = 'sleep';
         if (w.t - s.t0 > 4 && d.energy >= CFG.RESTED) return 'done';
         return 'run';
@@ -546,6 +596,7 @@
         if (!d.plan.length) { if (w.paused) { playAnim(w, 'idle'); d.anim.tick(dt); return; } choose(w); }
         d.step = d.plan.shift();
         const fix = faceFix(w, d.step); if (fix) { d.plan.unshift(d.step); d.step = fix; }
+        const alt = sideGuard(w, d.step); if (alt) d.step = alt;   // p4a：侧身动作开播前查侧身身体盒
         startStep(w, d.step);
       }
       if (w.paused && d.step.k !== 'sleep' && d.step.k !== 'anim') { playAnim(w, 'idle'); d.anim.tick(dt); return; }   // 搬家具时停下来等

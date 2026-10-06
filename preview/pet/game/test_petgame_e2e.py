@@ -16,6 +16,15 @@ DISMISS = """async () => { for (let i = 0; i < 12; i++) { if (__tzz.modalOpen())
 WATCH = """() => { if (window.__pw) return; const PE = window.PetEngine; window.__pw = { frames: 0, overlap: 0, outside: 0, drawn: 0, acts: {} };
   const f = () => { const w = __tzz.pet.w; if (w) { __pw.frames++; if (PE.bodyOverlap(w)) __pw.overlap++; if (w.dog.x < 0 || w.dog.y < 0 || w.dog.x > w.cols || w.dog.y > w.rows) __pw.outside++;
     const el = document.querySelector('#roomFloor .pet-dog'); if (el) __pw.drawn++; __pw.acts[w.dog.activity] = 1; } requestAnimationFrame(f); }; requestAnimationFrame(f); }"""
+# p4a：在页面里逐帧推进，独立按逐帧量出的外形（不读 manifest.body）查身体盒有没有压家具 / 出界，记下播过的动作
+GSTEP = """(sec) => { const PE = window.PetEngine, w = __tzz.pet.w, C = PE.CFG, K = 1.8 / 256, PX = { E: [46, 217], N: [92, 164], S: [88, 169] };
+  const vis = () => window.PetArt.IN_PLACE.includes(w.dog.anim.name) ? (w.dog.dir === 'W' ? 'W' : 'E') : w.dog.dir;
+  const hit = () => { const dir = vis(), e = PX[dir === 'W' ? 'E' : dir]; let l = (128 - e[0]) * K, r = (e[1] - 128) * K; if (dir === 'W') [l, r] = [r, l]; const d = w.dog;
+    if (d.x - l < -1e-6 || d.x + r > w.cols + 1e-6 || d.y - C.R < -1e-6 || d.y + C.R > w.rows + 1e-6) return true;
+    for (const p of w.items) { if (!PE.isSolid(w, p)) continue; const q = PE.itemRect(w, p); if (d.x - l < q.x + q.w - 1e-6 && d.x + r > q.x + 1e-6 && d.y - C.R < q.y + q.h - 1e-6 && d.y + C.R > q.y + 1e-6) return true; } return false; };
+  const out = { body: 0, eng: 0, seq: [], frames: 0 };
+  for (let i = 0; i < Math.round(sec * 60); i++) { PE.update(w, 1 / 60); out.frames++; if (hit()) out.body++; if (PE.bodyOverlap(w)) out.eng++; const c = w.dog.anim.name; if (out.seq[out.seq.length - 1] !== c) out.seq.push(c); }
+  return out; }"""
 def boot(pg, url=None):
     pg.goto(url or URL); pg.wait_for_function("document.body.dataset.petReady==='1' && window.__tzz", timeout=20000); pg.evaluate(DISMISS)
 def to_room(pg):
@@ -135,6 +144,32 @@ with sync_playwright() as p:
         # 页面藏起来很久再回来（不刷新）
         ev = pg.evaluate("() => { __tzz.pet.resume(3600e3); return __tzz.pet.rt.lastEvent; }")
         check(ev in ('slept', 'back'), f'切后台回来：按离线重算（{ev}）')
+        # ---------- p4a：转不开身不播侧身动作（豪宅 10×6 里摆出 1 格竖走廊 / 横走廊 / 死胡同 / 边界格）----------
+        pg.evaluate("() => { const s = __tzz.state, E = __tzz.E; s.coins += 1e8; while (E.homeOf(s, 'c77').lv < 3) E.upgradeHome(s, 'c77'); __tzz.persist(); }")
+        def col(x, y0, y1): return [[x, y] for y in range(y0, y1)]
+        def row(y, x0, x1): return [[x, y] for x in range(x0, x1)]
+        CASES = [('竖走廊', col(3, 0, 5) + col(5, 0, 5), 4.5, 1.5, 'S', False), ('横走廊', row(1, 2, 9) + row(3, 2, 9), 5.5, 2.5, 'E', True),
+                 ('死胡同', col(3, 0, 4) + col(5, 0, 4) + [[4, 3]], 4.5, 1.5, 'N', False), ('边界格', col(1, 0, 3), 0.5, 1.2, 'S', False)]
+        for name, cells, x, y, dr, side_ok in CASES:
+            pg.evaluate("""([cells, x, y, dr]) => { const s = __tzz.state, E = __tzz.E, H = E.homeOf(s, 'c77'); H.placed = [];
+              for (const [cx, cy] of cells) { E.buyFurniture(s, 'furn_plant'); E.placeItem(s, 'c77', 'furn_plant', cx, cy, 0, 'floor'); }
+              __tzz.pet.manual(true); const w = __tzz.pet.rt.sync(s), d = w.dog; d.x = x; d.y = y; d.dir = dr; d.plan = []; d.step = null; d.activity = 'idle'; d.lastGain = -1e9; d.petCdUntil = 0; d.energy = 80; d.tired = false;
+              if (w.ball.state !== 'floor') { w.ball.state = 'floor'; w.ball.flight = null; } __tzz.homeMode = 'live'; __tzz.renderTab(); }""", [cells, x, y, dr])
+            pg.wait_for_timeout(150); pg.evaluate("() => document.querySelector('#room').scrollIntoView({ block: 'start' })"); pg.wait_for_timeout(150)
+            fr = pg.evaluate("() => { const w = __tzz.pet.w, PE = window.PetEngine; return { n: w.items.length, E: PE.bodyFree(w, w.dog.x, w.dog.y, 'E'), W: PE.bodyFree(w, w.dog.x, w.dog.y, 'W'), V: PE.bodyFree(w, w.dog.x, w.dog.y, 'V') }; }")
+            a0 = pg.evaluate("() => __tzz.pet.w.dog.affinity"); xy = dog_px(pg); pg.mouse.click(xy['x'], xy['y'])
+            r = pg.evaluate(GSTEP, 3); a1 = pg.evaluate("() => __tzz.pet.w.dog.affinity")
+            if name in ('竖走廊', '死胡同'): pg.screenshot(path=f'{SHOTS}/{tag}_p4a_{"v" if name == "竖走廊" else "dead"}.png')
+            check(fr['n'] == len(cells) and fr['V'] and (fr['E'] or fr['W']) == side_ok, f'p4a {name}：家宅摆好 {fr["n"]} 件，站得下，侧身{"放得下" if side_ok else "放不下"}')
+            check(a1 > a0 and r['body'] == 0 and r['eng'] == 0, f'p4a {name}：点小狗有回应（亲密 {a0}→{a1}），身体盒不穿墙（{r["body"]} 帧，动作 {"→".join(r["seq"][:5])}）')
+            if side_ok: check('petted' in r['seq'], f'p4a {name}：侧身放得下 → 正常播侧身抚摸')
+            elif name != '边界格': check('petted' not in r['seq'], f'p4a {name}：转不开身 → 站着摇尾巴，不播侧身抚摸')
+            for k, js in (('呼唤', "() => __tzz.pet.rt.call(__tzz.state)"), ('抛球', "() => __tzz.pet.rt.throwBall(__tzz.state)"), ('摸摸按钮', "() => __tzz.pet.rt.pet(__tzz.state, 'button')")):
+                pg.evaluate(js); r = pg.evaluate(GSTEP, 8)
+                check(r['body'] == 0 and r['eng'] == 0, f'p4a {name}{k}：不穿墙（{r["body"]} 帧）')
+            r = pg.evaluate(GSTEP, 90)
+            check(r['body'] == 0 and r['eng'] == 0, f'p4a {name}：自主活动 90 秒不穿墙（{r["body"]} / {r["frames"]} 帧）')
+        pg.evaluate("() => __tzz.pet.manual(false)")
         check(not errs, '控制台 0 报错 / 0 警告 / 0 坏请求' + ('' if not errs else '：' + '；'.join(errs[:4])))
         # ---------- 只在一台上跑：主线预览读这份档不丢小狗；换正式图集接口 ----------
         if devname == 'iPhone 15':

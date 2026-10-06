@@ -464,5 +464,64 @@ section('19. p4：没有饭碗 / 外部整组换布局（家宅同步）');
   ok(w.cols === 8 && w.rows === 5 && w.front.y === 4.7, '升级房子：尺寸 / 「你」的位置跟着换');
   PE.call(w); const r3 = run(w, 20, (w) => !(w.dog.step && w.dog.step.k === 'wait' && w.dog.activity === 'called')); ok(clean(r3) && Math.hypot(w.dog.x - 4, w.dog.y - 4.15) < 0.05, '升级后呼唤：跑到新的前沿');
 }
+
+section('20. p4a：转不开身不播侧身动作（1 格竖走廊 / 横走廊 / 死胡同 / 边界格）');
+{
+  const F1 = 'furn_plant';   // 1×1 实心
+  const col = (x, y0, y1, tag) => { const a = []; for (let y = y0; y < y1; y++) a.push({ uid: tag + x + '_' + y, fid: F1, x, y }); return a; };
+  const row = (y, x0, x1, tag) => { const a = []; for (let x = x0; x < x1; x++) a.push({ uid: tag + x + '_' + y, fid: F1, x, y }); return a; };
+  const mk = (cols, rows, items, front) => ({ cols, rows, wallRows: 2, front: front || { x: cols / 2, y: rows - 0.3 }, bed: { x: 0, y: rows - 0.9, w: 1.3, h: 0.9 }, bowl: null, items });
+  const place = (w, x, y, dir) => { w.dog.x = x; w.dog.y = y; w.dog.dir = dir || 'S'; w.dog.plan = []; w.dog.step = null; w.dog.activity = 'idle'; };
+  const clips = (w, sec, each) => { const seen = {}; const r = run(w, sec, (w) => { seen[w.dog.anim.name] = 1; return each ? each(w) : undefined; }); return { r, seen }; };
+  // 竖走廊：x∈[3,4]，两侧 x=2 / x=4 一整列实心（y 0..6），只有前面 y=7 一行开口；狗在走廊中段，离开口 > 1.8 格
+  const vroom = () => mk(7, 8, [...col(2, 0, 7, 'L'), ...col(4, 0, 7, 'R')], { x: 3.5, y: 7.7 });
+  {
+    const w = world(201, vroom()); place(w, 3.5, 2.5, 'S');
+    ok(PE.bodyFree(w, 3.5, 2.5, 'V') && !PE.bodyFree(w, 3.5, 2.5, 'E') && !PE.bodyFree(w, 3.5, 2.5, 'W'), '竖走廊：站得下（南北），左右都转不开');
+    const a0 = w.dog.affinity; w.dog.lastGain = -1e9;
+    PE.pet(w, 'tap'); let c = clips(w, 2.5, (w) => w.dog.activity === 'petted');
+    ok(clean(c.r) && !c.seen.petted, '竖走廊点小狗：不播侧身抚摸，身体盒不穿墙（' + JSON.stringify(c.r) + '）');
+    ok(w.dog.affinity === a0 + 1 && (w.stats.sideBlocked || 0) >= 1 && Math.abs(w.dog.y - 2.5) < 1e-9, '…改成站着摇尾巴：照样加亲密、原地不走');
+    place(w, 3.5, 2.5, 'N'); PE.throwBall(w); c = clips(w, 12); ok(clean(c.r), '竖走廊抛球：张望 / 追球 / 叼放球全程不穿墙（' + JSON.stringify(c.r) + '）');
+    place(w, 3.5, 2.5, 'S'); PE.call(w); c = clips(w, 8); ok(clean(c.r), '竖走廊呼唤：不穿墙');
+    place(w, 3.5, 2.5, 'S'); PE.pet(w, 'button'); c = clips(w, 10); ok(clean(c.r), '竖走廊按「摸摸」：走出来再摸，不穿墙');
+    place(w, 3.5, 1.5, 'N'); w.dog.energy = 10; w.dog.tired = true; c = clips(w, 40); ok(clean(c.r), '竖走廊里困了：先挪到能转身处再趴（' + JSON.stringify(c.r) + '）');
+    place(w, 3.5, 1.5, 'N'); let sp = null; w.dog.plan = [{ k: 'face', dir: null }, { k: 'anim', clip: 'sniff', label: '低头闻闻地板' }];
+    c = clips(w, 15, (w) => { if (w.dog.anim.name === 'sniff' && !sp) sp = { x: w.dog.x, y: w.dog.y }; return !sp; });
+    ok(clean(c.r) && (w.stats.sideDefer || 0) >= 1 && sp && PE.bodyFree(w, sp.x, sp.y, 'E') && PE.bodyFree(w, sp.x, sp.y, 'W'), '竖走廊中段要闻地板（1.8 格内没宽敞处）：延后到走廊外能转身处再闻（sideDefer=' + (w.stats.sideDefer || 0) + '）');
+    for (const seed of [1, 2, 3]) { const w2 = world(210 + seed, vroom()); place(w2, 3.5, 1.2 + seed, 'S'); const c2 = clips(w2, 180); ok(clean(c2.r), '竖走廊自主活动 3 分钟（seed ' + seed + '）不穿墙（' + JSON.stringify(c2.r) + '）'); }
+  }
+  // 横走廊：y∈[3,4]，上下 y=2 / y=4 一整行实心（x 0..8），右边 x=9 一列开口：侧身本来就放得下 → 正常播
+  {
+    const w = world(202, mk(10, 7, [...row(2, 0, 9, 'T'), ...row(4, 0, 9, 'B')], { x: 9.5, y: 6.7 })); place(w, 4.5, 3.5, 'E');
+    ok(PE.bodyFree(w, 4.5, 3.5, 'E') && PE.bodyFree(w, 4.5, 3.5, 'W'), '横走廊：左右侧身放得下');
+    PE.pet(w, 'tap'); const c = clips(w, 2.5); ok(clean(c.r) && c.seen.petted && !(w.stats.sideBlocked > 0), '横走廊点小狗：正常播侧身抚摸，不被误拦');
+    place(w, 4.5, 3.5, 'W'); const c2 = clips(w, 120); ok(clean(c2.r), '横走廊自主活动 2 分钟不穿墙（' + JSON.stringify(c2.r) + '）');
+  }
+  // 死胡同：竖口袋 x∈[3,4] y∈[0,3]，三面实心，底下 y=3 一格也堵上 → 整个口袋里没有能转身的地方、也走不出去
+  {
+    const items = [...col(2, 0, 4, 'L'), ...col(4, 0, 4, 'R'), { uid: 'cap', fid: F1, x: 3, y: 3 }];
+    const w = world(203, mk(8, 7, items)); place(w, 3.5, 1.5, 'S');
+    ok(!PE.reachable(w, w.dog, { x: 6, y: 5 }, 0) && !PE.bodyFree(w, 3.5, 1.5, 'E'), '死胡同：出不去、转不开');
+    w.dog.lastGain = -1e9; PE.pet(w, 'tap'); let c = clips(w, 2.5); ok(clean(c.r) && !c.seen.petted, '死胡同点小狗：不穿墙（站着摇尾巴）');
+    PE.call(w); c = clips(w, 6); ok(clean(c.r), '死胡同呼唤（走不到）：愣一下也不穿墙');
+    PE.throwBall(w); c = clips(w, 8); ok(clean(c.r), '死胡同抛球：不穿墙');
+    place(w, 3.5, 1.5, 'N'); w.dog.energy = 8; w.dog.tired = true; const e0 = w.dog.energy; c = clips(w, 30);
+    ok(clean(c.r) && !c.seen.liedown && !c.seen.sleep && w.dog.energy > e0 + 10, '死胡同困了：不趴（侧身），站着打盹照样回精力（' + e0 + ' → ' + w.dog.energy.toFixed(1) + '）');
+    const c2 = clips(w, 180); ok(clean(c2.r), '死胡同自主活动 3 分钟不穿墙（' + JSON.stringify(c2.r) + '）');
+    ok(Object.keys(c2.seen).every(k => !PA.IN_PLACE.includes(k)), '死胡同里一个侧身动作都没播（' + Object.keys(c2.seen).join(',') + '）');
+  }
+  // 边界格：空房间贴左墙（x=0.5 时左右侧身都出界）、贴墙 1 格宽的竖条（墙 + 一列家具）
+  {
+    const w = world(204, mk(8, 6, [])); place(w, 0.5, 2.5, 'N');
+    ok(!PE.bodyFree(w, 0.5, 2.5, 'E') && !PE.bodyFree(w, 0.5, 2.5, 'W') && PE.bodyFree(w, 0.5, 2.5, 'V'), '边界格 x=0.5：竖着站得下，侧身两边都出界');
+    w.dog.lastGain = -1e9; PE.pet(w, 'tap'); let c = clips(w, 2.5, (w) => w.dog.activity === 'petted'); ok(clean(c.r) && (!c.seen.petted || w.dog.x > 0.6), '边界格点小狗：不出界（旁边 1.8 格内有宽敞处就挪一小步再摸，' + Object.keys(c.seen).join(',') + '）');
+    place(w, 0.5, 2.5, 'N'); let sx = null; w.dog.plan = [{ k: 'face', dir: 'E' }, { k: 'anim', clip: 'sniff', label: '闻闻' }]; c = clips(w, 6, (w) => { if (w.dog.anim.name === 'sniff' && sx == null) sx = w.dog.x; return sx == null; });
+    ok(clean(c.r) && c.seen.sniff && ((w.stats.sideDefer || 0) + (w.stats.reloc || 0)) >= 1 && sx > 0.6 && sx < 1.2, '边界格要闻地板：先挪离墙一点再闻（闻时 x=' + (sx == null ? '-' : sx.toFixed(2)) + '）');
+    const w2 = world(205, mk(6, 6, col(1, 0, 6, 'C'), { x: 4, y: 5.7 })); place(w2, 0.5, 2.5, 'S');
+    w2.dog.lastGain = -1e9; PE.pet(w2, 'tap'); c = clips(w2, 2.5); ok(clean(c.r) && !c.seen.petted, '贴墙 1 格竖条（被一列家具封死）：点小狗不穿墙');
+    const c2 = clips(w2, 120); ok(clean(c2.r), '贴墙竖条自主活动 2 分钟不穿墙（' + JSON.stringify(c2.r) + '）');
+  }
+}
 console.log(`\n引擎测试：${pass} 过 / ${fail} 挂`);
 process.exit(fail ? 1 : 0);

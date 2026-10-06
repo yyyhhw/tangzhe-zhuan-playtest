@@ -1,6 +1,6 @@
 # 从 preview/ 生成 preview/pet/game/ 的快照副本 + 宠物钩子（可重跑；每处替换都断言命中次数）
 import re, pathlib
-SRC = pathlib.Path(__file__).resolve().parents[3]; DST = SRC / 'pet' / 'game'; V = 'p4'
+SRC = pathlib.Path(__file__).resolve().parents[3]; DST = SRC / 'pet' / 'game'; V = 'p4a'
 def rep(s, old, new, n=1):
     c = s.count(old); assert c == n, (old[:80], c); return s.replace(old, new)
 base = (SRC / 'version.json').read_text().strip()
@@ -13,7 +13,7 @@ bv = re.search(r'"v"\s*:\s*"([^"]+)"', base).group(1)
 (DST / 'version.json').write_text('{"v":"%s"}\n' % V)
 # ---------- index.html ----------
 h = (SRC / 'index.html').read_text()
-h = rep(h, '<title>躺着也能赚（预览·未上线）</title>', '<title>躺着也能赚（宠物 p4 预览·未上线）</title>')
+h = rep(h, '<title>躺着也能赚（预览·未上线）</title>', '<title>躺着也能赚（宠物 p4a 预览·未上线）</title>')
 h = rep(h, 'href="icon.svg"', 'href="../../icon.svg"')
 h = rep(h, 'href="apple-touch-icon.png"', 'href="../../apple-touch-icon.png"')
 h = rep(h, f'<link rel="stylesheet" href="style.css?v={bv}">', f'<link rel="stylesheet" href="style.css?v={V}">\n<link rel="stylesheet" href="petgame.css?v={V}">')

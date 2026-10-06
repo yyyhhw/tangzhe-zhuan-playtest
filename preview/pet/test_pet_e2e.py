@@ -211,6 +211,37 @@ with sync_playwright() as p:
             check(sw2['chair'] == [0, 6] and sw2['plant'] == [2, 5] and sw2['cat'] == [5, 5], f'p3 (b)：刷新后交换保留（摇椅 {sw2["chair"]}、绿植 {sw2["plant"]}、猫窝 {sw2["cat"]}），没被打回默认')
             pg.evaluate(P3_SETUP); r = pg.evaluate(STEP_JS, [60, None])
             check(r['overlap'] == 0 and r['teleport'] == 0 and r['body'] == 0 and r['vis'] == 0, f'p3：新摆设下活动 1 分钟，鼻尖 / 尾巴不进家具（地面 {r["body"]} / 屏幕 {r["vis"]}，朝向 {r["dirs"]}）')
+        # ===== p4a 回归（熊大 p3 复核：1 格宽竖走廊里转不开身还播侧身动作，身体两侧穿墙）=====
+        pg.goto(URL + '?fresh=1&seed=11'); pg.wait_for_function("document.body.dataset.ready==='1'"); pg.evaluate("__pet.manual(true)")
+        pg.wait_for_function("__pet.imagesReady().ok === __pet.imagesReady().total", timeout=15000); pg.evaluate(P3_SETUP)
+        def col(x, y0, y1, t): return [{'uid': f'{t}{x}_{y}', 'fid': 'furn_plant', 'x': x, 'y': y} for y in range(y0, y1)]
+        def row(y, x0, x1, t): return [{'uid': f'{t}{x}_{y}', 'fid': 'furn_plant', 'x': x, 'y': y} for x in range(x0, x1)]
+        CASES = [
+            ('竖走廊', col(3, 0, 7, 'L') + col(5, 0, 7, 'R'), 4.5, 2.5, 'S', False),
+            ('横走廊', row(1, 2, 9, 'T') + row(3, 2, 9, 'B'), 5.5, 2.5, 'E', True),
+            ('死胡同', col(3, 0, 4, 'L') + col(5, 0, 4, 'R') + [{'uid': 'cap', 'fid': 'furn_plant', 'x': 4, 'y': 3}], 4.5, 1.5, 'N', False),
+            ('边界格', col(1, 0, 3, 'C'), 0.5, 1.2, 'S', False),
+        ]
+        for name, items, x, y, dr, side_ok in CASES:
+            pg.evaluate("""([items, x, y, dr]) => { const P = __pet, w = P.w, PE = P.PE; PE.setLayout(w, { items }); const d = w.dog;
+              d.x = x; d.y = y; d.dir = dr; d.plan = []; d.step = null; d.activity = 'idle'; d.lastGain = -1e9; d.petCdUntil = 0; d.energy = 80; d.tired = false; w.ball.state = 'floor'; P.advance(0); }""", [items, x, y, dr])
+            fr = pg.evaluate("(() => { const w = __pet.w; return { E: __pet.PE.bodyFree(w, w.dog.x, w.dog.y, 'E'), W: __pet.PE.bodyFree(w, w.dog.x, w.dog.y, 'W'), V: __pet.PE.bodyFree(w, w.dog.x, w.dog.y, 'V') }; })()")
+            pt = pg.evaluate("(() => { const w = __pet.w; return __pet.screenOf(w.dog.x, w.dog.y - 0.4); })()")
+            a0 = pg.evaluate("__pet.w.dog.affinity")
+            pg.mouse.click(pt['x'], pt['y'])
+            r = pg.evaluate(STEP_JS, [3, None]); a1 = pg.evaluate("__pet.w.dog.affinity")
+            if name == '边界格': pg.screenshot(path=f'{SHOTS}/{tag}_p4a_edge.png')
+            if name == '竖走廊': pg.screenshot(path=f'{SHOTS}/{tag}_p4a_vcorr.png')
+            tapped = 'petted' in r['seq'] or a1 > a0
+            check(fr['V'] and (fr['E'] or fr['W']) == side_ok, f'p4a {name}：站得下，侧身{"放得下" if side_ok else "放不下"}（E={fr["E"]} W={fr["W"]}）')
+            check(tapped and r['body'] == 0 and r['vis'] == 0 and r['overlap'] == 0 and r['teleport'] == 0, f'p4a {name}：点小狗有回应（亲密 {a0}→{a1}），身体盒不穿墙（地面 {r["body"]} / 屏幕 {r["vis"]}，动作 {"→".join(r["seq"][:6])}）')
+            if side_ok: check('petted' in r['seq'], f'p4a {name}：侧身放得下 → 正常播侧身抚摸（不误拦）')
+            elif name != '边界格': check('petted' not in r['seq'], f'p4a {name}：转不开身 → 不播侧身抚摸（站着摇尾巴）')
+            for k, js in (('呼唤', "__pet.PE.call(__pet.w)"), ('抛球', "__pet.PE.throwBall(__pet.w)")):
+                pg.evaluate(js); r = pg.evaluate(STEP_JS, [8, None])
+                check(r['body'] == 0 and r['vis'] == 0 and r['overlap'] == 0, f'p4a {name}{k}：不穿墙（地面 {r["body"]} / 屏幕 {r["vis"]}）')
+            r = pg.evaluate(STEP_JS, [90, None])
+            check(r['body'] == 0 and r['vis'] == 0 and r['overlap'] == 0 and r['teleport'] == 0, f'p4a {name}：自主活动 90 秒不穿墙（地面 {r["body"]} / 屏幕 {r["vis"]}，朝向 {r["dirs"]}）')
         check(not errs, '控制台 0 报错 / 0 警告 / 0 坏请求' + ('' if not errs else '：' + '；'.join(errs[:4])))
         ctx.close()
     # 换真图集那条路：把占位帧烘成 2048×1024 图集再按 cell 画

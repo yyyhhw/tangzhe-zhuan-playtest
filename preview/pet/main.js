@@ -252,13 +252,13 @@
     const v = PA.validateManifest(m); if (!v.ok) throw new Error(v.errors.join('；'));
     M = m;
     const res = makeWorld(true); resize(); welcomeBack(res);
-    if (!m.placeholder && m.atlas.image) { const im = new Image(); im.onload = () => { atlas = im; artMode = 'atlas'; }; im.onerror = () => console.warn('图集没加载到，先用占位小狗'); im.src = 'art/' + m.atlas.image + '?v=p3'; }
+    if (!m.placeholder && m.atlas.image) { const im = new Image(); im.onload = () => { atlas = im; artMode = 'atlas'; }; im.onerror = () => console.warn('图集没加载到，先用占位小狗'); im.src = 'art/' + m.atlas.image + '?v=p4a'; }
     if (Q.get('art') === 'atlas') window.__pet.bakeAtlas();
     document.body.dataset.ready = '1';
     requestAnimationFrame(frame);
   }
   function loadManifest(tryN) {
-    fetch('art/manifest.json?v=p3').then(r => { if (!r.ok) throw new Error('manifest ' + r.status); return r.json(); }).then(boot).catch(e => {
+    fetch('art/manifest.json?v=p4a').then(r => { if (!r.ok) throw new Error('manifest ' + r.status); return r.json(); }).then(boot).catch(e => {
       if (leaving) return;
       if (tryN < 3) { $('label').textContent = '加载中…'; setTimeout(() => loadManifest(tryN + 1), 500 * (tryN + 1)); return; }
       $('label').textContent = '加载失败：' + e.message + '（下拉刷新试试）'; console.error(e);
