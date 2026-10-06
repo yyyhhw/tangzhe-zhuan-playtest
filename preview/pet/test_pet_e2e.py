@@ -48,7 +48,7 @@ with sync_playwright() as p:
         pg.on('console', lambda m: m.type in ('error', 'warning') and errs.append(f'{m.type}: {m.text}'))
         pg.on('pageerror', lambda e: errs.append(f'pageerror: {e}'))
         pg.on('response', lambda r: r.status >= 400 and errs.append(f'{r.status} {r.url}'))
-        pg.on('requestfailed', lambda r: errs.append(f'failed {r.url}'))
+        pg.on('requestfailed', lambda r: None if 'cancel' in (r.failure or '').lower() else errs.append(f'failed {r.url} {r.failure}'))   # 换页 / 刷新时浏览器取消的在途请求不算坏请求
         pg.goto(URL); pg.wait_for_function("document.body.dataset.ready==='1' && __pet.imagesReady().ok === __pet.imagesReady().total", timeout=20000)   # 等首屏全加载完再跳，免得把在途请求算成坏请求
         pg.evaluate("localStorage.clear(); localStorage.setItem('tangzhe-save', '{\"sentinel\":1}')")
         pg.goto(URL + '?seed=5'); pg.wait_for_function("document.body.dataset.ready==='1'", timeout=15000)

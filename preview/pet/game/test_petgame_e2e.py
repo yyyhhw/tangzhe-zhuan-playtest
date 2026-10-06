@@ -52,7 +52,7 @@ with sync_playwright() as p:
         pg.on('console', lambda m: m.type in ('error', 'warning') and errs.append(f'{m.type}: {m.text}'))
         pg.on('pageerror', lambda e: errs.append(f'pageerror: {e}'))
         pg.on('response', lambda r: r.status >= 400 and errs.append(f'{r.status} {r.url}'))
-        pg.on('requestfailed', lambda r: errs.append(f'failed {r.url}'))
+        pg.on('requestfailed', lambda r: None if 'cancel' in (r.failure or '').lower() else errs.append(f'failed {r.url} {r.failure}'))   # 换页 / 刷新时浏览器取消的在途请求不算坏请求
         boot(pg)
         # ---------- 旧档：没有 pet 字段 ----------
         pg.evaluate("""() => { const E = __tzz.E, s = E.newState(Date.now()); s.coins = 50000; s.taps = 321; s.totalEarned = 1000;
@@ -64,7 +64,7 @@ with sync_playwright() as p:
         check(st['coins'] == 50000 and st['taps'] == 321 and st['placed'] == ['furn_sofa', 'furn_rug', 'furn_catbed'], f'旧档其余内容都在（金币 {st["coins"]}、点击 {st["taps"]}、家具 {len(st["placed"])} 件）')
         keys0 = st['keys']
         to_room(pg)
-        check(pg.locator('#petNote').count() == 1 and pg.locator('#roomFloor .pet-dog').count() == 0, '家宅：还没小狗，只有「商城新到」提示')
+        check(pg.locator('#petNote').count() == 0 and pg.locator('#petBar').count() == 0 and pg.locator('#roomFloor .pet-dog').count() == 0, '家宅：还没小狗 → 不加提示条、不画小狗（12e 并入主预览：没买狗时家宅布局和原来一样）')
         # ---------- 商城 → 购买 ----------
         pg.evaluate("() => __tzz.homeAct('homeSub', 'mall')"); pg.wait_for_timeout(500)
         card = pg.locator('#petCard'); check(card.count() == 1 and card.locator('[data-act=homePetBuy]').count() == 1, '商城第一张是小狗，有「购买 3,000」')
@@ -272,7 +272,7 @@ with sync_playwright() as p:
             pg.evaluate("() => __tzz.persist()")
             pg.goto(PREVIEW); pg.wait_for_function("window.__tzz && __tzz.state", timeout=20000); pg.wait_for_timeout(800)
             pv = pg.evaluate("() => { __tzz.persist(); const raw = JSON.parse(localStorage.getItem('" + SAVE + "')); return { pet: raw.pet && raw.pet.home, mem: !!__tzz.state.pet, petGame: typeof window.PetGame }; }")
-            check(pv['pet'] == 'c77' and pv['mem'] and pv['petGame'] == 'undefined', '主线预览（不认识小狗）读写这份档：pet 字段原样保留')
+            check(pv['pet'] == 'c77' and pv['mem'] and pv['petGame'] == 'object', '主线预览（12e 起已并入小狗）读写这份档：pet 字段原样保留、内存里也有小狗')
             atlas = pg.evaluate("""async () => { const s = document.createElement('script'); s.src = 'pet/puppy.js'; const a = document.createElement('script'); a.src = 'pet/art.js'; document.head.append(a, s);
               await new Promise(r => setTimeout(r, 600)); const m = await (await fetch('pet/art/manifest.json')).json(); return PetPuppy.bakeAtlas(document, m).toDataURL('image/png'); }""")
             png = base64.b64decode(atlas.split(',', 1)[1])

@@ -1,8 +1,9 @@
 /* 宠物 p4：小狗 / 窝 / 球在家宅地板里的样式。地上家具按「占地前沿」排前后（--fz 由 app.js 写），小狗按落地点排，前后遮挡一致 */
-.room-floor .furn:not(.rug){z-index:var(--fz,2)}
-.room-floor .furn.sel{z-index:300}
-.room-floor .room-hl{z-index:310}
-.room-floor .home-actor{z-index:400}
+/* 12e：并进主预览后，只有屋里真有小狗时才改家具层级（没狗 = 主预览原样：家具 2 / 选中 4 / 高亮 3 / CEO 6） */
+.room-floor:has(> .pet-dog) .furn:not(.rug){z-index:var(--fz,2)}
+.room-floor:has(> .pet-dog) .furn.sel{z-index:300}
+.room-floor:has(> .pet-dog) .room-hl{z-index:310}
+.room-floor:has(> .pet-dog) .home-actor{z-index:400}
 .pet-bed{position:absolute;z-index:5;pointer-events:none;border:2.5px solid #2b2118;border-radius:50%;background:radial-gradient(ellipse at 50% 56%,#f2d8b4 0 52%,#8f5a33 55%);box-shadow:1px 2px 0 rgba(20,20,20,.35)}
 .pet-ball{position:absolute;pointer-events:none;border-radius:50%;background:radial-gradient(circle at 38% 35%,#f4ff9a 0 18%,#d6e83a 22%);border:2px solid #2b2118;box-sizing:border-box}
 .pet-dog{position:absolute;pointer-events:none}

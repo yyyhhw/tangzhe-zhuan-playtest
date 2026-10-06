@@ -1860,8 +1860,8 @@ function petMallCard() {
 }
 function petRoomBar(id) {
   if (!PG) return '';
-  if (!petOwned()) return `<div class="note pet-note" id="petNote">商城新到：${PG.PET.emoji} ${PG.PET.name}（${fmt(PG.PET.price)} 金币），买了就住进来。<button class="buy alt" data-act="homeSub" data-arg="mall">去看看</button></div>`;
-  if (!petRt) return '';   // 12e：没买狗的提示条不等 manifest 加载就画（免得加载完插一条、把家宅往下顶）
+  if (!petOwned()) return '';   // 12e：没买狗时家宅不加任何提示条（主预览布局一像素不动；小狗只在商城卡片里出现）
+  if (!petRt) return '';
   if (state.pet.home !== id) return `<div class="note pet-note" id="petNote">${PG.PET.emoji} 小狗住在 ${E.CEO_BY_ID[state.pet.home].name} 的家。<button class="buy alt" data-act="homePetMove" data-arg="${id}">接过来</button></div>`;
   const w = petRt.sync(state);
   if (w && w.noRoom) return `<div class="note pet-note pet-wait" id="petWait">${PG.PET.emoji} <b>小狗等待安置</b>：屋里摆满了，没有它能站的空地。收起或挪开一件家具（留出 1 格）、或升级房子，它会自己出来。</div>`;   // p4b
