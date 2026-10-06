@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>躺着赚 · 宠物原型 p6</title>
+<link rel="stylesheet" href="pet.css?v=p6">
+</head>
+<body>
+<main id="app">
+  <header class="top">
+    <div class="ttl">🐶 宠物原型 <b>p6</b></div>
+    <div class="sub">小狗自己在家过日子 · 熊大 v3 候选图 · 收益加成 0 · 独立存档</div>
+  </header>
+  <div class="stage" id="stage"><canvas id="room" aria-label="小狗的房间"></canvas><div class="toast hidden" id="toast"></div></div>
+  <div class="status"><span id="label">刚到家</span><span class="aff" id="aff">亲密 40</span></div>
+  <nav class="ctl">
+    <button id="bCall" class="btn">📣 呼唤</button>
+    <button id="bPet" class="btn">🤚 抚摸</button>
+    <button id="bBall" class="btn">🎾 抛球</button>
+  </nav>
+  <div class="tools"><button id="bMove" class="tbtn">🪑 搬家具</button><span class="hint" id="hint">点小狗也能摸它</span></div>
+</main>
+<script src="../economy.js?v=p6"></script>
+<script src="art.js?v=p6"></script>
+<script src="puppy.js?v=p6"></script>
+<script src="room.js?v=p6"></script>
+<script src="engine.js?v=p6"></script>
+<script src="main.js?v=p6"></script>
+</body>
+</html>

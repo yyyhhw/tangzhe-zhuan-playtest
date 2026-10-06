@@ -1,0 +1,27 @@
+/* 宠物 p4：小狗 / 窝 / 球在家宅地板里的样式。地上家具按「占地前沿」排前后（--fz 由 app.js 写），小狗按落地点排，前后遮挡一致 */
+/* 12e：并进主预览后，只有屋里真有小狗时才改家具层级（没狗 = 主预览原样：家具 2 / 选中 4 / 高亮 3 / CEO 6） */
+.room-floor:has(> .pet-dog) .furn:not(.rug){z-index:var(--fz,2)}
+.room-floor:has(> .pet-dog) .furn.sel{z-index:300}
+.room-floor:has(> .pet-dog) .room-hl{z-index:310}
+.room-floor:has(> .pet-dog) .home-actor{z-index:400}
+.pet-bed{position:absolute;z-index:5;pointer-events:none;border:2.5px solid #2b2118;border-radius:50%;background:radial-gradient(ellipse at 50% 56%,#f2d8b4 0 52%,#8f5a33 55%);box-shadow:1px 2px 0 rgba(20,20,20,.35)}
+.pet-ball{position:absolute;pointer-events:none;border-radius:50%;background:radial-gradient(circle at 38% 35%,#f4ff9a 0 18%,#d6e83a 22%);border:2px solid #2b2118;box-sizing:border-box}
+.pet-dog{position:absolute;pointer-events:none}
+.pet-dog .pet-cv{display:block}
+.pet-fx{position:absolute;left:50%;top:18%;width:0;height:0;pointer-events:none}
+.pet-fx i{position:absolute;left:0;top:0;font-style:normal;font-size:18px;font-weight:900;line-height:1;transform:translateX(-50%)}
+.pet-fx i.q{color:#d64545;font-size:20px}
+.pet-fx i.z{color:#5b6fb5;left:14px;animation:petz 2.4s linear infinite}
+@keyframes petz{0%{opacity:1;transform:translate(0,10px) scale(.8)}100%{opacity:0;transform:translate(10px,-14px) scale(1.2)}}
+.pet-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0 2px}
+.pet-bar .pet-lb{flex:1 1 100%;font-size:12px;line-height:1.4;min-height:17px}
+.pet-bar .pet-lb small{margin-left:8px;color:#a0522d;font-weight:800}
+.pet-bar .buy{flex:1 1 0;min-width:0;padding-left:4px;padding-right:4px}
+.pet-note .buy{margin-left:6px;padding:2px 8px;font-size:12px}
+.pet-ico span{font-size:min(30px,8vw);line-height:1}
+.pet-card{border-color:#e07a3f}
+/* p4b：卡片标题里的「宠物 · 新」不被截；满屋「暂时无法入宅」按钮折两行不挤正文；等待安置提示醒目一点 */
+.pet-card .name{flex-wrap:wrap;white-space:normal;overflow:visible;row-gap:2px}
+.pet-card .name .tag{white-space:nowrap}
+.pet-card #petNoRoom{max-width:96px;white-space:normal;line-height:1.25;padding:6px 8px}
+.pet-wait{border-color:#e07a3f;background:#fff4e6;line-height:1.5}

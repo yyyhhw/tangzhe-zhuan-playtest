@@ -12,15 +12,44 @@
 <title>躺着也能赚</title>
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="style.css?v=12">
+<link rel="stylesheet" href="style.css?v=13">
+<link rel="stylesheet" href="pet/game/petgame.css?v=13">
 </head>
 <body>
+<!-- 12c 漫画 UI：统一线稿图标（同一支墨线笔 stroke 2、圆头；--ica 主色 / --icf 纸色 / --icy 黄，激活态由 CSS 换色） -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="ic-shop" viewBox="0 0 24 24"><path d="M4.5 10.5V20.5h15v-10" style="fill:var(--icf,#fff)"/><path d="M9.5 20.5v-5.5h5v5.5" style="fill:var(--icy,#ffd23f)"/><path d="M3.5 4.5h17l1.3 4.6a2.5 2.5 0 0 1-4.8 1.1 2.5 2.5 0 0 1-5 0 2.5 2.5 0 0 1-5 0A2.5 2.5 0 0 1 2.2 9.1Z" style="fill:var(--ica,#e63946)"/><path d="M8.6 4.5 7 10.2M12 4.5v5.7M15.4 4.5l1.6 5.7"/></symbol>
+  <symbol id="ic-home" viewBox="0 0 24 24"><path d="M5.5 10.5v10h13v-10" style="fill:var(--icf,#fff)"/><path d="M10 20.5v-5.5h4v5.5" style="fill:var(--icy,#ffd23f)"/><path d="M15.5 6V3.5h2.5v4.6"/><path d="M2.5 11.5 12 3.5l9.5 8Z" style="fill:var(--ica,#e63946)"/></symbol>
+  <symbol id="ic-ceo" viewBox="0 0 24 24"><path d="M3.8 21.2c.5-4.7 3.7-7.2 8.2-7.2s7.7 2.5 8.2 7.2Z" style="fill:var(--icf,#fff)"/><circle cx="12" cy="7.6" r="4" style="fill:var(--icf,#fff)"/><path d="M12 14l-1.8 2.2 1.8 5 1.8-5Z" style="fill:var(--ica,#e63946)"/><path d="M9.2 14.4 12 17l2.8-2.6"/></symbol>
+  <symbol id="ic-gacha" viewBox="0 0 24 24"><rect x="4.2" y="10.5" width="15.6" height="10.3" rx="1" style="fill:var(--icy,#ffd23f)"/><rect x="3" y="7" width="18" height="4" rx="1" style="fill:var(--ica,#e63946)"/><path d="M12 7v13.8"/><path d="M12 7C10.2 3.4 6.3 3.6 7.4 6.3 7.9 7.3 12 7 12 7Zm0 0c1.8-3.6 5.7-3.4 4.6-.7-.5 1-4.6.7-4.6.7Z" style="fill:var(--icf,#fff)"/></symbol>
+  <symbol id="ic-col" viewBox="0 0 24 24"><path d="M5 4.5c0-.6.4-1 1-1h12.5c.3 0 .5.2.5.5v16.5H6.6A1.6 1.6 0 0 1 5 18.9Z" style="fill:var(--icf,#fff)"/><path d="M5 18.9c0-.9.7-1.6 1.6-1.6H19"/><path d="M12.5 3.5v7l2.2-1.6 2.2 1.6v-7" style="fill:var(--ica,#e63946)"/></symbol>
+  <symbol id="ic-mall" viewBox="0 0 24 24"><path d="M4.8 8.2h14.4l-1.1 12.6H5.9Z" style="fill:var(--icy,#ffd23f)"/><path d="M8.8 11V7.2a3.2 3.2 0 0 1 6.4 0V11"/><path d="M8 14.5h8" style="stroke:var(--ica,#e63946)"/></symbol>
+  <symbol id="ic-live" viewBox="0 0 24 24"><circle cx="14" cy="4.6" r="2.2" style="fill:var(--icf,#fff)"/><path d="M12.8 8.4 10.6 13l3 2.4-1 5.4M11.6 8.8 8 11.2l-.6 2.6M13.2 9.4l2.2 2.8 3 .6M10.6 13l-3.2 6.6"/></symbol>
+  <symbol id="ic-decor" viewBox="0 0 24 24"><path d="M5.2 12V8.6c0-1.4 1.1-2.6 2.6-2.6h8.4c1.5 0 2.6 1.2 2.6 2.6V12" style="fill:var(--icf,#fff)"/><path d="M2.8 12.6a2.1 2.1 0 0 1 4.2 0V14h10v-1.4a2.1 2.1 0 0 1 4.2 0V18.2H2.8Z" style="fill:var(--icy,#ffd23f)"/><path d="M5 18.2v2.2M19 18.2v2.2"/></symbol>
+  <symbol id="ic-close" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" style="stroke-width:3.2"/></symbol>
+  <symbol id="ic-sound" viewBox="0 0 24 24"><path d="M3.5 9.2h3.6L11.8 5v14l-4.7-4.2H3.5Z" style="fill:var(--icy,#ffd23f)"/><path d="M15 9.2a3.9 3.9 0 0 1 0 5.6M17.6 6.6a7.6 7.6 0 0 1 0 10.8"/></symbol>
+  <symbol id="ic-mute" viewBox="0 0 24 24"><path d="M3.5 9.2h3.6L11.8 5v14l-4.7-4.2H3.5Z" style="fill:var(--icf,#fff)"/><path d="M15 9.5l5 5M20 9.5l-5 5" style="stroke:var(--ica,#e63946);stroke-width:2.6"/></symbol>
+  <!-- 12c1：店铺切换 / 家宅升级 / 锁 / 家宅墙饰 / 生活动作，原系统 emoji 全换成同一支笔的 SVG -->
+  <symbol id="ic-bbq" viewBox="0 0 24 24"><path d="M3.5 20.5 20.5 3.5"/><circle cx="8" cy="16" r="3" style="fill:var(--ica,#e63946)"/><circle cx="12" cy="12" r="3" style="fill:var(--icy,#ffd23f)"/><circle cx="16" cy="8" r="3" style="fill:var(--ica,#e63946)"/></symbol>
+  <symbol id="ic-tea" viewBox="0 0 24 24"><path d="M6.5 8.5h11l-1.3 12H7.8Z" style="fill:var(--icf,#fff)"/><path d="M5 6h14v2.5H5Z" style="fill:var(--ica,#e63946)"/><path d="M13 6l2.2-4"/><circle cx="10" cy="17" r="1.1" style="fill:#141414;stroke:none"/><circle cx="12.6" cy="18" r="1.1" style="fill:#141414;stroke:none"/><circle cx="14.2" cy="15.6" r="1.1" style="fill:#141414;stroke:none"/><path d="M7.2 12.5h9.6" style="stroke:var(--icy,#ffd23f)"/></symbol>
+  <symbol id="ic-book" viewBox="0 0 24 24"><path d="M12 6.5C9.5 4.8 6.5 4.5 3 5v13.5c3.5-.5 6.5-.2 9 1.5 2.5-1.7 5.5-2 9-1.5V5c-3.5-.5-6.5-.2-9 1.5Z" style="fill:var(--icf,#fff)"/><path d="M12 6.5V20"/><path d="M15.5 5.2v6l1.5-1.2 1.5 1.2V5" style="fill:var(--ica,#e63946)"/><path d="M5.5 9h3.5M5.5 12h3.5"/></symbol>
+  <symbol id="ic-tech" viewBox="0 0 24 24"><rect x="4.5" y="4.5" width="15" height="11" rx="1" style="fill:var(--icy,#ffd23f)"/><path d="M2.5 18h19l-1.6 2.5H4.1Z" style="fill:var(--icf,#fff)"/><path d="M9.5 8 7.5 10l2 2M14.5 8l2 2-2 2" style="stroke:var(--ica,#e63946)"/></symbol>
+  <symbol id="ic-lock" viewBox="0 0 24 24"><path d="M8 11V8a4 4 0 0 1 8 0v3"/><rect x="5" y="11" width="14" height="9.5" rx="1.5" style="fill:var(--icy,#ffd23f)"/><path d="M12 14.5v2.5"/></symbol>
+  <symbol id="ic-apt" viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17" rx=".5" style="fill:var(--icf,#fff)"/><path d="M8 7h2M14 7h2M8 10.5h2M14 10.5h2M8 14h2M14 14h2" style="stroke:var(--icy,#ffd23f);stroke-width:2.6"/><path d="M10.5 20.5v-3.5h3v3.5" style="fill:var(--ica,#e63946)"/><path d="M3 20.5h18"/></symbol>
+  <symbol id="ic-villa" viewBox="0 0 24 24"><path d="M3.5 20.5V10h3v2h2.5V8.5L12 6l3 2.5V12h2.5v-2h3v10.5Z" style="fill:var(--icf,#fff)"/><path d="M12 6V2.5l3.5 1.2L12 5" style="fill:var(--ica,#e63946)"/><path d="M10 20.5v-4a2 2 0 0 1 4 0v4" style="fill:var(--icy,#ffd23f)"/><path d="M5 14.5h0M19 14.5h0" style="stroke-width:2.6"/></symbol>
+  <symbol id="ic-window" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="1" style="fill:#dff1ff"/><path d="M12 4v16M4 12h16"/><path d="M4 4h4.5c-1 4-1 9-2.5 16H4Z" style="fill:var(--ica,#e63946)"/><path d="M20 4h-4.5c1 4 1 9 2.5 16H20Z" style="fill:var(--ica,#e63946)"/></symbol>
+  <symbol id="ic-spark" viewBox="0 0 24 24"><path d="M12 2.5l2.2 7.3 7.3 2.2-7.3 2.2-2.2 7.3-2.2-7.3L2.5 12l7.3-2.2Z" style="fill:var(--icy,#ffd23f)"/></symbol>
+  <symbol id="ic-candle" viewBox="0 0 24 24"><rect x="8.5" y="10" width="7" height="10.5" rx="1" style="fill:var(--icf,#fff)"/><path d="M12 3c2 2.2 2 4.5 0 5.5-2-1-2-3.3 0-5.5Z" style="fill:var(--icy,#ffd23f)"/><path d="M6 20.5h12"/></symbol>
+  <symbol id="ic-zz" viewBox="0 0 24 24"><path d="M4 5h7l-7 8h7M14 12h6l-6 7h6"/></symbol>
+  <symbol id="ic-shirt" viewBox="0 0 24 24"><path d="M8.5 3.5 3.5 7l2.5 4 2-1.2V20.5h8V9.8l2 1.2 2.5-4-5-3.5c-.4 1.6-1.9 2.7-3.5 2.7s-3.1-1.1-3.5-2.7Z" style="fill:var(--ica,#e63946)"/></symbol>
+  <symbol id="ic-box" viewBox="0 0 24 24"><path d="M3.5 8 12 4l8.5 4v9.5L12 21.5l-8.5-4Z" style="fill:var(--icy,#ffd23f)"/><path d="M3.5 8 12 12l8.5-4M12 12v9.5"/><path d="M7.8 6 16.3 10" style="stroke:var(--ica,#e63946)"/></symbol>
+</svg>
 <div id="app" data-tab="shop">
   <header id="top">
     <div class="title-row">
       <h1 class="logo"><span class="l1">躺着</span><span class="l2">也能赚</span></h1>
       <button id="dailyChip" class="chip" aria-label="每日双倍"></button>
-      <button id="mute" class="icon-btn" aria-label="声音开关">♪</button>
+      <button id="mute" class="icon-btn" aria-label="声音开关"><svg class="ic ic-on" aria-hidden="true"><use href="#ic-sound"/></svg><svg class="ic ic-off" aria-hidden="true"><use href="#ic-mute"/></svg></button>
     </div>
     <div class="money">
       <div class="coin-ico" aria-hidden="true"><span>赚</span></div>
@@ -41,31 +70,38 @@
   <section id="panel">
     <div id="tabBody"></div>
   </section>
-  <nav id="bottomNav">
-    <button data-tab="shop" class="on"><span class="ni">🏪</span>经营</button>
-    <button data-tab="home"><span class="ni">🏠</span>家宅</button>
-    <button data-tab="ceo"><span class="ni">👔</span>CEO</button>
-    <button data-tab="gacha"><span class="ni">🎁</span>盲盒</button>
-    <button data-tab="col"><span class="ni">📒</span>收藏</button>
+  <nav id="bottomNav" class="cx-nav" aria-label="主菜单">
+    <button data-tab="shop" class="on"><span class="ni"><svg class="ic" aria-hidden="true"><use href="#ic-shop"/></svg></span>经营</button>
+    <button data-tab="home"><span class="ni"><svg class="ic" aria-hidden="true"><use href="#ic-home"/></svg></span>家宅</button>
+    <button data-tab="ceo"><span class="ni"><svg class="ic" aria-hidden="true"><use href="#ic-ceo"/></svg></span>CEO</button>
+    <button data-tab="gacha"><span class="ni"><svg class="ic" aria-hidden="true"><use href="#ic-gacha"/></svg></span>盲盒</button>
+    <button data-tab="col"><span class="ni"><svg class="ic" aria-hidden="true"><use href="#ic-col"/></svg></span>收藏</button>
   </nav>
 </div>
 
 <div id="modal" class="modal hidden" role="dialog" aria-modal="true"><div class="burst"></div><div class="mpanel" id="mpanel"></div></div>
 <div id="sheet" class="sheet hidden" role="dialog" aria-modal="true"><div class="sheet-bg"></div><div class="sheet-panel" id="sheetPanel"></div></div>
 <div id="lockOverlay" class="lock hidden">
-  <div class="lock-card">
+  <div class="lock-card cx-panel">
     <div class="lock-ico">📱</div>
     <div class="lock-title">游戏已在别的页面打开</div>
     <div class="lock-txt">为了防止重复领钱，同一时间只能在一个页面玩。</div>
     <button id="lockResume" class="buy big">在这里继续玩</button>
   </div>
 </div>
+<div id="zbOverlay" class="zb-ov hidden"><iframe id="zbFrame" title="77 打僵尸" src="about:blank"></iframe></div>
 <div id="toast" class="hidden"></div>
 <script>
 /* 版本自检：App 内置浏览器 / 主屏图标可能缓存旧的 index.html。拿最新版本号，比本页新就带版本号重开一次（只重开一次，不会死循环） */
-(function(){var B='12';try{fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(j){if(!j||!j.v||String(j.v)===B)return;var k='tzz-reload-'+j.v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');location.replace(location.pathname+'?v='+j.v+location.hash);}).catch(function(){});}catch(e){}})();
+(function(){var B='13';try{fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(j){if(!j||!j.v||String(j.v)===B)return;var k='tzz-reload-'+j.v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');var q=location.search.replace(/^\?/,'').split('&').filter(function(x){return x&&x.split('=')[0]!=='v'});q.unshift('v='+j.v);location.replace(location.pathname+'?'+q.join('&')+location.hash);}).catch(function(){});}catch(e){}})();
 </script>
-<script src="economy.js?v=12"></script>
-<script src="app.js?v=12"></script>
+<script src="zombie/zbcore.js?v=13"></script>
+<script src="economy.js?v=13"></script>
+<script src="pet/art.js?v=13"></script>
+<script src="pet/puppy.js?v=13"></script>
+<script src="pet/room.js?v=13"></script>
+<script src="pet/engine.js?v=13"></script>
+<script src="pet/game/petgame.js?v=13"></script>
+<script src="app.js?v=13"></script>
 </body>
 </html>

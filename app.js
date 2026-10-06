@@ -2,7 +2,12 @@
 (() => {
 'use strict';
 const E = window.Economy, CFG = E.CFG;
+const ZB = window.ZBCore; var zbOpen = false, zbPort = null;
 const SAVE_KEY = 'tangzhe-save', BAK_KEY = 'tangzhe-save-bak', LOCK_KEY = 'tangzhe-tab-lock';
+// 12b2 测试房间：只有网址带 ?test=homes 才进；整局放在内存里，不读、不写任何 localStorage（真存档 / 备份 / 多标签锁都不碰），刷新就重置
+// &lv=3 → 四家都是豪宅，默认四家都是公寓
+const TEST_Q = (() => { try { return new URLSearchParams(location.search); } catch (e) { return null; } })();
+const TEST_MODE = !!(TEST_Q && TEST_Q.get('test') === 'homes'), TEST_LV = TEST_Q && TEST_Q.get('lv') === '3' ? 3 : 2;
 const INK = '#141414', PAPER = '#f7f1e3', RED = '#e63946', YELLOW = '#ffd23f', TAU = Math.PI * 2;
 const $ = s => document.querySelector(s);
 const now = () => Date.now();
@@ -11,44 +16,94 @@ const rand = () => { if (crypto && crypto.getRandomValues) return crypto.getRand
 
 /* ================= 存档（版本号 + 多标签防重复） ================= */
 const TAB = rid();
-let frozen = false, state, migratedFrom = null;
+let frozen = false, state, migratedFrom = null, loadWallMig = { moved:0, stored:0 };
+// 12d 金币安全：读档走 E.loadSave（主档坏 → 完整备份 BAK_KEY；都坏 → saveBlocked：只在内存里玩，绝不覆盖原档）；写档前 E.validState 校验
+let loadInfo = { source:'new', bad:[] }, saveBlocked = false, lastGood = null;
+function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
 function loadState() {
-  let raw = null;
-  try { raw = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch (e) { raw = null; }
-  if (raw && raw.v !== CFG.SAVE_VERSION) { try { localStorage.setItem(BAK_KEY + '-v' + (raw.v || 0), JSON.stringify(raw)); } catch (e) {} }
-  const m = E.migrate(raw, now());
-  migratedFrom = raw ? (raw.v !== CFG.SAVE_VERSION ? (raw.v || 0) : null) : null;
+  if (TEST_MODE) { loadWallMig = { moved:0, stored:0 }; migratedFrom = null; return E.testHomesState(now(), TEST_LV); }
+  const m = E.loadSave(lsGet(SAVE_KEY), lsGet(BAK_KEY), now()), raw = m.raw;
+  loadInfo = { source:m.source, bakBad:m.bakBad || [], bad:m.bad || [], badPending:!!m.badPending, unsafe:!!m.unsafe, bakOk:!!m.bakOk, bakCoins:m.bakCoins, rawCoins:m.raw && m.raw.coins, mainMissing:!!m.mainMissing };
+  if (raw && raw.v !== CFG.SAVE_VERSION && m.source !== 'broken' && !m.blocked) { try { localStorage.setItem(BAK_KEY + '-v' + (raw.v || 0), JSON.stringify(raw)); } catch (e) {} }
+  loadWallMig = m.wall || { moved:0, stored:0 };
+  migratedFrom = raw && m.source !== 'broken' && !m.blocked ? (raw.v !== CFG.SAVE_VERSION ? (raw.v || 0) : null) : null;
+  if (m.source === 'bak') m.st.rev = Math.max(m.st.rev || 0, m.mainRev || 0);   // 从备份恢复：rev 不低于坏主档，免得多标签锁误判
+  if (m.blocked) saveBlocked = true;
+  if (window.PetGame) PetGame.norm(m.st, E);   // 宠物 p4：没有 pet 字段 = 没买，旧档原样
   return m.st;
 }
-function storedRev() { try { const r = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); return r ? (r.rev || 0) : -1; } catch (e) { return -1; } }
+function storedRev() { if (TEST_MODE) return -1; try { const r = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); return r ? (r.rev || 0) : -1; } catch (e) { return -1; } }
 // 保存 = 先确认没有别的页面写过（rev 比我新就冻结本页），再整份原子写入
+// 12d3（熊大 22:08 第 4 条）：只读模式返回 false（不假装保存成功）；写前 E.validState（含序列化后 E.checkSave）；
+//   备份写失败 → 整次保存放弃，主档不动；跨页写档（宠物 / 打僵尸）用 E.commitSave，同一套规矩
 function persist() {
   if (frozen) return false;
+  if (TEST_MODE) { state.rev++; return true; }   // 测试房间：只在内存里，永远不写真存档
+  if (saveBlocked) return false;                  // 12d：坏档 / 余额异常且没有可用备份 → 只读，原档一个字节都不改；12d3：如实返回失败（交易据此回滚）
+  const bad = E.validState(state);                // 12d：写档前校验（金币 / 等级 / 待领取收益 + 12d3 整档结构），坏了不写、恢复上一份好档
+  if (bad.length) { restoreGood(bad); return false; }
   const sr = storedRev();
   if (sr > state.rev) { freeze(); return false; }
   const t = now();
   if (t > state.lastSeen) state.lastSeen = t;
   state.maxSeen = Math.max(state.maxSeen || 0, state.lastSeen);
+  petBeforePersist();   // 宠物 p4：小狗状态写进 state.pet.eng（同一份存档）
   state.rev++;
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify(state)); return true; }
-  catch (e) { state.rev--; toast('存档失败：浏览器存储不可用（无痕模式？）'); return false; }
+  const json = JSON.stringify(state);
+  // 完整备份：把当前通过完整校验的主档整份放进 BAK_KEY（README 里已有的 -bak 键，不新增键），再写新主档；坏主档永远不进备份
+  let prev = null;
+  try { prev = localStorage.getItem(SAVE_KEY); } catch (e) { state.rev--; toast('保存失败：读不到浏览器存储'); return false; }
+  if (prev && prev !== json) {
+    let ok = false; try { ok = !E.checkSave(JSON.parse(prev)).length; } catch (e) {}
+    if (ok) {
+      try { localStorage.setItem(BAK_KEY, prev); if (localStorage.getItem(BAK_KEY) !== prev) throw new Error('bak'); }
+      catch (e) { state.rev--; toast('保存失败：备份写不进去，这次没有保存（原存档未改）', 2600); return false; }   // 12d3：备份失败 → 主档不动
+    }
+  }
+  try { localStorage.setItem(SAVE_KEY, json); lastGood = json; return true; }
+  catch (e) { state.rev--; toast('保存失败：浏览器存储不可用（无痕模式？）'); return false; }
 }
-// 关键操作（领钱、开盲盒）：失败就回滚内存，保证「扣钱/入账/记录」要么一起成功要么都没发生
-function atomic(fn) {
-  const snap = JSON.stringify(state);
-  const res = fn();
-  if (res && res.ok === false) return res;
-  if (!persist()) { state = JSON.parse(snap); return { ok:false, why:'saveFailed' }; }
-  return res;
+// 内存里出现坏值（NaN / ∞ / 负数 / 非数字）：不写盘，整档回到上一次成功写入的样子
+function restoreGood(bad) {
+  if (lastGood) { try { state = JSON.parse(lastGood); E.normWallet(state); } catch (e) {} }
+  dirty = true;
+  toast('金币数据异常（' + bad.slice(0, 3).join('、') + '），没有存档，已回到上一次存档', 3200);
 }
-function claimLock() { try { localStorage.setItem(LOCK_KEY, JSON.stringify({ tab:TAB, t:now() })); } catch (e) {} }
-function lockMine() { try { const v = JSON.parse(localStorage.getItem(LOCK_KEY) || 'null'); return !v || v.tab === TAB; } catch (e) { return true; } }
+// 12d3 统一交易（熊大 22:08 第 3 条）：扣款 + 改状态 + 落盘一起走 E.transact——persist() 失败就整档回滚（钱、等级、物品都还原），
+// 提示「保存失败」、不播成功效果。what = 失败提示里的「什么没生效」
+function txn(apply, price, what) {
+  const r = E.transact(state, { price:price || 0, apply, save:() => persist(), blocked:saveBlocked });
+  if (!r.ok && r.stage !== 'pay' && r.stage !== 'apply') saveFailNote(r, what);
+  return r;
+}
+function saveFailNote(r, what) {
+  sfx('no'); dirty = true;
+  const w = what || '这次操作没有生效';
+  if (r.stage === 'blocked') toast(saveBlocked ? '存档异常（只读模式）：买卖、升级都暂停，原存档保留' : r.why + '，这次没有生效', 2800);
+  else toast('保存失败：' + w, 2800);
+}
+// 关键操作（领钱、开盲盒、买卖、升级、摆放…）：失败就回滚内存，保证「扣钱/入账/记录」要么一起成功要么都没发生
+// 返回经济函数自己的结果；没存上 → { ok:false, why:'saveFailed' }（提示已由 txn 给出）
+function atomic(fn, what) {
+  const r = txn(fn, 0, what);
+  if (r.ok) return r.result && typeof r.result === 'object' ? r.result : { ok:true };
+  if (r.stage === 'apply' || r.stage === 'pay') return r.result && typeof r.result === 'object' ? r.result : { ok:false, why:r.why };
+  return { ok:false, why:'saveFailed', stage:r.stage };
+}
+// 12d3：主页面跳去别的页面（宠物 / 打僵尸入口都用它）：先 persist()，保存失败 / 只读就不跳转
+function goPage(url) {
+  if (saveBlocked) { toast('存档异常（只读模式）：先不跳转，原存档保留', 2800); return false; }
+  if (!persist()) { toast('保存失败：没有跳转，请稍后再试', 2800); return false; }
+  location.href = url; return true;
+}
+function claimLock() { if (TEST_MODE) return; try { localStorage.setItem(LOCK_KEY, JSON.stringify({ tab:TAB, t:now() })); } catch (e) {} }
+function lockMine() { if (TEST_MODE) return true; try { const v = JSON.parse(localStorage.getItem(LOCK_KEY) || 'null'); return !v || v.tab === TAB; } catch (e) { return true; } }
 function freeze() {
-  if (frozen) return; frozen = true;
+  if (frozen) return; frozen = true; if (zbOpen) closeZombie();
   $('#lockOverlay').classList.remove('hidden'); audioPause();
 }
 window.addEventListener('storage', e => {
-  if (frozen) return;
+  if (frozen || TEST_MODE) return;
   if (e.key === LOCK_KEY && e.newValue) { try { if (JSON.parse(e.newValue).tab !== TAB) freeze(); } catch (x) {} }
   if (e.key === SAVE_KEY && e.newValue) { try { if ((JSON.parse(e.newValue).rev || 0) > state.rev) freeze(); } catch (x) {} }
 });
@@ -141,10 +196,12 @@ const SHOP_STYLE = [
   { wall:'#e9ecef', awn:'#2b2d42', counter:'#adb5bd', accent:'#06d6a0' },
 ];
 const LOOKS = {
-  c77:    { skin:'#ffe0c7', hair:'#1b1b1b', style:'bangs', bow:'#ff4f9a', top:'#ffffff', apron:'#ff5a7a', female:true, tag:'77' },
-  pearl:  { skin:'#ffe0c7', hair:'#6b3e26', style:'bun', top:'#9b5de5', pearls:true, female:true, lips:true },
-  otaku:  { skin:'#ffe6d0', hair:'#2b2b2b', style:'messy', glasses:true, top:'#2a9d8f', hood:true },
-  rocket: { skin:'#ffe0c7', hair:'#3b2a20', style:'swept', top:'#222222', rocketLogo:true, smug:true },
+  // 12c1：四位 CEO 店内小人沿用熊大立绘的发型 / 配饰 / 主色（77 高马尾+粉蝴蝶结+红 T 棕围裙；珍珠姐及颌卷发+珍珠发夹+薄荷衬衫杏色围裙；阿宅乱发+圆眼镜+藏青连帽衫；火箭老板背头+黑西装+火箭胸针）
+  // 12b3：77 换熊大漫画新形象后（12b2 头像 / 立绘），店内小人配色同步：粉蝴蝶结高马尾 + 红 T + 粉围裙 + 深棕长裤 + 棕靴（取色自 ceo77_fullbody_comic_v1）
+  c77:    { skin:'#ffe0c7', hair:'#4a2c22', style:'pony', bow:'#f4837a', top:'#e84d3c', short:true, apron:'#f0a08e', pants:'#4a2f26', shoe:'#835233', female:true, tag:'77' },
+  pearl:  { skin:'#ffe0c7', hair:'#7a4a2a', style:'wavy', pin:true, top:'#bfe3c4', apron:'#e3a35f', female:true, lips:true },
+  otaku:  { skin:'#ffe6d0', hair:'#1e1e1e', style:'messy', glasses:true, top:'#25335c', hood:true },
+  rocket: { skin:'#ffe0c7', hair:'#5a3a26', style:'swept', top:'#2b2b2b', inner:'#141414', lapel:true, rocketLogo:true, smug:true },
   e0:     { skin:'#ffd9b8', hair:'#222', style:'short', headband:RED, top:'#f4a261' },
   e1:     { skin:'#ffe0c7', hair:'#222', style:'twin', top:'#ffafcc', female:true, apron:'#fff' },
   e2:     { skin:'#ffe6d0', hair:'#333', style:'cover', top:'#8ecae6', sleepy:true },
@@ -166,7 +223,7 @@ function wearOf(id) { return (state.wear && state.wear[id]) || {}; }
 function lookOf(id) {
   const base = LOOKS[id]; if (!E.CEO_BY_ID[id]) return base;
   const L = Object.assign({}, base), eq = wearOf(id);
-  if (eq.clothes && CLOTHES[eq.clothes]) Object.assign(L, CLOTHES[eq.clothes], { rocketLogo:false, hood:false, tie:false, tag:id === 'c77' ? base.tag : null });
+  if (eq.clothes && CLOTHES[eq.clothes]) Object.assign(L, CLOTHES[eq.clothes], { rocketLogo:false, hood:false, tie:false, inner:null, lapel:false, short:false, pants:null, tag:id === 'c77' ? base.tag : null });   // 12b3：换衣服时裤子回到衣服自己的默认色（背带裤蓝 / 深灰），不沿用 77 的深棕长裤
   if (eq.hat) L.hat = eq.hat;
   return L;
 }
@@ -199,7 +256,7 @@ function buildBg(i) {
   const S = SHOP_STYLE[i], l = L(), lw = 2.6 * U, open = state.shops[i].open;
   // 天空 + 网点
   c.fillStyle = '#fffaf0'; c.fillRect(0, 0, W, H);
-  c.fillStyle = dotsPattern(c, 'rgba(20,20,20,.16)', 7 * U); c.fillRect(0, 0, W, H * 0.6);
+  c.fillStyle = dotsPattern(c, 'rgba(20,20,20,.07)', 7 * U); c.fillRect(0, 0, W, H * 0.6); // 12c1：背景网点减轻（非重点区）
   // 远处楼
   for (let k = 0; k < 7; k++) { const bw = W * 0.16, bx = k * W * 0.15 - W * 0.04, bh = H * (0.25 + ((k * 37) % 5) * 0.06);
     rr(c, bx, l.ground - bh - H * 0.2, bw, bh, 0); inkFill(c, k % 2 ? '#efe8d8' : '#e6dfcd', 1.5 * U); }
@@ -240,7 +297,7 @@ function buildBg(i) {
   const cy = l.counterY;
   rr(c, fx + fw * 0.06, cy, fw * 0.66, l.ground - cy, 0); inkFill(c, S.counter, lw);
   rr(c, fx + fw * 0.04, cy - 6 * U, fw * 0.7, 9 * U, 2 * U); inkFill(c, '#fff', lw);
-  c.fillStyle = dotsPattern(c, 'rgba(20,20,20,.18)', 5 * U); c.fillRect(fx + fw * 0.06 + 2, cy + 4 * U, fw * 0.66 - 4, l.ground - cy - 6 * U);
+  c.fillStyle = dotsPattern(c, 'rgba(20,20,20,.10)', 5 * U); c.fillRect(fx + fw * 0.06 + 2, cy + 4 * U, fw * 0.66 - 4, l.ground - cy - 6 * U);
   // 柜台上的道具
   if (i === 0) { rr(c, fx + fw * 0.12, cy - 18 * U, fw * 0.4, 14 * U, 2 * U); inkFill(c, '#333', lw); c.fillStyle = '#ff6b35'; c.fillRect(fx + fw * 0.13, cy - 9 * U, fw * 0.38, 4 * U); }
   else if (i === 1) { for (let k = 0; k < 3; k++) { const x = fx + fw * (0.16 + k * 0.12); c.beginPath(); c.moveTo(x - 8 * U, cy - 26 * U); c.lineTo(x + 8 * U, cy - 26 * U); c.lineTo(x + 6 * U, cy - 6 * U); c.lineTo(x - 6 * U, cy - 6 * U); c.closePath(); inkFill(c, '#f6e7d7', 2 * U);
@@ -252,18 +309,55 @@ function buildBg(i) {
 function decorOn(id) { return state.gacha.owned.includes(id) && !(state.decorHidden || []).includes(id); }
 
 /* ---------- 角色 ---------- */
+// 12c1：约 3 头身（头 ≈ 全身 1/3）、平涂 + 一层色块阴影；手臂两段（上臂袖子 → 弯肘 → 袖口 → 小臂 + 手），裤子是有宽度的两条裤管 + 裤脚
+function shadeHex(hex, k) { // k<0 变暗、k>0 变亮（0~1）
+  let h = String(hex || '#888').replace('#', ''); if (h.length === 3) h = h.replace(/./g, m => m + m);
+  const n = parseInt(h.slice(0, 6), 16); if (isNaN(n)) return hex;
+  const f = v => Math.round(k < 0 ? v * (1 + k) : v + (255 - v) * k);
+  return `rgb(${f(n >> 16 & 255)},${f(n >> 8 & 255)},${f(n & 255)})`;
+}
+const SHADE = 'rgba(20,20,20,.16)';
+function personArm(c, side, a1, a2, look) {
+  // side：-1 左 / 1 右；a1 上臂相对“垂直向下”的外摆角，a2 弯肘角（负 = 往身前收）
+  const sx = side * 17.5, sy = -67, L1 = 16, L2 = 15;
+  const ex = sx + side * Math.sin(a1) * L1, ey = sy + Math.cos(a1) * L1;
+  const b = a1 + a2, wx = ex + side * Math.sin(b) * L2, wy = ey + Math.cos(b) * L2;
+  const cut = look.short ? -0.25 : 0.38; // 短袖：袖口在肘上；长袖：袖口在小臂上
+  const cx = cut < 0 ? ex + (sx - ex) * -cut : ex + (wx - ex) * cut, cy = cut < 0 ? ey + (sy - ey) * -cut : ey + (wy - ey) * cut;
+  const sleeve = look.sleeve || look.top, cuff = look.cuff || shadeHex(sleeve, -0.28);
+  c.lineCap = 'round'; c.lineJoin = 'round';
+  // 小臂（皮肤）
+  c.strokeStyle = INK; c.lineWidth = 8.5; c.beginPath(); c.moveTo(cut < 0 ? ex : cx, cut < 0 ? ey : cy); if (cut < 0) { c.moveTo(cx, cy); c.lineTo(ex, ey); } c.lineTo(wx, wy); c.stroke();
+  c.strokeStyle = look.skin; c.lineWidth = 5; c.stroke();
+  // 袖子（上臂 → 弯肘）
+  c.beginPath(); c.moveTo(sx, sy); if (cut < 0) c.lineTo(cx, cy); else { c.lineTo(ex, ey); c.lineTo(cx, cy); }
+  c.strokeStyle = INK; c.lineWidth = 12; c.stroke(); c.strokeStyle = sleeve; c.lineWidth = 8; c.stroke();
+  // 袖口：一道垂直于手臂的色带
+  const dx = (cut < 0 ? cx - sx : wx - ex), dy = (cut < 0 ? cy - sy : wy - ey), dl = Math.hypot(dx, dy) || 1, nx = -dy / dl * 5.6, ny = dx / dl * 5.6;
+  c.lineCap = 'butt'; c.beginPath(); c.moveTo(cx - nx, cy - ny); c.lineTo(cx + nx, cy + ny);
+  c.strokeStyle = INK; c.lineWidth = 6.5; c.stroke(); c.strokeStyle = cuff; c.lineWidth = 3.2; c.stroke(); c.lineCap = 'round';
+  // 手
+  c.beginPath(); c.arc(wx, wy, 4.2, 0, TAU); c.fillStyle = look.skin; c.fill(); c.strokeStyle = INK; c.lineWidth = 2.2; c.stroke();
+}
 function drawPerson(c, x, y, s, look, o = {}) {
-  const t = o.t || 0, lw = 3 * s;
+  const t = o.t || 0;
   c.save(); c.translate(x, y + (o.bob ? Math.sin(t * 6) * 1.6 * s : 0)); c.scale(o.flip ? -s : s, s);
-  const LW = 3;
-  // 腿（加粗，少细线腿）
-  c.lineCap = 'round'; c.strokeStyle = INK; c.lineWidth = 10;
-  c.beginPath(); c.moveTo(-9, -36); c.lineTo(-10, -4); c.moveTo(9, -36); c.lineTo(10, -4); c.stroke();
-  c.lineWidth = 6; c.strokeStyle = look.pattern === 'overall' ? '#2c5282' : '#555'; c.beginPath(); c.moveTo(-9, -34); c.lineTo(-10, -6); c.moveTo(9, -34); c.lineTo(10, -6); c.stroke();
-  rr(c, -18, -6, 15, 8, 3); inkFill(c, '#333', 2); rr(c, 3, -6, 15, 8, 3); inkFill(c, '#333', 2);
-  // 身体
-  c.beginPath(); c.moveTo(-20, -36); c.quadraticCurveTo(-22, -66, -12, -72); c.lineTo(12, -72); c.quadraticCurveTo(22, -66, 20, -36); c.closePath();
-  inkFill(c, look.top, LW);
+  c.lineJoin = 'round'; c.lineCap = 'round';
+  const LW = 3, pants = look.pants || (look.pattern === 'overall' ? '#2c5282' : '#3d405b');
+  // 裤腿：两条有宽度的裤管（内侧一层色块阴影）+ 折边裤脚 + 鞋
+  for (const d of [-1, 1]) {
+    c.beginPath(); c.moveTo(d * 1.5, -42); c.lineTo(d * 16, -42); c.lineTo(d * 14.5, -9); c.lineTo(d * 3.5, -9); c.closePath(); inkFill(c, pants, 2.6);
+    c.save(); c.clip(); c.fillStyle = SHADE; c.beginPath(); c.moveTo(d * 1.5, -42); c.lineTo(d * 6.5, -42); c.lineTo(d * 7.5, -9); c.lineTo(d * 1.5, -9); c.closePath(); c.fill(); c.restore();
+    c.beginPath(); c.moveTo(d * 3.2, -13); c.lineTo(d * 14.8, -13); c.lineTo(d * 15, -8); c.lineTo(d * 3, -8); c.closePath(); inkFill(c, shadeHex(pants, -0.3), 2);
+    c.beginPath(); c.moveTo(d * 2.5, -8); c.lineTo(d * 15, -8); c.quadraticCurveTo(d * 21, -7, d * 20, -1.5); c.lineTo(d * 2.5, -1.5); c.closePath(); inkFill(c, look.shoe || '#2f2a28', 2.2);
+  }
+  // 身体（平涂 + 右侧一层色块阴影）
+  const torso = () => { c.beginPath(); c.moveTo(-20, -36); c.quadraticCurveTo(-22, -66, -12, -72); c.lineTo(12, -72); c.quadraticCurveTo(22, -66, 20, -36); c.closePath(); };
+  torso(); inkFill(c, look.top, LW);
+  c.save(); torso(); c.clip(); c.fillStyle = SHADE; c.beginPath(); c.moveTo(9, -74); c.quadraticCurveTo(15, -55, 9, -34); c.lineTo(26, -34); c.lineTo(26, -74); c.closePath(); c.fill(); c.restore();
+  c.fillStyle = look.belt || shadeHex(pants, -0.35); c.fillRect(-19.5, -40, 39, 4); c.lineWidth = 1.6; c.strokeStyle = INK; c.strokeRect(-19.5, -40, 39, 4);
+  if (look.inner) { c.beginPath(); c.moveTo(-7, -72); c.lineTo(7, -72); c.lineTo(5, -38); c.lineTo(-5, -38); c.closePath(); inkFill(c, look.inner, 1.8); }
+  if (look.lapel) { for (const d of [-1, 1]) { c.beginPath(); c.moveTo(d * 7, -72); c.lineTo(d * 13, -66); c.lineTo(d * 8, -60); c.lineTo(d * 5, -46); c.closePath(); inkFill(c, shadeHex(look.top, 0.12), 1.8); } }
   if (look.pattern === 'flower') { c.fillStyle = RED; for (const [px, py] of [[-10, -62], [6, -55], [-4, -45], [12, -66], [-14, -44], [10, -42]]) { c.beginPath(); c.arc(px, py, 2.6, 0, TAU); c.fill(); } }
   if (look.pattern === 'panda') { c.fillStyle = INK; c.beginPath(); c.ellipse(-9, -52, 6, 8, 0.3, 0, TAU); c.fill(); c.beginPath(); c.ellipse(10, -46, 5, 7, -0.3, 0, TAU); c.fill(); }
   if (look.pattern === 'overall') { rr(c, -12, -58, 24, 22, 2); inkFill(c, '#2c5282', 2); c.strokeStyle = '#d2691e'; c.lineWidth = 2; c.beginPath(); c.moveTo(6, -56); c.lineTo(10, -66); c.stroke(); }
@@ -272,36 +366,43 @@ function drawPerson(c, x, y, s, look, o = {}) {
   if (look.pattern === 'space') { c.fillStyle = '#ff6b35'; c.fillRect(-19, -50, 38, 5); c.strokeStyle = INK; c.lineWidth = 1.5; c.strokeRect(-19, -50, 38, 5); rr(c, -14, -66, 10, 8, 2); inkFill(c, '#118ab2', 1.5); c.fillStyle = RED; c.beginPath(); c.arc(9, -62, 3, 0, TAU); c.fill(); }
   if (look.pattern === 'suit') { c.beginPath(); c.moveTo(-8, -72); c.lineTo(0, -52); c.lineTo(8, -72); c.closePath(); inkFill(c, '#fff', 1.8); c.beginPath(); c.moveTo(0, -70); c.lineTo(-2.5, -62); c.lineTo(0, -52); c.lineTo(2.5, -62); c.closePath(); inkFill(c, RED, 1.2); c.fillStyle = '#fff'; c.fillRect(10, -64, 5, 3); }
   if (look.pattern === 'goldvest') { c.beginPath(); c.moveTo(-18, -38); c.lineTo(-13, -70); c.lineTo(-3, -50); c.lineTo(-3, -38); c.closePath(); inkFill(c, '#e9b824', 2); c.beginPath(); c.moveTo(18, -38); c.lineTo(13, -70); c.lineTo(3, -50); c.lineTo(3, -38); c.closePath(); inkFill(c, '#e9b824', 2); }
-  if (look.apron) { c.beginPath(); c.moveTo(-12, -60); c.lineTo(12, -60); c.lineTo(15, -36); c.lineTo(-15, -36); c.closePath(); inkFill(c, look.apron, 2);
+  if (look.apron) { c.beginPath(); c.moveTo(-12, -60); c.lineTo(12, -60); c.lineTo(15, -32); c.lineTo(-15, -32); c.closePath(); inkFill(c, look.apron, 2);
+    c.strokeStyle = INK; c.lineWidth = 1.8; c.beginPath(); c.moveTo(-11, -60); c.lineTo(-8, -71); c.moveTo(11, -60); c.lineTo(8, -71); c.stroke();
     if (look.pattern === 'oil') { c.fillStyle = '#ffb703'; c.beginPath(); c.arc(-5, -48, 2, 0, TAU); c.arc(5, -43, 1.6, 0, TAU); c.fill(); }
     if (look.tag) { c.fillStyle = '#fff'; c.font = '900 10px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(look.tag, 0, -48); } }
   if (look.tie) { c.beginPath(); c.moveTo(0, -70); c.lineTo(-3, -60); c.lineTo(0, -46); c.lineTo(3, -60); c.closePath(); inkFill(c, RED, 1.5); }
-  if (look.rocketLogo) { c.fillStyle = '#fff'; c.beginPath(); c.moveTo(0, -64); c.quadraticCurveTo(5, -56, 3, -48); c.lineTo(-3, -48); c.quadraticCurveTo(-5, -56, 0, -64); c.fill(); c.fillStyle = '#ff6b35'; c.beginPath(); c.moveTo(-2, -47); c.lineTo(0, -42); c.lineTo(2, -47); c.fill(); }
+  if (look.rocketLogo) { c.save(); c.translate(-10, -60); c.rotate(-0.5); c.beginPath(); c.moveTo(0, -6); c.quadraticCurveTo(3.5, -1, 2.4, 4); c.lineTo(-2.4, 4); c.quadraticCurveTo(-3.5, -1, 0, -6); inkFill(c, '#fff', 1.2); c.fillStyle = '#ff6b35'; c.beginPath(); c.moveTo(-2, 4.5); c.lineTo(0, 8.5); c.lineTo(2, 4.5); c.fill(); c.restore(); }
   if (look.pearls) { c.fillStyle = '#fff'; for (let k = -3; k <= 3; k++) { c.beginPath(); c.arc(k * 3.2, -69 + Math.abs(k) * -0.6 + 3, 1.9, 0, TAU); c.fill(); c.lineWidth = 0.8; c.stroke(); } }
-  // 手臂
-  const wave = o.pose === 'wave' ? Math.sin(t * 8) * 0.5 : 0, work = o.pose === 'work' ? Math.sin(t * 10) * 6 : 0;
-  c.lineWidth = 6; c.strokeStyle = INK; c.lineCap = 'round';
-  c.beginPath(); c.moveTo(-18, -66); c.lineTo(-25, -46 + work); c.stroke();
-  c.save(); c.translate(18, -66); c.rotate(o.pose === 'wave' ? -2.2 + wave : (o.pose === 'point' ? -1.2 : 0)); c.beginPath(); c.moveTo(0, 0); c.lineTo(7, 20 - (o.pose === 'work' ? work : 0)); c.stroke();
-  c.fillStyle = look.skin; c.beginPath(); c.arc(7, 21, 3.6, 0, TAU); c.fill(); c.lineWidth = 2; c.stroke(); c.restore();
-  c.lineWidth = 3.8; c.strokeStyle = look.top === '#222222' ? '#444' : look.top; c.beginPath(); c.moveTo(-18, -66); c.lineTo(-24, -48 + work); c.stroke();
-  c.fillStyle = look.skin; c.strokeStyle = INK; c.lineWidth = 2; c.beginPath(); c.arc(-25, -45 + work, 3.6, 0, TAU); c.fill(); c.stroke();
+  // 手臂（两段 + 弯肘 + 袖口）
+  const p = o.pose, w8 = Math.sin(t * 8), w10 = Math.sin(t * 10);
+  let L1 = 0.16, L2 = -0.3, R1 = 0.16, R2 = -0.3;
+  if (p === 'work') { L1 = 0.32; L2 = -1.55 - w10 * 0.28; R1 = 0.32; R2 = -1.55 + w10 * 0.28; }
+  else if (p === 'wave') { R1 = 1.8; R2 = 0.85 + w8 * 0.35; }
+  else if (p === 'point') { R1 = 1.3; R2 = 0.18; }
+  personArm(c, -1, L1, L2, look); personArm(c, 1, R1, R2, look);
   // 头
   drawHead(c, look, o);
   c.restore();
 }
 function drawHead(c, look, o = {}) {
   const hy = -92, R = 19;
+  c.lineJoin = 'round';
   // 后发
   c.fillStyle = look.hair; c.strokeStyle = INK; c.lineWidth = 3;
   if (look.style === 'bangs') { c.beginPath(); c.moveTo(-21, hy - 4); c.quadraticCurveTo(-25, hy + 22, -16, hy + 26); c.lineTo(16, hy + 26); c.quadraticCurveTo(25, hy + 22, 21, hy - 4); c.closePath(); c.fill(); c.stroke(); }
+  if (look.style === 'pony') { // 高马尾：从头顶右后方甩下来
+    c.beginPath(); c.moveTo(6, hy - 20); c.quadraticCurveTo(34, hy - 26, 31, hy + 4); c.quadraticCurveTo(29, hy + 22, 20, hy + 30); c.quadraticCurveTo(24, hy + 12, 18, hy - 2); c.quadraticCurveTo(14, hy - 10, 4, hy - 12); c.closePath(); c.fill(); c.stroke();
+    c.beginPath(); c.moveTo(-20, hy - 2); c.quadraticCurveTo(-23, hy + 12, -17, hy + 18); c.lineTo(-12, hy + 4); c.closePath(); c.fill(); c.stroke(); }
+  if (look.style === 'wavy') { // 及颌卷发：波浪发尾
+    c.beginPath(); c.moveTo(-22, hy - 6); c.quadraticCurveTo(-27, hy + 8, -22, hy + 16); c.quadraticCurveTo(-26, hy + 22, -18, hy + 24); c.quadraticCurveTo(-14, hy + 20, -12, hy + 14); c.lineTo(12, hy + 14); c.quadraticCurveTo(14, hy + 20, 18, hy + 24); c.quadraticCurveTo(26, hy + 22, 22, hy + 16); c.quadraticCurveTo(27, hy + 8, 22, hy - 6); c.closePath(); c.fill(); c.stroke(); }
   if (look.style === 'bun') { c.beginPath(); c.arc(0, hy - 22, 9, 0, TAU); c.fill(); c.stroke(); }
   if (look.style === 'twin') { c.beginPath(); c.arc(-19, hy - 12, 8, 0, TAU); c.fill(); c.stroke(); c.beginPath(); c.arc(19, hy - 12, 8, 0, TAU); c.fill(); c.stroke(); }
-  // 脸
+  // 脸（下缘一层色块阴影）
   c.beginPath(); c.arc(0, hy, R, 0, TAU); c.fillStyle = look.skin; c.fill(); c.stroke();
   // 前发
   c.fillStyle = look.hair; c.beginPath();
-  if (look.style === 'bangs') { c.moveTo(-20, hy - 2); c.quadraticCurveTo(-20, hy - 22, 0, hy - 22); c.quadraticCurveTo(20, hy - 22, 20, hy - 2); for (let k = 0; k < 6; k++) c.lineTo(20 - k * 8 - 4, hy - 8 + (k % 2) * 5); c.closePath(); }
+  if (look.style === 'bangs' || look.style === 'pony') { c.moveTo(-20, hy - 2); c.quadraticCurveTo(-20, hy - 22, 0, hy - 22); c.quadraticCurveTo(20, hy - 22, 20, hy - 2); for (let k = 0; k < 6; k++) c.lineTo(20 - k * 8 - 4, hy - 8 + (k % 2) * 5); c.closePath(); }
+  else if (look.style === 'wavy') { c.moveTo(-21, hy + 2); c.quadraticCurveTo(-21, hy - 23, 2, hy - 22); c.quadraticCurveTo(21, hy - 21, 21, hy + 2); c.quadraticCurveTo(14, hy - 12, 4, hy - 10); c.quadraticCurveTo(-4, hy - 4, -10, hy - 9); c.quadraticCurveTo(-16, hy - 4, -21, hy + 2); }
   else if (look.style === 'bun' || look.style === 'twin') { c.moveTo(-19, hy - 3); c.quadraticCurveTo(-16, hy - 21, 0, hy - 20); c.quadraticCurveTo(16, hy - 21, 19, hy - 3); c.quadraticCurveTo(6, hy - 13, -2, hy - 8); c.quadraticCurveTo(-10, hy - 12, -19, hy - 3); }
   else if (look.style === 'messy') { c.moveTo(-20, hy - 2); for (let k = 0; k < 9; k++) c.lineTo(-20 + k * 5, hy - 20 - (k % 2) * 8); c.lineTo(20, hy - 2); c.quadraticCurveTo(0, hy - 12, -20, hy - 2); }
   else if (look.style === 'swept') { c.moveTo(-19, hy - 4); c.quadraticCurveTo(-18, hy - 24, 4, hy - 24); c.quadraticCurveTo(22, hy - 22, 20, hy - 6); c.quadraticCurveTo(8, hy - 16, -19, hy - 4); }
@@ -325,9 +426,11 @@ function drawHead(c, look, o = {}) {
   // 配件
   c.strokeStyle = INK; c.lineWidth = 2.5;
   if (look.bow && !look.hat) { c.fillStyle = look.bow; c.beginPath(); c.moveTo(10, hy - 18); c.lineTo(22, hy - 26); c.lineTo(22, hy - 12); c.closePath(); c.moveTo(10, hy - 18); c.lineTo(0, hy - 28); c.lineTo(2, hy - 12); c.closePath(); c.fill(); c.stroke(); }
+  if (look.pin && !look.hat) { c.fillStyle = '#fff'; c.lineWidth = 1.4; for (const [px, py] of [[-13, hy - 13], [-9.5, hy - 15.5], [-6, hy - 17]]) { c.beginPath(); c.arc(px, py, 2.4, 0, TAU); c.fill(); c.stroke(); } c.lineWidth = 2.5; }
   if (look.headband) { c.fillStyle = look.headband; rr(c, -20, hy - 13, 40, 6, 2); c.fill(); c.stroke(); }
   if (look.headset) { c.beginPath(); c.arc(0, hy - 2, 21, Math.PI * 1.05, Math.PI * 1.95); c.stroke(); c.fillStyle = '#333'; rr(c, -24, hy - 4, 6, 12, 2); c.fill(); c.beginPath(); c.moveTo(-21, hy + 8); c.quadraticCurveTo(-16, hy + 16, -6, hy + 14); c.stroke(); }
-  if (look.hood) { c.strokeStyle = INK; c.lineWidth = 2; c.beginPath(); c.moveTo(-6, hy + 20); c.lineTo(-6, hy + 30); c.moveTo(6, hy + 20); c.lineTo(6, hy + 30); c.stroke(); }
+  if (look.hood) { c.fillStyle = shadeHex(look.top, -0.15); c.beginPath(); c.moveTo(-17, hy + 22); c.quadraticCurveTo(0, hy + 30, 17, hy + 22); c.lineTo(13, hy + 19); c.quadraticCurveTo(0, hy + 25, -13, hy + 19); c.closePath(); c.fill(); c.lineWidth = 2; c.stroke();
+    c.beginPath(); c.moveTo(-5, hy + 25); c.lineTo(-5, hy + 34); c.moveTo(5, hy + 25); c.lineTo(5, hy + 34); c.stroke(); }
   if (look.hat) drawHat(c, look.hat, hy);
 }
 function drawHat(c, id, hy) {
@@ -356,10 +459,13 @@ function avatarURL(id, key) {
   c.translate(56, 186); c.scale(1.15, 1.15); drawHead(c, lookOf(id), { happy:false });
   return (avaCache[k] = o.toDataURL());
 }
-// 熊大画的 CEO 头像（图没加载出来就退回画布小人头像）
-const ART_V = '12', PORTRAIT = { c77:1, pearl:1, otaku:1, rocket:1 };
-const faceURL = id => PORTRAIT[id] ? `art/face_${id}.webp?v=${ART_V}` : avatarURL(id);
-const bustURL = id => PORTRAIT[id] ? `art/ceo_${id}.webp?v=${ART_V}` : avatarURL(id);
+// 熊大画的 CEO 头像（图没加载出来就退回画布小人头像）；12b2 起 77 的 ceo_c77 / face_c77 是漫画新版，换了图所以 ART_V 跟着换
+const ART_V = '13', PORTRAIT = { c77:1, pearl:1, otaku:1, rocket:1 };
+// 12d2：单图缓存号——只换一张图时只改这张，不动整体 ART_V。77 头像 face_c77 换回 12b2 之前的原版（杨总 19:30 / 熊大 19:34），全身 ceo_c77 保留漫画新版
+const ART_ONE = {};   // v13：整体缓存号已换成 13，单图缓存号清空（机制保留）
+const artV = n => ART_ONE[n] || ART_V;
+const faceURL = id => PORTRAIT[id] ? `art/face_${id}.webp?v=${artV('face_' + id)}` : avatarURL(id);
+const bustURL = id => PORTRAIT[id] ? `art/ceo_${id}.webp?v=${artV('ceo_' + id)}` : avatarURL(id);
 const faceImg = id => `<img src="${faceURL(id)}"${PORTRAIT[id] ? ` class="art" data-fb="${id}"` : ''} alt="">`;
 const bustImg = id => `<img src="${bustURL(id)}"${PORTRAIT[id] ? ` class="art" data-fb="${id}"` : ''} alt="">`;
 // CEO×店铺 任职形象（16 张）：本行用 ceo_<id>.webp，其余放 art/job_<id>_<店id>.webp，交过来一张在 JOB_ART 里登记一张
@@ -480,6 +586,12 @@ function drawDecorFront(c, i, t) {
     c.strokeStyle = '#a0522d'; c.lineWidth = 1 * U; for (let k = -2; k <= 2; k++) { c.beginPath(); c.moveTo(x + k * 5 * U, y - 21 * U); c.lineTo(x + k * 5 * U, y - 16 * U); c.stroke(); }
   }
 }
+function drawLock(c, x, y, r) { // 和 SVG ic-lock 同形：黄锁身 + 墨线锁梁
+  c.save(); c.translate(x, y); c.lineJoin = 'round'; c.lineCap = 'round';
+  c.beginPath(); c.arc(0, -r * 0.35, r * 0.5, Math.PI, 0); c.lineTo(r * 0.5, 0); c.moveTo(-r * 0.5, 0); c.lineTo(-r * 0.5, -r * 0.35); c.lineWidth = r * 0.26; c.strokeStyle = INK; c.stroke();
+  rr(c, -r * 0.85, -r * 0.05, r * 1.7, r * 1.2, r * 0.18); inkFill(c, YELLOW, r * 0.2);
+  c.beginPath(); c.moveTo(0, r * 0.3); c.lineTo(0, r * 0.75); c.lineWidth = r * 0.2; c.stroke(); c.restore();
+}
 function drawStrokeText(c, txt, x, y, size, color, rot = 0, alpha = 1) {
   c.save(); c.globalAlpha = alpha; c.translate(x, y); c.rotate(rot);
   c.font = `900 ${size}px -apple-system,"PingFang SC",sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
@@ -541,7 +653,7 @@ function render(t) {
   } else {
     const prev = i > 0 && !state.shops[i - 1].open;
     drawStrokeText(g, prev ? '先开上一家店' : '点下面「开张」', W / 2, H * 0.55, 16 * U, '#fff', -0.05);
-    drawStrokeText(g, '🔒', W / 2, H * 0.4, 22 * U, '#fff');
+    drawLock(g, W / 2, H * 0.4, 12 * U); // 12c1：画布里的锁也换成同套墨线锁（原系统 emoji）
   }
   // 普通客人（只在当前店、经营页）
   if (open && tab === 'shop') {
@@ -630,7 +742,10 @@ function burstCoins(x, y, n) { for (let k = 0; k < n; k++) coinsP.push({ x, y, v
 let clock = 0; // 秒（performance）
 const coinsEl = $('#coins'), cpsEl = $('#cps'), tabBody = $('#tabBody'), toastEl = $('#toast'), sfxWord = $('#sfxWord');
 let tab = 'shop', buyAmt = 1, dirty = true;
-function earn(v) { state.coins += v; state.totalEarned += v; }
+// 12d：所有入账走 E.addCoins（坏值拒绝、到上限停住、旧档超上限不再增长）；返回实际到账
+let capWarned = false;
+function earn(v) { const r = E.addCoins(state, v); if (r.capped) capNote(); return r.ok ? r.added : 0; }
+function capNote() { if (capWarned) return; capWarned = true; toast('金币到上限 ' + fmt(CFG.COIN_CAP) + '：先花掉一些，收益才会继续进账', 3200); }
 function popWord(w) { sfxWord.textContent = w; sfxWord.classList.remove('pop'); void sfxWord.offsetWidth; sfxWord.classList.add('pop'); }
 function bumpCoins() { coinsEl.classList.remove('bump'); void coinsEl.offsetWidth; coinsEl.classList.add('bump'); }
 let toastTimer = 0;
@@ -643,8 +758,8 @@ function tick() {
   const t = now(), gap = (t - state.lastSeen) / 1000;
   if (gap < 0) { if (t > state.maxSeen - CFG.CLOCK_TOLERANCE * 1000) state.lastSeen = t; return; }
   if (gap > 5) { onReturn(); return; }
-  const gained = E.onlineRate(state, t) * gap;
-  earn(gained); noteVisualIncome(gained);
+  const gained = earn(E.onlineRate(state, t) * gap);
+  noteVisualIncome(gained);
   state.lastSeen = t; if (t > state.maxSeen) state.maxSeen = t;
 }
 function onReturn() {
@@ -869,8 +984,10 @@ function startOrder(shop) {
 function finishOrder() {
   if (!order) return;
   const o = order; order = null;
-  const paid = E.settleOrder(state, o.payout);
-  persist();
+  let paid = 0;
+  const tr = atomic(() => { paid = E.settleOrder(state, o.payout); return { ok:true }; }, '团单收入没有入账');   // 12d3：没存上就撤回这笔
+  if (!tr.ok) return;
+  if (E.overCap(state)) capNote();
   focusT = 0.55; shake = 0.45; sfx('mile'); popWord('结账！');
   // 金币成串飞向钱包 + 「团单收入 +X」
   const tx = W * 0.18, ty = 8 * U;
@@ -936,9 +1053,9 @@ function hitBig(x, y) {
   if (special && special.shop === state.cur && special.r != null) {
     if (Math.hypot(x - special.x, y - special.y) <= special.r * 1.2) {
       const sp = special; special = null;
-      const paid = E.settleSpecial(state, sp.shop);
-      persist();
-      showSpecialComic(sp.meta, paid);
+      let paid = 0;
+      const tr = atomic(() => { paid = E.settleSpecial(state, sp.shop); return { ok:true }; }, '特殊客人奖励没有入账');   // 12d3
+      if (tr.ok) showSpecialComic(sp.meta, paid);
       return true;
     }
   }
@@ -976,28 +1093,36 @@ function updateSupers() {
     if (!(state.shops[i].emp > 0)) continue;
     if (k === 'tea') { E.startRush(state, 'tea', t); superAnnounce(1, '爆单！', '珍珠喷泉：连续爆单 ' + CFG.FOUNTAIN_SEC + ' 秒！'); }
     else if (k === 'tech') { E.startRush(state, 'tech', t); superAnnounce(3, '超频！', '人造太阳：超频 ' + CFG.SUN_SEC + ' 秒！'); }
-    else { const amt = E.portalReward(state); earn(amt); superAnnounce(2, '客串！', '次元传送门：漫画角色客串，大订单 +' + fmt(amt), amt); }
+    else { let amt = 0; const tr = atomic(() => { amt = E.portalReward(state); earn(amt); return { ok:true }; }, '传送门奖励没有入账');   // 12d3：入账和落盘一起
+      if (tr.ok) superAnnounce(2, '客串！', '次元传送门：漫画角色客串，大订单 +' + fmt(amt), amt); }
     changed = true;
   }
   // 爆单 / 超频开始或结束时刷新店铺页的暴击显示
   const key = E.rushActive(state, 'tea', t) + '|' + E.rushActive(state, 'tech', t);
   if (key !== updateSupers.key) { updateSupers.key = key; dirty = true; }
-  if (changed) { dirty = true; persist(); }
+  if (changed) dirty = true;   // 12d3：传送门入账已在 atomic 里落盘；爆单 / 超频只是在线临时效果（读档时本来就清零），不另存
 }
 
 /* ---------- 购买 ---------- */
-function afterBuy(btn, msg) { sfx('buy'); popWord('叮！'); bumpCoins(); dirty = true; persist(); if (btn) { const c = btn.closest('.card'); if (c) { c.classList.remove('flash'); void c.offsetWidth; c.classList.add('flash'); } } if (msg) toast(msg); }
+// 12d3：afterBuy 只播成功效果——落盘已在 txn / atomic 里完成（存不上根本走不到这里）
+function afterBuy(btn, msg) { sfx('buy'); popWord('叮！'); bumpCoins(); dirty = true; if (btn) { const c = btn.closest('.card'); if (c) { c.classList.remove('flash'); void c.offsetWidth; c.classList.add('flash'); } } if (msg) toast(msg); }
 function failBuy(btn, why) { sfx('no'); shakeEl(btn); toast(why === '金币不够' ? '金币不够，躺一会儿再来' : why); }
+// 12d3：买卖结果统一处理——成功 true；经济规则拒绝 → failBuy；没存上（saveFailed）→ 提示已给过，只抖一下按钮
+function buyOk(r, btn) { if (r.ok) return true; if (r.why === 'saveFailed') shakeEl(btn); else failBuy(btn, r.why); return false; }
+const BUY_FAIL = '购买没有生效，金币已退回';
 function handleUnlocks(list) { (list || []).forEach(id => queueModal(() => showCeoJoin(id))); }
-function shopUpgradeCount(i) {
-  const s = state.shops[i]; if (buyAmt !== 'max') return buyAmt;
-  let k = 0, c = 0; while (k < 200) { const n = E.upgradeCost(i, s.lv + k); if (c + n > state.coins) break; c += n; k++; } return Math.max(1, k);
-}
+// 12d：x1 / x10 / MAX 都不超过店铺等级上限（满级返回 0）；MAX 最多循环 CFG.MAX_BUY_STEPS 次
+function shopUpgradeCount(i) { return E.shopBuyCount(state, i, buyAmt); }
 function doUpgradeShop(i, btn) {
-  const k = shopUpgradeCount(i), cost = E.bulkUpgradeCost(i, state.shops[i].lv, k);
-  if (state.coins < cost) return failBuy(btn, '金币不够');
+  const k = shopUpgradeCount(i); if (!k) return failBuy(btn, E.shopMaxed(state, i) ? '已满级' : E.walletOk(state) ? '金币不够' : '金币数据异常');   // 12d1：MAX 一级都买不起 → 0
+  const cost = E.bulkUpgradeCost(i, state.shops[i].lv, k);
+  if (!(E.balance(state) >= cost)) return failBuy(btn, E.walletOk(state) ? '金币不够' : '金币数据异常');
   let best = null, unlocked = [];
-  for (let j = 0; j < k; j++) { const r = E.upgradeShop(state, i); if (!r.ok) break; if (r.milestone) best = r; if (r.unlocked) unlocked.push(...r.unlocked); }
+  // 12d3：x1 / x10 / MAX 整批一个交易：任何一级失败或存不上 → 整批回滚（钱和等级都不动）
+  const r = atomic(() => { let n = 0; best = null; unlocked = [];
+    for (let j = 0; j < k; j++) { const u = E.upgradeShop(state, i); if (!u.ok) { if (!n) return u; break; } n++; if (u.milestone) best = u; if (u.unlocked) unlocked.push(...u.unlocked); }
+    return { ok:true, n }; }, '升级没有生效，金币已退回');
+  if (!buyOk(r, btn)) return;
   afterBuy(btn);
   if (best) { mileFx = { t0:clock, lv:best.lv, mult:best.milestone, panel:best.panel, bonus:best.bonus }; sfx('mile'); focusT = 0.5; if (state.cur !== i) switchShop(i);
     toast(best.panel ? `漫画杯套：Lv${best.lv} 分镜特效 + 小红包 ${fmt(best.bonus)}` : `${E.SHOPS[i].short} Lv${best.lv}！收益 ×${best.milestone}`); }
@@ -1006,21 +1131,22 @@ function doUpgradeShop(i, btn) {
 function act(a, arg, btn) {
   const i = state.cur;
   switch (a) {
-    case 'open': { const r = E.openShop(state, +arg); if (!r.ok) return failBuy(btn, r.why); afterBuy(btn, E.SHOPS[+arg].name + ' 开张啦！'); signAnim = { shop:+arg, from:'招租中', t0:clock }; handleUnlocks(r.unlocked); break; }
+    case 'zombie': openZombie(); return;   // 12e 打僵尸入口（板砖 b640f25）
+    case 'open': { const r = atomic(() => E.openShop(state, +arg), '开张没有生效，金币已退回'); if (!buyOk(r, btn)) return; afterBuy(btn, E.SHOPS[+arg].name + ' 开张啦！'); signAnim = { shop:+arg, from:'招租中', t0:clock }; handleUnlocks(r.unlocked); break; }
     case 'up': return doUpgradeShop(+arg, btn);
-    case 'hire': { const r = E.hireEmp(state, +arg); if (!r.ok) return failBuy(btn, r.why); afterBuy(btn, '雇到 ' + E.SHOPS[+arg].emp.name + '！开始自动赚钱'); sayLine('e', E.SHOPS[+arg].emp.line, 3); if (+arg === 3) queueModal(showGachaOpen); break; }
-    case 'emp': { const r = E.upgradeEmp(state, +arg); if (!r.ok) return failBuy(btn, r.why); afterBuy(btn); break; }
-    case 'ceoUp': { const r = E.upgradeCeo(state, arg); if (!r.ok) return failBuy(btn, r.why); afterBuy(btn); sayLine('c', E.CEO_BY_ID[arg].line); break; }
+    case 'hire': { const r = atomic(() => E.hireEmp(state, +arg), '雇人没有生效，金币已退回'); if (!buyOk(r, btn)) return; afterBuy(btn, '雇到 ' + E.SHOPS[+arg].emp.name + '！开始自动赚钱'); sayLine('e', E.SHOPS[+arg].emp.line, 3); if (+arg === 3) queueModal(showGachaOpen); break; }
+    case 'emp': { const r = atomic(() => E.upgradeEmp(state, +arg), '员工升级没有生效，金币已退回'); if (!buyOk(r, btn)) return; afterBuy(btn); break; }
+    case 'ceoUp': { const r = atomic(() => E.upgradeCeo(state, arg), 'CEO 升级没有生效，金币已退回'); if (!buyOk(r, btn)) return; afterBuy(btn); sayLine('c', E.CEO_BY_ID[arg].line); break; }
     case 'assign': return openAssign(arg);
     case 'assignTo': return openAssignTo(+arg);
     case 'amt': buyAmt = arg === 'max' ? 'max' : +arg; dirty = true; break;
     case 'comic': return showComic(arg, false);
     case 'draw': return doGacha(btn);
-    case 'equip': { const [who, slot, id] = arg.split(':'); if (!state.wear[who]) state.wear[who] = { clothes:null, hat:null }; state.wear[who][slot] = id === 'none' ? null : id; persist(); dirty = true; avaCacheClear(); sfx('buy'); break; }
+    case 'equip': { const [who, slot, id] = arg.split(':'); const r = atomic(() => { if (!state.wear[who]) state.wear[who] = { clothes:null, hat:null }; state.wear[who][slot] = id === 'none' ? null : id; return { ok:true }; }, '换装没有生效'); dirty = true; avaCacheClear(); if (r.ok) sfx('buy'); break; }
     case 'wearWho': wardrobeWho = arg; dirty = true; break;
     case 'jobView': { const [who, k] = arg.split(':'); jobView[who] = { i:+k, at:state.ceos[who].at }; dirty = true; sfx('tap'); break; }
     case 'jobBig': { const [who, k] = arg.split(':'); return showJobArt(who, +k); }
-    case 'decor': { const h = state.decorHidden || (state.decorHidden = []); const k = h.indexOf(arg); if (k >= 0) h.splice(k, 1); else h.push(arg); persist(); dirty = true; bgKey = ''; break; }
+    case 'decor': { atomic(() => { const h = state.decorHidden || (state.decorHidden = []); const k = h.indexOf(arg); if (k >= 0) h.splice(k, 1); else h.push(arg); return { ok:true }; }, '装饰显示没有切换'); dirty = true; bgKey = ''; break; }
     case 'card': return showCard(arg);
     case 'reset': return confirmReset();
     case 'goShop': switchShop(+arg); setTab('shop'); break;
@@ -1030,14 +1156,16 @@ function act(a, arg, btn) {
 function avaCacheClear() { for (const k of Object.keys(avaCache)) delete avaCache[k]; }
 
 /* ================= 界面：标签页 ================= */
-const SHOP_ICON = ['🍢', '🧋', '📚', '💻'], TAB_NAME = ['烧烤摊', '奶茶店', '漫画店', '科技'];
+// 12c 漫画 UI：统一线稿图标（index.html 里的 <symbol>，导航 / 翻页签 / 模式签共用同一套）
+const ic = n => `<svg class="ic" aria-hidden="true"><use href="#ic-${n}"/></svg>`;
+const SHOP_ICON = ['bbq', 'tea', 'book', 'tech'].map(n => ic(n)), LOCK_IC = ic('lock'), TAB_NAME = ['烧烤摊', '奶茶店', '漫画店', '科技'];
 const DECOR_ICON = { d_stool:'🪑', d_lights:'🌶️', d_neon:'🏮', d_board:'🪧', d_balloon:'🎈', d_poster:'📰', d_cat:'🐱', d_plant:'🪴' };
 const TYPE_LABEL = { clothes:'衣服', hat:'帽子', decor:'装饰', card:'故事卡', super:'超级装饰' };
 const thumbCache = {};
 function itemThumb(id) {
   if (thumbCache[id]) return thumbCache[id];
   const it = E.ITEM_BY_ID[id] || {}, o = document.createElement('canvas'); o.width = o.height = 96; const c = o.getContext('2d');
-  if (it.type === 'clothes' || id === 'c_gold') { c.translate(48, 108); c.scale(0.85, 0.85); drawPerson(c, 0, 0, 1, Object.assign({}, LOOKS.c77, CLOTHES[id], { bow:null }), {}); }
+  if (it.type === 'clothes' || id === 'c_gold') { c.translate(48, 108); c.scale(0.85, 0.85); drawPerson(c, 0, 0, 1, Object.assign({}, LOOKS.c77, CLOTHES[id], { bow:null, pants:null }), {}); }
   else if (it.type === 'hat' || id === 'h_gold') { c.translate(48, 150); c.scale(1.05, 1.05); drawHead(c, Object.assign({}, LOOKS.c77, { hat:id }), {}); }
   else return null;
   return (thumbCache[id] = o.toDataURL());
@@ -1087,34 +1215,35 @@ function renderShop() {
   }
   const info = E.ceoInfo(state, i), sr = E.shopRate(state, i), sign = E.signOf(state, i);
   const nm = E.nextMilestone(s.lv), prevM = [0, 10, 25, 50].filter(m => m <= s.lv).pop() || 0;
-  const k = shopUpgradeCount(i), upCost = E.bulkUpgradeCost(i, s.lv, k);
+  const shopTop = E.shopMaxed(state, i), k0 = shopUpgradeCount(i), k = shopTop ? 0 : Math.max(1, k0), upCost = E.bulkUpgradeCost(i, s.lv, k);   // 12d1：MAX 买不起时按钮显示下一级的价格并置灰（不再显示 0 元）
   const upGain = rateDelta(c => { c.shops[i].lv += k; });
   let h = `<div class="summary">「${sign.name}」每秒 <b style="color:var(--red)">+${fmt(sr)}</b>${s.emp > 0
       ? `<br>店铺 ${fmt(E.shopBase(i, s.lv))} × 员工 ×${E.empMult(s.emp).toFixed(2)} × CEO ×${info.mult.toFixed(2)}${E.hasSuper(state, i) ? ` × 超级装饰 ×${CFG.SUPER_RATE}` : ''}`
       : '<br>还没员工：不会自动赚钱（可以点画面手动赚）'}
     ${critLine(i)}</div>`;
+  h += zbCard();
   if (E.hasSuper(state, i)) { const sp = E.ITEM_BY_ID[E.SUPER_OF_SHOP[i]];
     h += `<div class="card super"><div class="ava sq">${SUPER_ICON[sp.id]}</div><div class="info"><div class="name">${sp.name}<span class="tag match">超级装饰</span></div><div class="desc">${sp.desc}</div></div></div>`; }
   h += `<div class="row-head"><div class="sec-title">店铺</div><div class="buyamt">${[1, 10, 'max'].map(a => `<button data-act="amt" data-arg="${a}" class="${buyAmt === a ? 'on' : ''}">${a === 'max' ? 'MAX' : 'x' + a}</button>`).join('')}</div></div>`;
   h += `<div class="card"><div class="ava sq">${SHOP_ICON[i]}</div><div class="info"><div class="name">${S.short}<span class="lv">Lv.${s.lv}</span></div>
     <div class="desc">当前基础产量 <b>${fmt(E.shopBase(i, s.lv))}</b>/秒原料${nm ? ` · 下一里程碑 Lv${nm} → 收益 ×${E.milestoneMult(nm)}` : ' · 里程碑全拿下 ×8'}</div>
     ${nm ? `<div class="mbar"><i style="width:${((s.lv - prevM) / (nm - prevM) * 100).toFixed(0)}%"></i></div>` : ''}
-    <div class="gain ${s.emp > 0 ? '' : 'warn'}">${s.emp > 0 ? '升级后 +' + fmt(upGain) + '/秒' : '还没员工：升级后自动收入仍是 +0/秒（先雇佣）· 手点会变强'}</div>
+    <div class="gain ${s.emp > 0 || shopTop ? '' : 'warn'}">${shopTop ? `已满级（店铺最高 Lv${E.shopMaxLv(i)}）` : s.emp > 0 ? '升级后 +' + fmt(upGain) + '/秒' : '还没员工：升级后自动收入仍是 +0/秒（先雇佣）· 手点会变强'}</div>
     <details class="details-fold"><summary>倍率怎么算</summary>店铺原料 × 员工 ×${E.empMult(s.emp).toFixed(2)} × CEO ×${info.mult.toFixed(2)}${E.hasSuper(state, i) ? ' × 超级装饰 ×' + CFG.SUPER_RATE : ''} = 每秒 <b>${fmt(sr)}</b></details></div>
-    ${btn('up', i, '升级' + (k > 1 ? ' ×' + k : ''), upCost)}</div>`;
+    ${shopTop ? '<button class="buy no" disabled data-max="shop">满级</button>' : btn('up', i, '升级' + (k > 1 ? ' ×' + k : ''), upCost)}</div>`;
   h += `<div class="sec-title">员工</div>`;
   if (s.emp <= 0) h += `<div class="card hl">${ava('e' + i)}<div class="info"><div class="name">${S.emp.name}<span class="lv" style="background:#999">未雇</span></div>
     <div class="desc one">“${S.emp.line}”</div><div class="gain">雇了才自动赚：+${fmt(rateDelta(c => { c.shops[i].emp = 1; }))}/秒</div></div>${btn('hire', i, '雇佣', S.hire)}</div>`;
   else h += `<div class="card">${ava('e' + i)}<div class="info"><div class="name">${S.emp.name}<span class="lv">Lv.${s.emp}</span></div>
-    <div class="desc one">“${S.emp.line}”</div><div class="gain">${s.emp >= CFG.EMP_MAX ? '已满级' : `速度 +${CFG.EMP_LV_BONUS * 100}% → +${fmt(rateDelta(c => { c.shops[i].emp++; }))}/秒`}</div></div>
-    ${s.emp >= CFG.EMP_MAX ? '<button class="buy no" disabled>满级</button>' : btn('emp', i, '升级', E.empCost(i, s.emp))}</div>`;
+    <div class="desc one">“${S.emp.line}”</div><div class="gain">${E.empMaxed(state, i) ? `已满级（员工最高 Lv${E.empMaxLv(i)}）` : `速度 +${CFG.EMP_LV_BONUS * 100}% → +${fmt(rateDelta(c => { c.shops[i].emp++; }))}/秒`}</div></div>
+    ${E.empMaxed(state, i) ? '<button class="buy no" disabled data-max="emp">满级</button>' : btn('emp', i, '升级', E.empCost(i, s.emp))}</div>`;
   h += `<div class="sec-title">CEO</div>`;
   if (info.id) {
     const c = E.CEO_BY_ID[info.id], cs = state.ceos[info.id];
     h += `<div class="card ${info.match ? '' : 'hl'}">${ava(info.id)}<div class="info"><div class="name">${c.name}<span class="lv">Lv.${cs.lv}</span>${ceoTags(i)}</div>
       <div class="desc">经营加成 ×${info.mult.toFixed(2)}（${info.match ? '专长对口' : '跨行'} ×${info.typeMult} · 等级 +${Math.round((info.lvMult - 1) * 100)}%）${info.cross ? '<br><b>' + info.cross.title + '</b>：' + info.cross.desc : ''}</div>
-      <div class="gain">${cs.lv >= CFG.CEO_MAX ? '已满级' : '升一级 +' + fmt(rateDelta(x => { x.ceos[info.id].lv++; })) + '/秒（跟着 CEO 走）'}</div></div>
-      <div class="btns">${cs.lv >= CFG.CEO_MAX ? '<button class="buy no" disabled>满级</button>' : btn('ceoUp', info.id, '升级', E.ceoCost(info.id, cs.lv))}<button class="buy alt" data-act="assignTo" data-arg="${i}">调任</button></div></div>`;
+      <div class="gain">${E.ceoMaxed(state, info.id) ? `已满级（最高 Lv${E.ceoMaxLv(info.id)}）` : '升一级 +' + fmt(rateDelta(x => { x.ceos[info.id].lv++; })) + '/秒（跟着 CEO 走）'}</div></div>
+      <div class="btns">${E.ceoMaxed(state, info.id) ? '<button class="buy no" disabled data-max="ceo">满级</button>' : btn('ceoUp', info.id, '升级', E.ceoCost(info.id, cs.lv))}<button class="buy alt" data-act="assignTo" data-arg="${i}">调任</button></div></div>`;
   } else {
     h += `<div class="card hl"><div class="ava">👔</div><div class="info"><div class="name">CEO 空缺</div><div class="desc">派一位 CEO 来：专长对口 ×${CFG.MATCH_MULT}，跨行 ×${CFG.CROSS_MULT} + 专属事件</div></div>
       <button class="buy" data-act="assignTo" data-arg="${i}">派 CEO</button></div>`;
@@ -1126,7 +1255,7 @@ function jobGallery(id) {
   const s = state.ceos[id], v = jobShown(id), cur = s.at === v, ready = hasJobArt(id, v);
   const chips = E.SHOPS.map((S, i) => {
     const open = !!state.shops[i].open;
-    return `<button class="job-chip ${i === v ? 'on' : ''} ${open ? '' : 'lock'}" ${open ? `data-act="jobView" data-arg="${id}:${i}"` : 'disabled'}>${open ? SHOP_ICON[i] : '🔒'} ${S.short}${s.at === i ? '<i>现任</i>' : ''}</button>`;
+    return `<button class="job-chip ${i === v ? 'on' : ''} ${open ? '' : 'lock'}" ${open ? `data-act="jobView" data-arg="${id}:${i}"` : 'disabled'}>${open ? SHOP_ICON[i] : LOCK_IC}${S.short}${s.at === i ? '<i>现任</i>' : ''}</button>`;
   }).join('');
   return `<div class="job-gal" data-ceo="${id}"><button class="job-pic" data-act="jobBig" data-arg="${id}:${v}">${jobImg(id, v)}${ready ? '' : '<span class="job-wip">画师赶稿中</span>'}</button>
     <div class="job-side"><div class="job-cap">${cur ? '现任形象' : s.at < 0 && v === homeShop(id) ? '本行形象（休息中）' : '换店预览'}：<b>${E.SHOPS[v].short}</b></div>
@@ -1137,12 +1266,12 @@ function renderCeo() {
     <div class="note" style="margin-top:0">流程：当前任职 → 选目的店 → 双方去向与 $/秒对比 → 确认。确认后换新招牌。</div>`;
   for (const c of E.CEOS) {
     const s = state.ceos[c.id];
-    if (!s.unlocked) { h += `<div class="card dim"><div class="ava">🔒</div><div class="info"><div class="name">${c.id === 'rocket' ? '？？？' : c.name}<span class="tag idle">${E.TYPES[c.type]}</span></div><div class="desc">${c.unlock}</div></div></div>`; continue; }
+    if (!s.unlocked) { h += `<div class="card dim"><div class="ava lock-ava">${LOCK_IC}</div><div class="info"><div class="name">${c.id === 'rocket' ? '？？？' : c.name}<span class="tag idle">${E.TYPES[c.type]}</span></div><div class="desc">${c.unlock}</div></div></div>`; continue; }
     const at = s.at, info = at >= 0 ? E.ceoInfo(state, at) : null;
     h += `<div class="card">${ava(c.id)}<div class="info"><div class="name">${c.name}<span class="lv">Lv.${s.lv}</span><span class="tag ${info ? (info.match ? 'match' : 'cross') : 'idle'}">${E.TYPES[c.type]}</span></div>
       <div class="desc one">现任：<b>${ceoPost(c.id)}</b>${info ? `（${info.match ? '专长' : '跨行'} ×${info.mult.toFixed(2)}）` : ''}</div>
       <div class="desc one">“${c.line}”</div></div>
-      <div class="btns">${s.lv >= CFG.CEO_MAX ? '' : btn('ceoUp', c.id, '升级', E.ceoCost(c.id, s.lv))}<button class="buy alt" data-act="assign" data-arg="${c.id}">调任</button></div></div>`;
+      <div class="btns">${E.ceoMaxed(state, c.id) ? '<button class="buy no" disabled data-max="ceo">满级</button>' : btn('ceoUp', c.id, '升级', E.ceoCost(c.id, s.lv))}<button class="buy alt" data-act="assign" data-arg="${c.id}">调任</button></div></div>`;
     h += jobGallery(c.id);
   }
   h += `<div class="sec-title">跨行组合</div><div class="cross-grid">`;
@@ -1239,7 +1368,7 @@ function updateCompactHead() {
   if (tab === 'ceo') {
     let cards = E.CEOS.map(c => {
       const s = state.ceos[c.id];
-      if (!s.unlocked) return `<div class="ch-card"><div class="ava">🔒</div><b>？？？</b><small>${c.unlock}</small></div>`;
+      if (!s.unlocked) return `<div class="ch-card"><div class="ava lock-ava">${LOCK_IC}</div><b>？？？</b><small>${c.unlock}</small></div>`;
       const post = s.at >= 0 ? E.signOf(state, s.at).name : '休息中';
       return `<div class="ch-card">${ava(c.id)}<b>${c.name}</b><small>${post}</small></div>`;
     }).join('');
@@ -1255,22 +1384,22 @@ function updateCompactHead() {
 function switchShop(i) { if (i < 0 || i > 3) return; if (state.cur !== i) combo.n = 0; state.cur = i; dirty = true; renderTabs(); }
 function renderTabs() {
   $('#shopTabs').innerHTML = E.SHOPS.map((S, i) => { const s = state.shops[i];
-    const sub = s.open ? (s.emp > 0 ? '+' + fmt(E.shopRate(state, i)) + '/秒' : '未雇员工') : (i === 0 || state.shops[i - 1].open ? fmt(S.open) : '🔒');
-    return `<button data-shop="${i}" class="${state.cur === i ? 'on' : ''} ${s.open ? '' : 'locked'}"><span class="tn">${SHOP_ICON[i]} ${TAB_NAME[i]}</span><small>${sub}</small></button>`; }).join('');
+    const sub = s.open ? (s.emp > 0 ? '+' + fmt(E.shopRate(state, i)) + '/秒' : '未雇员工') : (i === 0 || state.shops[i - 1].open ? fmt(S.open) : LOCK_IC + '待解锁');
+    return `<button data-shop="${i}" class="${state.cur === i ? 'on' : ''} ${s.open ? '' : 'locked'}"><span class="tn">${SHOP_ICON[i]}${TAB_NAME[i]}</span><small>${sub}</small></button>`; }).join('');
 }
 let lastDyn = 0;
 function refreshDynamic(force) {
   const t = now();
   // 顶部
   const r = E.onlineRate(state, t), busy = !!(order && order.progress < 1);
-  const ct = fmt(state.coins); if (coinsEl.textContent !== ct) coinsEl.textContent = ct;
+  const ct = E.walletOk(state) ? fmt(E.balance(state)) : '存档异常'; if (coinsEl.textContent !== ct) coinsEl.textContent = ct;
   const cps = '每秒 +' + fmt(r) + (busy ? '（团单服务中）' : ''); if (cpsEl.textContent !== cps) cpsEl.textContent = cps;
   $('#boostTag').classList.toggle('hidden', !busy); if (busy) $('#boostSec').textContent = Math.round(order.progress * 100);
   const dc = $('#dailyChip'), can = E.canDouble(state, t);
   const dtxt = can ? '今日双倍 ✓' : '双倍 ' + fmtClockMYT(E.nextResetTs(t)) + ' 重置'; if (dc.textContent !== dtxt) dc.textContent = dtxt;
   dc.className = 'chip ' + (can ? 'on' : 'used');
   // 按钮可买状态
-  tabBody.querySelectorAll('[data-cost]').forEach(b => b.classList.toggle('no', state.coins < +b.dataset.cost));
+  tabBody.querySelectorAll('[data-cost]').forEach(b => b.classList.toggle('no', !E.canAfford(state, +b.dataset.cost)));
   refreshCrit();   // 暴击说明不受 900ms 限制：连击中 / 刚断连都马上对上店景 HUD
   if (!force && t - lastDyn < 900) return; lastDyn = t;
   // 下一步
@@ -1278,13 +1407,13 @@ function refreshDynamic(force) {
   $('#goalBar').style.width = Math.min(100, gl.cur / gl.need * 100).toFixed(0) + '%';
   renderTabs();
   // 底部提醒点
-  const gdot = E.gachaUnlocked(state) && !E.gachaComplete(state) && state.coins >= E.gachaPrice(state);
+  const gdot = E.gachaUnlocked(state) && !E.gachaComplete(state) && E.canAfford(state, E.gachaPrice(state));
   const nb = document.querySelector('#bottomNav [data-tab="gacha"]'); const has = !!nb.querySelector('.dot');
   if (gdot && !has) nb.insertAdjacentHTML('beforeend', '<i class="dot"></i>'); if (!gdot && has) nb.querySelector('.dot').remove();
   const cdot = E.CEOS.some(c => state.ceos[c.id].unlocked && state.ceos[c.id].at === -1);
   const cb = document.querySelector('#bottomNav [data-tab="ceo"]'); const hc = !!cb.querySelector('.dot');
   if (cdot && !hc) cb.insertAdjacentHTML('beforeend', '<i class="dot"></i>'); if (!cdot && hc) cb.querySelector('.dot').remove();
-  const mb = document.getElementById('mallBal'); if (mb) mb.textContent = fmt(state.coins);
+  const mb = document.getElementById('mallBal'); if (mb) mb.textContent = E.walletOk(state) ? fmt(E.balance(state)) : '存档异常';
   const hl = document.getElementById('homeLux'); if (hl && homeWho) hl.textContent = E.homeLuxury(state, homeWho);
 }
 
@@ -1293,9 +1422,15 @@ const modal = $('#modal'), mpanel = $('#mpanel'), sheet = $('#sheet'), sheetPane
 const mq = [];
 function modalOpen() { return !modal.classList.contains('hidden') || !sheet.classList.contains('hidden'); }
 function queueModal(fn) { if (modalOpen()) mq.push(fn); else fn(); }
-function openModal(html, burst = true) { mpanel.classList.remove('zoom'); mpanel.innerHTML = html; modal.querySelector('.burst').style.display = burst ? '' : 'none'; modal.classList.remove('hidden'); mpanel.scrollTop = 0; }
+function openModal(html, burst = true) { mpanel.classList.remove('zoom'); mpanel.innerHTML = html; modalX(); modal.querySelector('.burst').style.display = burst ? '' : 'none'; modal.classList.remove('hidden'); mpanel.scrollTop = 0; }
+// 12c：统一右上角关闭钮 = 代按弹窗里已有的「再想想 / 好 / 知道了 / 返回」，不另走关闭逻辑（领离线收益这类必须选一个的弹窗没有 ×）
+function modalX() {
+  const t = mpanel.querySelector('#mNo, #pvNo') || mpanel.querySelector('#mOk'); mpanel.classList.toggle('has-x', !!t); if (!t) return;
+  mpanel.insertAdjacentHTML('afterbegin', `<button class="cx-close" id="mX" type="button" aria-label="${t.id === 'mOk' && t.dataset.x !== 'close' ? (t.textContent.trim() || '关闭') : '关闭'}">${ic('close')}</button>`);
+  $('#mX').addEventListener('click', () => { const c = mpanel.querySelector('#mNo, #pvNo') || mpanel.querySelector('#mOk'); if (c && c.dataset.x === 'close') closeModal(); else if (c) c.click(); }); // 12c1：data-x="close" 的弹窗（开摊介绍）× 只关窗，不走「开摊」的解锁音效 / 台词；12c3：这种 × 朗读标签也叫「关闭」
+}
 function closeModal() { modal.classList.add('hidden'); mpanel.innerHTML = ''; if (mq.length && !modalOpen()) setTimeout(() => { if (!modalOpen() && mq.length) mq.shift()(); }, 120); }
-function openSheet(html) { sheetPanel.innerHTML = html; sheet.classList.remove('hidden'); }
+function openSheet(html) { sheetPanel.innerHTML = `<button class="cx-close" id="sheetX" type="button" aria-label="关闭">${ic('close')}</button>` + html; sheet.classList.remove('hidden'); $('#sheetX').addEventListener('click', closeSheet); }
 function closeSheet() { sheet.classList.add('hidden'); sheetPanel.innerHTML = ''; }
 sheet.querySelector('.sheet-bg').addEventListener('click', closeSheet);
 const coinSm = '<span class="coin-ico sm"><span>赚</span></span>';
@@ -1314,9 +1449,9 @@ function showOffline() {
     <div class="mbtns">${can ? `<button class="buy big red" id="claimDouble">今日双倍领取 +${fmt(p.amount * 2)}</button><button class="buy ghost" id="claim">直接领取（双倍留到下次）</button>`
       : `<button class="buy big" id="claim">收下！</button><div class="mnote" style="margin:0">今日双倍已用，${fmtClockMYT(E.nextResetTs(now()))}（马来西亚时间）重置</div>`}</div>`);
   const go = dbl => {
-    const r = atomic(() => E.claimOffline(state, now(), dbl));
+    const r = atomic(() => E.claimOffline(state, now(), dbl), '离线收益没有到账，下次再领');
     closeModal();
-    if (r.ok) { sfx('reveal'); popWord(r.doubled ? '翻倍！' : '到账！'); bumpCoins(); burstCoins(W / 2, H * 0.5, 18); toast((r.doubled ? '双倍到账 +' : '到账 +') + fmt(r.amount)); dirty = true; }
+    if (r.ok) { sfx('reveal'); popWord(r.doubled ? '翻倍！' : '到账！'); bumpCoins(); burstCoins(W / 2, H * 0.5, 18); toast((r.doubled ? '双倍到账 +' : '到账 +') + fmt(r.amount) + (r.capped ? '（金币已到上限，多出的没进账）' : '')); dirty = true; }
     else if (r.why !== 'saveFailed') toast(r.why);
   };
   const cd = $('#claimDouble'); if (cd) cd.addEventListener('click', () => { audioUnlock(); go(true); }, { once:true });
@@ -1379,8 +1514,8 @@ function showPreview(id, target) {
   $('#pvYes').addEventListener('click', () => {
     const oldSigns = E.SHOPS.map((_, i) => state.shops[i].open ? E.signOf(state, i).name : null);
     tick(); // 先按旧阵容把收益结清（长空档会先走离线结算），再换人；店铺等级/员工/装饰都不动
-    const r = E.assignCeoWithPayout(state, id, target, now()); closeModal(); if (!r.ok) return toast(r.why);
-    persist(); sfx('swoosh'); popWord('换牌！'); dirty = true;
+    const r = atomic(() => E.assignCeoWithPayout(state, id, target, now()), '调任没有生效'); closeModal(); if (!r.ok) { if (r.why !== 'saveFailed') toast(r.why); return; }   // 12d3
+    sfx('swoosh'); popWord('换牌！'); dirty = true;
     const view = target >= 0 ? target : (r.from >= 0 ? r.from : state.cur);
     switchShop(view); signAnim = { shop:view, from:oldSigns[view] || '', t0:clock };
     if (target >= 0) sayLine('c', E.SIGNS[id][target][1], 3);
@@ -1393,7 +1528,7 @@ function showPreview(id, target) {
 function showComic(k, fresh, back) { // back：从放大图返回，只重画，不重复记已看/音效
   const x = E.CROSS[k], [id, shop] = k.split('@'), c = E.CEO_BY_ID[id];
   if (!back && !state.ceos[id].unlocked && !fresh) { toast('这位 CEO 还没加入'); return; }
-  if (fresh && !back) { state.crossSeen[k] = true; persist(); sfx('mile'); }
+  if (fresh && !back) { atomic(() => { state.crossSeen[k] = true; return { ok:true }; }, '「已看过」没有记上，下次还会弹'); sfx('mile'); }
   openModal(`<div class="mbubble">${fresh ? '跨行事件！' : '跨行组合'}</div><div class="mtitle">${c.name} × ${E.SHOPS[+shop].short}：「${x.title}」</div>
     <div class="comic-sfx">${x.sfx}</div>
     <div class="cross-wrap${CROSS_ART[k] ? ' has-art' : ''}">
@@ -1432,7 +1567,7 @@ function showGachaOpen() {
 let drawing = false;
 function doGacha(b) {
   if (drawing) return;
-  const r = atomic(() => E.gachaDraw(state, rand()));
+  const r = atomic(() => E.gachaDraw(state, rand()), '开盒没有生效，金币已退回');
   if (!r.ok) { if (r.why === 'saveFailed') return; return failBuy(b, r.why); }
   drawing = true; dirty = true; sfx('box');
   const ico = $('#boxIco'); if (ico) ico.classList.add('shake');
@@ -1449,7 +1584,7 @@ function showReveal(resumed) {
     <div class="mnote">${note}本次概率：${last.odds} · 已收集 ${state.gacha.owned.length}/${total}</div>
     ${last.setDone ? `<div class="pv-tags"><div>🎉 集齐 ${E.CARD_COUNT} 张故事卡！解锁专属外观「${E.SET_REWARD.name}」（金马甲 + 金厨师帽）</div></div>` : ''}
     <div class="mbtns two"><button class="buy ghost" id="mOk">收下</button>${!done && !resumed ? `<button class="buy red" id="mAgain">再开一个 · ${fmt(E.gachaPrice(state))}</button>` : sup ? `<button class="buy" id="mGoShop">去看看</button>` : `<button class="buy" id="mCol">去收藏页</button>`}</div>`);
-  last.seen = true; persist(); bgKey = ''; dirty = true;
+  atomic(() => { if (state.gacha.last) state.gacha.last.seen = true; return { ok:true }; }, '「已看过」没有记上'); bgKey = ''; dirty = true;
   $('#mOk').addEventListener('click', closeModal, { once:true });
   const ag = $('#mAgain'); if (ag) ag.addEventListener('click', () => { closeModal(); doGacha(ag); }, { once:true });
   const mc = $('#mCol'); if (mc) mc.addEventListener('click', () => { closeModal(); setTab('col'); }, { once:true });
@@ -1460,13 +1595,17 @@ function confirmReset() {
   openModal(`<div class="mtitle">确定重新开始？</div><div class="mnote">所有店铺、CEO、员工、金币和收藏都会清空，不能恢复。</div>
     <div class="mbtns two"><button class="buy ghost" id="mNo">取消</button><button class="buy red" id="mYes">清空重来</button></div>`, false);
   $('#mNo').addEventListener('click', closeModal, { once:true });
-  $('#mYes').addEventListener('click', () => { const rev = state.rev; state = E.newState(now()); state.rev = Math.max(rev, storedRev()); persist(); location.reload(); }, { once:true });
+  $('#mYes').addEventListener('click', () => {
+    if (saveBlocked) { closeModal(); toast('存档异常（只读模式）：不能清空重来，原存档保留', 2800); return; }   // 12d3：只读不覆盖原文
+    const old = state, rev = state.rev; state = E.newState(now()); state.rev = Math.max(rev, storedRev());
+    if (!persist()) { state = old; closeModal(); dirty = true; toast('保存失败：没有清空，进度原样保留', 2800); return; }   // 12d3：存不上不刷新
+    location.reload(); }, { once:true });
 }
 function showIntro() {
   openModal(`<div class="mbubble">欢迎来到《躺着也能赚》</div><div style="display:flex;justify-content:center;margin:6px 0"><div class="ava art bust">${bustImg('c77')}</div></div>
     <div class="mtitle">77：巴适得很，串串烤起走！</div>
     <div class="mnote">① 点画面里的烧烤摊赚第一桶金：每一下都有<b>暴击</b>机会（暴击 ×5 / 超级 ×10 / 超超超级 ×20），1 秒内连点越点越容易暴击<br>② 攒 50 雇员工阿炭，之后<b>躺着也能赚</b><br>③ 开新店、升级店铺/员工/CEO，把 CEO 调去别的店试试跨行事件<br>离线也有收益（50%，最多 8 小时），每天还有一次免费双倍。</div>
-    <button class="buy big red" id="mOk">开摊！</button>`);
+    <button class="buy big red" id="mOk" data-x="close">开摊！</button>`);
   $('#mOk').addEventListener('click', () => { audioUnlock(); closeModal(); sayLine('c', '巴适得很，串串烤起走！', 3); }, { once:true });
 }
 
@@ -1475,7 +1614,7 @@ function showIntro() {
 // 美术：画师的图转成 webp 后放 art/，在下面两张表里登记一张就用一张；没登记 / 加载失败 → 用色块 + emoji 占位
 // 房间底图：art/home_<ceo>_<lv>.webp（ceo=c77/pearl/otaku/rocket，lv=1/2/3），例 { c77_1:1 }
 // 底图规格：宽 = 列数×200px，高 = (2 + 行数)×200px；上面 2 格高是后墙，下面是地板格，平行投影无消失点。Lv1 6×4 → 1200×1200，墙地分界 y=400
-const HOME_ART = { c77_1: 1, pearl_1: 1, otaku_1: 1, rocket_1: 1 };  // 熊大四位 CEO 的 Lv1（原图墙 / 地板在踢脚线底边处分开，分别缩放到 1200×400 + 1200×800）
+const HOME_ART = { c77_1: 1, pearl_1: 1, otaku_1: 1, rocket_1: 1, c77_2: 1, c77_3: 1, pearl_2: 1, pearl_3: 1, otaku_2: 1, otaku_3: 1, rocket_2: 1, rocket_3: 1 };  // 熊大四位 CEO 的 Lv1（原图墙 / 地板在踢脚线底边处分开，分别缩放到 1200×400 + 1200×800）；12b1：77 / 珍珠姐 Lv2 1600×400+1600×1000、Lv3 2000×400+2000×1200，同样在踢脚线底边切开；12b2：阿宅 / 火箭老板 Lv2/Lv3 同法
 const FURN_ART = { bed:1, bookshelf:1, wardrobe:1, table:1, fridge:1, sofa:1, rug:1, plant:1, lamp:1, tv:1, painting:1, catbed:1, rocket_rocket_model:1, rocket_meteor_stand:1, rocket_biosphere_dome:1, s77_cloud_canopy:1, rocket_capsule_bunk:1 };  // +火箭模型/陨石展座/生态圆顶/云朵纱帐床；宽=占地×200（1格240）
 const furnName = fid => fid.replace(/^furn_/, '');
 // 高家具：占地只有底下那排格子，图按「高 / 宽」比例往上伸（盖住后墙），底脚对齐占地底边；值 = 图高 / 图宽（400×600 → 1.5）
@@ -1491,7 +1630,11 @@ Object.assign(FURN_ART, { pearl_tea_loft:1, pearl_canopy_lounge:1, pearl_capsule
 Object.assign(FURN_UP, { pearl_tea_loft: 412 / 400, pearl_canopy_lounge: 615 / 600, pearl_capsule_daybed: 336 / 400, pearl_tea_cat_hammock: 132 / 240, pearl_tea_cubby: 447 / 400, pearl_glass_wardrobe: 455 / 400, pearl_rattan_bookcase: 699 / 400, pearl_tea_trolley_shelf: 254 / 240, pearl_tea_stool: 199 / 240, pearl_cafe_chair: 555 / 240, pearl_round_tea_table: 391 / 400, pearl_scallop_sofa: 234 / 600, pearl_tea_bar: 300 / 600, pearl_bar_stool: 667 / 240, pearl_picnic_table: 170 / 400, pearl_egg_swing: 706 / 400, pearl_fan_shade_lamp: 350 / 240, pearl_tea_arc_lamp: 361 / 240, pearl_fountain_light: 209 / 400, pearl_tea_kettle_cart: 256 / 240, pearl_juice_press: 371 / 240, pearl_milk_frother_bar: 282 / 400, pearl_tea_brewer: 226 / 400, pearl_dessert_chiller: 711 / 400, pearl_herb_crate: 111 / 240, pearl_tea_bonsai: 213 / 240, pearl_ceramic_cup_stack: 368 / 240, pearl_terrarium_orb: 274 / 240, pearl_tea_tree_screen: 390 / 600, otaku_floor_futon: 264 / 400, otaku_sofa_sleeper: 503 / 400, otaku_bunk_manga: 470 / 400, otaku_gaming_pod: 564 / 400, otaku_projector_bed: 598 / 600, otaku_cat_keyboard_cave: 174 / 240, otaku_locker_wardrobe: 516 / 400, otaku_disc_tower: 741 / 240, otaku_figure_vitrine: 310 / 400, otaku_comic_wheel_cart: 180 / 240, otaku_controller_drawers: 282 / 400, otaku_modular_pixel_shelf: 518 / 600, otaku_server_display_rack: 433 / 400, otaku_beanbag: 200 / 240, otaku_kotatsu: 200 / 400, otaku_gaming_chair: 394 / 240, otaku_manga_desk: 371 / 400, otaku_snack_sidecar: 321 / 240, otaku_cocoon_lounger: 601 / 400, otaku_panel_lamp: 1331 / 240, otaku_gooseneck_stand: 461 / 240, otaku_pixel_cube_light: 696 / 240, otaku_arcade_marquee_lamp: 399 / 400, otaku_orbital_neon_floor: 768 / 240, otaku_sleep_timer_totem: 770 / 240, otaku_mini_fridge: 284 / 240, otaku_console_station: 291 / 400, otaku_arcade_cabinet: 477 / 240, otaku_projector_cart: 208 / 240, otaku_triple_monitor_station: 320 / 600, otaku_cactus_cartridge: 235 / 240, rocket_steel_platform_bed: 298 / 400, rocket_cryo_rest_pod: 434 / 400, rocket_observatory_bed: 543 / 600, rocket_landing_cat_pod: 239 / 240, rocket_steel_locker: 418 / 400, rocket_pipe_bookcase: 418 / 400, rocket_tool_chest: 247 / 400, rocket_specimen_drawer: 250 / 400, rocket_orbital_archive: 936 / 600, rocket_bolt_stool: 260 / 240, rocket_workbench: 213 / 400, rocket_drafting_chair: 386 / 240, rocket_pipe_sofa: 337 / 600, rocket_oil_drum_table: 342 / 400, rocket_captain_chair: 342 / 240, rocket_cantilever_desk: 326 / 400, rocket_orbital_ring_lamp: 479 / 240, rocket_solar_array_lamp: 372 / 400, rocket_industrial_fan: 238 / 240, rocket_vacuum_dock: 401 / 240, rocket_coffee_pressure_unit: 508 / 400, rocket_air_purifier: 632 / 240, rocket_hydroponic_unit: 241 / 400, rocket_planetarium_console: 485 / 400, rocket_concrete_succulent: 228 / 240, rocket_pipe_vase: 347 / 240 });
 const ROOM_WALL_ROWS = 2;  // 后墙高 2 格
 const furnTall = fid => !!(FURN_ART[furnName(fid)] && FURN_UP[furnName(fid)]);
-const HOME_ICON = ['🏠', '🏢', '🏰'];
+// 12c2：竖放（rot 1/3）用侧面图。熊大补 art/furn_<名>_side.webp（宽 = 竖放后的占地宽，1 格 240px；高随图）后，在这里登记「图高 / 图宽」就生效：
+// 竖放换侧面图、底脚贴占地底边、同样封顶到房间顶边；rot 3 水平镜像；侧面图没登记或加载失败 → 保持原来的正面图等比兜底。目前素材包里没有任何侧面图，所以表是空的
+const FURN_SIDE = {};
+const furnSide = (fid, rot) => ((rot & 1) && FURN_SIDE[furnName(fid)]) || 0;
+const HOME_ICON = ['home', 'apt', 'villa'].map(n => ic(n)); // 12c1：家宅升级三档用同套 SVG（原系统 emoji）
 let homeWho = 'c77', homeSub = 'room', homeMode = 'live', homeSel = null, homeDrag = null;
 const homeActor = {}; // ceoId -> {x,y,tx,ty,act,line,until,walk}
 let mallQ = '', mallCat = 'all', mallSub = 'all', mallFilter = { afford:false, owned:false, price:'any', size:'any' };
@@ -1503,22 +1646,27 @@ function furnInner(fid, rot, inRoom) {
   const f = E.FURN_BY_ID[fid], sz = E.furnSize(fid, rot), odd = rot & 1, n = furnName(fid);
   // 挂画（wall:true）在房间里：顶对齐、贴格子上沿挂（靠天花板），不在格子中间飘；转 90° 的才按中心转
   // 11z：往上伸的图最高只到「占地 + 2 格后墙」（房间顶边）；超高的（面板灯、光盘塔、计时图腾等）等比缩小、脚底不动，整图不被顶边裁掉
-  const st = inRoom && furnTall(fid) ? `left:0;top:auto;bottom:0;width:100%;height:${Math.min(sz.w * FURN_UP[n], sz.h + ROOM_WALL_ROWS) / sz.h * 100}%;transform:none`
+  const tall = inRoom && furnTall(fid), side = tall ? furnSide(fid, rot) : 0, tallH = up => `${Math.min(sz.w * up, sz.h + ROOM_WALL_ROWS) / sz.h * 100}%`;
+  const st = tall ? `left:0;top:auto;bottom:0;width:100%;height:${tallH(side || FURN_UP[n])};transform:none`
     : inRoom && f.wall && !odd ? `left:50%;top:0;width:100%;height:100%;transform:translateX(-50%)`
     : `width:${odd ? sz.h / sz.w * 100 : 100}%;height:${odd ? sz.w / sz.h * 100 : 100}%;transform:translate(-50%,-50%) rotate(${rot * 90}deg)`;
-  return `<div class="fi" style="${st}"><span class="fe">${f.emoji}</span>${FURN_ART[n] ? `<img src="art/furn_${n}.webp?v=${ART_V}" data-homefb="1" alt="">` : ''}</div>`;
+  const front = `art/furn_${n}.webp?v=${ART_V}`;
+  const img = !FURN_ART[n] ? '' : side ? `<img class="side${rot === 3 ? ' mir' : ''}" src="art/furn_${n}_side.webp?v=${ART_V}" data-homefb="1" data-front="${front}" data-fronth="${tallH(FURN_UP[n])}" alt="">`
+    : `<img src="${front}" data-homefb="1" alt="">`;
+  return `<div class="fi" style="${st}"><span class="fe">${f.emoji}</span>${img}</div>`;
 }
-document.addEventListener('error', e => { const el = e.target; if (el && el.tagName === 'IMG' && el.dataset && el.dataset.homefb) { const fu = el.closest('.furn'); if (fu) fu.classList.remove('art'); el.remove(); } }, true);
+document.addEventListener('error', e => { const el = e.target; if (el && el.tagName === 'IMG' && el.dataset && el.dataset.front) { const fi = el.parentNode; if (fi && el.dataset.fronth) fi.style.height = el.dataset.fronth; el.className = ''; el.src = el.dataset.front; delete el.dataset.front; return; } // 12c2：侧面图坏了 → 回正面图
+  if (el && el.tagName === 'IMG' && el.dataset && el.dataset.homefb) { const fu = el.closest('.furn'); if (fu) fu.classList.remove('art'); el.remove(); } }, true);
 function homeBook(sub) {
-  return `<div class="book-tabs" role="tablist"><button data-act="homeGo" data-arg="shop">📖 经营</button><button class="${sub === 'room' ? 'on' : ''}" data-act="homeSub" data-arg="room">🏠 家宅</button><button class="${sub === 'mall' ? 'on' : ''}" data-act="homeSub" data-arg="mall">🛒 商城</button></div>`;
+  return `<div class="book-tabs" role="tablist"><button data-act="homeGo" data-arg="shop">${ic('shop')}经营</button><button class="${sub === 'room' ? 'on' : ''}" data-act="homeSub" data-arg="room">${ic('home')}家宅</button><button class="${sub === 'mall' ? 'on' : ''}" data-act="homeSub" data-arg="mall">${ic('mall')}商城</button></div>`;
 }
 function homeWhoRow() {
   return `<div class="who-row home-who">${E.CEOS.map(c => { const open = E.homeOpen(state, c.id);
-    return `<button class="who ${c.id === homeWho ? 'on' : ''} ${open ? '' : 'locked'}" data-act="homeWho" data-arg="${c.id}">${open ? ava(c.id) : '<div class="ava">🔒</div>'}<span>${open || c.id !== 'rocket' ? c.name : '？？？'}</span></button>`; }).join('')}</div>`;
+    return `<button class="who ${c.id === homeWho ? 'on' : ''} ${open ? '' : 'locked'}" data-act="homeWho" data-arg="${c.id}">${open ? ava(c.id) : `<div class="ava lock-ava">${LOCK_IC}</div>`}<span>${open || c.id !== 'rocket' ? c.name : '？？？'}</span></button>`; }).join('')}</div>`;
 }
 function homeLocked() {
   const c = E.CEO_BY_ID[homeWho];
-  return `<div class="card dim home-lock"><div class="ava">🔒</div><div class="info"><div class="name">${c.id === 'rocket' ? '？？？' : c.name} 的家还没开放</div><div class="desc">${c.unlock}，加入后就有自己的小屋。</div></div></div>`;
+  return `<div class="card dim home-lock"><div class="ava lock-ava">${LOCK_IC}</div><div class="info"><div class="name">${c.id === 'rocket' ? '？？？' : c.name} 的家还没开放</div><div class="desc">${c.unlock}，加入后就有自己的小屋。</div></div></div>`;
 }
 
 const LIVE_LINES = {
@@ -1552,7 +1700,7 @@ function renderRoom() {
   const isWall = p => E.itemSurf(p) === 'wall';
   const mkFurn = (p, rows) => {
     const f = E.FURN_BY_ID[p.fid], sz = E.furnSize(p.fid, p.rot);
-    return `<div class="furn ${f.layer === 'rug' ? 'rug' : ''} ${f.wall ? 'wallf' : ''} ${FURN_ART[furnName(p.fid)] ? 'art' : ''} ${furnTall(p.fid) ? 'tall' : ''} ${p.uid === homeSel ? 'sel' : ''}" data-uid="${p.uid}" data-fid="${p.fid}" data-surf="${E.itemSurf(p)}" style="left:${p.x / T.cols * 100}%;top:${p.y / rows * 100}%;width:${sz.w / T.cols * 100}%;height:${sz.h / rows * 100}%;--fc:${f.color}">${furnInner(p.fid, p.rot, true)}<b class="fn">${f.name}</b></div>`;
+    return `<div class="furn ${f.layer === 'rug' ? 'rug' : ''} ${f.wall ? 'wallf' : ''} ${FURN_ART[furnName(p.fid)] ? 'art' : ''} ${furnTall(p.fid) ? 'tall' : ''} ${p.uid === homeSel ? 'sel' : ''}" data-uid="${p.uid}" data-fid="${p.fid}" data-surf="${E.itemSurf(p)}" style="left:${p.x / T.cols * 100}%;top:${p.y / rows * 100}%;width:${sz.w / T.cols * 100}%;height:${sz.h / rows * 100}%;--fc:${f.color};--fz:${10 + (p.y + sz.h) * 10}">${furnInner(p.fid, p.rot, true)}<b class="fn">${f.name}</b></div>`;
   };
   // 墙面挂画 / 地板家具分开渲染；地板前后遮挡：地毯垫最底，其余按底脚行排
   const wallItems = H.placed.filter(isWall).slice().sort((a, b) => a.y - b.y || a.x - b.x).map(p => mkFurn(p, E.WALL_ROWS)).join('');
@@ -1562,16 +1710,17 @@ function renderRoom() {
   const wallBlocks = E.wallBlockedCells(state, id).map(([x, y]) => `<i class="wall-block" style="left:${x / T.cols * 100}%;top:${y / E.WALL_ROWS * 100}%;width:${100 / T.cols}%;height:${100 / E.WALL_ROWS}%"></i>`).join('');
   h += `<div class="room tier-${T.id}${hasArt ? ' has-art' : ''}" id="room" data-tier="${T.id}" style="--cols:${T.cols};--rows:${T.rows};--wall:${T.wall};--floor:${T.floor};--trim:${T.trim}">
     ${hasArt ? `<img class="room-art" src="art/home_${artKey}.webp?v=${ART_V}" data-homefb="1" alt="" onerror="this.closest('.room')&&this.closest('.room').classList.remove('has-art')">` : ''}
-    <div class="room-wall" id="roomWall"><span class="rw-deco">${T.id === 'hut' ? '🪟' : T.id === 'apt' ? '🪟 🪟' : '✨🕯️✨'}</span><span class="rw-name">${c.name}的${T.name}</span><div class="wall-grid" id="wallGrid">${wallBlocks}${wallItems}<div class="room-hl hidden" id="wallHl"></div></div></div>
-    <div class="room-floor" id="roomFloor">${floorItems}<div class="home-actor" id="homeActor" style="left:${(homeActorOf(id).x + 0.5) / T.cols * 100}%;top:${(homeActorOf(id).y + 0.5) / T.rows * 100}%"><span class="ha-ava">${ava(id)}</span>${(() => { const ac = homeActorOf(id); return ac.line && ac.until > clock ? `<b class="ha-line">${ac.line}</b>` : ''; })()}<i class="ha-act">${(() => { const ac = homeActorOf(id); return ac.act === 'rest' ? '💤' : ac.act === 'read' ? '📖' : ac.act === 'dress' ? '👕' : ''; })()}</i></div><div class="room-hl hidden" id="roomHl"></div></div></div>`;
+    <div class="room-wall" id="roomWall"><span class="rw-deco">${T.id === 'hut' ? ic('window') : T.id === 'apt' ? ic('window') + ic('window') : ic('spark') + ic('candle') + ic('spark')}</span><span class="rw-name">${c.name}的${T.name}</span><div class="wall-grid" id="wallGrid">${wallBlocks}${wallItems}<div class="room-hl hidden" id="wallHl"></div></div></div>
+    <div class="room-floor" id="roomFloor">${floorItems}<div class="home-actor" id="homeActor" style="left:${(homeActorOf(id).x + 0.5) / T.cols * 100}%;top:${(homeActorOf(id).y + 0.5) / T.rows * 100}%"><span class="ha-ava">${ava(id)}</span>${(() => { const ac = homeActorOf(id); return ac.line && ac.until > clock ? `<b class="ha-line">${ac.line}</b>` : ''; })()}<i class="ha-act">${(() => { const ac = homeActorOf(id); return ac.act === 'rest' ? ic('zz') : ac.act === 'read' ? ic('book') : ac.act === 'dress' ? ic('shirt') : ''; })()}</i></div><div class="room-hl hidden" id="roomHl"></div></div></div>`;
   const st = undoStack(id);
-  h += `<div class="mode-tabs" role="tablist"><button class="mt ${homeMode === 'live' ? 'on' : ''}" data-act="homeMode" data-arg="live">🚶 生活</button><button class="mt ${homeMode === 'decor' ? 'on' : ''}" data-act="homeMode" data-arg="decor">🛋️ 布置</button></div>`;
-  h += `<div class="room-tools">${homeMode === 'decor' ? (sel ? `<span class="rt-sel">已选：<b>${E.FURN_BY_ID[sel.fid].name}</b></span><button class="buy alt" data-act="homeRot" data-arg="${sel.uid}">↻ 旋转</button><button class="buy alt" data-act="homeStore" data-arg="${sel.uid}">📦 收回</button>`
+  h += `<div class="mode-tabs" role="tablist"><button class="mt ${homeMode === 'live' ? 'on' : ''}" data-act="homeMode" data-arg="live">${ic('live')}生活</button><button class="mt ${homeMode === 'decor' ? 'on' : ''}" data-act="homeMode" data-arg="decor">${ic('decor')}布置</button></div>`;
+  h += `<div class="room-tools">${homeMode === 'decor' ? (sel ? `<span class="rt-sel">已选：<b>${E.FURN_BY_ID[sel.fid].name}</b></span><button class="buy alt" data-act="homeRot" data-arg="${sel.uid}">↻ 旋转</button><button class="buy alt" data-act="homeStore" data-arg="${sel.uid}">${ic('box')}收回</button>`
     : '<span class="rt-sel">布置：点家具选中 / 拖动换位；挂画拖到墙面</span>') : '<span class="rt-sel">生活：点空地走过去 · 点床休息 · 点书架看书 · 点衣柜换装</span>'}
     ${homeMode === 'decor' ? `<button class="buy alt" data-act="homeUndo" data-arg="${id}" ${st.length ? '' : 'disabled'}>↶ 撤销${st.length ? ' ' + st.length : ''}</button>` : ''}</div>`;
+  h += petRoomBar(id);
   const inv = Object.entries(E.furnInvOf(state)).filter(([, n]) => n > 0);
   if (homeMode === 'decor') {
-    h += `<div class="tray-head"><b>公共家具仓库</b><span>${inv.length ? '按住拖进房间 · 轻点自动摆' : '空空的'}</span><button class="buy alt mall-go" data-act="homeSub" data-arg="mall">🛒 去商城</button></div>`;
+    h += `<div class="tray-head"><b>公共家具仓库</b><span>${inv.length ? '按住拖进房间 · 轻点自动摆' : '空空的'}</span><button class="buy alt mall-go" data-act="homeSub" data-arg="mall">${ic('mall')}去商城</button></div>`;
     h += inv.length ? `<div class="inv-strip">${inv.map(([fid, n]) => { const f = E.FURN_BY_ID[fid], stt = E.furnStats(state, fid);
         const where = stt.where.length ? stt.where.map(w => w.name).join('、') : '';
         return `<div class="inv-item" data-fid="${fid}" style="--fc:${f.color}" title="${f.name} ${f.w}×${f.h}${where ? ' · 另有在 ' + where : ''}"><span class="ie">${f.emoji}</span><b>${f.name}</b><small>${f.w}×${f.h}</small><i>×${n}</i></div>`; }).join('')}</div>
@@ -1579,7 +1728,7 @@ function renderRoom() {
       : `<div class="note">仓库空空。去商城买家具，再回来布置 ${c.name} 的房间。</div>`;
   } else {
     h += `<div class="note live-note">生活模式：点地板空位让 ${c.name} 走过去；点<b>床</b>休息、点<b>书架</b>看书、点<b>衣柜</b>换装。要摆家具请切到「布置」。</div>
-      <button class="buy alt mall-go" data-act="homeSub" data-arg="mall">🛒 去商城</button>`;
+      <button class="buy alt mall-go" data-act="homeSub" data-arg="mall">${ic('mall')}去商城</button>`;
   }
   return h;
 }
@@ -1589,7 +1738,7 @@ function mallMatch(f) {
   if (mallCat !== 'all' && f.cat !== mallCat) return false;
   if (mallCat === 'cabinet' && mallSub !== 'all' && f.sub !== mallSub) return false;
   const stt = E.furnStats(state, f.id);
-  if (mallFilter.afford && state.coins < f.price) return false;
+  if (mallFilter.afford && !E.canAfford(state, f.price)) return false;
   if (mallFilter.owned && stt.owned <= 0) return false;
   if (mallFilter.price === 'low' && f.price >= 3000) return false;
   if (mallFilter.price === 'mid' && (f.price < 3000 || f.price >= 15000)) return false;
@@ -1603,7 +1752,8 @@ function mallMatch(f) {
 function renderMall() {
   const c = E.CEO_BY_ID[homeWho], open = E.homeOpen(state, homeWho), nm = open || c.id !== 'rocket' ? c.name : '？？？';
   const list = E.FURNITURE.filter(mallMatch);
-  let h = `<div class="mall-head"><div>公共仓库 · ${open ? `现看 <b>${nm}</b> 的家` : `<b>${nm}</b> 还没加入，买的先进仓库`}</div><div>余额 ${coinSm}<b id="mallBal">${fmt(state.coins)}</b></div></div>`;
+  let h = `<div class="mall-head"><div>公共仓库 · ${open ? `现看 <b>${nm}</b> 的家` : `<b>${nm}</b> 还没加入，买的先进仓库`}</div><div>余额 ${coinSm}<b id="mallBal">${fmt(E.balance(state))}</b></div></div>`;
+  h += petMallCard();
   h += `<div class="mall-search"><input id="mallSearch" type="search" enterkeyhint="search" placeholder="搜索家具…" value="${mallQ.replace(/"/g, '&quot;')}" autocomplete="off"><button type="button" class="buy alt" data-act="mallClear" ${mallQ || mallCat !== 'all' || mallFilter.afford || mallFilter.owned || mallFilter.price !== 'any' || mallFilter.size !== 'any' ? '' : 'disabled'}>清除</button></div>`;
   h += `<div class="mall-cats" role="tablist"><button class="mc ${mallCat === 'all' ? 'on' : ''}" data-act="mallCat" data-arg="all">全部</button>${E.MALL_CATS.map(c => `<button class="mc ${mallCat === c.id ? 'on' : ''}" data-act="mallCat" data-arg="${c.id}">${c.name}</button>`).join('')}</div>`;
   if (mallCat === 'cabinet') {
@@ -1616,7 +1766,7 @@ function renderMall() {
     <select data-act="mallPrice"><option value="any"${mallFilter.price==='any'?' selected':''}>价格</option><option value="low"${mallFilter.price==='low'?' selected':''}>3千以下</option><option value="mid"${mallFilter.price==='mid'?' selected':''}>3千–1.5万</option><option value="high"${mallFilter.price==='high'?' selected':''}>1.5万+</option></select>
     <select data-act="mallSize"><option value="any"${mallFilter.size==='any'?' selected':''}>占地</option><option value="1"${mallFilter.size==='1'?' selected':''}>1×1</option><option value="2"${mallFilter.size==='2'?' selected':''}>含 2 格边</option><option value="3p"${mallFilter.size==='3p'?' selected':''}>3 格+</option></select>
   </div>`;
-  h += `<div class="mall-count">显示 <b>${list.length}</b> / ${E.FURNITURE.length} 件<span class="mall-spacer">后期还会加</span></div>`;
+  h += `<div class="mall-count"><span class="mc-num">显示<b>${list.length}</b>/ ${E.FURNITURE.length} 件</span><span class="mall-spacer">后期还会加</span></div>`;
   h += `<div class="mall-list">`;
   h += list.map(f => { const stt = E.furnStats(state, f.id);
     const where = stt.where.length ? stt.where.map(w => w.name).join('、') : '未摆出';
@@ -1630,7 +1780,7 @@ function renderMall() {
   return h;
 }
 function confirmHomeBuy(fid) {
-  const f = E.FURN_BY_ID[fid], stt = E.furnStats(state, fid), bal = state.coins, can = bal >= f.price;
+  const f = E.FURN_BY_ID[fid], stt = E.furnStats(state, fid), bal = E.balance(state), can = E.canAfford(state, f.price);
   openModal(`<div class="mbubble">商城 · 公共仓库</div><div class="buy-prev"><div class="furn-ico big" style="--fc:${f.color}">${furnInner(fid, 0)}</div></div>
     <div class="mtitle">${f.name}（${f.w}×${f.h} 格 · 豪华 +${f.lux}）</div>
     <table class="pv-table"><tr><td>价格</td><td>${fmt(f.price)}</td></tr><tr><td>当前余额</td><td>${fmt(bal)}</td></tr><tr><td>已有</td><td>${stt.owned}（摆出 ${stt.placed} / 仓库 ${stt.warehouse}）</td></tr><tr class="total"><td>买后余额</td><td class="${can ? '' : 'down'}">${can ? fmt(bal - f.price) : '还差 ' + fmt(f.price - bal)}</td></tr></table>
@@ -1638,33 +1788,142 @@ function confirmHomeBuy(fid) {
     <div class="mbtns two"><button class="buy ghost" id="mNo">再想想</button><button class="buy red" id="hbYes" ${can ? '' : 'disabled'}>${can ? '确认购买' : '金币不够'}</button></div>`, false);
   $('#mNo').addEventListener('click', closeModal, { once:true });
   $('#hbYes').addEventListener('click', () => {
-    const r = atomic(() => E.buyFurniture(state, fid)); closeModal();
+    const r = atomic(() => E.buyFurniture(state, fid), BUY_FAIL); closeModal();
     if (!r.ok) { if (r.why !== 'saveFailed') failBuy(null, r.why); return; }
     afterBuy(null, `${f.name} 已进公共仓库（仓库 ${r.count} 件）`);
   }, { once:true });
 }
 function confirmHomeUp(id) {
   const H = E.homeOf(state, id), c = E.CEO_BY_ID[id]; if (H.lv >= E.HOME_MAX) return;
-  const T = E.homeTier(H.lv), N = E.HOME_TIERS[H.lv], bal = state.coins, can = bal >= N.cost;
+  const T = E.homeTier(H.lv), N = E.HOME_TIERS[H.lv], bal = E.balance(state), can = E.canAfford(state, N.cost);
   openModal(`<div class="mbubble">房子升级</div><div class="mtitle">${c.name}：${T.name} → ${N.name}</div>
-    <div class="mnote">${T.cols}×${T.rows} 格 → <b>${N.cols}×${N.rows} 格</b>，房型豪华 ${T.bonus} → ${N.bonus}。摆好的家具原位保留。</div>
+    <div class="mnote">${T.cols}×${T.rows} 格 → <b>${N.cols}×${N.rows} 格</b>，房型豪华 ${T.bonus} → ${N.bonus}。摆好的家具原位保留；挂画如果挡到新房的窗户 / 墙饰，会自动挪到空墙，挂不下就退回仓库，不会丢。</div>
     <table class="pv-table"><tr><td>价格</td><td>${fmt(N.cost)}</td></tr><tr><td>当前余额</td><td>${fmt(bal)}</td></tr><tr class="total"><td>升级后余额</td><td class="${can ? '' : 'down'}">${can ? fmt(bal - N.cost) : '还差 ' + fmt(N.cost - bal)}</td></tr></table>
     <div class="mbtns two"><button class="buy ghost" id="mNo">再想想</button><button class="buy red" id="huYes" ${can ? '' : 'disabled'}>${can ? '确认升级' : '金币不够'}</button></div>`, false);
   $('#mNo').addEventListener('click', closeModal, { once:true });
   $('#huYes').addEventListener('click', () => {
-    const r = atomic(() => E.upgradeHome(state, id)); closeModal();
+    const r = atomic(() => E.upgradeHome(state, id), '房子升级没有生效，金币已退回'); closeModal();
     if (!r.ok) { if (r.why !== 'saveFailed') failBuy(null, r.why); return; }
     afterBuy(null, `${c.name} 搬进${r.tier.name}啦！${r.tier.cols}×${r.tier.rows} 格`); sfx('mile');
+    if (r.wallMoved || r.wallStored) setTimeout(() => toast(r.wallStored ? `新房墙面不一样：${r.wallMoved} 幅挂画挪到空墙，${r.wallStored} 幅挂不下已退回仓库` : `新房墙面不一样：${r.wallMoved} 幅挂画已挪到空墙`, 3200), 900);
   }, { once:true });
 }
+// 12d3：摆放 / 移动 / 旋转 / 收回都先 atomic（改 + 落盘一起），这里只处理结果；没存上 → 已回滚、已提示
+const HOME_FAIL = '摆放没有生效，已恢复原样';
+/* ================= 宠物 p4：小狗（PetGame / PetEngine；存档只占 state.pet，一个键都不加） ================= */
+const PG = window.PetGame, PET_LIBS = !!(PG && window.PetEngine && window.PetArt && window.PetPuppy);
+let petRt = null, petView = null, petM = null, petHiddenAt = 0, petManual = false, petShown = '', petWaitShown = null;   // petWaitShown（p4b）：上一帧是不是「等待安置」，变了就重画家宅条
+function petInit(tryN) {
+  if (!PET_LIBS) return;
+  fetch('pet/art/manifest.json?v=p6').then(r => { if (!r.ok) throw new Error('manifest ' + r.status); return r.json(); }).then(m => {
+    const v = window.PetArt.validateManifest(m); if (!v.ok) throw new Error(v.errors.join('；'));
+    petM = m; petRt = PG.createRuntime({ E, manifest: m }); petView = PG.createView({ manifest: m, PA: window.PetArt, PP: window.PetPuppy, atlasBase: 'pet/art/', ver: 'p5' });
+    document.body.dataset.petReady = '1'; dirty = true;
+  }).catch(e => { if ((tryN || 0) < 3) setTimeout(() => petInit((tryN || 0) + 1), 600 * ((tryN || 0) + 1)); else console.warn('小狗没加载到：' + e.message); });
+}
+const petOwned = () => !!(PG && PG.owned(state));
+const petHere = () => petOwned() && state.pet.home === homeWho;
+function petBeforePersist() { if (petRt && state) petRt.beforePersist(state); }
+function petFrame(dt) {
+  if (!petRt) return;
+  const room = tab === 'home' && homeSub === 'room' && !!$('#roomFloor') && E.homeOpen(state, homeWho);
+  const w = petManual ? petRt.sync(state) : petRt.frame(dt, state, { decorHere: room && homeMode === 'decor' && petHere() });
+  const show = !!(w && room && petHere());
+  // p4b：等待安置 ↔ 出来了：重画家宅条（提示 / 按钮）；正看着这个家时，腾出空地出来了给个提示
+  const wt = !!(w && w.noRoom) + '|' + (w ? petRt.homeId : '');
+  if (wt !== petWaitShown) { const was = petWaitShown; petWaitShown = wt; dirty = true; if (was && was.startsWith('true|') && wt === 'false|' + was.slice(5) && show) toast('腾出空地了，小狗跑出来啦', 2200); }
+  petView.draw(show ? w : null, show ? $('#roomFloor') : null);
+  if (!show) return;
+  const lb = $('#petLabel'), af = $('#petAff');
+  if (lb && lb.textContent !== w.dog.label) lb.textContent = w.dog.label;
+  if (af) { const s = '亲密 ' + w.dog.affinity; if (af.textContent !== s) af.textContent = s; }
+  const bb = $('#petBallBtn'); if (bb) { const busy = w.ball.state === 'carried' || w.ball.state === 'air'; if (bb.disabled !== busy) bb.disabled = busy; }
+}
+function petResume() {
+  if (!petRt || !petHiddenAt) return;
+  const away = now() - petHiddenAt; petHiddenAt = 0;
+  if (away < 3000 || !petOwned()) return;
+  const ev = petRt.resume(state);
+  if (ev === 'slept' && tab === 'home' && homeSub === 'room' && petHere()) toast(`你不在的 ${Math.max(1, Math.round(away / 60000))} 分钟，小狗在窝里睡了一觉`, 2400);
+}
+function petMallCard() {
+  if (!PG) return '';
+  const P = PG.PET, own = petOwned(), open = E.homeOpen(state, homeWho), nm = E.CEO_BY_ID[homeWho].name;
+  let b, line;
+  const full = !own && open && petM && !PG.hasRoom(state, E, homeWho, petM);   // p4b：购买前就查有没有地方站
+  if (full) { b = '<button class="buy no" disabled id="petNoRoom">暂时无法<br>入宅</button>'; line = `<b>${nm}</b> 的家摆满了，没有小狗能站的空地；收起或挪开家具、或升级房子后再来（不会扣钱）`; }
+  else if (!own) { b = open ? btn('homePetBuy', homeWho, '购买', P.price) : '<button class="buy no" disabled>未加入</button>'; line = open ? `买了住进 <b>${nm}</b> 的家（只能养一只）` : `${homeWho === 'rocket' ? '这位 CEO' : nm} 还没加入，先切到已加入的 CEO`; }
+  else if (state.pet.home === homeWho) { b = '<button class="buy no" disabled>住这儿</button>'; line = petRt && petRt.waiting && petRt.homeId === homeWho ? `住在 <b>${nm}</b> 的家，<b>等待安置</b>：屋里摆满了，腾出 1 格空地它就出来` : `已经住在 <b>${nm}</b> 的家，去家宅看看它`; }
+  else { b = open ? `<button class="buy alt" data-act="homePetMove" data-arg="${homeWho}">搬过来</button>` : '<button class="buy no" disabled>未加入</button>'; line = `现在住在 <b>${E.CEO_BY_ID[state.pet.home].name}</b> 的家；搬家不花钱`; }
+  return `<div class="card mall-card pet-card" id="petCard" data-pet="${own ? 'owned' : 'none'}" data-room="${full ? 'full' : 'ok'}"><div class="ava sq furn-ico pet-ico"><span>${P.emoji}</span></div><div class="info"><div class="name">${P.name}<span class="tag match">宠物 · 新</span></div>
+    <div class="desc">${P.desc}<br>${line}</div></div>${b}</div>`;
+}
+function petRoomBar(id) {
+  if (!PG) return '';
+  if (!petOwned()) return '';   // 12e：没买狗时家宅不加任何提示条（主预览布局一像素不动；小狗只在商城卡片里出现）
+  if (!petRt) return '';
+  if (state.pet.home !== id) return `<div class="note pet-note" id="petNote">${PG.PET.emoji} 小狗住在 ${E.CEO_BY_ID[state.pet.home].name} 的家。<button class="buy alt" data-act="homePetMove" data-arg="${id}">接过来</button></div>`;
+  const w = petRt.sync(state);
+  if (w && w.noRoom) return `<div class="note pet-note pet-wait" id="petWait">${PG.PET.emoji} <b>小狗等待安置</b>：屋里摆满了，没有它能站的空地。收起或挪开一件家具（留出 1 格）、或升级房子，它会自己出来。</div>`;   // p4b
+  if (homeMode === 'decor') return `<div class="note pet-note" id="petNote">${PG.PET.emoji} 小狗在旁边等你摆完；摆好切回「生活」，它会自己绕开新家具。</div>`;
+  return `<div class="pet-bar" id="petBar"><div class="pet-lb">${PG.PET.emoji} <b id="petLabel">${w ? w.dog.label : ''}</b><small id="petAff">${w ? '亲密 ' + w.dog.affinity : ''}</small></div>
+    <button class="buy alt" data-act="homePetCall" id="petCallBtn">📣 呼唤</button><button class="buy alt" data-act="homePetPat" id="petPatBtn">✋ 摸摸</button><button class="buy alt" data-act="homePetBall" id="petBallBtn">🎾 抛球</button></div>`;
+}
+function confirmPetBuy(home) {
+  if (!PG) return;
+  const P = PG.PET, bal = E.balance(state), can = E.canAfford(state, P.price), nm = E.CEO_BY_ID[home] ? E.CEO_BY_ID[home].name : '';   // p5：余额 / 能不能买走统一钱包
+  if (petOwned()) { toast('已经有小狗了（只能养一只）'); return; }
+  if (!E.walletOk(state)) { sfx('no'); toast('金币数据异常，现在不能买'); return; }   // p5：12d1 异常钱包（余额超安全整数等）不弹购买窗、不扣钱
+  if (!petM) { toast('小狗还没准备好，稍后再试'); return; }
+  if (!PG.hasRoom(state, E, home, petM)) { sfx('no'); toast(PG.NO_ROOM, 2600); dirty = true; return; }   // p4b：满屋不弹购买窗、不扣钱
+  openModal(`<div class="mbubble">商城 · 宠物</div><div class="buy-prev"><div class="furn-ico big pet-ico"><span>${P.emoji}</span></div></div>
+    <div class="mtitle">${P.name}</div>
+    <table class="pv-table"><tr><td>价格</td><td>${fmt(P.price)}</td></tr><tr><td>当前余额</td><td>${fmt(bal)}</td></tr><tr><td>住进</td><td>${nm} 的家</td></tr><tr class="total"><td>买后余额</td><td class="${can ? '' : 'down'}">${can ? fmt(bal - P.price) : '还差 ' + fmt(P.price - bal)}</td></tr></table>
+    <div class="mnote">${P.desc}以后想换个家，在商城或家宅里点「搬过来」，不花钱。</div>
+    <div class="mbtns two"><button class="buy ghost" id="mNo">再想想</button><button class="buy red" id="pbYes" ${can ? '' : 'disabled'}>${can ? '确认购买' : '金币不够'}</button></div>`, false);
+  $('#mNo').addEventListener('click', closeModal, { once:true });
+  $('#pbYes').addEventListener('click', () => {
+    petBeforePersist();
+    const r = PG.buy(state, E, home, now(), petM, () => persist(), saveBlocked || frozen); closeModal();   // 12d3：扣款 + 写小狗 + persist 一起走 E.transact，存不上整档回滚
+    if (!r.ok) { if (r.stage === 'save' || r.stage === 'validate' || r.stage === 'blocked') saveFailNote(r, '小狗没买成（金币没扣）'); else failBuy(null, r.why); return; }
+    homeWho = home; homeSub = 'room'; homeMode = 'live'; homeSel = null; pageFlip('prev'); $('#panel').scrollTop = 0;
+    afterBuy(null, `${P.name} 住进 ${nm} 的家啦！点它摸摸`);
+  }, { once:true });
+}
+function petMoveHere(home) {
+  petBeforePersist();
+  const r = atomic(() => PG.move(state, E, home));
+  if (!r.ok) { if (r.why !== 'saveFailed') { sfx('no'); toast(r.why); } return; }
+  homeWho = home; homeSub = 'room'; homeMode = 'live'; homeSel = null;
+  const wt = petRt && petRt.sync(state) && petRt.waiting;
+  sfx('tap'); toast(wt ? `小狗搬到 ${E.CEO_BY_ID[home].name} 的家了，但屋里摆满了：先等待安置，腾出空地它就出来` : `小狗搬到 ${E.CEO_BY_ID[home].name} 的家了`, wt ? 2800 : 1900); dirty = true;
+}
+function petDo(k) {
+  if (!petRt || !petHere()) return;
+  const r = k === 'call' ? petRt.call(state) : k === 'pet' ? petRt.pet(state, 'button') : petRt.throwBall(state);
+  if (!r.ok) { sfx('no'); toast(r.why === 'carried' ? '球在它嘴里呢' : r.why === 'flying' ? '球还在飞' : r.why === 'rearrange' ? '先把家具摆好' : r.why === 'waiting' ? '屋里没地方站，先腾出空地' : '现在不行'); return; }
+  sfx('tap'); if (r.ignored === 'asleep') toast('它睡着了，球先放那儿'); else if (r.ignored === 'tired') toast('它太困了，想回窝');
+}
+function petTap(e) {
+  if (!petRt || !petView || !petHere() || !petRt.w) return false;
+  if (!petView.hit(petRt.w, $('#roomFloor'), e.clientX, e.clientY)) return false;
+  petRt.pet(state, 'tap'); sfx('tap'); return true;
+}
+const petHooks = {
+  get rt() { return petRt; }, get w() { return petRt && petRt.w; }, get waiting() { return !!(petRt && petRt.waiting); }, get view() { return petView; }, get M() { return petM; }, PG,
+  manual(on) { petManual = !!on; },
+  advance(sec) { const w = petRt && petRt.sync(state); if (w) window.PetEngine.step(w, sec); return w ? window.PetEngine.snapshot(w) : null; },
+  snapshot() { const w = petRt && petRt.sync(state); return w ? window.PetEngine.snapshot(w) : null; },
+  resume(ms) { petHiddenAt = now() - (ms || 60000); petResume(); }, persist() { return persist(); },
+};
 function homeCommit(r, msg) {
-  if (!r.ok) { sfx('no'); if (!r.same) toast(r.why); return false; }
+  if (!r.ok) { if (r.why === 'saveFailed') { dirty = true; return false; } sfx('no'); if (!r.same) toast(r.why); return false; }
   if (r.undo) pushUndo(r.undo);
-  persist(); sfx('tap'); if (msg) toast(msg); dirty = true; return true;
+  sfx('tap'); if (msg) toast(msg); dirty = true; return true;
 }
 function homeAutoPlace(fid) {
   for (const rot of E.FURN_BY_ID[fid].wall ? [0] : [0, 1]) { const at = E.findFree(state, homeWho, fid, rot);   // 挂画自动挂不横转（不会侧着挂）；禁区和手动拖动同一份 canPlace
-    if (at) { const r = E.placeItem(state, homeWho, fid, at.x, at.y, rot, at.surf); if (homeCommit(r)) homeSel = r.uid; return; } }
+    if (at) { const r = atomic(() => E.placeItem(state, homeWho, fid, at.x, at.y, rot, at.surf), HOME_FAIL); if (homeCommit(r)) homeSel = r.uid; return; } }
   sfx('no'); toast(E.FURN_BY_ID[fid].wall ? '墙面挂满了：先收一幅，或者换个位置' : '房间放不下了：先收回点东西，或者升级房子');
 }
 function homeAct(a, arg, b) {
@@ -1674,6 +1933,11 @@ function homeAct(a, arg, b) {
     case 'homeSub': if (homeSub !== arg) { homeSub = arg; homeSel = null; pageFlip(arg === 'mall' ? 'next' : 'prev'); $('#panel').scrollTop = 0; sfx('swoosh'); } dirty = true; return;
     case 'homeWho': if (homeWho !== arg) { homeWho = arg; homeSel = null; sfx('tap'); } if (!E.homeOpen(state, arg)) toast('这位 CEO 还没加入'); dirty = true; return;
     case 'homeUp': return confirmHomeUp(arg);
+    case 'homePetBuy': return confirmPetBuy(arg || homeWho);
+    case 'homePetMove': return petMoveHere(arg || homeWho);
+    case 'homePetCall': return petDo('call');
+    case 'homePetPat': return petDo('pet');
+    case 'homePetBall': return petDo('ball');
     case 'homeBuy': return confirmHomeBuy(arg);
     case 'mallCat': mallCat = arg; if (arg !== 'cabinet') mallSub = 'all'; dirty = true; return;
     case 'mallSub': mallSub = arg; dirty = true; return;
@@ -1682,9 +1946,9 @@ function homeAct(a, arg, b) {
     case 'mallOwn': mallFilter.owned = !!(typeof arg === 'boolean' ? arg : !mallFilter.owned); dirty = true; return;
     case 'mallPrice': mallFilter.price = arg || 'any'; dirty = true; return;
     case 'mallSize': mallFilter.size = arg || 'any'; dirty = true; return;
-    case 'homeRot': { const r = E.rotateItem(state, homeWho, arg); homeCommit(r, r.ok && r.moved ? '转好了（挪了一点才放得下）' : null); return; }
-    case 'homeStore': { const r = E.storeItem(state, homeWho, arg); if (homeCommit(r, r.ok ? E.FURN_BY_ID[r.undo.item.fid].name + ' 收回仓库' : null)) homeSel = null; return; }
-    case 'homeUndo': { const st = undoStack(arg), u = st.pop(); const r = E.undoHome(state, u); if (r.ok) { persist(); sfx('swoosh'); toast('撤销了一步'); } else { sfx('no'); toast(r.why); } homeSel = null; dirty = true; return; }
+    case 'homeRot': { const r = atomic(() => E.rotateItem(state, homeWho, arg), HOME_FAIL); homeCommit(r, r.ok && r.moved ? '转好了（挪了一点才放得下）' : null); return; }
+    case 'homeStore': { const r = atomic(() => E.storeItem(state, homeWho, arg), HOME_FAIL); if (homeCommit(r, r.ok ? E.FURN_BY_ID[r.undo.item.fid].name + ' 收回仓库' : null)) homeSel = null; return; }
+    case 'homeUndo': { const st = undoStack(arg), u = st.pop(); const r = atomic(() => E.undoHome(state, u), '撤销没有生效'); if (r.ok) { sfx('swoosh'); toast('撤销了一步'); } else if (r.why === 'saveFailed') { if (u) st.push(u); } else { sfx('no'); toast(r.why); } homeSel = null; dirty = true; return; }
   }
 }
 // ---- 拖动（pointer 事件：iPhone 触摸 / 鼠标通用；拖动中禁止页面滚动、暂停重画） ----
@@ -1724,7 +1988,7 @@ function homeDown(e) {
   if (homeMode === 'live') {
     if (e.button > 0) return;
     if (e.target.closest('.mode-tabs, .room-tools, .book-tabs, .home-who, .tray-head, .mall-go, button')) return;
-    e.preventDefault(); audioUnlock(); homeLiveTap(e); return;
+    e.preventDefault(); audioUnlock(); if (petTap(e)) return; homeLiveTap(e); return;
   }
   const fEl = e.target.closest('#roomFloor .furn, #roomWall .furn'), iEl = e.target.closest('.inv-item');
   if (!fEl && !iEl) { if (homeSel && (e.target.closest('#roomFloor') || e.target.closest('#roomWall'))) { homeSel = null; dirty = true; } return; }
@@ -1793,8 +2057,8 @@ function homeUp(e) {
   } else if (!d.cell) { sfx('no'); const nm = E.FURN_BY_ID[d.fid].name;
     toast(d.surf === 'wall' ? nm + '只能放墙面' + (d.src === 'room' ? '，放回原位' : '') : d.src === 'inv' ? '拖到房间的格子里才能放' : '拖出房间了，放回原位'); }
   else if (!d.valid || !d.valid.ok) { sfx('no'); toast((d.valid && d.valid.why) || '放不下'); }
-  else if (d.src === 'inv') { const r = E.placeItem(state, homeWho, d.fid, d.cell.x, d.cell.y, d.rot, d.cell.surf); if (homeCommit(r)) homeSel = r.uid; }
-  else { homeCommit(E.moveItem(state, homeWho, d.uid, d.cell.x, d.cell.y)); homeSel = d.uid; }
+  else if (d.src === 'inv') { const r = atomic(() => E.placeItem(state, homeWho, d.fid, d.cell.x, d.cell.y, d.rot, d.cell.surf), HOME_FAIL); if (homeCommit(r)) homeSel = r.uid; }
+  else { homeCommit(atomic(() => E.moveItem(state, homeWho, d.uid, d.cell.x, d.cell.y), HOME_FAIL)); homeSel = d.uid; }
   dirty = true; renderTab();
 }
 function homeCancel(e) { const d = homeDrag; if (!d || e.pointerId !== d.id) return; homeEnd(); dirty = true; renderTab(); }
@@ -1840,19 +2104,19 @@ $('#mute').addEventListener('click', () => {
   state.muted = !state.muted; $('#mute').classList.toggle('off', state.muted);
   if (state.muted) { if (AU.master) AU.master.gain.value = 0; audioPause(); }
   else { audioUnlock(); if (AU.master) AU.master.gain.value = 1; audioResume(); }
-  persist();
+  if (!persist() && !saveBlocked && !frozen) toast('声音已切换，但保存失败：刷新后会恢复原设置', 2600);   // 12d3：声音开关是设置不是进度，照常生效（不能让玩家关不掉声音），只提示没存上
 });
 $('#dailyChip').addEventListener('click', () => toast(E.canDouble(state, now()) ? '每日双倍：今天第一次领离线收益可以免费翻倍（先封顶再翻倍）' : '今天的双倍用过啦，马来西亚时间早上 5 点重置', 2600));
 document.addEventListener('gesturestart', e => e.preventDefault());
 let lastTouchEnd = 0;
 document.addEventListener('touchend', e => { const t = Date.now(); if (t - lastTouchEnd < 300 && !e.target.closest('button')) e.preventDefault(); lastTouchEnd = t; }, { passive:false });
 
-function onHide() { if (frozen) return; tick(); if (order) order = null; /* 离线不结算进行中的团单，避免和离线收益纠缠 */ special = null; state.lastSeen = now(); persist(); audioPause(); }
+function onHide() { if (frozen) return; petHiddenAt = now(); tick(); if (order) order = null; /* 离线不结算进行中的团单，避免和离线收益纠缠 */ special = null; state.lastSeen = now(); persist(); audioPause(); }
 function onShow() {
   if (frozen) return;
   if (!lockMine()) { freeze(); return; }
   if (storedRev() > state.rev) { freeze(); return; }
-  tick(); audioResume(); lastFrame = performance.now();
+  tick(); audioResume(); lastFrame = performance.now(); petResume();
 }
 document.addEventListener('visibilitychange', () => { if (document.hidden) onHide(); else onShow(); });
 window.addEventListener('pagehide', onHide);
@@ -1886,22 +2150,33 @@ function frame(ts) {
     } else if (ac.line && ac.until < clock) { ac.line = ''; ac.act = null; if (el) { const b = el.querySelector('.ha-line'), i = el.querySelector('.ha-act'); if (b) b.remove(); if (i) i.textContent = ''; } }
   }
   if (dirty) renderTab();
+  petFrame(dt);   // 宠物 p4：小狗一直在过日子；在它家的生活页才画
   saveAcc += dt; if (saveAcc > 5) { saveAcc = 0; persist(); }
 }
 
 function boot() {
   state = loadState(); claimLock();
+  if (!TEST_MODE && !saveBlocked) { E.normWallet(state); lastGood = JSON.stringify(state); }
   $('#mute').classList.toggle('off', !!state.muted);
   resize();
-  const first = !state.taps && !state.totalEarned && state.shops[0].emp === 0;
+  const first = !state.taps && !state.totalEarned && !state.earnedFrac && state.shops[0].emp === 0;
   const fpMig = E.migrateFootprints(state);
-  const wallMig = E.migrateWallPaintings(state);
+  const wallMig0 = E.migrateWallPaintings(state);   // 读档时已在 E.migrate 里整理过一次，这里通常是 0；两次加起来如实提示
+  const wallMig = { moved:loadWallMig.moved + wallMig0.moved, stored:loadWallMig.stored + wallMig0.stored };
   const p = E.settleOffline(state, now(), rid);
   persist();
-  scheduleBig(); scheduleSpecial(); renderTabs(); setTab('shop');
+  scheduleBig(); scheduleSpecial(); renderTabs(); setTab(TEST_MODE ? 'home' : 'shop');
+  if (TEST_MODE) { const b = document.createElement('div'); b.id = 'testBadge'; b.textContent = '测试房间 · ' + (TEST_LV === 3 ? '豪宅' : '公寓') + ' · 不存档，刷新重置'; document.body.appendChild(b);
+    const place = () => { const n = $('#bottomNav'); if (n) b.style.bottom = Math.max(8, innerHeight - n.getBoundingClientRect().top + 6) + 'px'; }; place(); addEventListener('resize', place); }
+  if (loadInfo.source === 'bak') toast(loadInfo.mainMissing ? '主存档不见了，已从完整备份恢复' : '存档里的金币 / 等级数据坏了（' + loadInfo.bad.slice(0, 3).join('、') + '），已从完整备份恢复', 3600);
+  if (saveBlocked && loadInfo.unsafe) { const sb = document.createElement('div'); sb.id = 'saveBadge'; sb.textContent = '存档余额异常（超出安全整数）：交易已暂停、不保存，原存档未覆盖'; sb.style.cssText = 'position:fixed;left:8px;right:8px;top:calc(env(safe-area-inset-top) + 6px);z-index:60;padding:6px 10px;border:2px solid #141414;border-radius:10px;background:#ffd6d6;font-size:12px;font-weight:700;text-align:center;pointer-events:none';
+    document.body.appendChild(sb); queueModal(() => { openModal(`<div class="mbubble">存档余额异常</div><div class="mtitle">余额超出能精确计算的范围</div><div class="mnote">存档里的余额是 <b>${String(loadInfo.rawCoins)}</b>，超过了 ${fmt(E.SAFE_COINS)}（安全整数上限），加减会算不准，不能当正常钱包用。为了不出错：<b>所有买卖和收入都已暂停，这次不会自动保存</b>，原存档原样保留、没有被覆盖。${loadInfo.bakOk ? `备份里有一份正常存档（余额 ${fmt(loadInfo.bakCoins)}），没有自动替换，请联系熊二 / 熊大确认后再恢复。` : '没有找到可用的备份，请联系熊二 / 熊大。'}</div><div class="mbtns"><button class="buy" id="mOk">知道了</button></div>`, false); $('#mOk').addEventListener('click', closeModal, { once:true }); }); }
+  else if (saveBlocked) { const sb = document.createElement('div'); sb.id = 'saveBadge'; sb.textContent = (loadInfo.mainMissing ? '主存档不见了、备份读不出来' : '存档损坏、没有可用备份') + '：只读模式，买卖暂停、不保存，原存档未覆盖'; sb.style.cssText = 'position:fixed;left:8px;right:8px;top:calc(env(safe-area-inset-top) + 6px);z-index:60;padding:6px 10px;border:2px solid #141414;border-radius:10px;background:#ffd6d6;font-size:12px;font-weight:700;text-align:center;pointer-events:none';
+    document.body.appendChild(sb); queueModal(() => { openModal(`<div class="mbubble">存档读不出来</div><div class="mtitle">${loadInfo.mainMissing ? '主存档不见了，备份也读不出来' : '存档结构坏了，也没有可用备份'}</div><div class="mnote">为了不把原存档盖掉，这次游戏是<b>只读模式</b>：<b>不会自动保存</b>，开店、升级、雇人、买东西都暂停（坏字段：${loadInfo.bad.slice(0, 4).join('、')}${loadInfo.mainMissing ? '；备份：' + (loadInfo.bakBad || []).slice(0, 3).join('、') : ''}）。原存档原样保留，请把情况告诉熊二 / 熊大。</div><div class="mbtns"><button class="buy" id="mOk">知道了</button></div>`, false); $('#mOk').addEventListener('click', closeModal, { once:true }); }); }
+  if (loadInfo.badPending) toast('离线收益数据异常，这一笔没有入账（余额不变）', 3200);
   if (migratedFrom != null) toast('存档已升级到 v' + CFG.SAVE_VERSION + '（新盲盒 + CEO 穿搭，收藏都保留）', 2600);
   if (fpMig && !fpMig.skipped && (fpMig.shifted || fpMig.stored)) toast(fpMig.stored ? `家具占地收紧：${fpMig.shifted} 件按脚底重锚，${fpMig.stored} 件腾不出空位已退回仓库` : `家具占地收紧：${fpMig.shifted} 件已按脚底重锚`, 3200);
-  if (wallMig && (wallMig.moved || wallMig.stored)) toast(wallMig.stored ? `挂画改挂墙了：${wallMig.moved} 幅上墙，${wallMig.stored} 幅墙面没空已退回仓库` : `挂画改挂墙了：${wallMig.moved} 幅已迁到墙面`, 3200);
+  if (wallMig && (wallMig.moved || wallMig.stored)) toast(wallMig.stored ? `墙面整理：${wallMig.moved} 幅挂画挪到空墙，${wallMig.stored} 幅墙面没空已退回仓库` : `墙面整理：${wallMig.moved} 幅挂画已挪到空墙`, 3200);
   if (p && p.rolledBack) toast('检测到手机时间被往回调，这段时间不发离线收益');
   if (first) queueModal(showIntro);
   if (state.pending) queueModal(showOffline);
@@ -1910,13 +2185,72 @@ function boot() {
   requestAnimationFrame(frame);
 }
 boot();
+petInit();
 
 // 测试/调试钩子（不影响玩家）
-window.__tzz = { E, get combo() { return combo; }, get critFx() { return critFx; }, critLine, refreshCrit, showComic, showCrossBig, queueModal, CROSS_ART, crossURL, showCeoJoin, get state() { return state; }, set state(v) { state = v; }, persist, onReturn, tapShop, act, setTab, switchShop, renderTab,
+window.__tzz = { TEST_MODE, TEST_LV, SAVE_KEY, BAK_KEY, get saveBlocked() { return saveBlocked; }, get loadInfo() { return loadInfo; }, restoreGood, earn, doUpgradeShop, goPage, txn, atomic, showOffline, homeAutoPlace, showReveal, shopUpgradeCount, get buyAmt() { return buyAmt; }, E, FURN_SIDE, furnInner, get combo() { return combo; }, get critFx() { return critFx; }, critLine, refreshCrit, showComic, showCrossBig, queueModal, CROSS_ART, crossURL, showCeoJoin, get state() { return state; }, set state(v) { state = v; }, persist, onReturn, tapShop, act, setTab, switchShop, renderTab,
   forceBig() { nextBigAt = 0; if (order) order = null; }, clearVisitors() { order = null; special = null; nextBigAt = clock + 9999; nextSpecialAt = clock + 9999; }, forceSpecial() { nextSpecialAt = 0; special = null; },
   forceSupers() { for (const k in superNext) superNext[k] = 0; updateSupers(); renderTab(); },
   get big() { return order; }, get order() { return order; }, get special() { return special; }, get guests() { return guests; },
   hitBig, modalOpen, closeModal, get frozen() { return frozen; },
   audioState() { return AU.ctx ? AU.ctx.state : 'none'; }, showPreview, openAssign, JOB_ART, jobShown, jobURL, showJobArt,
-  HOME_ART, FURN_ART, FURN_UP, homeAct, get homeWho() { return homeWho; }, get homeSub() { return homeSub; }, get homeMode() { return homeMode; }, set homeMode(v) { homeMode = v === 'decor' ? 'decor' : 'live'; }, get homeSel() { return homeSel; }, get homeDrag() { return homeDrag; }, homeActor, LIVE_LINES, homeUndo, resize, get canvasSize() { return { W, H }; } };
+  HOME_ART, FURN_ART, FURN_UP, homeAct, get homeWho() { return homeWho; }, get homeSub() { return homeSub; }, get homeMode() { return homeMode; }, set homeMode(v) { homeMode = v === 'decor' ? 'decor' : 'live'; }, get homeSel() { return homeSel; }, get homeDrag() { return homeDrag; }, homeActor, LIVE_LINES, homeUndo, resize, get canvasSize() { return { W, H }; }, pet: petHooks, lookOf, drawPerson, drawHead, LOOKS, get bubble() { return bubble; } };
+/* ================= 打僵尸（zombie/?embed=1，全屏 iframe）=================
+   只和经营共用金币：价格、等级上限、进度校验都在这边按 ZBCore 算，训练扣款和结算进度都走 txn → E.transact（扣款 + 改状态 + persist 一起成功，失败整体回滚）。
+   小游戏页不写任何存档，也不能加金币；iframe 加载后经营页递给它一个 MessageChannel 端口，只认这个端口发来的 hello / buy / result / close。 */
+function zbState() { return (state.zombie = ZB.norm(state.zombie)); }
+function zbCard() { return `<div class="card zb-card"><div class="ava sq">🧟</div><div class="info"><div class="name">77 打僵尸<span class="tag">小游戏</span></div><div class="desc">花金币练战斗力 · 已通关 <b>${ZB.norm(state.zombie).cleared} / ${ZB.MAX_LV}</b></div></div><button class="buy" data-act="zombie" data-arg="0">去打</button></div>`; }
+function zbBlocked() { return frozen || saveBlocked || E.isBlocked(state) || !E.walletOk(state) || !!(loadInfo && (loadInfo.unsafe || loadInfo.blocked)); }
+function zbReply(why, extra) {
+  if (!zbOpen || !zbPort) return;
+  const ok = !zbBlocked();
+  zbPort.postMessage(Object.assign({ zb:'state', coins: ok ? E.balance(state) : 0, z: zbState(), blocked: !ok, why: why || '' }, extra));
+}
+function openZombie() {
+  if (frozen || zbOpen || !ZB) return;
+  zbOpen = true; const f = $('#zbFrame');
+  f.onload = () => {
+    if (!zbOpen || zbPort || !/\/zombie\//.test(f.src)) return;
+    const ch = new MessageChannel(); zbPort = ch.port1; zbPort.onmessage = e => zbMsg(e.data);
+    f.contentWindow.postMessage({ zb:'port' }, location.origin, [ch.port2]); zbReply();
+  };
+  f.src = 'zombie/?embed=1&v=13'; $('#zbOverlay').classList.remove('hidden'); audioPause();
+}
+function closeZombie() {
+  if (!zbOpen) return; zbOpen = false; if (zbPort) { zbPort.close(); zbPort = null; }
+  $('#zbOverlay').classList.add('hidden'); $('#zbFrame').src = 'about:blank'; dirty = true; audioResume();
+}
+function zbMsg(d) {
+  if (!zbOpen || !d || typeof d !== 'object') return;
+  if (d.zb === 'close') return closeZombie();
+  if (d.zb === 'hello') return zbReply();
+  if (d.zb === 'result') {
+    const ack = { ack:'result' };
+    if (zbBlocked()) return zbReply(frozen ? '游戏已在别的页面打开，这局进度没记上' : '存档异常（只读模式），这局进度没记上', ack);
+    const r = txn(st => {
+      const z = st.zombie = ZB.norm(st.zombie), before = JSON.stringify(z);
+      if (!ZB.applyResult(z, d)) return { ok:false, why:'invalid' };
+      return JSON.stringify(z) === before ? { ok:false, why:'same' } : { ok:true };
+    }, 0, '这局进度没记上');
+    if (r.ok) { dirty = true; return zbReply('', ack); }
+    if (r.stage === 'apply') return zbReply(r.why === 'invalid' ? '这局结果无效，没记上' : '', ack);
+    dirty = true;
+    return zbReply('存档失败，这局进度没记上', ack);
+  }
+  if (zbBlocked()) return zbReply(frozen ? '游戏已在别的页面打开，这里不能花金币' : '存档异常（只读模式），暂时不能花金币');
+  if (d.zb === 'buy') {
+    if (!ZB.IDS.includes(d.id)) return zbReply();
+    const lv = zbState().lv[d.id];
+    if (lv >= ZB.MAX_TRAIN) return zbReply('已满级');
+    const r = txn(st => {
+      const z = st.zombie = ZB.norm(st.zombie);
+      if (z.lv[d.id] !== lv) return { ok:false, why:'训练等级已变化，请重试' };
+      z.lv[d.id] = lv + 1; return { ok:true };
+    }, ZB.price(d.id, lv), '训练没生效，没扣金币');
+    dirty = true;
+    if (r.ok) return zbReply('');
+    return zbReply(r.stage === 'pay' || r.stage === 'apply' ? r.why : '存档失败，没扣金币');
+  }
+}
+Object.defineProperties(window.__tzz, { openZombie:{ value:openZombie }, closeZombie:{ value:closeZombie }, zbOpen:{ get:() => zbOpen } });
 })();

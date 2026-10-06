@@ -1,0 +1,1144 @@
+{
+ "schema": "tangzhe-pet-art/1",
+ "name": "暖棕白小狗（熊大 v3 候选图）",
+ "placeholder": false,
+ "note": "p5：熊大 v3 候选包（home-transfer-20261006 3fb4756 batch3_puppy，native zip sha256 40fe9351…）烘成的图集。仍是候选：嘴巴点是目测 / 推算，N 向嘴巴被挡（null），落地点近似。重新生成：tools/build_atlas.py + tools/gen_manifest_v3.py。",
+ "source": {
+  "frameSize": [
+   256,
+   256
+  ],
+  "origin": [
+   128,
+   208
+  ],
+  "perFrameCrop": false,
+  "shadow": "separate"
+ },
+ "runtime": {
+  "cellSize": 128,
+  "origin": [
+   64,
+   104
+  ],
+  "displayTiles": 1.15
+ },
+ "atlas": {
+  "image": "puppy_atlas_v3.webp",
+  "size": [
+   2048,
+   1024
+  ],
+  "cols": 16,
+  "rows": 8
+ },
+ "directions": {
+  "drawn": [
+   "E",
+   "N",
+   "S"
+  ],
+  "mirror": {
+   "W": "E"
+  }
+ },
+ "shadow": {
+  "cell": 108,
+  "radius": [
+   52,
+   13
+  ]
+ },
+ "body": {
+  "E": [
+   26,
+   252
+  ],
+  "N": [
+   78,
+   178
+  ],
+  "S": [
+   46,
+   206
+  ]
+ },
+ "clips": {
+  "idle_E": {
+   "dir": "E",
+   "loop": true,
+   "inPlace": false,
+   "frames": [
+    {
+     "cell": 0,
+     "ms": 220,
+     "mouth": [
+      230.3,
+      101.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 1,
+     "ms": 200,
+     "mouth": [
+      226.3,
+      99.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 2,
+     "ms": 200,
+     "mouth": [
+      228.3,
+      101.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 3,
+     "ms": 220,
+     "mouth": [
+      230.3,
+      101.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 4,
+     "ms": 200,
+     "mouth": [
+      230.3,
+      101.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 5,
+     "ms": 200,
+     "mouth": [
+      226.3,
+      99.3
+     ],
+     "mouthSrc": "noseTip"
+    }
+   ]
+  },
+  "idle_N": {
+   "dir": "N",
+   "loop": true,
+   "inPlace": false,
+   "frames": [
+    {
+     "cell": 6,
+     "ms": 240,
+     "mouth": null,
+     "mouthHidden": true
+    },
+    {
+     "cell": 7,
+     "ms": 240,
+     "mouth": null,
+     "mouthHidden": true
+    },
+    {
+     "cell": 8,
+     "ms": 240,
+     "mouth": null,
+     "mouthHidden": true
+    },
+    {
+     "cell": 9,
+     "ms": 240,
+     "mouth": null,
+     "mouthHidden": true
+    }
+   ]
+  },
+  "idle_S": {
+   "dir": "S",
+   "loop": true,
+   "inPlace": false,
+   "frames": [
+    {
+     "cell": 10,
+     "ms": 240,
+     "mouth": [
+      128,
+      112
+     ],
+     "mouthSrc": "idleS"
+    },
+    {
+     "cell": 11,
+     "ms": 240,
+     "mouth": [
+      128,
+      112
+     ],
+     "mouthSrc": "idleS"
+    },
+    {
+     "cell": 12,
+     "ms": 240,
+     "mouth": [
+      128,
+      112
+     ],
+     "mouthSrc": "idleS"
+    },
+    {
+     "cell": 13,
+     "ms": 240,
+     "mouth": [
+      128,
+      112
+     ],
+     "mouthSrc": "idleS"
+    }
+   ]
+  },
+  "walk_E": {
+   "dir": "E",
+   "loop": true,
+   "inPlace": false,
+   "frames": [
+    {
+     "cell": 14,
+     "ms": 100,
+     "mouth": [
+      224.8,
+      101.3
+     ],
+     "mouthSrc": "sidecar"
+    },
+    {
+     "cell": 15,
+     "ms": 100,
+     "mouth": [
+      222.1,
+      101.3
+     ],
+     "mouthSrc": "sidecar"
+    },
+    {
+     "cell": 16,
+     "ms": 100,
+     "mouth": [
+      220.7,
+      99.4
+     ],
+     "mouthSrc": "sidecar"
+    },
+    {
+     "cell": 17,
+     "ms": 100,
+     "mouth": [
+      219.9,
+      100.8
+     ],
+     "mouthSrc": "sidecar"
+    },
+    {
+     "cell": 18,
+     "ms": 100,
+     "mouth": [
+      224.8,
+      103.8
+     ],
+     "mouthSrc": "sidecar"
+    },
+    {
+     "cell": 19,
+     "ms": 100,
+     "mouth": [
+      222.6,
+      102.3
+     ],
+     "mouthSrc": "sidecar"
+    },
+    {
+     "cell": 20,
+     "ms": 100,
+     "mouth": [
+      220.7,
+      102.8
+     ],
+     "mouthSrc": "sidecar"
+    },
+    {
+     "cell": 21,
+     "ms": 100,
+     "mouth": [
+      220.4,
+      102.3
+     ],
+     "mouthSrc": "sidecar"
+    }
+   ]
+  },
+  "walk_N": {
+   "dir": "N",
+   "loop": true,
+   "inPlace": false,
+   "frames": [
+    {
+     "cell": 22,
+     "ms": 100,
+     "mouth": null,
+     "mouthHidden": true
+    },
+    {
+     "cell": 23,
+     "ms": 100,
+     "mouth": null,
+     "mouthHidden": true
+    },
+    {
+     "cell": 24,
+     "ms": 100,
+     "mouth": null,
+     "mouthHidden": true
+    },
+    {
+     "cell": 25,
+     "ms": 100,
+     "mouth": null,
+     "mouthHidden": true
+    },
+    {
+     "cell": 26,
+     "ms": 100,
+     "mouth": null,
+     "mouthHidden": true
+    },
+    {
+     "cell": 27,
+     "ms": 100,
+     "mouth": null,
+     "mouthHidden": true
+    },
+    {
+     "cell": 28,
+     "ms": 100,
+     "mouth": null,
+     "mouthHidden": true
+    },
+    {
+     "cell": 29,
+     "ms": 100,
+     "mouth": null,
+     "mouthHidden": true
+    }
+   ]
+  },
+  "walk_S": {
+   "dir": "S",
+   "loop": true,
+   "inPlace": false,
+   "frames": [
+    {
+     "cell": 30,
+     "ms": 100,
+     "mouth": [
+      128.0,
+      112.0
+     ],
+     "mouthSrc": "sidecar"
+    },
+    {
+     "cell": 31,
+     "ms": 100,
+     "mouth": [
+      127.8,
+      111.0
+     ],
+     "mouthSrc": "sidecar"
+    },
+    {
+     "cell": 32,
+     "ms": 100,
+     "mouth": [
+      128.2,
+      111.5
+     ],
+     "mouthSrc": "sidecar"
+    },
+    {
+     "cell": 33,
+     "ms": 100,
+     "mouth": [
+      128.0,
+      112.0
+     ],
+     "mouthSrc": "sidecar"
+    },
+    {
+     "cell": 34,
+     "ms": 100,
+     "mouth": [
+      128.9,
+      111.0
+     ],
+     "mouthSrc": "sidecar"
+    },
+    {
+     "cell": 35,
+     "ms": 100,
+     "mouth": [
+      128.2,
+      111.0
+     ],
+     "mouthSrc": "sidecar"
+    },
+    {
+     "cell": 36,
+     "ms": 100,
+     "mouth": [
+      128.5,
+      113.8
+     ],
+     "mouthSrc": "sidecar"
+    },
+    {
+     "cell": 37,
+     "ms": 100,
+     "mouth": [
+      128.5,
+      111.0
+     ],
+     "mouthSrc": "sidecar"
+    }
+   ]
+  },
+  "run_E": {
+   "dir": "E",
+   "loop": true,
+   "inPlace": false,
+   "frames": [
+    {
+     "cell": 38,
+     "ms": 70,
+     "mouth": [
+      234.4,
+      108.9
+     ],
+     "mouthSrc": "sidecar"
+    },
+    {
+     "cell": 39,
+     "ms": 70,
+     "mouth": [
+      233.9,
+      107.5
+     ],
+     "mouthSrc": "sidecar"
+    },
+    {
+     "cell": 40,
+     "ms": 70,
+     "mouth": [
+      233.9,
+      108.0
+     ],
+     "mouthSrc": "sidecar"
+    },
+    {
+     "cell": 41,
+     "ms": 70,
+     "mouth": [
+      233.2,
+      109.8
+     ],
+     "mouthSrc": "sidecar"
+    },
+    {
+     "cell": 42,
+     "ms": 70,
+     "mouth": [
+      233.5,
+      108.4
+     ],
+     "mouthSrc": "sidecar"
+    },
+    {
+     "cell": 43,
+     "ms": 70,
+     "mouth": [
+      233.2,
+      108.9
+     ],
+     "mouthSrc": "sidecar"
+    }
+   ]
+  },
+  "run_N": {
+   "dir": "N",
+   "loop": true,
+   "inPlace": false,
+   "frames": [
+    {
+     "cell": 44,
+     "ms": 70,
+     "mouth": null,
+     "mouthHidden": true
+    },
+    {
+     "cell": 45,
+     "ms": 70,
+     "mouth": null,
+     "mouthHidden": true
+    },
+    {
+     "cell": 46,
+     "ms": 70,
+     "mouth": null,
+     "mouthHidden": true
+    },
+    {
+     "cell": 47,
+     "ms": 70,
+     "mouth": null,
+     "mouthHidden": true
+    },
+    {
+     "cell": 48,
+     "ms": 70,
+     "mouth": null,
+     "mouthHidden": true
+    },
+    {
+     "cell": 49,
+     "ms": 70,
+     "mouth": null,
+     "mouthHidden": true
+    }
+   ]
+  },
+  "run_S": {
+   "dir": "S",
+   "loop": true,
+   "inPlace": false,
+   "frames": [
+    {
+     "cell": 50,
+     "ms": 70,
+     "mouth": [
+      126.9,
+      112.0
+     ],
+     "mouthSrc": "sidecar"
+    },
+    {
+     "cell": 51,
+     "ms": 70,
+     "mouth": [
+      128.2,
+      112.0
+     ],
+     "mouthSrc": "sidecar"
+    },
+    {
+     "cell": 52,
+     "ms": 70,
+     "mouth": [
+      127.3,
+      112.7
+     ],
+     "mouthSrc": "sidecar"
+    },
+    {
+     "cell": 53,
+     "ms": 70,
+     "mouth": [
+      127.5,
+      113.0
+     ],
+     "mouthSrc": "sidecar"
+    },
+    {
+     "cell": 54,
+     "ms": 70,
+     "mouth": [
+      127.3,
+      113.0
+     ],
+     "mouthSrc": "sidecar"
+    },
+    {
+     "cell": 55,
+     "ms": 70,
+     "mouth": [
+      127.5,
+      113.4
+     ],
+     "mouthSrc": "sidecar"
+    }
+   ]
+  },
+  "attention": {
+   "dir": "E",
+   "loop": false,
+   "inPlace": true,
+   "frames": [
+    {
+     "cell": 56,
+     "ms": 110,
+     "mouth": [
+      232.3,
+      99.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 57,
+     "ms": 150,
+     "mouth": [
+      228.3,
+      89.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 58,
+     "ms": 420,
+     "mouth": [
+      226.3,
+      87.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 59,
+     "ms": 200,
+     "mouth": [
+      230.3,
+      99.3
+     ],
+     "mouthSrc": "noseTip"
+    }
+   ]
+  },
+  "sniff": {
+   "dir": "E",
+   "loop": false,
+   "inPlace": true,
+   "frames": [
+    {
+     "cell": 60,
+     "ms": 180,
+     "mouth": [
+      244.3,
+      103.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 61,
+     "ms": 180,
+     "mouth": [
+      220.0,
+      144.0
+     ],
+     "mouthSrc": "noseDown"
+    },
+    {
+     "cell": 62,
+     "ms": 180,
+     "mouth": [
+      218.0,
+      188.0
+     ],
+     "mouthSrc": "noseDown"
+    },
+    {
+     "cell": 63,
+     "ms": 180,
+     "mouth": [
+      224.0,
+      190.0
+     ],
+     "mouthSrc": "noseDown"
+    },
+    {
+     "cell": 64,
+     "ms": 180,
+     "mouth": [
+      224.0,
+      120.0
+     ],
+     "mouthSrc": "noseDown"
+    },
+    {
+     "cell": 65,
+     "ms": 180,
+     "mouth": [
+      242.3,
+      101.3
+     ],
+     "mouthSrc": "noseTip"
+    }
+   ]
+  },
+  "hop": {
+   "dir": "E",
+   "loop": false,
+   "inPlace": true,
+   "frames": [
+    {
+     "cell": 66,
+     "ms": 70,
+     "mouth": [
+      234.3,
+      101.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 67,
+     "ms": 70,
+     "mouth": [
+      222.3,
+      121.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 68,
+     "ms": 70,
+     "mouth": [
+      210.3,
+      99.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 69,
+     "ms": 70,
+     "mouth": [
+      216.3,
+      105.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 70,
+     "ms": 70,
+     "mouth": [
+      224.3,
+      113.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 71,
+     "ms": 70,
+     "mouth": [
+      212.3,
+      115.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 72,
+     "ms": 70,
+     "mouth": [
+      224.3,
+      131.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 73,
+     "ms": 70,
+     "mouth": [
+      220.3,
+      105.3
+     ],
+     "mouthSrc": "noseTip"
+    }
+   ],
+   "bakedLift": true
+  },
+  "play": {
+   "dir": "E",
+   "loop": false,
+   "inPlace": true,
+   "frames": [
+    {
+     "cell": 74,
+     "ms": 110,
+     "mouth": [
+      220.3,
+      99.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 75,
+     "ms": 110,
+     "mouth": [
+      210.3,
+      133.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 76,
+     "ms": 110,
+     "mouth": [
+      208.3,
+      143.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 77,
+     "ms": 110,
+     "mouth": [
+      198.3,
+      129.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 78,
+     "ms": 110,
+     "mouth": [
+      214.3,
+      103.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 79,
+     "ms": 110,
+     "mouth": [
+      206.3,
+      99.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 80,
+     "ms": 110,
+     "mouth": [
+      210.3,
+      91.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 81,
+     "ms": 110,
+     "mouth": [
+      220.3,
+      97.3
+     ],
+     "mouthSrc": "noseTip"
+    }
+   ]
+  },
+  "sleep": {
+   "dir": "E",
+   "loop": true,
+   "inPlace": true,
+   "frames": [
+    {
+     "cell": 82,
+     "ms": 420,
+     "mouth": [
+      212.3,
+      179.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 83,
+     "ms": 420,
+     "mouth": [
+      210.3,
+      179.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 84,
+     "ms": 420,
+     "mouth": [
+      212.3,
+      179.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 85,
+     "ms": 420,
+     "mouth": [
+      210.3,
+      179.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 86,
+     "ms": 420,
+     "mouth": [
+      210.3,
+      179.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 87,
+     "ms": 420,
+     "mouth": [
+      210.3,
+      179.3
+     ],
+     "mouthSrc": "noseTip"
+    }
+   ]
+  },
+  "eat": {
+   "dir": "E",
+   "loop": false,
+   "inPlace": true,
+   "frames": [
+    {
+     "cell": 88,
+     "ms": 170,
+     "mouth": [
+      234.3,
+      99.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 89,
+     "ms": 170,
+     "mouth": [
+      212.0,
+      146.0
+     ],
+     "mouthSrc": "noseDown"
+    },
+    {
+     "cell": 90,
+     "ms": 170,
+     "mouth": [
+      210.0,
+      194.0
+     ],
+     "mouthSrc": "noseDown"
+    },
+    {
+     "cell": 91,
+     "ms": 170,
+     "mouth": [
+      218.0,
+      178.0
+     ],
+     "mouthSrc": "noseDown"
+    },
+    {
+     "cell": 92,
+     "ms": 170,
+     "mouth": [
+      232.3,
+      91.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 93,
+     "ms": 170,
+     "mouth": [
+      234.3,
+      99.3
+     ],
+     "mouthSrc": "noseTip"
+    }
+   ]
+  },
+  "petted": {
+   "dir": "E",
+   "loop": false,
+   "inPlace": true,
+   "frames": [
+    {
+     "cell": 94,
+     "ms": 180,
+     "mouth": [
+      234.3,
+      99.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 95,
+     "ms": 180,
+     "mouth": [
+      224.3,
+      89.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 96,
+     "ms": 180,
+     "mouth": [
+      228.3,
+      93.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 97,
+     "ms": 180,
+     "mouth": [
+      230.3,
+      83.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 98,
+     "ms": 180,
+     "mouth": [
+      228.3,
+      87.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 99,
+     "ms": 180,
+     "mouth": [
+      234.3,
+      99.3
+     ],
+     "mouthSrc": "noseTip"
+    }
+   ]
+  },
+  "liedown": {
+   "dir": "E",
+   "loop": false,
+   "inPlace": true,
+   "frames": [
+    {
+     "cell": 100,
+     "ms": 200,
+     "mouth": [
+      224.3,
+      103.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 101,
+     "ms": 200,
+     "mouth": [
+      222.3,
+      157.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 102,
+     "ms": 200,
+     "mouth": [
+      222.3,
+      173.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 103,
+     "ms": 200,
+     "mouth": [
+      208.3,
+      179.3
+     ],
+     "mouthSrc": "noseTip"
+    }
+   ]
+  },
+  "getup": {
+   "dir": "E",
+   "loop": false,
+   "inPlace": true,
+   "frames": [
+    {
+     "cell": 104,
+     "ms": 180,
+     "mouth": [
+      216.3,
+      179.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 105,
+     "ms": 180,
+     "mouth": [
+      222.3,
+      169.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 106,
+     "ms": 180,
+     "mouth": [
+      222.3,
+      119.3
+     ],
+     "mouthSrc": "noseTip"
+    },
+    {
+     "cell": 107,
+     "ms": 180,
+     "mouth": [
+      218.3,
+      103.3
+     ],
+     "mouthSrc": "noseTip"
+    }
+   ]
+  }
+ },
+ "actions": {
+  "pick_ball": {
+   "clip": "sniff",
+   "frames": [
+    0,
+    1,
+    2,
+    3
+   ],
+   "events": [
+    {
+     "frame": 3,
+     "name": "ball_pick"
+    }
+   ]
+  },
+  "drop_ball": {
+   "clip": "eat",
+   "frames": [
+    0,
+    1,
+    2
+   ],
+   "events": [
+    {
+     "frame": 2,
+     "name": "ball_drop"
+    }
+   ]
+  }
+ }
+}

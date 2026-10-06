@@ -2,8 +2,8 @@
 # 用法：先在本目录起静态服务（python3 -m http.server 49710），再 .pwvenv/bin/python test_playtest.py [URL]
 import sys, json, os
 from playwright.sync_api import sync_playwright
-URL = sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:49710/index.html'
-KEY = 'tangzhe-save'  # 正式站存档键
+URL = sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:49941/index.html'
+KEY = 'tangzhe-save'  # 预览专用存档键（11r 起）
 SHOTS = os.path.join(os.path.dirname(os.path.abspath(__file__)), '_shots')
 os.makedirs(SHOTS, exist_ok=True)
 results = []
@@ -352,26 +352,26 @@ with sync_playwright() as p:
     hp.locator('.home-who [data-arg="pearl"]').click(); hp.wait_for_timeout(250)
     check('还没开放' in hp.inner_text('#tabBody') and hp.locator('#room').count() == 0, '点锁着的珍珠姐：显示「家还没开放」')
     hp.locator('.book-tabs [data-arg="mall"]').click(); hp.wait_for_timeout(450)
-    NF = S(hp, '__tzz.E.FURNITURE.length'); check(hp.locator('.mall-card:not(.mall-ghost)').count() == NF and hp.locator('.home-lock').count() == 0 and '还没加入' in hp.inner_text('.mall-head') and '珍珠姐' in hp.inner_text('.mall-head'), '选着锁着的珍珠姐点「商城」：照样能逛公共商城（顶部提示她还没加入）')
+    NF = S(hp, '__tzz.E.FURNITURE.length'); check(hp.locator('.mall-card:not(.mall-ghost):not(.pet-card)').count() == NF and hp.locator('.home-lock').count() == 0 and '还没加入' in hp.inner_text('.mall-head') and '珍珠姐' in hp.inner_text('.mall-head'), '选着锁着的珍珠姐点「商城」：照样能逛公共商城（顶部提示她还没加入）')
     hp.locator('.book-tabs [data-arg="room"]').click(); hp.wait_for_timeout(450)
     check('还没开放' in hp.inner_text('#tabBody') and hp.locator('#room').count() == 0, '再回「家宅」：珍珠姐的家仍显示没开放')
     hp.locator('.home-who [data-arg="c77"]').click(); hp.wait_for_timeout(200)
     # 商城
     hp.locator('.book-tabs [data-arg="mall"]').click(); hp.wait_for_timeout(450)
-    names = S(hp, "[...document.querySelectorAll('.mall-card:not(.mall-ghost) .name')].map(e=>e.firstChild.textContent.trim())")
-    check(hp.locator('.mall-card:not(.mall-ghost)').count() == NF and all(n in names for n in ['床','沙发','桌子','台灯','地毯','绿植','书架','电视','冰箱','衣柜','挂画','猫窝']), f'商城 {NF} 件家具（含新接入）：{"/".join(names)}')
+    names = S(hp, "[...document.querySelectorAll('.mall-card:not(.mall-ghost):not(.pet-card) .name')].map(e=>e.firstChild.textContent.trim())")
+    check(hp.locator('.mall-card:not(.mall-ghost):not(.pet-card)').count() == NF and all(n in names for n in ['床','沙发','桌子','台灯','地毯','绿植','书架','电视','冰箱','衣柜','挂画','猫窝']), f'商城 {NF} 件家具（含新接入）：{"/".join(names)}')
     check(hp.locator('#mallSearch').count() == 1 and hp.locator('.mall-cats .mc').count() >= 9, '商城有固定搜索框 + 分类')
-    check(S(hp, "[...document.querySelectorAll('.mall-card:not(.mall-ghost)')].every(c=>c.querySelector('[data-act=homeBuy] small') && /豪华 \\+\\d+/.test(c.innerText) && /占地 \\d×\\d/.test(c.innerText))"), '每件都标价格 / 豪华度 / 占地')
+    check(S(hp, "[...document.querySelectorAll('.mall-card:not(.mall-ghost):not(.pet-card)')].every(c=>c.querySelector('[data-act=homeBuy] small') && /豪华 \\+\\d+/.test(c.innerText) && /占地 \\d×\\d/.test(c.innerText))"), '每件都标价格 / 豪华度 / 占地')
     check('余额' in hp.inner_text('.mall-head') and '100.0万' in hp.inner_text('.mall-head'), '商城顶部显示余额')
     hp.locator('.mall-cats [data-arg="bed"]').click(); hp.wait_for_timeout(200)
-    NB = S(hp, "__tzz.E.FURNITURE.filter(f=>f.cat==='bed').length"); check(hp.locator('.mall-card:not(.mall-ghost)').count() == NB and '床' in hp.inner_text('.mall-list') and '沙发' not in hp.inner_text('.mall-list'), f'分类「床具」只显示床类（{NB} 件：旧床 + 云朵 / 舱式 + 11v 新床）')
+    NB = S(hp, "__tzz.E.FURNITURE.filter(f=>f.cat==='bed').length"); check(hp.locator('.mall-card:not(.mall-ghost):not(.pet-card)').count() == NB and '床' in hp.inner_text('.mall-list') and '沙发' not in hp.inner_text('.mall-list'), f'分类「床具」只显示床类（{NB} 件：旧床 + 云朵 / 舱式 + 11v 新床）')
     hp.locator('.mall-cats [data-arg="cabinet"]').click(); hp.wait_for_timeout(200)
-    NC = S(hp, "__tzz.E.FURNITURE.filter(f=>f.cat==='cabinet').length"); check(hp.locator('.mall-subs').count() == 1 and hp.locator('.mall-card:not(.mall-ghost)').count() == NC and NC >= 9, f'柜架：子类 + 全部柜架 {NC} 件（书架/衣柜 + 11v 7 件）')
+    NC = S(hp, "__tzz.E.FURNITURE.filter(f=>f.cat==='cabinet').length"); check(hp.locator('.mall-subs').count() == 1 and hp.locator('.mall-card:not(.mall-ghost):not(.pet-card)').count() == NC and NC >= 9, f'柜架：子类 + 全部柜架 {NC} 件（书架/衣柜 + 11v 7 件）')
     hp.locator('.mall-subs [data-arg="wardrobe"]').click(); hp.wait_for_timeout(200)
-    check(hp.locator('.mall-card:not(.mall-ghost)').count() == 1 and '衣柜' in hp.inner_text('.mall-list'), '柜架 → 衣柜')
+    check(hp.locator('.mall-card:not(.mall-ghost):not(.pet-card)').count() == 1 and '衣柜' in hp.inner_text('.mall-list'), '柜架 → 衣柜')
     hp.locator('[data-act="mallClear"]').click(); hp.wait_for_timeout(200)
     hp.fill('#mallSearch', '挂画'); hp.wait_for_timeout(300)
-    check(hp.locator('.mall-card:not(.mall-ghost)').count() == 1 and '挂画' in hp.inner_text('.mall-list'), '搜索「挂画」→ 挂画（11v 起「挂」还会搜到挂钩小格柜 / 拼布故事挂毯）')
+    check(hp.locator('.mall-card:not(.mall-ghost):not(.pet-card)').count() == 1 and '挂画' in hp.inner_text('.mall-list'), '搜索「挂画」→ 挂画（11v 起「挂」还会搜到挂钩小格柜 / 拼布故事挂毯）')
     hp.locator('[data-act="mallClear"]').click(); hp.wait_for_timeout(200)
     c0 = S(hp, '__tzz.state.coins')
     hp.locator('[data-act="homeBuy"][data-arg="furn_bed"]').click(); hp.wait_for_timeout(300)
@@ -584,6 +584,8 @@ with sync_playwright() as p:
     # 四位 CEO 的 Lv1 底图都登记了，且原图是 1200×1200
     hl = S(hp, "Promise.all(['c77','pearl','otaku','rocket'].map(id=>new Promise(r=>{ if(!__tzz.HOME_ART[id+'_1']) return r(id+' 没登记'); const im=new Image(); im.onload=()=>r(im.naturalWidth===1200&&im.naturalHeight===1200?null:id+' 尺寸 '+im.naturalWidth+'×'+im.naturalHeight); im.onerror=()=>r(id+' 加载失败'); im.src='art/home_'+id+'_1.webp';}))).then(a=>a.filter(Boolean))")
     check(hl == [], f'四位 CEO 的 Lv1 家宅底图都登记且是 1200×1200 {hl}')
+    hl2 = S(hp, "Promise.all([['c77_2',1600,1400],['c77_3',2000,1600],['pearl_2',1600,1400],['pearl_3',2000,1600]].map(([k,w,h])=>new Promise(r=>{ if(!__tzz.HOME_ART[k]) return r(k+' 没登记'); const im=new Image(); im.onload=()=>r(im.naturalWidth===w&&im.naturalHeight===h?null:k+' 尺寸 '+im.naturalWidth+'×'+im.naturalHeight); im.onerror=()=>r(k+' 加载失败'); im.src='art/home_'+k+'.webp';}))).then(a=>a.filter(Boolean))")
+    check(hl2 == [], f'12b1 77 / 珍珠姐 Lv2/Lv3 底图都登记、加载成功、尺寸对（公寓 1600×1400、豪宅 2000×1600）{hl2}')
     # 存档往返
     h_before = home(); inv_before = S(hp, "JSON.parse(JSON.stringify(__tzz.state.furnInv))")
     hp.reload(); hp.wait_for_timeout(900); close_modals(hp)
@@ -934,6 +936,367 @@ with sync_playwright() as p:
     check(bad == [], f'靠后墙超高件整图都在房间里（顶边超出 ≤1px、脚底贴占地底）{cl}')
     zp.wait_for_timeout(500); zp.locator('#room').screenshot(path=f'{SHOTS}/home_11z_tall.png')
     zc.close()
+
+    # 12b：真实页面读档链路（localStorage → loadState → E.migrate → boot 整理）：坏画排前也不挤走合法画，如实提示；记录换序结果一样；刷新幂等
+    for tag, order in [('坏画在前', ['bad', 'ok']), ('合法画在前', ['ok', 'bad'])]:
+        wc = b.new_context(**dev); wp = wc.new_page(); hook(wp, 'wall12b-' + tag)
+        wp.goto(URL.replace('index.html', 'icon.svg'))
+        recs = {'bad': {'uid': 'bad', 'fid': 'furn_painting', 'x': 5, 'y': 0, 'rot': 0, 'surf': 'wall'}, 'ok': {'uid': 'ok', 'fid': 'furn_painting', 'x': 0, 'y': 0, 'rot': 0, 'surf': 'wall'}}
+        wp.evaluate("""(pl)=>{localStorage.clear(); const T=Date.now(); const s={v:3,rev:3,coins:999,totalEarned:999,fpMig11w:1,fpMig11z:1,shops:[{open:true,lv:4,emp:1},{open:false,lv:0,emp:0},{open:false,lv:0,emp:0},{open:false,lv:0,emp:0}],
+          ceos:{c77:{unlocked:true,lv:2,at:0}},gacha:{owned:[],draws:0,pity:0,last:null},claimLog:[],lastSeen:T-3000,maxSeen:T-3000,created:T-1e6,furnInv:{},
+          homes:{c77:{lv:2,next:9,placed:pl}}}; localStorage.setItem('""" + KEY + """', JSON.stringify(s));}""", [recs[k] for k in order])
+        wp.goto(URL); wp.wait_for_timeout(700)
+        tt = S(wp, "(()=>{const t=document.getElementById('toast');return t&&!t.classList.contains('hidden')?t.textContent:''})()")
+        close_modals(wp)
+        wpos = lambda: {q['uid']: (q['x'], q['y'], q.get('surf')) for q in st(wp)['homes']['c77']['placed']}
+        w1 = wpos(); s1 = st(wp)
+        check(w1.get('ok') == (0, 0, 'wall') and w1.get('bad') == (2, 0, 'wall') and len(w1) == 2 and not s1['furnInv'].get('furn_painting'), f'12b/12b1 真读档（{tag}）：合法画留 (0,0)，压在 77 公寓真拱窗上的坏画挪到最近空墙 (2,0)（12b1 前无底图时是 (5,1)），没退仓 {w1}')
+        check('墙面整理' in tt and '1 幅' in tt, f'12b 真读档（{tag}）：如实提示挪了 1 幅「{tt}」')
+        wp.reload(); wp.wait_for_timeout(700)
+        tt2 = S(wp, "(()=>{const t=document.getElementById('toast');return t&&!t.classList.contains('hidden')?t.textContent:''})()")
+        close_modals(wp); w2 = wpos()
+        check(w2 == w1 and '墙面整理' not in tt2, f'12b 刷新（{tag}）：位置不变、不再提示 {w2}「{tt2}」')
+        wc.close()
+
+    print('== 12c. 漫画 UI 系统：导航图标 / 面板 / 按钮 / 弹窗关闭钮 / 小屏不溢出 / 减少动态 ==')
+    UI_JS = """(()=>{const vw=innerWidth, cs=e=>getComputedStyle(e), R=e=>e.getBoundingClientRect();
+      const nav=[...document.querySelectorAll('#bottomNav button')].map(b=>{const u=b.querySelector('svg.ic use'), h=u&&u.getAttribute('href'), r=R(b), ir=b.querySelector('svg.ic')&&R(b.querySelector('svg.ic'));
+        return {tab:b.dataset.tab, sym:!!(h&&document.querySelector(h)&&document.querySelector(h).tagName.toLowerCase()==='symbol'), iw:ir?Math.round(ir.width):0, w:Math.round(r.width), h:Math.round(r.height), emoji:/\\p{Extended_Pictographic}/u.test(b.textContent), on:b.classList.contains('on')};});
+      const vis=[...document.querySelectorAll('#tabBody .buy, #bottomNav button, #shopTabs button, .book-tabs button, .mode-tabs .mt')].filter(x=>x.offsetParent);
+      const clip=vis.filter(x=>x.scrollWidth>x.clientWidth+1).map(x=>x.textContent.trim().slice(0,12));
+      const panel=document.getElementById('panel'), root=cs(document.documentElement);
+      const card=document.querySelector('#tabBody .card'), buy=document.querySelector('#tabBody .buy:not([disabled])'), sec=document.querySelector('#tabBody .sec-title');
+      return {vw, sw:document.documentElement.scrollWidth, pw:panel.scrollWidth, pc:panel.clientWidth, nav, clip,
+        tok:['--lw-1','--lw-2','--lw-3','--sh-3','--tone-ink','--fs-title','--fs-num','--red-ink'].every(k=>root.getPropertyValue(k).trim()!==''),
+        card:card?{bw:cs(card).borderTopWidth, sh:cs(card).boxShadow}:null, buy:buy?{sh:cs(buy).boxShadow, bw:cs(buy).borderTopWidth}:null, sec:sec?cs(sec).backgroundColor:null};})()"""
+    for dname in ['iPhone SE', 'iPhone SE (3rd gen)', 'iPhone 15']:
+        uc = b.new_context(**p.devices[dname]); up = uc.new_page(); hook(up, 'ui12c-' + dname)
+        up.goto(URL); up.evaluate("localStorage.clear()"); up.reload(); up.wait_for_timeout(800); close_modals(up)
+        up.evaluate("(()=>{const s=__tzz.state,E=__tzz.E; s.coins=5e7; E.hireEmp(s,0); s.shops[0].lv=12; E.openShop(s,1); E.hireEmp(s,1); E.openShop(s,2); E.hireEmp(s,2); E.buyFurniture(s,'furn_painting'); __tzz.persist(); __tzz.renderTab();})()"); up.wait_for_timeout(500); close_modals(up)
+        for tb in ['shop', 'home', 'ceo']:
+            up.locator(f'#bottomNav [data-tab="{tb}"]').click(); up.wait_for_timeout(600); close_modals(up)
+            if tb == 'home': up.evaluate("__tzz.act('homeMode','decor')"); up.wait_for_timeout(300)
+            u = S(up, UI_JS)
+            nv = u['nav']
+            check(len(nv) == 5 and all(n['sym'] and n['iw'] >= 20 and not n['emoji'] and n['h'] >= 44 and n['w'] >= 44 for n in nv) and [n['tab'] for n in nv if n['on']] == [tb],
+                  f"12c {dname} {tb}：底栏 5 个同套线稿图标（symbol 引用、≥20px、无 emoji），按钮 ≥44×44，只有当前页高亮 {[(n['tab'], n['w'], n['h'], n['iw']) for n in nv]}")
+            check(u['sw'] <= u['vw'] and u['pw'] <= u['pc'] + 1 and not u['clip'], f"12c {dname} {tb}：无横向溢出（页 {u['sw']}≤{u['vw']}，面板 {u['pw']}≤{u['pc']}），按钮文字没被裁 {u['clip']}")
+            check(u['tok'] and u['card'] and float(u['card']['bw'][:-2]) >= 3 and '4px 4px' in u['card']['sh'] and u['buy'] and '3px 3px' in u['buy']['sh'] and (u['sec'] == 'rgb(20, 20, 20)' or (tb == 'home' and u['sec'] is None)),
+                  f"12c {dname} {tb}：设计令牌生效（卡片 ≥3px 墨边 + 4px 墨影、按钮 3px 墨影、段标题墨底）{u['card']} {u['buy']}")
+        # 弹窗统一关闭钮：× = 代按「再想想」，不改任何东西
+        up.locator('#bottomNav [data-tab="home"]').click(); up.wait_for_timeout(500)
+        h0 = st(up); up.evaluate("__tzz.act('homeUp','c77')"); up.wait_for_timeout(500)
+        xm = S(up, """(()=>{const x=document.querySelector('#mpanel .cx-close'), m=document.querySelector('#mpanel'); if(!x) return null; const r=x.getBoundingClientRect(), M=m.getBoundingClientRect(), bb=document.querySelector('#mpanel .mbubble').getBoundingClientRect();
+          return {w:r.width, h:r.height, inP:r.left>=M.left&&r.right<=M.right&&r.top>=M.top&&r.bottom<=innerHeight, overlap:!(r.right<=bb.left||r.left>=bb.right||r.bottom<=bb.top||r.top>=bb.bottom), use:!!x.querySelector('use[href="#ic-close"]'), hasx:m.classList.contains('has-x')}})()""")
+        check(modal_visible(up) and xm and xm['w'] >= 34 and xm['inP'] and not xm['overlap'] and xm['use'] and xm['hasx'], f'12c {dname}：房子升级弹窗有统一 × 关闭钮（在弹窗内、不压对白泡）{xm}')
+        up.click('#mX'); up.wait_for_timeout(300); h1 = st(up)
+        check(not modal_visible(up) and h1['homes'] == h0['homes'] and h1['coins'] >= h0['coins'] and h1['furnInv'] == h0['furnInv'], f"12c × 关闭升级弹窗：等同「再想想」，房子 / 仓库不变、没扣钱（{round(h0['coins'])} → {round(h1['coins'])}，自动收入照常涨）")
+        up.locator('#bottomNav [data-tab="ceo"]').click(); up.wait_for_timeout(400)
+        c0 = st(up)['ceos']; up.evaluate("__tzz.showPreview('pearl', 0)"); up.wait_for_timeout(400)
+        check(modal_visible(up) and up.locator('#mpanel #mX').count() == 1, f'12c {dname}：调任预览弹窗有 ×')
+        up.click('#mX'); up.wait_for_timeout(300)
+        check(not modal_visible(up) and st(up)['ceos'] == c0, '12c × 关闭调任预览：任职安排不变')
+        up.evaluate("__tzz.openAssign('pearl')"); up.wait_for_timeout(400)
+        check(S(up, "!document.getElementById('sheet').classList.contains('hidden')") and up.locator('#sheetX').count() == 1, f'12c {dname}：调任选店抽屉有 ×')
+        up.click('#sheetX'); up.wait_for_timeout(300)
+        check(S(up, "document.getElementById('sheet').classList.contains('hidden')") and st(up)['ceos'] == c0, '12c 抽屉 × 关闭：不改安排')
+        uc.close()
+    # 减少动态：弹窗 / 提示不弹跳
+    rc = b.new_context(**p.devices['iPhone SE (3rd gen)'], reduced_motion='reduce'); rp = rc.new_page(); hook(rp, 'ui12c-rm')
+    rp.goto(URL); rp.evaluate("localStorage.clear()"); rp.reload(); rp.wait_for_timeout(800)
+    rm = S(rp, "(()=>({m:getComputedStyle(document.getElementById('mpanel')).animationName, t:getComputedStyle(document.getElementById('toast')).animationName, x:!!document.querySelector('#mpanel #mX')}))()")
+    check(rm['m'] == 'none' and rm['t'] == 'none' and rm['x'], f'12c 减少动态：开场弹窗 / 提示条不做弹出动画，× 照常有 {rm}')
+    rc.close()
+
+    print('== 12c1. 熊大 13:18 视觉基准：配色 / 3px·2px 线 / 正文无网点 / 只主操作大黄块 / 无系统 emoji / 触控 ≥44 / 3 头身人物 ==')
+    SPEC_JS = """(()=>{const cs=(e,p)=>getComputedStyle(e,p), R=e=>e.getBoundingClientRect(), root=cs(document.documentElement), vis=s=>[...document.querySelectorAll(s)].filter(x=>x.offsetParent);
+      const card=vis('#tabBody .card:not(.dim)')[0], buy=vis('#tabBody .buy:not([disabled]):not(.alt):not(.ghost):not(.red):not(.no)')[0];
+      const tok={ink:root.getPropertyValue('--ink').trim(), paper:root.getPropertyValue('--paper').trim(), panel:root.getPropertyValue('--panel').trim(), yellow:root.getPropertyValue('--yellow').trim(), red:root.getPropertyValue('--red').trim()};
+      const cardA=card?cs(card,'::after'):null;
+      const yel=vis('#tabBody *, #shopTabs *, #bottomNav *').filter(e=>cs(e).backgroundColor==='rgb(255, 210, 63)'&&!e.closest('.buy')&&R(e).width*R(e).height>1600).map(e=>e.className||e.tagName);
+      const emo=['#bottomNav','#shopTabs','.book-tabs','.mode-tabs','.home-card','.room-tools','.room-wall .rw-deco','.home-who','.job-gal','#compactHead','.who-row'].flatMap(s=>vis(s)).map(e=>[...e.textContent.matchAll(/\\p{Extended_Pictographic}/gu)].map(m=>m[0]).join('')).join('');
+      const icons=vis('#shopTabs button, .home-card .ava.sq, .job-chip').map(e=>{const u=e.querySelector('svg.ic use'); const h=u&&u.getAttribute('href'); return !!(h&&document.querySelector(h)&&document.querySelector(h).tagName.toLowerCase()==='symbol'&&R(e.querySelector('svg.ic')).height>=12&&R(e.querySelector('svg.ic')).height<=40);});
+      return {tok, app:cs(document.getElementById('app')).backgroundImage, card:card?{bw:cs(card).borderTopWidth, bg:cs(card).backgroundColor, tone:cardA.display==='none'||cardA.content==='none'}:null,
+        buy:buy?{bw:cs(buy).borderTopWidth, bg:cs(buy).backgroundColor}:null, nav:cs(document.getElementById('bottomNav')).borderTopWidth, navBg:cs(document.getElementById('bottomNav')).backgroundImage,
+        yel, emo, icons};})()"""
+    HIT_JS = """(()=>{const R=e=>e.getBoundingClientRect(), vis=s=>[...document.querySelectorAll(s)].filter(x=>x.offsetParent&&!x.disabled);
+      const nav=R(document.getElementById('bottomNav')).top, out=[]; for(const s of ['#bottomNav button','#shopTabs button','.book-tabs button','.mode-tabs .mt','.job-chip','.buyamt button','#dailyChip','#mute','#tabBody .buy','.mall-go']){
+        for(const e of vis(s)){const r=R(e); const inNav=!!e.closest('#bottomNav'); if(r.top<0||(!inNav&&r.bottom>nav-2)||r.bottom>innerHeight) continue; const cx=r.left+r.width/2, cy=r.top+r.height/2;
+          const hit=(x,y)=>{const t=document.elementFromPoint(x,y); return !!t&&(t===e||e.contains(t));};
+          const h=[-21.5,21.5].every(d=>hit(cx,cy+d)), w=[-21.5,21.5].every(d=>hit(cx+d,cy));
+          if(!(h&&w)) out.push(s+' '+e.textContent.trim().slice(0,8)+' '+Math.round(r.width)+'×'+Math.round(r.height));}}
+      return out;})()"""
+    for dname in ['iPhone SE', 'iPhone SE (3rd gen)', 'iPhone 15']:
+        sc = b.new_context(**p.devices[dname]); sp = sc.new_page(); hook(sp, 'spec12c1-' + dname)
+        sp.goto(URL); sp.evaluate("localStorage.clear()"); sp.reload(); sp.wait_for_timeout(800)
+        intro = S(sp, """(()=>{const m=document.getElementById('mpanel'), lines=e=>{if(!e) return 0; const r=document.createRange(); r.selectNodeContents(e); return new Set([...r.getClientRects()].filter(q=>q.width>1).map(q=>Math.round(q.top))).size;};
+          return {open:!m.closest('.hidden'), x:!!m.querySelector('#mX'), ok:(m.querySelector('#mOk')||{}).textContent, bub:lines(m.querySelector('.mbubble')), title:lines(m.querySelector('.mtitle'))};})()""")
+        check(intro['open'] and intro['x'] and '开摊' in (intro['ok'] or '') and intro['bub'] == 1 and intro['title'] == 1, f"12c1 {dname}：开摊介绍弹窗对白泡和标题都是一行（不在 × 旁折行）{intro}")
+        xl = S(sp, "(()=>{const x=document.querySelector('#mpanel #mX'), r=x.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height/2, hit=(dx,dy)=>{const e=document.elementFromPoint(cx+dx,cy+dy); return !!e && (e===x || x.contains(e));}; return {label:x.getAttribute('aria-label'), w:r.width, h:r.height, cx, cy, hits:[[0,0],[-15,0],[15,0],[0,-15],[0,15],[-21.5,0],[21.5,0],[0,-21.5],[0,21.5],[-22,0],[22,0],[0,-22],[0,22]].map(d=>hit(d[0],d[1])), ins:getComputedStyle(x,'::before').top};})()")
+        check(xl['label'] == '关闭' and len(xl['hits']) == 13 and all(xl['hits']), f"12c3/12b3 {dname}：开摊介绍 × 朗读标签是「关闭」（不叫「开摊」），× 中心和上下左右 15 / 21.5 / 22px 实测点（elementFromPoint）都得到 × 本身（热区 46px）{xl}")
+        b0 = S(sp, "__tzz.bubble.until"); sp.mouse.click(xl['cx'], xl['cy']); sp.wait_for_timeout(400)
+        xi = S(sp, "({open:!document.getElementById('modal').classList.contains('hidden'), au:__tzz.audioState(), same:__tzz.bubble.until===" + json.dumps(b0) + "})")
+        check(not xi['open'] and xi['au'] == 'none' and xi['same'], f"12c1/12c3 {dname}：开摊介绍按坐标实点 × 只关窗——不解锁音频、77 不新说开摊台词 {xi}")
+        # 12b3：板砖 16:28 × 边缘——WebKit 按下→松开：在 ±22px 边缘按下（:active 让按钮右下移 2px），按住时四个方向 ±21.5 / ±22px 仍命中 ×，原地松开只关窗、不解锁音频、77 不说开摊台词
+        for ex, ey in [(-22, 0), (22, 0), (0, -22), (0, 22)]:
+            sp.evaluate("localStorage.clear()"); sp.reload(); sp.wait_for_timeout(800)
+            r0 = S(sp, "(()=>{const r=document.querySelector('#mpanel #mX').getBoundingClientRect(); return {cx:r.left+r.width/2, cy:r.top+r.height/2};})()")
+            b0 = S(sp, "__tzz.bubble.until"); sp.mouse.move(r0['cx'] + ex, r0['cy'] + ey); sp.mouse.down(); sp.wait_for_timeout(120)
+            pr = S(sp, "(()=>{const x=document.querySelector('#mpanel #mX'), cx=" + json.dumps(r0['cx']) + ", cy=" + json.dumps(r0['cy']) + ", hit=(dx,dy)=>{const e=document.elementFromPoint(cx+dx,cy+dy); return !!e && (e===x || x.contains(e));}; return {act:x.matches(':active'), tf:getComputedStyle(x).transform, bt:getComputedStyle(x,'::before').transform, hits:[[-22,0],[22,0],[0,-22],[0,22],[-21.5,0],[21.5,0],[0,-21.5],[0,21.5]].map(d=>hit(d[0],d[1]))};})()")
+            sp.mouse.up(); sp.wait_for_timeout(400)
+            xr = S(sp, "({open:!document.getElementById('modal').classList.contains('hidden'), au:__tzz.audioState(), same:__tzz.bubble.until===" + json.dumps(b0) + "})")
+            check(pr['act'] and pr['tf'] != 'none' and all(pr['hits']), f"12b3 {dname}：× 在 ({ex},{ey}) 边缘按住（:active 位移 {pr['tf']}，热区反向 {pr['bt']}）时四方向 ±21.5 / ±22px 仍命中 × {pr['hits']}")
+            check(not xr['open'] and xr['au'] == 'none' and xr['same'], f"12b3 {dname}：× 在 ({ex},{ey}) 边缘按下→松开只关窗——不解锁音频、77 不说开摊台词 {xr}")
+        # 12b3：同写法的声音按钮 / 每日双倍芯片：按住（:active 位移 2px）时 ±21.5 / ±22px 四个方向的命中结果和松手时一模一样（热区不跟着跑）
+        mc = b.new_context(**p.devices[dname]); mp = mc.new_page(); hook(mp, 'press12b3-' + dname)
+        mp.goto(URL); mp.evaluate("localStorage.clear()"); mp.reload(); mp.wait_for_timeout(800); close_modals(mp)
+        PT = "[[-21.5,0],[21.5,0],[0,-21.5],[0,21.5],[-22,0],[22,0],[0,-22],[0,22]]"
+        for sel in ['#mute', '#dailyChip']:
+            HJ = "(()=>{const x=document.querySelector('" + sel + "'), r=x.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height/2, hit=(dx,dy)=>{const e=document.elementFromPoint(cx+dx,cy+dy); return !!e && (e===x || x.contains(e));}; return {act:x.matches(':active'), tf:getComputedStyle(x).transform, cx, cy, w:r.width, h:r.height, hits:" + PT + ".map(d=>hit(d[0],d[1]))};})()"
+            r0 = S(mp, HJ); pts = json.loads(PT); k = next((i for i, h in enumerate(r0['hits']) if h and pts[i][0] != 0), 0)
+            mp.mouse.move(r0['cx'] + pts[k][0], r0['cy'] + pts[k][1]); mp.mouse.down(); mp.wait_for_timeout(120)
+            r1 = S(mp, HJ.replace("cx=r.left+r.width/2, cy=r.top+r.height/2", "cx=" + json.dumps(r0['cx']) + ", cy=" + json.dumps(r0['cy'])))
+            mp.mouse.up(); mp.wait_for_timeout(300); close_modals(mp)
+            if sel == '#mute': mp.click('#mute'); mp.wait_for_timeout(200)
+            check(r1['act'] and r1['tf'] != 'none' and r1['hits'] == r0['hits'] and all(r0['hits'][:2]), f"12b3 {dname}：{sel}（{round(r0['w'])}×{round(r0['h'])}）按住时热区不跑——±21.5 / ±22px 命中 松手 {r0['hits']} = 按住 {r1['hits']}（位移 {r1['tf']}）")
+        if dname == 'iPhone 15':
+            lk3 = S(mp, "(()=>{const L=__tzz.LOOKS.c77, s=__tzz.state; s.wear=s.wear||{}; const w=s.wear.c77; s.wear.c77={clothes:'c_work'}; const a=__tzz.lookOf('c77').pants; if(w===undefined) delete s.wear.c77; else s.wear.c77=w; return [L.apron,L.pants,L.shoe,a];})()")
+            check(lk3 == ['#f0a08e', '#4a2f26', '#835233', None], f"12b3 77 店内小人跟新形象：粉围裙 / 深棕长裤 / 棕靴；换上背带裤等衣服时裤子回衣服默认色 {lk3}")
+        mc.close()
+        if dname == 'iPhone SE':
+            sp.reload(); sp.wait_for_timeout(800); b0 = S(sp, "__tzz.bubble.until"); sp.click('#mOk'); sp.wait_for_timeout(400)
+            ki = S(sp, "({au:__tzz.audioState(), line:__tzz.bubble.txt, changed:__tzz.bubble.until!==" + json.dumps(b0) + "})")
+            check(ki['au'] != 'none' and '串串烤起走' in (ki['line'] or '') and ki['changed'], f'12c1 对照：点「开摊！」照旧解锁音频 + 77 说开摊台词 {ki}')
+        close_modals(sp)
+        sp.evaluate("(()=>{const s=__tzz.state,E=__tzz.E; s.coins=5e7; E.hireEmp(s,0); s.shops[0].lv=12; E.openShop(s,1); E.hireEmp(s,1); E.openShop(s,2); E.hireEmp(s,2); E.buyFurniture(s,'furn_painting'); __tzz.persist(); __tzz.renderTab();})()"); sp.wait_for_timeout(500); close_modals(sp)
+        for tb in ['shop', 'home', 'ceo']:
+            sp.locator(f'#bottomNav [data-tab="{tb}"]').click(); sp.wait_for_timeout(600); close_modals(sp)
+            if tb == 'home': sp.evaluate("__tzz.act('homeMode','decor')"); sp.wait_for_timeout(300)
+            u = S(sp, SPEC_JS)
+            check(u['tok'] == {'ink': '#141414', 'paper': '#f7f1e3', 'panel': '#fffaf0', 'yellow': '#ffd23f', 'red': '#e63946'}, f"12c1 {dname} {tb}：五个基准色令牌 = 墨 #141414 / 纸 #f7f1e3 / 内容底 #fffaf0 / 黄 #ffd23f / 红 #e63946 {u['tok']}")
+            check(u['card'] and u['card']['bw'] == '3px' and u['card']['bg'] == 'rgb(255, 250, 240)' and u['nav'] == '3px' and u['buy'] and u['buy']['bw'] == '2px' and u['buy']['bg'] == 'rgb(255, 210, 63)',
+                  f"12c1 {dname} {tb}：外框 3px（卡片 / 底栏）、内框 2px（主按钮，主黄 #ffd23f），卡片底 #fffaf0 {u['card']} 底栏 {u['nav']} 按钮 {u['buy']}")
+            check(u['app'] == 'none' and u['card']['tone'] and u['navBg'] == 'none', f"12c1 {dname} {tb}：正文区不铺网点（页底 {u['app'][:30]}、卡片角网点关、底栏 {u['navBg'][:30]}）")
+            check(not u['yel'], f"12c1 {dname} {tb}：大黄块只给主操作按钮，选中态不再是整块主黄 {u['yel'][:6]}")
+            check(u['emo'] == '' and u['icons'] and all(u['icons']), f"12c1 {dname} {tb}：导航 / 店铺切换 / 家宅升级 / 任职签无系统 emoji（剩 {u['emo']!r}），店铺 / 家宅 / 锁图标全是同套 SVG symbol（{len(u['icons'])} 个）")
+            icv = S(sp, """(()=>{const v=e=>e?getComputedStyle(e).getPropertyValue('--ica').trim():null, vis=s=>[...document.querySelectorAll(s)].filter(x=>x.offsetParent);
+              const grp=s=>vis(s).filter(b=>b.querySelector('svg.ic')).map(b=>[b.classList.contains('on'), v(b.querySelector('svg.ic'))]);
+              return {nav:grp('#bottomNav button'), book:grp('.book-tabs button:not(:first-child)'), mode:grp('.mode-tabs .mt')};})()""")
+            okc = lambda g: all((c == '#e63946') if on else (c == '#f0a9af') for on, c in g) and sum(on for on, _ in g) == 1
+            check(okc(icv['nav']) and (tb != 'home' or (okc(icv['book']) and okc(icv['mode']))), f"12c1 {dname} {tb}：图标跟随选中态（选中主红 #e63946、未选淡红 #f0a9af；底栏{' / 翻页签 / 生活·布置' if tb == 'home' else ''}）{icv}")
+            adj = S(sp, """(()=>{const R=e=>e.getBoundingClientRect(), nav=R(document.getElementById('bottomNav')).top, out=[];
+              for(const g of ['#shopTabs button','.book-tabs button','.mode-tabs .mt','.buyamt button','.job-gal .job-chips']){
+                for(const box of document.querySelectorAll(g.endsWith('job-chips')?g:g.split(' ')[0])){ const items=g.endsWith('job-chips')?[...box.querySelectorAll('.job-chip')]:[...document.querySelectorAll(g)];
+                  for(const e of items){ if(!e.offsetParent||e.disabled) continue; const r=R(e); if(r.top<0||r.bottom>nav-2) continue; const cy=r.top+r.height/2, cx=r.left+r.width/2;
+                    for(const [x,y] of [[r.left+3,cy],[r.right-3,cy],[cx,r.top+3],[cx,r.bottom-3]]){const t=document.elementFromPoint(x,y); if(!t||!(t===e||e.contains(t))) out.push(g+' '+e.textContent.trim().slice(0,6)+' @'+Math.round(x)+','+Math.round(y)+'→'+(t?(t.textContent||'').trim().slice(0,6):null));}}
+                  if(!g.endsWith('job-chips')) break; }}
+              return out;})()""")
+            check(not adj, f"12c1 {dname} {tb}：相邻控件不误触（店铺签 / 翻页签 / 生活·布置 / 数量切换 / 任职签，每格四边内 3px 点到的都是自己）{adj[:4]}")
+            coin = S(sp, "(()=>{const b=[...document.querySelectorAll('#tabBody .buy:not([disabled]):not(.no)')].find(x=>x.offsetParent&&x.querySelector('small')); if(!b) return null; const s=getComputedStyle(b.querySelector('small'),'::before'); return {bg:s.backgroundColor, img:s.backgroundImage.slice(0,15), btn:getComputedStyle(b).backgroundColor};})()")
+            check(coin is None or (coin['bg'] == 'rgb(233, 161, 0)' and coin['bg'] != coin['btn']), f"12c1 {dname} {tb}：按钮里的金币是深金币（不再是黄按钮上的空圈）{coin}")
+            miss = S(sp, HIT_JS)
+            check(not miss, f"12c1 {dname} {tb}：可见控件实测点击盒 ≥44×44（elementFromPoint 中心 ±21.5px 都打得到本控件）{miss[:6]}")
+            if tb == 'home':
+                sp.evaluate("__tzz.act('homeSub','mall')"); sp.wait_for_timeout(400)
+                miss = S(sp, HIT_JS); check(not miss, f'12c1 {dname} 商城：页签 / 按钮点击盒 ≥44 {miss[:6]}')
+                mc = S(sp, "(()=>{const c=document.querySelector('.mall-count'), n=c&&c.querySelector('.mc-num'); return n?{t:n.textContent, w:n.getBoundingClientRect().width, cw:c.getBoundingClientRect().width}:null})()")
+                import re as _re
+                check(mc and _re.fullmatch(r'显示\d+/ \d+ 件', mc['t']) and mc['w'] < mc['cw'] * 0.6, f"12c1 {dname} 商城「显示 N / 200 件」是一组、不被拉散 {mc}")
+                sp.evaluate("__tzz.act('homeSub','room')"); sp.wait_for_timeout(300)
+        # 误触：扩出来的点击区不吃掉邻居；数量切换只切自己；每日双倍扩展区外不算点中
+        sp.locator('#bottomNav [data-tab="shop"]').click(); sp.wait_for_timeout(500); close_modals(sp)
+        sp.evaluate("document.querySelector('.buyamt').scrollIntoView({block:'center'})"); sp.wait_for_timeout(200)
+        mis = S(sp, """(()=>{const R=e=>e.getBoundingClientRect(), d=document.getElementById('dailyChip'), m=document.getElementById('mute'), dr=R(d), mr=R(m);
+          const at=(x,y)=>{const t=document.elementFromPoint(x,y); return t&&(t.closest('#dailyChip')?'daily':t.closest('#mute')?'mute':'other');};
+          const bs=[...document.querySelectorAll('.buyamt button')];
+          const dy=dr.top+dr.height/2, my=mr.top+mr.height/2;
+          return {dIn:at(dr.left+dr.width/2, dy+21.5), dOut:at(dr.left+dr.width/2, dy+30), mIn:at(mr.left+mr.width/2, my+21.5), gap:at((dr.right+mr.left)/2, dy), mL:at(mr.left-2, my), amt:bs.map(b=>{const r=R(b), t=document.elementFromPoint(r.left+3, r.top+r.height/2); return !!t&&t.closest('.buyamt button')===b;})};})()""")
+        check(mis['dIn'] == 'daily' and mis['dOut'] != 'daily' and mis['mIn'] == 'mute' and mis['gap'] != 'daily' and mis['mL'] == 'mute' and all(mis['amt']),
+              f"12c1 {dname}：扩展点击区不越界（每日双倍中心 +21.5 算、+30 不算；声音键 +21.5 算；每日双倍不往声音键那边扩、声音键左缘外 2px 仍是声音键；数量切换每格左缘点到的是自己）{mis}")
+        btns = sp.locator('.buyamt button'); seen = []
+        for k in range(btns.count()):
+            btns.nth(k).click(); sp.wait_for_timeout(150); seen.append([sp.locator('.buyamt button').nth(j).get_attribute('class') or '' for j in range(btns.count())])
+        check(len(seen) >= 2 and all(('on' in seen[k][k]) and sum('on' in c.split() for c in seen[k]) == 1 for k in range(len(seen))), f'12c1 {dname}：数量切换 ×1 / ×10 / MAX 点哪个只选中哪个（无误触）')
+        sc.close()
+    # 经营人物：约 3 头身 + 袖口 / 弯肘 / 裤腿；四位 CEO 沿用立绘发型 / 配饰 / 主色
+    pc = b.new_context(**p.devices['iPhone 15']); pp = pc.new_page(); hook(pp, 'person12c1')
+    pp.goto(URL); pp.evaluate("localStorage.clear()"); pp.reload(); pp.wait_for_timeout(800); close_modals(pp)
+    fig = S(pp, """(()=>{const T=window.__tzz; const box=(fn)=>{const o=document.createElement('canvas'); o.width=200; o.height=220; const c=o.getContext('2d'); c.translate(100,200); fn(c);
+        const d=c.getImageData(0,0,200,220).data; let t=999,b=-1; for(let y=0;y<220;y++)for(let x=0;x<200;x++) if(d[(y*200+x)*4+3]>40){if(y<t)t=y;if(y>b)b=y;}
+        return {h:b-t+1, d};};
+      const near=(d,x,y,hex,tol)=>{const m=/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(hex); let h=m[1]; if(h.length===3) h=h.replace(/./g,c=>c+c); const n=parseInt(h,16), R=n>>16&255,G=n>>8&255,B=n&255;
+        for(let yy=y-2;yy<=y+2;yy++)for(let xx=x-2;xx<=x+2;xx++){const i=(yy*200+xx)*4; if(Math.abs(d[i]-R)<tol&&Math.abs(d[i+1]-G)<tol&&Math.abs(d[i+2]-B)<tol) return true;} return false;};
+      const out={}; for(const id of ['c77','pearl','otaku','rocket','e0','e1','e2','e3']){ const L=T.LOOKS[id];
+        const body=box(c=>T.drawPerson(c,0,0,1,Object.assign({},L,{hat:null}),{t:0,pose:''}));
+        const pants=L.pants||'#3d405b', sleeve=L.sleeve||L.top;
+        // 静止姿势：左上臂中点约 (-21,-60)，小臂袖口下约 (-19,-40)，裤管约 (±9,-25)
+        out[id]={ratio:+(body.h/38).toFixed(2), pants:near(body.d,91,175,pants,12)&&near(body.d,109,175,pants,12), sleeve:near(body.d,79,140,sleeve,14), skin:near(body.d,81,160,L.skin,12)};
+      }
+      const lk=id=>{const L=T.lookOf(id); return [L.style,L.top,L.bow||L.pin||L.glasses||L.lapel||null];};
+      out.looks={c77:lk('c77'), pearl:lk('pearl'), otaku:lk('otaku'), rocket:lk('rocket')};
+      return out;})()""")
+    lk = fig.pop('looks')
+    check(all(2.7 <= v['ratio'] <= 3.3 for v in fig.values()), f"12c1 店内人物约 3 头身（全身高 ÷ 头径 38）{ {k: v['ratio'] for k, v in fig.items()} }")
+    check(all(v['pants'] and v['sleeve'] and v['skin'] for v in fig.values()), f"12c1 店内人物有裤腿（两条裤管取色）、袖子（上臂是衣服色）、袖口下露小臂肤色 { {k: (v['pants'], v['sleeve'], v['skin']) for k, v in fig.items()} }")
+    check(lk == {'c77': ['pony', '#e84d3c', '#f4837a'], 'pearl': ['wavy', '#bfe3c4', True], 'otaku': ['messy', '#25335c', True], 'rocket': ['swept', '#2b2b2b', True]},
+          f'12c1/12b3 四位 CEO 店内小人沿用立绘：77 高马尾 + 粉蝴蝶结 + 红 T（12b3 按漫画新形象换色），珍珠姐卷发 + 珍珠发夹 + 薄荷衬衫，阿宅乱发 + 圆眼镜 + 藏青连帽衫，火箭老板背头 + 黑西装翻领 {lk}')
+    wear = S(pp, "(()=>{const s=__tzz.state; const old=s.wear&&s.wear.rocket; s.wear=s.wear||{}; s.wear.rocket={clothes:'c_suit'}; const L=__tzz.lookOf('rocket'); if(old) s.wear.rocket=old; else delete s.wear.rocket; return [L.top, !!L.lapel, !!L.inner];})()")
+    check(wear == ['#264653', False, False], f'12c1 换装覆盖立绘专属的内搭 / 翻领（穿 c_suit 不叠两层西装）{wear}')
+    pp.locator('#bottomNav [data-tab="shop"]').click(); pp.wait_for_timeout(1500)
+    check(not [e for e in errs if 'person12c1' in e or 'spec12c1' in e], '12c1 新人物 / 图标绘制无控制台报错')
+    pc.close()
+
+    print('== 12c2. 家具：面板灯等比显示（不拉变形）/ 竖放选图（有侧面图用侧面图，没有保持正面图兜底）==')
+    import struct, zlib
+    def png_bytes(w, h):
+        raw = b''.join(b'\x00' + bytes([230, 57, 70, 255]) * w for _ in range(h))
+        def chunk(t, d): return struct.pack('>I', len(d)) + t + d + struct.pack('>I', zlib.crc32(t + d) & 0xffffffff)
+        return b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', w, h, 8, 6, 0, 0, 0)) + chunk(b'IDAT', zlib.compress(raw)) + chunk(b'IEND', b'')
+    GEO_JS = """(uid=>{const e=document.querySelector('#roomFloor .furn[data-uid="'+uid+'"]'); if(!e) return null; const i=e.querySelector('img'), fi=e.querySelector('.fi'), rm=document.querySelector('#room'), rr=rm.getBoundingClientRect(), bt=parseFloat(getComputedStyle(rm).borderTopWidth)||0; if(!i) return {noimg:true, cls:e.className};
+      const eb=e.getBoundingClientRect(), b=i.getBoundingClientRect(), sc=Math.min(b.width/i.naturalWidth,b.height/i.naturalHeight), dw=i.naturalWidth*sc, dh=i.naturalHeight*sc, cs=getComputedStyle(i);
+      return {src:i.getAttribute('src'), cls:i.className, art:e.classList.contains('art'), nw:i.naturalWidth, nh:i.naturalHeight, ew:eb.width, eh:eb.height, dw, dh, dcx:b.left+b.width/2, ecx:eb.left+eb.width/2, foot:Math.abs(b.bottom-eb.bottom), top:b.bottom-dh, roomTop:rr.top+bt, fit:cs.objectFit, tf:cs.transform, fiH:fi.style.height}})"""
+    def place12c2(pg, items):
+        return S(pg, "(()=>{const s=__tzz.state,E=__tzz.E; s.coins=1e9; s.homes.c77.placed.slice().forEach(q=>E.storeItem(s,'c77',q.uid)); const items=" + json.dumps(items) + "; items.forEach(([f])=>E.buyFurniture(s,f)); const r=items.map(([f,x,y,rot])=>{const q=E.placeItem(s,'c77',f,x,y,rot); return q.ok?q.uid:q.why}); __tzz.persist(); __tzz.renderTab(); return r;})()")
+    def wait_imgs(pg): pg.wait_for_function("[...document.querySelectorAll('#roomFloor .furn img')].every(i=>i.complete&&i.naturalWidth)", timeout=15000)
+    # 1) 面板灯：素材 240×1331（5.55:1），占地 1×1；房间顶边封顶 = 占地 1 + 后墙 2 = 3 格高 → 等比最宽 ≈ 0.54 格。三机型锁住：比例不变、高 = 3 格、贴底居中、不出房间顶
+    for dname in ['iPhone SE', 'iPhone SE (3rd gen)', 'iPhone 15']:
+        lc = b.new_context(**p.devices[dname]); lp = lc.new_page(); hook(lp, '12c2-lamp-' + dname)
+        lp.goto(URL); lp.evaluate("localStorage.clear()"); lp.reload(); lp.wait_for_timeout(800); close_modals(lp)
+        lp.locator('#bottomNav [data-tab="home"]').click(); lp.wait_for_timeout(600); close_modals(lp)
+        u = place12c2(lp, [['furn_otaku_panel_lamp', 0, 0, 0], ['furn_otaku_panel_lamp', 3, 3, 1], ['furn_lamp', 1, 0, 0]])
+        check(all(isinstance(x, str) and len(x) > 0 and x == x.strip() for x in u) and len(set(u)) == 3, f'12c2 {dname}：面板灯 ×2（靠后墙 / 前排转 90°）+ 普通落地灯摆好 {u}')
+        wait_imgs(lp)
+        for uid, where in [(u[0], '靠后墙'), (u[1], '前排转 90°')]:
+            g = S(lp, GEO_JS + "('" + uid + "')")
+            ok = g and g['nw'] == 240 and g['nh'] == 1331 and g['fit'] == 'contain' and g['tf'] == 'none' \
+                and abs((g['dh'] / g['dw']) - 1331 / 240) < 0.06 and abs(g['dh'] - 3 * g['eh']) < 1.5 \
+                and g['dw'] / g['ew'] >= 0.53 and g['dw'] <= g['ew'] + 0.5 and abs(g['dcx'] - g['ecx']) < 1 and g['foot'] < 1.5 and g['top'] >= g['roomTop'] - 1
+            check(ok, f"12c2 {dname} 面板灯（{where}）：等比 {round(g['dh']/g['dw'],2) if g else '?'}≈5.55、高 3 格（封顶到房间顶）、宽 {round(g['dw']/g['ew']*100) if g else '?'}% 格（等比最大）、贴底居中、不越顶 {g and {k: round(v,1) if isinstance(v,float) else v for k,v in g.items() if k in ('ew','eh','dw','dh','top','roomTop','foot')}}")
+        if dname == 'iPhone 15':
+            g2 = S(lp, GEO_JS + "('" + u[2] + "')")
+            check(g2 and abs(g2['dw'] - g2['ew']) < 1 and abs(g2['dh'] / g2['dw'] - 468 / 240) < 0.03, f"12c2 普通落地灯不受影响：满 1 格宽、等比 468/240 {g2 and (round(g2['dw'],1), round(g2['dh'],1))}")
+        lc.close()
+    # 2) 选图（纯函数，全 200 件 × 4 个方向）：rot 1/3 且 FURN_SIDE 登记了 → 侧面图；其余 → 正面图（原兜底）
+    sc = b.new_context(**dev); sp = sc.new_page(); hook(sp, '12c2-side')
+    sp.goto(URL); sp.evaluate("localStorage.clear()"); sp.reload(); sp.wait_for_timeout(800); close_modals(sp)
+    sel = S(sp, """(()=>{const E=__tzz.E, A=__tzz.FURN_ART, SD=__tzz.FURN_SIDE, all=Object.values(E.FURN_BY_ID), bad=[]; let n=0;
+      for (const f of all) { const nm=f.id.replace(/^furn_/,''); if(!A[nm]) continue; for (const r of [0,1,2,3]) { const h=__tzz.furnInner(f.id,r,true), side=(r&1)&&SD[nm]&&__tzz.FURN_UP[nm]; n++;
+        const want=side?'art/furn_'+nm+'_side.webp':'art/furn_'+nm+'.webp'; if(!h.includes('src="'+want)) bad.push(f.id+'@'+r); } }
+      const tallOdd=all.filter(f=>!f.wall&&f.layer!=='rug'&&f.w!==f.h&&__tzz.FURN_UP[f.id.replace(/^furn_/,'')]).length;
+      return {n, bad, side:Object.keys(SD), tallOdd}})()""")
+    check(sel['n'] >= 700 and sel['bad'] == [], f"12c2 选图：有图家具 × 4 方向共 {sel['n']} 组，竖放登记侧面图的用侧面图、其余都用正面图（侧面图登记 {sel['side']}；非方形、往上伸的家具 {sel['tallOdd']} 件目前都没侧面图 → 正面图兜底）{sel['bad'][:5]}")
+    sp.locator('#bottomNav [data-tab="home"]').click(); sp.wait_for_timeout(600); close_modals(sp)
+    # 3) 沙发竖放，没侧面图：保持原兜底（正面图、1 格宽、等比 225/600、贴底）
+    u = place12c2(sp, [['furn_sofa', 5, 1, 1], ['furn_rocket_pipe_sofa', 4, 1, 1], ['furn_sofa', 0, 3, 0]])
+    check(len(u) == 3 and all(isinstance(x, str) and x for x in u), f'12c2 沙发竖放 (5,1) / 钢管沙发竖放 (4,1) / 沙发横放 (0,3) 摆好 {u}')
+    wait_imgs(sp)
+    g = S(sp, GEO_JS + "('" + u[0] + "')")
+    check(g and g['src'].startswith('art/furn_sofa.webp') and abs(g['dw'] - g['ew']) < 1 and abs(g['dh'] / g['dw'] - 225 / 600) < 0.02 and g['foot'] < 1.5 and abs(g['eh'] - 3 * g['ew']) < 2, f"12c2 沙发竖放、没侧面图：保持正面图兜底（1 格宽、等比、贴底）{g and (g['src'], round(g['dw'],1), round(g['dh'],1))}")
+    # 4) 模拟熊大补了 furn_sofa_side.webp（240×800）：竖放换侧面图、1 格宽、高 800/240 格、贴底；rot 3 镜像；横放仍正面图
+    sp.route('**/art/furn_sofa_side.webp*', lambda r: r.fulfill(status=200, content_type='image/png', body=png_bytes(240, 800)))
+    S(sp, "__tzz.FURN_SIDE.sofa = 800/240; __tzz.FURN_SIDE.rocket_pipe_sofa = 3; __tzz.renderTab()")
+    sp.wait_for_function("(()=>{const e=document.querySelector('#roomFloor .furn[data-uid=\"" + u[1] + "\"] img'); return e&&e.complete&&e.naturalWidth&&!e.dataset.front})()", timeout=15000)
+    wait_imgs(sp)
+    g = S(sp, GEO_JS + "('" + u[0] + "')")
+    check(g and g['src'].startswith('art/furn_sofa_side.webp') and g['nw'] == 240 and g['nh'] == 800 and 'mir' not in g['cls'] and abs(g['dw'] - g['ew']) < 1 and abs(g['dh'] - g['ew'] * 800 / 240) < 1.5 and g['foot'] < 1.5,
+          f"12c2 登记侧面图后：沙发竖放（rot 1）用 furn_sofa_side.webp、1 格宽、高 {round(g['dh']/g['ew'],2) if g else '?'} 格（=800/240）、贴底 {g and g['src']}")
+    gh = S(sp, GEO_JS + "('" + u[2] + "')")
+    check(gh and gh['src'].startswith('art/furn_sofa.webp') and abs(gh['dw'] - gh['ew']) < 1, f"12c2 同一件沙发横放仍用正面图 {gh and gh['src']}")
+    # 4b) 侧面图加载失败（钢管沙发登记了但没这张图）→ 自动回正面图、高度回正面比例、不丢图
+    gp = S(sp, GEO_JS + "('" + u[1] + "')")
+    check(gp and gp['src'].startswith('art/furn_rocket_pipe_sofa.webp') and gp['art'] and abs(gp['dh'] / gp['dw'] - 337 / 600) < 0.02 and abs(gp['dw'] - gp['ew']) < 1 and gp['foot'] < 1.5, f"12c2 侧面图缺失/加载失败 → 回正面图兜底（不变 emoji、比例 337/600）{gp and (gp['src'], gp['fiH'])}")
+    r3 = S(sp, "(()=>{const s=__tzz.state,E=__tzz.E,q=s.homes.c77.placed.find(x=>x.uid==='" + u[0] + "'); q.rot=3; const ok=E.canPlace(s,'c77',q.fid,q.x,q.y,3,q.uid).ok; __tzz.persist(); __tzz.renderTab(); return ok})()")
+    wait_imgs(sp)
+    g = S(sp, GEO_JS + "('" + u[0] + "')")
+    check(r3 and g and g['src'].startswith('art/furn_sofa_side.webp') and 'mir' in g['cls'] and g['tf'].startswith('matrix(-1'), f"12c2 rot 3：同一张侧面图水平镜像 {g and (g['cls'], g['tf'])}")
+    sp.locator('#room').screenshot(path=f'{SHOTS}/12c2_side_sim.png')
+    S(sp, "delete __tzz.FURN_SIDE.sofa; delete __tzz.FURN_SIDE.rocket_pipe_sofa; __tzz.renderTab()")
+    sc.close()
+    errs[:] = [e for e in errs if not (e.startswith('12c2-side') and ('_side.webp' in e or '404' in e))]  # 4b 故意请求不存在的侧面图
+
+    print('== 12b2. 阿宅 / 火箭老板 Lv2/Lv3 底图 + 真禁区；77 漫画新全身 / 头像；测试房间 ?test=homes 不碰真存档 ==')
+    TURL = URL + ('&' if '?' in URL else '?') + 'test=homes'
+    WB12B2 = {'otaku_2': (10, 1600, 1400), 'otaku_3': (16, 2000, 1600), 'rocket_2': (10, 1600, 1400), 'rocket_3': (14, 2000, 1600)}   # 禁区格数 = 列数 × 2 排
+    zc = b.new_context(**p.devices['iPhone 15']); zp = zc.new_page(); hook(zp, '12b2')
+    zp.goto(URL); zp.evaluate("localStorage.clear()"); zp.reload(); zp.wait_for_timeout(800); close_modals(zp)
+    hl3 = S(zp, "Promise.all(" + json.dumps([[k, v[1], v[2]] for k, v in WB12B2.items()]) + ".map(([k,w,h])=>new Promise(r=>{ if(!__tzz.HOME_ART[k]) return r(k+' 没登记'); const im=new Image(); im.onload=()=>r(im.naturalWidth===w&&im.naturalHeight===h?null:k+' 尺寸 '+im.naturalWidth+'×'+im.naturalHeight); im.onerror=()=>r(k+' 加载失败'); im.src='art/home_'+k+'.webp';}))).then(a=>a.filter(Boolean))")
+    check(hl3 == [], f'12b2 阿宅 / 火箭老板 Lv2/Lv3 底图都登记、加载成功、尺寸对（公寓 1600×1400、豪宅 2000×1600）{hl3}')
+    a77 = S(zp, "Promise.all([['ceo_c77',480],['face_c77',192]].map(([n,w])=>new Promise(r=>{const im=new Image(); im.onload=()=>r(im.naturalWidth===w&&im.naturalHeight===w?null:n+' '+im.naturalWidth+'×'+im.naturalHeight); im.onerror=()=>r(n+' 加载失败'); im.src='art/'+n+'.webp?v='+(n==='face_c77'?'12d2':'12b2');}))).then(a=>a.filter(Boolean))")
+    check(a77 == [], f'12b2 77 漫画新全身 ceo_c77 480×480、头像 face_c77 192×192（12d2 换回原版）都能加载 {a77}')
+    zp.locator('#bottomNav [data-tab="ceo"]').click(); zp.wait_for_timeout(500)
+    srcs = S(zp, "[...document.querySelectorAll('img')].map(i=>i.getAttribute('src')||'').filter(s=>/_c77\\.webp/.test(s))")
+    check(srcs and all(s.endswith('?v=13') for s in srcs) and any('face_c77' in s for s in srcs) and any('ceo_c77' in s for s in srcs), f'12b2/12d2 CEO 页 77：v13 正式站头像 / 全身都带 ?v=13 {srcs[:4]}')
+    # 12d2：服务器上的头像字节 = 72323b4^ 原版，全身 = 72323b4 新版（线上跑就是核对线上文件）
+    import hashlib, urllib.request
+    _base = URL.split('?')[0].rsplit('/', 1)[0]
+    def _sha(n, v):
+        for _ in range(3):
+            try: return hashlib.sha256(urllib.request.urlopen(f'{_base}/art/{n}.webp?v={v}', timeout=30).read()).hexdigest()
+            except Exception as e: _err = e
+        return 'ERR ' + str(_err)
+    fs_, cs_ = _sha('face_c77', '13'), _sha('ceo_c77', '13')
+    check(fs_ == '020bcc1fba97f778e96841d71c29174ab4ee8af7075a927a3e1322d73dd81342' and cs_ == '0233b7ed158ee38ec7c34d6dc411b29bb5685b46bab6161f535f10837212a2c4', f'12d2 站上 face_c77.webp = 72323b4^ 原版（{fs_[:12]}）、ceo_c77.webp = 72323b4 新版（{cs_[:12]}）')
+    fsrc = S(zp, "(()=>{const i=[...document.querySelectorAll('img')].find(i=>/face_c77/.test(i.getAttribute('src')||'')); return i ? {ok:i.complete && i.naturalWidth===192, src:i.getAttribute('src')} : null})()")
+    check(fsrc and fsrc['ok'], f'12d2 CEO 页 77 头像图片实际加载成功（192×192）{fsrc}')
+    S(zp, "(()=>{const s=__tzz.state; s.ceos.otaku.unlocked=true; s.ceos.rocket.unlocked=true; s.coins=1e9; __tzz.persist();})()")
+    zp.locator('#bottomNav [data-tab="home"]').click(); zp.wait_for_timeout(500); close_modals(zp)
+    for key, (nb, W, H) in WB12B2.items():
+        cid, lv = key.split('_')[0], int(key[-1])
+        S(zp, f"(()=>{{const s=__tzz.state; s.homes.{cid}.lv={lv}; s.homes.{cid}.placed=[]; __tzz.persist(); __tzz.homeAct('homeWho','{cid}'); __tzz.renderTab();}})()")
+        zp.wait_for_function("(()=>{const i=document.querySelector('#room .room-art'); return i&&i.complete&&i.naturalWidth>0})()", timeout=15000)
+        g = S(zp, "(()=>{const r=document.getElementById('room'),im=r.querySelector('.room-art'); return {has:r.classList.contains('has-art'), src:im.getAttribute('src'), nw:im.naturalWidth, nh:im.naturalHeight, blocks:document.querySelectorAll('#wallGrid .wall-block').length, n:__tzz.E.wallBlockedCells(__tzz.state,__tzz.homeWho).length}})()")
+        check(g['has'] and g['src'].startswith(f'art/home_{key}.webp') and g['nw'] == W and g['nh'] == H and g['blocks'] == g['n'] == nb, f"12b2 {key}：房间用真底图 {g['nw']}×{g['nh']}，墙面禁区 {g['blocks']} 格（应 {nb}）")
+    zc.close()
+    # —— 测试房间：先造一份真存档（另一个标签开着真游戏），再开 ?test=homes 狂操作，真存档 / 备份 / 多标签锁一个字节都不能变 ——
+    tc = b.new_context(**p.devices['iPhone 15']); rp = tc.new_page(); hook(rp, '12b2-real')
+    rp.goto(URL); rp.evaluate("localStorage.clear()"); rp.reload(); rp.wait_for_timeout(800); close_modals(rp)
+    S(rp, "(()=>{const s=__tzz.state,E=__tzz.E; s.coins=123456; s.taps=77; E.buyFurniture(s,'furn_painting'); E.placeItem(s,'c77','furn_painting',0,1,0,'wall'); __tzz.persist();})()")
+    LS = "(()=>{const o={}; for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i); o[k]=localStorage.getItem(k);} return o})()"
+    rp.close()   # 真游戏标签自己每 5 秒 / 切后台关页时也会存档：先关掉，再从同源的静态页（version.json，不跑游戏）拍 localStorage 快照，下面逐字节比
+    vj = tc.new_page(); vj.goto(URL.rsplit('/', 1)[0] + '/version.json'); snap0 = S(vj, LS); real0 = json.loads(snap0[KEY])
+    tp = tc.new_page(); hook(tp, '12b2-test'); tp.goto(TURL); tp.wait_for_timeout(900)
+    t = S(tp, "(()=>{const s=__tzz.state,b=document.getElementById('testBadge'); return {tm:__tzz.TEST_MODE, tab:document.getElementById('app').dataset.tab, badge:b&&getComputedStyle(b).display!=='none'&&b.getBoundingClientRect().height>0?b.textContent:'', lv:['c77','pearl','otaku','rocket'].map(id=>s.homes[id].lv), open:['c77','pearl','otaku','rocket'].every(id=>s.ceos[id].unlocked), n:['c77','pearl','otaku','rocket'].map(id=>s.homes[id].placed.length), wall:['c77','pearl','otaku','rocket'].map(id=>s.homes[id].placed.filter(q=>q.surf==='wall').length), inv:s.furnInv.furn_painting, coins:s.coins, modal:!document.querySelector('#modal').classList.contains('hidden')}})()")
+    check(t['tm'] and t['tab'] == 'home' and '不存档' in t['badge'] and t['lv'] == [2, 2, 2, 2] and t['open'] and t['n'] == [8, 8, 8, 8] and t['wall'] == [1, 1, 1, 1] and t['inv'] == 4 and t['coins'] >= 1e12 and not t['modal'],
+          f"12b2 ?test=homes：直接进家宅、角标「{t['badge']}」、四家公寓都开、每家 7 件家具 + 1 幅画、仓库 4 幅画、不弹开场 {t['lv']} {t['n']}")
+    S(tp, "__tzz.homeAct('homeWho','otaku'); __tzz.renderTab()"); tp.wait_for_function("(()=>{const i=document.querySelector('#room .room-art'); return i&&i.complete&&i.naturalWidth>0&&[...document.querySelectorAll('#room .furn img')].every(x=>x.complete)})()", timeout=15000)
+    rr = S(tp, "(()=>{const r=document.getElementById('room'); return {has:r.classList.contains('has-art'), src:r.querySelector('.room-art').getAttribute('src'), furn:r.querySelectorAll('.furn').length, blocks:r.querySelectorAll('.wall-block').length}})()")
+    check(rr['has'] and 'home_otaku_2.webp' in rr['src'] and rr['furn'] == 8 and rr['blocks'] == 10, f"12b2 测试房间阿宅公寓：真底图、8 件家具画出来、墙面禁区 {rr['blocks']} 格 {rr['src']}")
+    # 挂画拖到禁区被拒（如实提示），拖到空墙可以；买家具 / 摆 / 升级 / 自动保存都只在内存
+    nb = S(tp, "(()=>{const s=__tzz.state,E=__tzz.E,q=s.homes.otaku.placed.find(x=>x.surf==='wall'); const bad=E.moveItem(s,'otaku',q.uid,4,0), good=E.moveItem(s,'otaku',q.uid,1,1); E.buyFurniture(s,'furn_sofa'); const pl=E.placeItem(s,'otaku','furn_sofa',4,1,0); const up=E.upgradeHome(s,'rocket'); __tzz.persist(); __tzz.renderTab(); return {bad:bad.ok, why:bad.why, good:good.ok, pl:pl.ok, up:up.ok, rocket:s.homes.rocket.lv}})()")
+    check(not nb['bad'] and '窗户' in (nb['why'] or '') and nb['good'] and nb['pl'] and nb['up'] and nb['rocket'] == 3, f"12b2 测试房间：画拖到第 5 列被拒「{nb['why']}」、拖到空墙可以、买 / 摆沙发、火箭老板升豪宅都正常")
+    tp.locator('.mode-tabs [data-arg="decor"]').first.click() if tp.locator('.mode-tabs [data-arg="decor"]').count() else None
+    tp.wait_for_timeout(6500)   # 等过一轮 5 秒自动保存
+    snap1 = S(tp, LS)
+    check(snap1 == snap0 and not S(tp, '__tzz.frozen'), f'12b2 测试房间操作 + 自动保存后：localStorage 一字不差（{len(snap0)} 个键：{sorted(snap0)}）')
+    tp.reload(); tp.wait_for_timeout(900)
+    t2 = S(tp, "(()=>{const s=__tzz.state; return {tm:__tzz.TEST_MODE, rocket:s.homes.rocket.lv, n:s.homes.otaku.placed.length}})()")
+    check(t2['tm'] and t2['rocket'] == 2 and t2['n'] == 8 and S(tp, LS) == snap0, f'12b2 测试房间刷新 = 重置成初始假数据（火箭老板回公寓、阿宅回 8 件），真存档仍不变 {t2}')
+    l3 = tc.new_page(); hook(l3, '12b2-lv3'); l3.goto(TURL + '&lv=3'); l3.wait_for_timeout(900)
+    t3 = S(l3, "(()=>{const s=__tzz.state,ids=['c77','pearl','otaku','rocket']; return {tm:__tzz.TEST_MODE, lv:ids.map(id=>s.homes[id].lv), ok:ids.every(id=>s.homes[id].placed.every(q=>__tzz.E.canPlace(s,id,q.fid,q.x,q.y,q.rot,q.uid,q.surf).ok)), badge:document.getElementById('testBadge').textContent}})()")
+    check(t3['tm'] and t3['lv'] == [3, 3, 3, 3] and t3['ok'] and '豪宅' in t3['badge'], f"12b2 ?test=homes&lv=3：四家都是豪宅、摆放全合法、角标「{t3['badge']}」")
+    l3.close()
+    # 版本自检重开（缓存旧页 → 带新版本号重开）也要保住 test=homes，不会掉回真存档
+    vp = tc.new_page(); hook(vp, '12b2-ver'); vp.route('**/version.json*', lambda r: r.fulfill(status=200, content_type='application/json', body='{"v":"99z"}'))
+    vp.goto(TURL); vp.wait_for_timeout(1500)
+    check('v=99z' in vp.url and 'test=homes' in vp.url and S(vp, '__tzz.TEST_MODE') and S(vp, LS) == snap0, f'12b2 版本自检重开后网址仍带 test=homes（{vp.url.split("/")[-1]}），仍是测试房间、真存档不变')
+    vp.close()
+    # 不带参数 / 参数不对都进不了测试房间：读回的就是刚才那份真存档
+    for q in ['', '?test=home', '?test=HOMES', '?homes=1']:
+        np_ = tc.new_page(); hook(np_, '12b2-no'); np_.goto(URL + q); np_.wait_for_timeout(900)
+        r = S(np_, "(()=>({tm:__tzz.TEST_MODE, coins:Math.floor(__tzz.state.coins), taps:__tzz.state.taps, badge:!!document.getElementById('testBadge'), lv:__tzz.state.homes.otaku.lv, wall:__tzz.state.homes.c77.placed.filter(x=>x.surf==='wall').map(x=>x.x+','+x.y)}))()")
+        check(not r['tm'] and not r['badge'] and r['coins'] == int(real0['coins']) and r['taps'] == 77 and r['lv'] == 1 and r['wall'] == ['0,1'], f"12b2 网址「{q or '（无参数）'}」：不是测试房间，读的是真存档（金币 {r['coins']}、点击 77、77 墙上原来那幅画 {r['wall']}）")
+        np_.close()
+    # 真游戏标签开着的时候再开测试房间：真标签不被挤下线（多标签锁没被改），测试房间也不会因为真标签存档而冻结
+    rp = tc.new_page(); hook(rp, '12b2-real2'); rp.goto(URL); rp.wait_for_timeout(900); close_modals(rp)
+    lock0 = S(rp, "localStorage.getItem('tangzhe-tab-lock')")
+    tp2 = tc.new_page(); hook(tp2, '12b2-test2'); tp2.goto(TURL); tp2.wait_for_timeout(900)
+    S(tp2, "(()=>{const s=__tzz.state,E=__tzz.E; E.buyFurniture(s,'furn_lamp'); E.upgradeHome(s,'c77'); __tzz.persist();})()"); S(rp, "__tzz.persist()"); tp2.wait_for_timeout(6000)
+    lock1 = S(rp, "localStorage.getItem('tangzhe-tab-lock')"); rs = json.loads(S(rp, LS)[KEY])
+    check(lock1 == lock0 and not S(rp, '__tzz.frozen') and not S(tp2, '__tzz.frozen') and rs['homes']['c77']['lv'] == 1 and rs.get('test') is None, f'12b2 真游戏 + 测试房间同时开：真标签没被挤下线、多标签锁没被改，测试房间里升的房子没进真存档（77 仍小屋）')
+    tp2.close()
+    after = json.loads(S(rp, LS)[KEY])
+    check(after.get('test') is None and after['homes']['otaku']['lv'] == 1 and after['coins'] >= real0['coins'], '12b2 真存档里没有任何测试房间的数据（没有 test 标记、阿宅仍是小屋）')
+    tc.close()
 
     print('== 9. 各尺寸 iPhone 视口 ==')
     for name in ['iPhone SE', 'iPhone SE (3rd gen)', 'iPhone 13 Mini', 'iPhone 15', 'iPhone 15 Pro Max', 'iPhone 16 Pro Max']:
