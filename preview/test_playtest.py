@@ -980,7 +980,7 @@ with sync_playwright() as p:
                   f"12c {dname} {tb}：底栏 5 个同套线稿图标（symbol 引用、≥20px、无 emoji），按钮 ≥44×44，只有当前页高亮 {[(n['tab'], n['w'], n['h'], n['iw']) for n in nv]}")
             check(u['sw'] <= u['vw'] and u['pw'] <= u['pc'] + 1 and not u['clip'], f"12c {dname} {tb}：无横向溢出（页 {u['sw']}≤{u['vw']}，面板 {u['pw']}≤{u['pc']}），按钮文字没被裁 {u['clip']}")
             check(u['tok'] and u['card'] and float(u['card']['bw'][:-2]) >= 3 and '4px 4px' in u['card']['sh'] and u['buy'] and '3px 3px' in u['buy']['sh'] and (u['sec'] == 'rgb(20, 20, 20)' or (tb == 'home' and u['sec'] is None)),
-                  f"12c {dname} {tb}：设计令牌生效（卡片 3.5px 墨边 + 4px 墨影、按钮 3px 墨影、段标题墨底）{u['card']} {u['buy']}")
+                  f"12c {dname} {tb}：设计令牌生效（卡片 ≥3px 墨边 + 4px 墨影、按钮 3px 墨影、段标题墨底）{u['card']} {u['buy']}")
         # 弹窗统一关闭钮：× = 代按「再想想」，不改任何东西
         up.locator('#bottomNav [data-tab="home"]').click(); up.wait_for_timeout(500)
         h0 = st(up); up.evaluate("__tzz.act('homeUp','c77')"); up.wait_for_timeout(500)
@@ -1005,6 +1005,116 @@ with sync_playwright() as p:
     rm = S(rp, "(()=>({m:getComputedStyle(document.getElementById('mpanel')).animationName, t:getComputedStyle(document.getElementById('toast')).animationName, x:!!document.querySelector('#mpanel #mX')}))()")
     check(rm['m'] == 'none' and rm['t'] == 'none' and rm['x'], f'12c 减少动态：开场弹窗 / 提示条不做弹出动画，× 照常有 {rm}')
     rc.close()
+
+    print('== 12c1. 熊大 13:18 视觉基准：配色 / 3px·2px 线 / 正文无网点 / 只主操作大黄块 / 无系统 emoji / 触控 ≥44 / 3 头身人物 ==')
+    SPEC_JS = """(()=>{const cs=(e,p)=>getComputedStyle(e,p), R=e=>e.getBoundingClientRect(), root=cs(document.documentElement), vis=s=>[...document.querySelectorAll(s)].filter(x=>x.offsetParent);
+      const card=vis('#tabBody .card:not(.dim)')[0], buy=vis('#tabBody .buy:not([disabled]):not(.alt):not(.ghost):not(.red):not(.no)')[0];
+      const tok={ink:root.getPropertyValue('--ink').trim(), paper:root.getPropertyValue('--paper').trim(), panel:root.getPropertyValue('--panel').trim(), yellow:root.getPropertyValue('--yellow').trim(), red:root.getPropertyValue('--red').trim()};
+      const cardA=card?cs(card,'::after'):null;
+      const yel=vis('#tabBody *, #shopTabs *, #bottomNav *').filter(e=>cs(e).backgroundColor==='rgb(255, 210, 63)'&&!e.closest('.buy')&&R(e).width*R(e).height>1600).map(e=>e.className||e.tagName);
+      const emo=['#bottomNav','#shopTabs','.book-tabs','.mode-tabs','.home-card','.room-tools','.room-wall .rw-deco','.home-who','.job-gal','#compactHead','.who-row'].flatMap(s=>vis(s)).map(e=>[...e.textContent.matchAll(/\\p{Extended_Pictographic}/gu)].map(m=>m[0]).join('')).join('');
+      const icons=vis('#shopTabs button, .home-card .ava.sq, .job-chip').map(e=>{const u=e.querySelector('svg.ic use'); const h=u&&u.getAttribute('href'); return !!(h&&document.querySelector(h)&&document.querySelector(h).tagName.toLowerCase()==='symbol'&&R(e.querySelector('svg.ic')).height>=12&&R(e.querySelector('svg.ic')).height<=40);});
+      return {tok, app:cs(document.getElementById('app')).backgroundImage, card:card?{bw:cs(card).borderTopWidth, bg:cs(card).backgroundColor, tone:cardA.display==='none'||cardA.content==='none'}:null,
+        buy:buy?{bw:cs(buy).borderTopWidth, bg:cs(buy).backgroundColor}:null, nav:cs(document.getElementById('bottomNav')).borderTopWidth, navBg:cs(document.getElementById('bottomNav')).backgroundImage,
+        yel, emo, icons};})()"""
+    HIT_JS = """(()=>{const R=e=>e.getBoundingClientRect(), vis=s=>[...document.querySelectorAll(s)].filter(x=>x.offsetParent&&!x.disabled);
+      const nav=R(document.getElementById('bottomNav')).top, out=[]; for(const s of ['#bottomNav button','#shopTabs button','.book-tabs button','.mode-tabs .mt','.job-chip','.buyamt button','#dailyChip','#mute','#tabBody .buy','.mall-go']){
+        for(const e of vis(s)){const r=R(e); const inNav=!!e.closest('#bottomNav'); if(r.top<0||(!inNav&&r.bottom>nav-2)||r.bottom>innerHeight) continue; const cx=r.left+r.width/2, cy=r.top+r.height/2;
+          const hit=(x,y)=>{const t=document.elementFromPoint(x,y); return !!t&&(t===e||e.contains(t));};
+          const h=[-21.5,21.5].every(d=>hit(cx,cy+d)), w=[-21.5,21.5].every(d=>hit(cx+d,cy));
+          if(!(h&&w)) out.push(s+' '+e.textContent.trim().slice(0,8)+' '+Math.round(r.width)+'×'+Math.round(r.height));}}
+      return out;})()"""
+    for dname in ['iPhone SE', 'iPhone SE (3rd gen)', 'iPhone 15']:
+        sc = b.new_context(**p.devices[dname]); sp = sc.new_page(); hook(sp, 'spec12c1-' + dname)
+        sp.goto(URL); sp.evaluate("localStorage.clear()"); sp.reload(); sp.wait_for_timeout(800)
+        intro = S(sp, """(()=>{const m=document.getElementById('mpanel'), lines=e=>{if(!e) return 0; const r=document.createRange(); r.selectNodeContents(e); return new Set([...r.getClientRects()].filter(q=>q.width>1).map(q=>Math.round(q.top))).size;};
+          return {open:!m.closest('.hidden'), x:!!m.querySelector('#mX'), ok:(m.querySelector('#mOk')||{}).textContent, bub:lines(m.querySelector('.mbubble')), title:lines(m.querySelector('.mtitle'))};})()""")
+        check(intro['open'] and intro['x'] and '开摊' in (intro['ok'] or '') and intro['bub'] == 1 and intro['title'] == 1, f"12c1 {dname}：开摊介绍弹窗对白泡和标题都是一行（不在 × 旁折行）{intro}")
+        b0 = S(sp, "__tzz.bubble.until"); sp.click('#mX'); sp.wait_for_timeout(400)
+        xi = S(sp, "({open:!document.getElementById('modal').classList.contains('hidden'), au:__tzz.audioState(), same:__tzz.bubble.until===" + json.dumps(b0) + "})")
+        check(not xi['open'] and xi['au'] == 'none' and xi['same'], f"12c1 {dname}：开摊介绍点 × 只关窗——不解锁音频、77 不新说开摊台词 {xi}")
+        if dname == 'iPhone SE':
+            sp.reload(); sp.wait_for_timeout(800); b0 = S(sp, "__tzz.bubble.until"); sp.click('#mOk'); sp.wait_for_timeout(400)
+            ki = S(sp, "({au:__tzz.audioState(), line:__tzz.bubble.txt, changed:__tzz.bubble.until!==" + json.dumps(b0) + "})")
+            check(ki['au'] != 'none' and '串串烤起走' in (ki['line'] or '') and ki['changed'], f'12c1 对照：点「开摊！」照旧解锁音频 + 77 说开摊台词 {ki}')
+        close_modals(sp)
+        sp.evaluate("(()=>{const s=__tzz.state,E=__tzz.E; s.coins=5e7; E.hireEmp(s,0); s.shops[0].lv=12; E.openShop(s,1); E.hireEmp(s,1); E.openShop(s,2); E.hireEmp(s,2); E.buyFurniture(s,'furn_painting'); __tzz.persist(); __tzz.renderTab();})()"); sp.wait_for_timeout(500); close_modals(sp)
+        for tb in ['shop', 'home', 'ceo']:
+            sp.locator(f'#bottomNav [data-tab="{tb}"]').click(); sp.wait_for_timeout(600); close_modals(sp)
+            if tb == 'home': sp.evaluate("__tzz.act('homeMode','decor')"); sp.wait_for_timeout(300)
+            u = S(sp, SPEC_JS)
+            check(u['tok'] == {'ink': '#141414', 'paper': '#f7f1e3', 'panel': '#fffaf0', 'yellow': '#ffd23f', 'red': '#e63946'}, f"12c1 {dname} {tb}：五个基准色令牌 = 墨 #141414 / 纸 #f7f1e3 / 内容底 #fffaf0 / 黄 #ffd23f / 红 #e63946 {u['tok']}")
+            check(u['card'] and u['card']['bw'] == '3px' and u['card']['bg'] == 'rgb(255, 250, 240)' and u['nav'] == '3px' and u['buy'] and u['buy']['bw'] == '2px' and u['buy']['bg'] == 'rgb(255, 210, 63)',
+                  f"12c1 {dname} {tb}：外框 3px（卡片 / 底栏）、内框 2px（主按钮，主黄 #ffd23f），卡片底 #fffaf0 {u['card']} 底栏 {u['nav']} 按钮 {u['buy']}")
+            check(u['app'] == 'none' and u['card']['tone'] and u['navBg'] == 'none', f"12c1 {dname} {tb}：正文区不铺网点（页底 {u['app'][:30]}、卡片角网点关、底栏 {u['navBg'][:30]}）")
+            check(not u['yel'], f"12c1 {dname} {tb}：大黄块只给主操作按钮，选中态不再是整块主黄 {u['yel'][:6]}")
+            check(u['emo'] == '' and u['icons'] and all(u['icons']), f"12c1 {dname} {tb}：导航 / 店铺切换 / 家宅升级 / 任职签无系统 emoji（剩 {u['emo']!r}），店铺 / 家宅 / 锁图标全是同套 SVG symbol（{len(u['icons'])} 个）")
+            icv = S(sp, """(()=>{const v=e=>e?getComputedStyle(e).getPropertyValue('--ica').trim():null, vis=s=>[...document.querySelectorAll(s)].filter(x=>x.offsetParent);
+              const grp=s=>vis(s).filter(b=>b.querySelector('svg.ic')).map(b=>[b.classList.contains('on'), v(b.querySelector('svg.ic'))]);
+              return {nav:grp('#bottomNav button'), book:grp('.book-tabs button:not(:first-child)'), mode:grp('.mode-tabs .mt')};})()""")
+            okc = lambda g: all((c == '#e63946') if on else (c == '#f0a9af') for on, c in g) and sum(on for on, _ in g) == 1
+            check(okc(icv['nav']) and (tb != 'home' or (okc(icv['book']) and okc(icv['mode']))), f"12c1 {dname} {tb}：图标跟随选中态（选中主红 #e63946、未选淡红 #f0a9af；底栏{' / 翻页签 / 生活·布置' if tb == 'home' else ''}）{icv}")
+            adj = S(sp, """(()=>{const R=e=>e.getBoundingClientRect(), nav=R(document.getElementById('bottomNav')).top, out=[];
+              for(const g of ['#shopTabs button','.book-tabs button','.mode-tabs .mt','.buyamt button','.job-gal .job-chips']){
+                for(const box of document.querySelectorAll(g.endsWith('job-chips')?g:g.split(' ')[0])){ const items=g.endsWith('job-chips')?[...box.querySelectorAll('.job-chip')]:[...document.querySelectorAll(g)];
+                  for(const e of items){ if(!e.offsetParent||e.disabled) continue; const r=R(e); if(r.top<0||r.bottom>nav-2) continue; const cy=r.top+r.height/2, cx=r.left+r.width/2;
+                    for(const [x,y] of [[r.left+3,cy],[r.right-3,cy],[cx,r.top+3],[cx,r.bottom-3]]){const t=document.elementFromPoint(x,y); if(!t||!(t===e||e.contains(t))) out.push(g+' '+e.textContent.trim().slice(0,6)+' @'+Math.round(x)+','+Math.round(y)+'→'+(t?(t.textContent||'').trim().slice(0,6):null));}}
+                  if(!g.endsWith('job-chips')) break; }}
+              return out;})()""")
+            check(not adj, f"12c1 {dname} {tb}：相邻控件不误触（店铺签 / 翻页签 / 生活·布置 / 数量切换 / 任职签，每格四边内 3px 点到的都是自己）{adj[:4]}")
+            coin = S(sp, "(()=>{const b=[...document.querySelectorAll('#tabBody .buy:not([disabled]):not(.no)')].find(x=>x.offsetParent&&x.querySelector('small')); if(!b) return null; const s=getComputedStyle(b.querySelector('small'),'::before'); return {bg:s.backgroundColor, img:s.backgroundImage.slice(0,15), btn:getComputedStyle(b).backgroundColor};})()")
+            check(coin is None or (coin['bg'] == 'rgb(233, 161, 0)' and coin['bg'] != coin['btn']), f"12c1 {dname} {tb}：按钮里的金币是深金币（不再是黄按钮上的空圈）{coin}")
+            miss = S(sp, HIT_JS)
+            check(not miss, f"12c1 {dname} {tb}：可见控件实测点击盒 ≥44×44（elementFromPoint 中心 ±21.5px 都打得到本控件）{miss[:6]}")
+            if tb == 'home':
+                sp.evaluate("__tzz.act('homeSub','mall')"); sp.wait_for_timeout(400)
+                miss = S(sp, HIT_JS); check(not miss, f'12c1 {dname} 商城：页签 / 按钮点击盒 ≥44 {miss[:6]}')
+                mc = S(sp, "(()=>{const c=document.querySelector('.mall-count'), n=c&&c.querySelector('.mc-num'); return n?{t:n.textContent, w:n.getBoundingClientRect().width, cw:c.getBoundingClientRect().width}:null})()")
+                import re as _re
+                check(mc and _re.fullmatch(r'显示\d+/ \d+ 件', mc['t']) and mc['w'] < mc['cw'] * 0.6, f"12c1 {dname} 商城「显示 N / 200 件」是一组、不被拉散 {mc}")
+                sp.evaluate("__tzz.act('homeSub','room')"); sp.wait_for_timeout(300)
+        # 误触：扩出来的点击区不吃掉邻居；数量切换只切自己；每日双倍扩展区外不算点中
+        sp.locator('#bottomNav [data-tab="shop"]').click(); sp.wait_for_timeout(500); close_modals(sp)
+        sp.evaluate("document.querySelector('.buyamt').scrollIntoView({block:'center'})"); sp.wait_for_timeout(200)
+        mis = S(sp, """(()=>{const R=e=>e.getBoundingClientRect(), d=document.getElementById('dailyChip'), m=document.getElementById('mute'), dr=R(d), mr=R(m);
+          const at=(x,y)=>{const t=document.elementFromPoint(x,y); return t&&(t.closest('#dailyChip')?'daily':t.closest('#mute')?'mute':'other');};
+          const bs=[...document.querySelectorAll('.buyamt button')];
+          const dy=dr.top+dr.height/2, my=mr.top+mr.height/2;
+          return {dIn:at(dr.left+dr.width/2, dy+21.5), dOut:at(dr.left+dr.width/2, dy+30), mIn:at(mr.left+mr.width/2, my+21.5), gap:at((dr.right+mr.left)/2, dy), mL:at(mr.left-2, my), amt:bs.map(b=>{const r=R(b), t=document.elementFromPoint(r.left+3, r.top+r.height/2); return !!t&&t.closest('.buyamt button')===b;})};})()""")
+        check(mis['dIn'] == 'daily' and mis['dOut'] != 'daily' and mis['mIn'] == 'mute' and mis['gap'] != 'daily' and mis['mL'] == 'mute' and all(mis['amt']),
+              f"12c1 {dname}：扩展点击区不越界（每日双倍中心 +21.5 算、+30 不算；声音键 +21.5 算；每日双倍不往声音键那边扩、声音键左缘外 2px 仍是声音键；数量切换每格左缘点到的是自己）{mis}")
+        btns = sp.locator('.buyamt button'); seen = []
+        for k in range(btns.count()):
+            btns.nth(k).click(); sp.wait_for_timeout(150); seen.append([sp.locator('.buyamt button').nth(j).get_attribute('class') or '' for j in range(btns.count())])
+        check(len(seen) >= 2 and all(('on' in seen[k][k]) and sum('on' in c.split() for c in seen[k]) == 1 for k in range(len(seen))), f'12c1 {dname}：数量切换 ×1 / ×10 / MAX 点哪个只选中哪个（无误触）')
+        sc.close()
+    # 经营人物：约 3 头身 + 袖口 / 弯肘 / 裤腿；四位 CEO 沿用立绘发型 / 配饰 / 主色
+    pc = b.new_context(**p.devices['iPhone 15']); pp = pc.new_page(); hook(pp, 'person12c1')
+    pp.goto(URL); pp.evaluate("localStorage.clear()"); pp.reload(); pp.wait_for_timeout(800); close_modals(pp)
+    fig = S(pp, """(()=>{const T=window.__tzz; const box=(fn)=>{const o=document.createElement('canvas'); o.width=200; o.height=220; const c=o.getContext('2d'); c.translate(100,200); fn(c);
+        const d=c.getImageData(0,0,200,220).data; let t=999,b=-1; for(let y=0;y<220;y++)for(let x=0;x<200;x++) if(d[(y*200+x)*4+3]>40){if(y<t)t=y;if(y>b)b=y;}
+        return {h:b-t+1, d};};
+      const near=(d,x,y,hex,tol)=>{const m=/^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(hex); let h=m[1]; if(h.length===3) h=h.replace(/./g,c=>c+c); const n=parseInt(h,16), R=n>>16&255,G=n>>8&255,B=n&255;
+        for(let yy=y-2;yy<=y+2;yy++)for(let xx=x-2;xx<=x+2;xx++){const i=(yy*200+xx)*4; if(Math.abs(d[i]-R)<tol&&Math.abs(d[i+1]-G)<tol&&Math.abs(d[i+2]-B)<tol) return true;} return false;};
+      const out={}; for(const id of ['c77','pearl','otaku','rocket','e0','e1','e2','e3']){ const L=T.LOOKS[id];
+        const body=box(c=>T.drawPerson(c,0,0,1,Object.assign({},L,{hat:null}),{t:0,pose:''}));
+        const pants=L.pants||'#3d405b', sleeve=L.sleeve||L.top;
+        // 静止姿势：左上臂中点约 (-21,-60)，小臂袖口下约 (-19,-40)，裤管约 (±9,-25)
+        out[id]={ratio:+(body.h/38).toFixed(2), pants:near(body.d,91,175,pants,12)&&near(body.d,109,175,pants,12), sleeve:near(body.d,79,140,sleeve,14), skin:near(body.d,81,160,L.skin,12)};
+      }
+      const lk=id=>{const L=T.lookOf(id); return [L.style,L.top,L.bow||L.pin||L.glasses||L.lapel||null];};
+      out.looks={c77:lk('c77'), pearl:lk('pearl'), otaku:lk('otaku'), rocket:lk('rocket')};
+      return out;})()""")
+    lk = fig.pop('looks')
+    check(all(2.7 <= v['ratio'] <= 3.3 for v in fig.values()), f"12c1 店内人物约 3 头身（全身高 ÷ 头径 38）{ {k: v['ratio'] for k, v in fig.items()} }")
+    check(all(v['pants'] and v['sleeve'] and v['skin'] for v in fig.values()), f"12c1 店内人物有裤腿（两条裤管取色）、袖子（上臂是衣服色）、袖口下露小臂肤色 { {k: (v['pants'], v['sleeve'], v['skin']) for k, v in fig.items()} }")
+    check(lk == {'c77': ['pony', '#d93a32', '#ff8fab'], 'pearl': ['wavy', '#bfe3c4', True], 'otaku': ['messy', '#25335c', True], 'rocket': ['swept', '#2b2b2b', True]},
+          f'12c1 四位 CEO 店内小人沿用立绘：77 高马尾 + 粉蝴蝶结 + 红 T，珍珠姐卷发 + 珍珠发夹 + 薄荷衬衫，阿宅乱发 + 圆眼镜 + 藏青连帽衫，火箭老板背头 + 黑西装翻领 {lk}')
+    wear = S(pp, "(()=>{const s=__tzz.state; const old=s.wear&&s.wear.rocket; s.wear=s.wear||{}; s.wear.rocket={clothes:'c_suit'}; const L=__tzz.lookOf('rocket'); if(old) s.wear.rocket=old; else delete s.wear.rocket; return [L.top, !!L.lapel, !!L.inner];})()")
+    check(wear == ['#264653', False, False], f'12c1 换装覆盖立绘专属的内搭 / 翻领（穿 c_suit 不叠两层西装）{wear}')
+    pp.locator('#bottomNav [data-tab="shop"]').click(); pp.wait_for_timeout(1500)
+    check(not [e for e in errs if 'person12c1' in e or 'spec12c1' in e], '12c1 新人物 / 图标绘制无控制台报错')
+    pc.close()
 
     print('== 9. 各尺寸 iPhone 视口 ==')
     for name in ['iPhone SE', 'iPhone SE (3rd gen)', 'iPhone 13 Mini', 'iPhone 15', 'iPhone 15 Pro Max', 'iPhone 16 Pro Max']:

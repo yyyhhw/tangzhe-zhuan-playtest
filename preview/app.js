@@ -142,10 +142,11 @@ const SHOP_STYLE = [
   { wall:'#e9ecef', awn:'#2b2d42', counter:'#adb5bd', accent:'#06d6a0' },
 ];
 const LOOKS = {
-  c77:    { skin:'#ffe0c7', hair:'#1b1b1b', style:'bangs', bow:'#ff4f9a', top:'#ffffff', apron:'#ff5a7a', female:true, tag:'77' },
-  pearl:  { skin:'#ffe0c7', hair:'#6b3e26', style:'bun', top:'#9b5de5', pearls:true, female:true, lips:true },
-  otaku:  { skin:'#ffe6d0', hair:'#2b2b2b', style:'messy', glasses:true, top:'#2a9d8f', hood:true },
-  rocket: { skin:'#ffe0c7', hair:'#3b2a20', style:'swept', top:'#222222', rocketLogo:true, smug:true },
+  // 12c1：四位 CEO 店内小人沿用熊大立绘的发型 / 配饰 / 主色（77 高马尾+粉蝴蝶结+红 T 棕围裙；珍珠姐及颌卷发+珍珠发夹+薄荷衬衫杏色围裙；阿宅乱发+圆眼镜+藏青连帽衫；火箭老板背头+黑西装+火箭胸针）
+  c77:    { skin:'#ffe0c7', hair:'#3a2418', style:'pony', bow:'#ff8fab', top:'#d93a32', short:true, apron:'#7a4a2e', female:true, tag:'77' },
+  pearl:  { skin:'#ffe0c7', hair:'#7a4a2a', style:'wavy', pin:true, top:'#bfe3c4', apron:'#e3a35f', female:true, lips:true },
+  otaku:  { skin:'#ffe6d0', hair:'#1e1e1e', style:'messy', glasses:true, top:'#25335c', hood:true },
+  rocket: { skin:'#ffe0c7', hair:'#5a3a26', style:'swept', top:'#2b2b2b', inner:'#141414', lapel:true, rocketLogo:true, smug:true },
   e0:     { skin:'#ffd9b8', hair:'#222', style:'short', headband:RED, top:'#f4a261' },
   e1:     { skin:'#ffe0c7', hair:'#222', style:'twin', top:'#ffafcc', female:true, apron:'#fff' },
   e2:     { skin:'#ffe6d0', hair:'#333', style:'cover', top:'#8ecae6', sleepy:true },
@@ -167,7 +168,7 @@ function wearOf(id) { return (state.wear && state.wear[id]) || {}; }
 function lookOf(id) {
   const base = LOOKS[id]; if (!E.CEO_BY_ID[id]) return base;
   const L = Object.assign({}, base), eq = wearOf(id);
-  if (eq.clothes && CLOTHES[eq.clothes]) Object.assign(L, CLOTHES[eq.clothes], { rocketLogo:false, hood:false, tie:false, tag:id === 'c77' ? base.tag : null });
+  if (eq.clothes && CLOTHES[eq.clothes]) Object.assign(L, CLOTHES[eq.clothes], { rocketLogo:false, hood:false, tie:false, inner:null, lapel:false, short:false, tag:id === 'c77' ? base.tag : null });
   if (eq.hat) L.hat = eq.hat;
   return L;
 }
@@ -200,7 +201,7 @@ function buildBg(i) {
   const S = SHOP_STYLE[i], l = L(), lw = 2.6 * U, open = state.shops[i].open;
   // 天空 + 网点
   c.fillStyle = '#fffaf0'; c.fillRect(0, 0, W, H);
-  c.fillStyle = dotsPattern(c, 'rgba(20,20,20,.16)', 7 * U); c.fillRect(0, 0, W, H * 0.6);
+  c.fillStyle = dotsPattern(c, 'rgba(20,20,20,.07)', 7 * U); c.fillRect(0, 0, W, H * 0.6); // 12c1：背景网点减轻（非重点区）
   // 远处楼
   for (let k = 0; k < 7; k++) { const bw = W * 0.16, bx = k * W * 0.15 - W * 0.04, bh = H * (0.25 + ((k * 37) % 5) * 0.06);
     rr(c, bx, l.ground - bh - H * 0.2, bw, bh, 0); inkFill(c, k % 2 ? '#efe8d8' : '#e6dfcd', 1.5 * U); }
@@ -241,7 +242,7 @@ function buildBg(i) {
   const cy = l.counterY;
   rr(c, fx + fw * 0.06, cy, fw * 0.66, l.ground - cy, 0); inkFill(c, S.counter, lw);
   rr(c, fx + fw * 0.04, cy - 6 * U, fw * 0.7, 9 * U, 2 * U); inkFill(c, '#fff', lw);
-  c.fillStyle = dotsPattern(c, 'rgba(20,20,20,.18)', 5 * U); c.fillRect(fx + fw * 0.06 + 2, cy + 4 * U, fw * 0.66 - 4, l.ground - cy - 6 * U);
+  c.fillStyle = dotsPattern(c, 'rgba(20,20,20,.10)', 5 * U); c.fillRect(fx + fw * 0.06 + 2, cy + 4 * U, fw * 0.66 - 4, l.ground - cy - 6 * U);
   // 柜台上的道具
   if (i === 0) { rr(c, fx + fw * 0.12, cy - 18 * U, fw * 0.4, 14 * U, 2 * U); inkFill(c, '#333', lw); c.fillStyle = '#ff6b35'; c.fillRect(fx + fw * 0.13, cy - 9 * U, fw * 0.38, 4 * U); }
   else if (i === 1) { for (let k = 0; k < 3; k++) { const x = fx + fw * (0.16 + k * 0.12); c.beginPath(); c.moveTo(x - 8 * U, cy - 26 * U); c.lineTo(x + 8 * U, cy - 26 * U); c.lineTo(x + 6 * U, cy - 6 * U); c.lineTo(x - 6 * U, cy - 6 * U); c.closePath(); inkFill(c, '#f6e7d7', 2 * U);
@@ -253,18 +254,55 @@ function buildBg(i) {
 function decorOn(id) { return state.gacha.owned.includes(id) && !(state.decorHidden || []).includes(id); }
 
 /* ---------- 角色 ---------- */
+// 12c1：约 3 头身（头 ≈ 全身 1/3）、平涂 + 一层色块阴影；手臂两段（上臂袖子 → 弯肘 → 袖口 → 小臂 + 手），裤子是有宽度的两条裤管 + 裤脚
+function shadeHex(hex, k) { // k<0 变暗、k>0 变亮（0~1）
+  let h = String(hex || '#888').replace('#', ''); if (h.length === 3) h = h.replace(/./g, m => m + m);
+  const n = parseInt(h.slice(0, 6), 16); if (isNaN(n)) return hex;
+  const f = v => Math.round(k < 0 ? v * (1 + k) : v + (255 - v) * k);
+  return `rgb(${f(n >> 16 & 255)},${f(n >> 8 & 255)},${f(n & 255)})`;
+}
+const SHADE = 'rgba(20,20,20,.16)';
+function personArm(c, side, a1, a2, look) {
+  // side：-1 左 / 1 右；a1 上臂相对“垂直向下”的外摆角，a2 弯肘角（负 = 往身前收）
+  const sx = side * 17.5, sy = -67, L1 = 16, L2 = 15;
+  const ex = sx + side * Math.sin(a1) * L1, ey = sy + Math.cos(a1) * L1;
+  const b = a1 + a2, wx = ex + side * Math.sin(b) * L2, wy = ey + Math.cos(b) * L2;
+  const cut = look.short ? -0.25 : 0.38; // 短袖：袖口在肘上；长袖：袖口在小臂上
+  const cx = cut < 0 ? ex + (sx - ex) * -cut : ex + (wx - ex) * cut, cy = cut < 0 ? ey + (sy - ey) * -cut : ey + (wy - ey) * cut;
+  const sleeve = look.sleeve || look.top, cuff = look.cuff || shadeHex(sleeve, -0.28);
+  c.lineCap = 'round'; c.lineJoin = 'round';
+  // 小臂（皮肤）
+  c.strokeStyle = INK; c.lineWidth = 8.5; c.beginPath(); c.moveTo(cut < 0 ? ex : cx, cut < 0 ? ey : cy); if (cut < 0) { c.moveTo(cx, cy); c.lineTo(ex, ey); } c.lineTo(wx, wy); c.stroke();
+  c.strokeStyle = look.skin; c.lineWidth = 5; c.stroke();
+  // 袖子（上臂 → 弯肘）
+  c.beginPath(); c.moveTo(sx, sy); if (cut < 0) c.lineTo(cx, cy); else { c.lineTo(ex, ey); c.lineTo(cx, cy); }
+  c.strokeStyle = INK; c.lineWidth = 12; c.stroke(); c.strokeStyle = sleeve; c.lineWidth = 8; c.stroke();
+  // 袖口：一道垂直于手臂的色带
+  const dx = (cut < 0 ? cx - sx : wx - ex), dy = (cut < 0 ? cy - sy : wy - ey), dl = Math.hypot(dx, dy) || 1, nx = -dy / dl * 5.6, ny = dx / dl * 5.6;
+  c.lineCap = 'butt'; c.beginPath(); c.moveTo(cx - nx, cy - ny); c.lineTo(cx + nx, cy + ny);
+  c.strokeStyle = INK; c.lineWidth = 6.5; c.stroke(); c.strokeStyle = cuff; c.lineWidth = 3.2; c.stroke(); c.lineCap = 'round';
+  // 手
+  c.beginPath(); c.arc(wx, wy, 4.2, 0, TAU); c.fillStyle = look.skin; c.fill(); c.strokeStyle = INK; c.lineWidth = 2.2; c.stroke();
+}
 function drawPerson(c, x, y, s, look, o = {}) {
-  const t = o.t || 0, lw = 3 * s;
+  const t = o.t || 0;
   c.save(); c.translate(x, y + (o.bob ? Math.sin(t * 6) * 1.6 * s : 0)); c.scale(o.flip ? -s : s, s);
-  const LW = 3;
-  // 腿（加粗，少细线腿）
-  c.lineCap = 'round'; c.strokeStyle = INK; c.lineWidth = 10;
-  c.beginPath(); c.moveTo(-9, -36); c.lineTo(-10, -4); c.moveTo(9, -36); c.lineTo(10, -4); c.stroke();
-  c.lineWidth = 6; c.strokeStyle = look.pattern === 'overall' ? '#2c5282' : '#555'; c.beginPath(); c.moveTo(-9, -34); c.lineTo(-10, -6); c.moveTo(9, -34); c.lineTo(10, -6); c.stroke();
-  rr(c, -18, -6, 15, 8, 3); inkFill(c, '#333', 2); rr(c, 3, -6, 15, 8, 3); inkFill(c, '#333', 2);
-  // 身体
-  c.beginPath(); c.moveTo(-20, -36); c.quadraticCurveTo(-22, -66, -12, -72); c.lineTo(12, -72); c.quadraticCurveTo(22, -66, 20, -36); c.closePath();
-  inkFill(c, look.top, LW);
+  c.lineJoin = 'round'; c.lineCap = 'round';
+  const LW = 3, pants = look.pants || (look.pattern === 'overall' ? '#2c5282' : '#3d405b');
+  // 裤腿：两条有宽度的裤管（内侧一层色块阴影）+ 折边裤脚 + 鞋
+  for (const d of [-1, 1]) {
+    c.beginPath(); c.moveTo(d * 1.5, -42); c.lineTo(d * 16, -42); c.lineTo(d * 14.5, -9); c.lineTo(d * 3.5, -9); c.closePath(); inkFill(c, pants, 2.6);
+    c.save(); c.clip(); c.fillStyle = SHADE; c.beginPath(); c.moveTo(d * 1.5, -42); c.lineTo(d * 6.5, -42); c.lineTo(d * 7.5, -9); c.lineTo(d * 1.5, -9); c.closePath(); c.fill(); c.restore();
+    c.beginPath(); c.moveTo(d * 3.2, -13); c.lineTo(d * 14.8, -13); c.lineTo(d * 15, -8); c.lineTo(d * 3, -8); c.closePath(); inkFill(c, shadeHex(pants, -0.3), 2);
+    c.beginPath(); c.moveTo(d * 2.5, -8); c.lineTo(d * 15, -8); c.quadraticCurveTo(d * 21, -7, d * 20, -1.5); c.lineTo(d * 2.5, -1.5); c.closePath(); inkFill(c, look.shoe || '#2f2a28', 2.2);
+  }
+  // 身体（平涂 + 右侧一层色块阴影）
+  const torso = () => { c.beginPath(); c.moveTo(-20, -36); c.quadraticCurveTo(-22, -66, -12, -72); c.lineTo(12, -72); c.quadraticCurveTo(22, -66, 20, -36); c.closePath(); };
+  torso(); inkFill(c, look.top, LW);
+  c.save(); torso(); c.clip(); c.fillStyle = SHADE; c.beginPath(); c.moveTo(9, -74); c.quadraticCurveTo(15, -55, 9, -34); c.lineTo(26, -34); c.lineTo(26, -74); c.closePath(); c.fill(); c.restore();
+  c.fillStyle = look.belt || shadeHex(pants, -0.35); c.fillRect(-19.5, -40, 39, 4); c.lineWidth = 1.6; c.strokeStyle = INK; c.strokeRect(-19.5, -40, 39, 4);
+  if (look.inner) { c.beginPath(); c.moveTo(-7, -72); c.lineTo(7, -72); c.lineTo(5, -38); c.lineTo(-5, -38); c.closePath(); inkFill(c, look.inner, 1.8); }
+  if (look.lapel) { for (const d of [-1, 1]) { c.beginPath(); c.moveTo(d * 7, -72); c.lineTo(d * 13, -66); c.lineTo(d * 8, -60); c.lineTo(d * 5, -46); c.closePath(); inkFill(c, shadeHex(look.top, 0.12), 1.8); } }
   if (look.pattern === 'flower') { c.fillStyle = RED; for (const [px, py] of [[-10, -62], [6, -55], [-4, -45], [12, -66], [-14, -44], [10, -42]]) { c.beginPath(); c.arc(px, py, 2.6, 0, TAU); c.fill(); } }
   if (look.pattern === 'panda') { c.fillStyle = INK; c.beginPath(); c.ellipse(-9, -52, 6, 8, 0.3, 0, TAU); c.fill(); c.beginPath(); c.ellipse(10, -46, 5, 7, -0.3, 0, TAU); c.fill(); }
   if (look.pattern === 'overall') { rr(c, -12, -58, 24, 22, 2); inkFill(c, '#2c5282', 2); c.strokeStyle = '#d2691e'; c.lineWidth = 2; c.beginPath(); c.moveTo(6, -56); c.lineTo(10, -66); c.stroke(); }
@@ -273,36 +311,43 @@ function drawPerson(c, x, y, s, look, o = {}) {
   if (look.pattern === 'space') { c.fillStyle = '#ff6b35'; c.fillRect(-19, -50, 38, 5); c.strokeStyle = INK; c.lineWidth = 1.5; c.strokeRect(-19, -50, 38, 5); rr(c, -14, -66, 10, 8, 2); inkFill(c, '#118ab2', 1.5); c.fillStyle = RED; c.beginPath(); c.arc(9, -62, 3, 0, TAU); c.fill(); }
   if (look.pattern === 'suit') { c.beginPath(); c.moveTo(-8, -72); c.lineTo(0, -52); c.lineTo(8, -72); c.closePath(); inkFill(c, '#fff', 1.8); c.beginPath(); c.moveTo(0, -70); c.lineTo(-2.5, -62); c.lineTo(0, -52); c.lineTo(2.5, -62); c.closePath(); inkFill(c, RED, 1.2); c.fillStyle = '#fff'; c.fillRect(10, -64, 5, 3); }
   if (look.pattern === 'goldvest') { c.beginPath(); c.moveTo(-18, -38); c.lineTo(-13, -70); c.lineTo(-3, -50); c.lineTo(-3, -38); c.closePath(); inkFill(c, '#e9b824', 2); c.beginPath(); c.moveTo(18, -38); c.lineTo(13, -70); c.lineTo(3, -50); c.lineTo(3, -38); c.closePath(); inkFill(c, '#e9b824', 2); }
-  if (look.apron) { c.beginPath(); c.moveTo(-12, -60); c.lineTo(12, -60); c.lineTo(15, -36); c.lineTo(-15, -36); c.closePath(); inkFill(c, look.apron, 2);
+  if (look.apron) { c.beginPath(); c.moveTo(-12, -60); c.lineTo(12, -60); c.lineTo(15, -32); c.lineTo(-15, -32); c.closePath(); inkFill(c, look.apron, 2);
+    c.strokeStyle = INK; c.lineWidth = 1.8; c.beginPath(); c.moveTo(-11, -60); c.lineTo(-8, -71); c.moveTo(11, -60); c.lineTo(8, -71); c.stroke();
     if (look.pattern === 'oil') { c.fillStyle = '#ffb703'; c.beginPath(); c.arc(-5, -48, 2, 0, TAU); c.arc(5, -43, 1.6, 0, TAU); c.fill(); }
     if (look.tag) { c.fillStyle = '#fff'; c.font = '900 10px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(look.tag, 0, -48); } }
   if (look.tie) { c.beginPath(); c.moveTo(0, -70); c.lineTo(-3, -60); c.lineTo(0, -46); c.lineTo(3, -60); c.closePath(); inkFill(c, RED, 1.5); }
-  if (look.rocketLogo) { c.fillStyle = '#fff'; c.beginPath(); c.moveTo(0, -64); c.quadraticCurveTo(5, -56, 3, -48); c.lineTo(-3, -48); c.quadraticCurveTo(-5, -56, 0, -64); c.fill(); c.fillStyle = '#ff6b35'; c.beginPath(); c.moveTo(-2, -47); c.lineTo(0, -42); c.lineTo(2, -47); c.fill(); }
+  if (look.rocketLogo) { c.save(); c.translate(-10, -60); c.rotate(-0.5); c.beginPath(); c.moveTo(0, -6); c.quadraticCurveTo(3.5, -1, 2.4, 4); c.lineTo(-2.4, 4); c.quadraticCurveTo(-3.5, -1, 0, -6); inkFill(c, '#fff', 1.2); c.fillStyle = '#ff6b35'; c.beginPath(); c.moveTo(-2, 4.5); c.lineTo(0, 8.5); c.lineTo(2, 4.5); c.fill(); c.restore(); }
   if (look.pearls) { c.fillStyle = '#fff'; for (let k = -3; k <= 3; k++) { c.beginPath(); c.arc(k * 3.2, -69 + Math.abs(k) * -0.6 + 3, 1.9, 0, TAU); c.fill(); c.lineWidth = 0.8; c.stroke(); } }
-  // 手臂
-  const wave = o.pose === 'wave' ? Math.sin(t * 8) * 0.5 : 0, work = o.pose === 'work' ? Math.sin(t * 10) * 6 : 0;
-  c.lineWidth = 6; c.strokeStyle = INK; c.lineCap = 'round';
-  c.beginPath(); c.moveTo(-18, -66); c.lineTo(-25, -46 + work); c.stroke();
-  c.save(); c.translate(18, -66); c.rotate(o.pose === 'wave' ? -2.2 + wave : (o.pose === 'point' ? -1.2 : 0)); c.beginPath(); c.moveTo(0, 0); c.lineTo(7, 20 - (o.pose === 'work' ? work : 0)); c.stroke();
-  c.fillStyle = look.skin; c.beginPath(); c.arc(7, 21, 3.6, 0, TAU); c.fill(); c.lineWidth = 2; c.stroke(); c.restore();
-  c.lineWidth = 3.8; c.strokeStyle = look.top === '#222222' ? '#444' : look.top; c.beginPath(); c.moveTo(-18, -66); c.lineTo(-24, -48 + work); c.stroke();
-  c.fillStyle = look.skin; c.strokeStyle = INK; c.lineWidth = 2; c.beginPath(); c.arc(-25, -45 + work, 3.6, 0, TAU); c.fill(); c.stroke();
+  // 手臂（两段 + 弯肘 + 袖口）
+  const p = o.pose, w8 = Math.sin(t * 8), w10 = Math.sin(t * 10);
+  let L1 = 0.16, L2 = -0.3, R1 = 0.16, R2 = -0.3;
+  if (p === 'work') { L1 = 0.32; L2 = -1.55 - w10 * 0.28; R1 = 0.32; R2 = -1.55 + w10 * 0.28; }
+  else if (p === 'wave') { R1 = 1.8; R2 = 0.85 + w8 * 0.35; }
+  else if (p === 'point') { R1 = 1.3; R2 = 0.18; }
+  personArm(c, -1, L1, L2, look); personArm(c, 1, R1, R2, look);
   // 头
   drawHead(c, look, o);
   c.restore();
 }
 function drawHead(c, look, o = {}) {
   const hy = -92, R = 19;
+  c.lineJoin = 'round';
   // 后发
   c.fillStyle = look.hair; c.strokeStyle = INK; c.lineWidth = 3;
   if (look.style === 'bangs') { c.beginPath(); c.moveTo(-21, hy - 4); c.quadraticCurveTo(-25, hy + 22, -16, hy + 26); c.lineTo(16, hy + 26); c.quadraticCurveTo(25, hy + 22, 21, hy - 4); c.closePath(); c.fill(); c.stroke(); }
+  if (look.style === 'pony') { // 高马尾：从头顶右后方甩下来
+    c.beginPath(); c.moveTo(6, hy - 20); c.quadraticCurveTo(34, hy - 26, 31, hy + 4); c.quadraticCurveTo(29, hy + 22, 20, hy + 30); c.quadraticCurveTo(24, hy + 12, 18, hy - 2); c.quadraticCurveTo(14, hy - 10, 4, hy - 12); c.closePath(); c.fill(); c.stroke();
+    c.beginPath(); c.moveTo(-20, hy - 2); c.quadraticCurveTo(-23, hy + 12, -17, hy + 18); c.lineTo(-12, hy + 4); c.closePath(); c.fill(); c.stroke(); }
+  if (look.style === 'wavy') { // 及颌卷发：波浪发尾
+    c.beginPath(); c.moveTo(-22, hy - 6); c.quadraticCurveTo(-27, hy + 8, -22, hy + 16); c.quadraticCurveTo(-26, hy + 22, -18, hy + 24); c.quadraticCurveTo(-14, hy + 20, -12, hy + 14); c.lineTo(12, hy + 14); c.quadraticCurveTo(14, hy + 20, 18, hy + 24); c.quadraticCurveTo(26, hy + 22, 22, hy + 16); c.quadraticCurveTo(27, hy + 8, 22, hy - 6); c.closePath(); c.fill(); c.stroke(); }
   if (look.style === 'bun') { c.beginPath(); c.arc(0, hy - 22, 9, 0, TAU); c.fill(); c.stroke(); }
   if (look.style === 'twin') { c.beginPath(); c.arc(-19, hy - 12, 8, 0, TAU); c.fill(); c.stroke(); c.beginPath(); c.arc(19, hy - 12, 8, 0, TAU); c.fill(); c.stroke(); }
-  // 脸
+  // 脸（下缘一层色块阴影）
   c.beginPath(); c.arc(0, hy, R, 0, TAU); c.fillStyle = look.skin; c.fill(); c.stroke();
   // 前发
   c.fillStyle = look.hair; c.beginPath();
-  if (look.style === 'bangs') { c.moveTo(-20, hy - 2); c.quadraticCurveTo(-20, hy - 22, 0, hy - 22); c.quadraticCurveTo(20, hy - 22, 20, hy - 2); for (let k = 0; k < 6; k++) c.lineTo(20 - k * 8 - 4, hy - 8 + (k % 2) * 5); c.closePath(); }
+  if (look.style === 'bangs' || look.style === 'pony') { c.moveTo(-20, hy - 2); c.quadraticCurveTo(-20, hy - 22, 0, hy - 22); c.quadraticCurveTo(20, hy - 22, 20, hy - 2); for (let k = 0; k < 6; k++) c.lineTo(20 - k * 8 - 4, hy - 8 + (k % 2) * 5); c.closePath(); }
+  else if (look.style === 'wavy') { c.moveTo(-21, hy + 2); c.quadraticCurveTo(-21, hy - 23, 2, hy - 22); c.quadraticCurveTo(21, hy - 21, 21, hy + 2); c.quadraticCurveTo(14, hy - 12, 4, hy - 10); c.quadraticCurveTo(-4, hy - 4, -10, hy - 9); c.quadraticCurveTo(-16, hy - 4, -21, hy + 2); }
   else if (look.style === 'bun' || look.style === 'twin') { c.moveTo(-19, hy - 3); c.quadraticCurveTo(-16, hy - 21, 0, hy - 20); c.quadraticCurveTo(16, hy - 21, 19, hy - 3); c.quadraticCurveTo(6, hy - 13, -2, hy - 8); c.quadraticCurveTo(-10, hy - 12, -19, hy - 3); }
   else if (look.style === 'messy') { c.moveTo(-20, hy - 2); for (let k = 0; k < 9; k++) c.lineTo(-20 + k * 5, hy - 20 - (k % 2) * 8); c.lineTo(20, hy - 2); c.quadraticCurveTo(0, hy - 12, -20, hy - 2); }
   else if (look.style === 'swept') { c.moveTo(-19, hy - 4); c.quadraticCurveTo(-18, hy - 24, 4, hy - 24); c.quadraticCurveTo(22, hy - 22, 20, hy - 6); c.quadraticCurveTo(8, hy - 16, -19, hy - 4); }
@@ -326,9 +371,11 @@ function drawHead(c, look, o = {}) {
   // 配件
   c.strokeStyle = INK; c.lineWidth = 2.5;
   if (look.bow && !look.hat) { c.fillStyle = look.bow; c.beginPath(); c.moveTo(10, hy - 18); c.lineTo(22, hy - 26); c.lineTo(22, hy - 12); c.closePath(); c.moveTo(10, hy - 18); c.lineTo(0, hy - 28); c.lineTo(2, hy - 12); c.closePath(); c.fill(); c.stroke(); }
+  if (look.pin && !look.hat) { c.fillStyle = '#fff'; c.lineWidth = 1.4; for (const [px, py] of [[-13, hy - 13], [-9.5, hy - 15.5], [-6, hy - 17]]) { c.beginPath(); c.arc(px, py, 2.4, 0, TAU); c.fill(); c.stroke(); } c.lineWidth = 2.5; }
   if (look.headband) { c.fillStyle = look.headband; rr(c, -20, hy - 13, 40, 6, 2); c.fill(); c.stroke(); }
   if (look.headset) { c.beginPath(); c.arc(0, hy - 2, 21, Math.PI * 1.05, Math.PI * 1.95); c.stroke(); c.fillStyle = '#333'; rr(c, -24, hy - 4, 6, 12, 2); c.fill(); c.beginPath(); c.moveTo(-21, hy + 8); c.quadraticCurveTo(-16, hy + 16, -6, hy + 14); c.stroke(); }
-  if (look.hood) { c.strokeStyle = INK; c.lineWidth = 2; c.beginPath(); c.moveTo(-6, hy + 20); c.lineTo(-6, hy + 30); c.moveTo(6, hy + 20); c.lineTo(6, hy + 30); c.stroke(); }
+  if (look.hood) { c.fillStyle = shadeHex(look.top, -0.15); c.beginPath(); c.moveTo(-17, hy + 22); c.quadraticCurveTo(0, hy + 30, 17, hy + 22); c.lineTo(13, hy + 19); c.quadraticCurveTo(0, hy + 25, -13, hy + 19); c.closePath(); c.fill(); c.lineWidth = 2; c.stroke();
+    c.beginPath(); c.moveTo(-5, hy + 25); c.lineTo(-5, hy + 34); c.moveTo(5, hy + 25); c.lineTo(5, hy + 34); c.stroke(); }
   if (look.hat) drawHat(c, look.hat, hy);
 }
 function drawHat(c, id, hy) {
@@ -481,6 +528,12 @@ function drawDecorFront(c, i, t) {
     c.strokeStyle = '#a0522d'; c.lineWidth = 1 * U; for (let k = -2; k <= 2; k++) { c.beginPath(); c.moveTo(x + k * 5 * U, y - 21 * U); c.lineTo(x + k * 5 * U, y - 16 * U); c.stroke(); }
   }
 }
+function drawLock(c, x, y, r) { // 和 SVG ic-lock 同形：黄锁身 + 墨线锁梁
+  c.save(); c.translate(x, y); c.lineJoin = 'round'; c.lineCap = 'round';
+  c.beginPath(); c.arc(0, -r * 0.35, r * 0.5, Math.PI, 0); c.lineTo(r * 0.5, 0); c.moveTo(-r * 0.5, 0); c.lineTo(-r * 0.5, -r * 0.35); c.lineWidth = r * 0.26; c.strokeStyle = INK; c.stroke();
+  rr(c, -r * 0.85, -r * 0.05, r * 1.7, r * 1.2, r * 0.18); inkFill(c, YELLOW, r * 0.2);
+  c.beginPath(); c.moveTo(0, r * 0.3); c.lineTo(0, r * 0.75); c.lineWidth = r * 0.2; c.stroke(); c.restore();
+}
 function drawStrokeText(c, txt, x, y, size, color, rot = 0, alpha = 1) {
   c.save(); c.globalAlpha = alpha; c.translate(x, y); c.rotate(rot);
   c.font = `900 ${size}px -apple-system,"PingFang SC",sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle';
@@ -542,7 +595,7 @@ function render(t) {
   } else {
     const prev = i > 0 && !state.shops[i - 1].open;
     drawStrokeText(g, prev ? '先开上一家店' : '点下面「开张」', W / 2, H * 0.55, 16 * U, '#fff', -0.05);
-    drawStrokeText(g, '🔒', W / 2, H * 0.4, 22 * U, '#fff');
+    drawLock(g, W / 2, H * 0.4, 12 * U); // 12c1：画布里的锁也换成同套墨线锁（原系统 emoji）
   }
   // 普通客人（只在当前店、经营页）
   if (open && tab === 'shop') {
@@ -1033,7 +1086,7 @@ function avaCacheClear() { for (const k of Object.keys(avaCache)) delete avaCach
 /* ================= 界面：标签页 ================= */
 // 12c 漫画 UI：统一线稿图标（index.html 里的 <symbol>，导航 / 翻页签 / 模式签共用同一套）
 const ic = n => `<svg class="ic" aria-hidden="true"><use href="#ic-${n}"/></svg>`;
-const SHOP_ICON = ['🍢', '🧋', '📚', '💻'], TAB_NAME = ['烧烤摊', '奶茶店', '漫画店', '科技'];
+const SHOP_ICON = ['bbq', 'tea', 'book', 'tech'].map(n => ic(n)), LOCK_IC = ic('lock'), TAB_NAME = ['烧烤摊', '奶茶店', '漫画店', '科技'];
 const DECOR_ICON = { d_stool:'🪑', d_lights:'🌶️', d_neon:'🏮', d_board:'🪧', d_balloon:'🎈', d_poster:'📰', d_cat:'🐱', d_plant:'🪴' };
 const TYPE_LABEL = { clothes:'衣服', hat:'帽子', decor:'装饰', card:'故事卡', super:'超级装饰' };
 const thumbCache = {};
@@ -1129,7 +1182,7 @@ function jobGallery(id) {
   const s = state.ceos[id], v = jobShown(id), cur = s.at === v, ready = hasJobArt(id, v);
   const chips = E.SHOPS.map((S, i) => {
     const open = !!state.shops[i].open;
-    return `<button class="job-chip ${i === v ? 'on' : ''} ${open ? '' : 'lock'}" ${open ? `data-act="jobView" data-arg="${id}:${i}"` : 'disabled'}>${open ? SHOP_ICON[i] : '🔒'} ${S.short}${s.at === i ? '<i>现任</i>' : ''}</button>`;
+    return `<button class="job-chip ${i === v ? 'on' : ''} ${open ? '' : 'lock'}" ${open ? `data-act="jobView" data-arg="${id}:${i}"` : 'disabled'}>${open ? SHOP_ICON[i] : LOCK_IC}${S.short}${s.at === i ? '<i>现任</i>' : ''}</button>`;
   }).join('');
   return `<div class="job-gal" data-ceo="${id}"><button class="job-pic" data-act="jobBig" data-arg="${id}:${v}">${jobImg(id, v)}${ready ? '' : '<span class="job-wip">画师赶稿中</span>'}</button>
     <div class="job-side"><div class="job-cap">${cur ? '现任形象' : s.at < 0 && v === homeShop(id) ? '本行形象（休息中）' : '换店预览'}：<b>${E.SHOPS[v].short}</b></div>
@@ -1140,7 +1193,7 @@ function renderCeo() {
     <div class="note" style="margin-top:0">流程：当前任职 → 选目的店 → 双方去向与 $/秒对比 → 确认。确认后换新招牌。</div>`;
   for (const c of E.CEOS) {
     const s = state.ceos[c.id];
-    if (!s.unlocked) { h += `<div class="card dim"><div class="ava">🔒</div><div class="info"><div class="name">${c.id === 'rocket' ? '？？？' : c.name}<span class="tag idle">${E.TYPES[c.type]}</span></div><div class="desc">${c.unlock}</div></div></div>`; continue; }
+    if (!s.unlocked) { h += `<div class="card dim"><div class="ava lock-ava">${LOCK_IC}</div><div class="info"><div class="name">${c.id === 'rocket' ? '？？？' : c.name}<span class="tag idle">${E.TYPES[c.type]}</span></div><div class="desc">${c.unlock}</div></div></div>`; continue; }
     const at = s.at, info = at >= 0 ? E.ceoInfo(state, at) : null;
     h += `<div class="card">${ava(c.id)}<div class="info"><div class="name">${c.name}<span class="lv">Lv.${s.lv}</span><span class="tag ${info ? (info.match ? 'match' : 'cross') : 'idle'}">${E.TYPES[c.type]}</span></div>
       <div class="desc one">现任：<b>${ceoPost(c.id)}</b>${info ? `（${info.match ? '专长' : '跨行'} ×${info.mult.toFixed(2)}）` : ''}</div>
@@ -1242,7 +1295,7 @@ function updateCompactHead() {
   if (tab === 'ceo') {
     let cards = E.CEOS.map(c => {
       const s = state.ceos[c.id];
-      if (!s.unlocked) return `<div class="ch-card"><div class="ava">🔒</div><b>？？？</b><small>${c.unlock}</small></div>`;
+      if (!s.unlocked) return `<div class="ch-card"><div class="ava lock-ava">${LOCK_IC}</div><b>？？？</b><small>${c.unlock}</small></div>`;
       const post = s.at >= 0 ? E.signOf(state, s.at).name : '休息中';
       return `<div class="ch-card">${ava(c.id)}<b>${c.name}</b><small>${post}</small></div>`;
     }).join('');
@@ -1258,8 +1311,8 @@ function updateCompactHead() {
 function switchShop(i) { if (i < 0 || i > 3) return; if (state.cur !== i) combo.n = 0; state.cur = i; dirty = true; renderTabs(); }
 function renderTabs() {
   $('#shopTabs').innerHTML = E.SHOPS.map((S, i) => { const s = state.shops[i];
-    const sub = s.open ? (s.emp > 0 ? '+' + fmt(E.shopRate(state, i)) + '/秒' : '未雇员工') : (i === 0 || state.shops[i - 1].open ? fmt(S.open) : '🔒');
-    return `<button data-shop="${i}" class="${state.cur === i ? 'on' : ''} ${s.open ? '' : 'locked'}"><span class="tn">${SHOP_ICON[i]} ${TAB_NAME[i]}</span><small>${sub}</small></button>`; }).join('');
+    const sub = s.open ? (s.emp > 0 ? '+' + fmt(E.shopRate(state, i)) + '/秒' : '未雇员工') : (i === 0 || state.shops[i - 1].open ? fmt(S.open) : LOCK_IC + '待解锁');
+    return `<button data-shop="${i}" class="${state.cur === i ? 'on' : ''} ${s.open ? '' : 'locked'}"><span class="tn">${SHOP_ICON[i]}${TAB_NAME[i]}</span><small>${sub}</small></button>`; }).join('');
 }
 let lastDyn = 0;
 function refreshDynamic(force) {
@@ -1301,7 +1354,7 @@ function openModal(html, burst = true) { mpanel.classList.remove('zoom'); mpanel
 function modalX() {
   const t = mpanel.querySelector('#mNo, #pvNo') || mpanel.querySelector('#mOk'); mpanel.classList.toggle('has-x', !!t); if (!t) return;
   mpanel.insertAdjacentHTML('afterbegin', `<button class="cx-close" id="mX" type="button" aria-label="${t.id === 'mOk' ? (t.textContent.trim() || '关闭') : '关闭'}">${ic('close')}</button>`);
-  $('#mX').addEventListener('click', () => { const c = mpanel.querySelector('#mNo, #pvNo') || mpanel.querySelector('#mOk'); if (c) c.click(); });
+  $('#mX').addEventListener('click', () => { const c = mpanel.querySelector('#mNo, #pvNo') || mpanel.querySelector('#mOk'); if (c && c.dataset.x === 'close') closeModal(); else if (c) c.click(); }); // 12c1：data-x="close" 的弹窗（开摊介绍）× 只关窗，不走「开摊」的解锁音效 / 台词
 }
 function closeModal() { modal.classList.add('hidden'); mpanel.innerHTML = ''; if (mq.length && !modalOpen()) setTimeout(() => { if (!modalOpen() && mq.length) mq.shift()(); }, 120); }
 function openSheet(html) { sheetPanel.innerHTML = `<button class="cx-close" id="sheetX" type="button" aria-label="关闭">${ic('close')}</button>` + html; sheet.classList.remove('hidden'); $('#sheetX').addEventListener('click', closeSheet); }
@@ -1475,7 +1528,7 @@ function showIntro() {
   openModal(`<div class="mbubble">欢迎来到《躺着也能赚》</div><div style="display:flex;justify-content:center;margin:6px 0"><div class="ava art bust">${bustImg('c77')}</div></div>
     <div class="mtitle">77：巴适得很，串串烤起走！</div>
     <div class="mnote">① 点画面里的烧烤摊赚第一桶金：每一下都有<b>暴击</b>机会（暴击 ×5 / 超级 ×10 / 超超超级 ×20），1 秒内连点越点越容易暴击<br>② 攒 50 雇员工阿炭，之后<b>躺着也能赚</b><br>③ 开新店、升级店铺/员工/CEO，把 CEO 调去别的店试试跨行事件<br>离线也有收益（50%，最多 8 小时），每天还有一次免费双倍。</div>
-    <button class="buy big red" id="mOk">开摊！</button>`);
+    <button class="buy big red" id="mOk" data-x="close">开摊！</button>`);
   $('#mOk').addEventListener('click', () => { audioUnlock(); closeModal(); sayLine('c', '巴适得很，串串烤起走！', 3); }, { once:true });
 }
 
@@ -1500,7 +1553,7 @@ Object.assign(FURN_ART, { pearl_tea_loft:1, pearl_canopy_lounge:1, pearl_capsule
 Object.assign(FURN_UP, { pearl_tea_loft: 412 / 400, pearl_canopy_lounge: 615 / 600, pearl_capsule_daybed: 336 / 400, pearl_tea_cat_hammock: 132 / 240, pearl_tea_cubby: 447 / 400, pearl_glass_wardrobe: 455 / 400, pearl_rattan_bookcase: 699 / 400, pearl_tea_trolley_shelf: 254 / 240, pearl_tea_stool: 199 / 240, pearl_cafe_chair: 555 / 240, pearl_round_tea_table: 391 / 400, pearl_scallop_sofa: 234 / 600, pearl_tea_bar: 300 / 600, pearl_bar_stool: 667 / 240, pearl_picnic_table: 170 / 400, pearl_egg_swing: 706 / 400, pearl_fan_shade_lamp: 350 / 240, pearl_tea_arc_lamp: 361 / 240, pearl_fountain_light: 209 / 400, pearl_tea_kettle_cart: 256 / 240, pearl_juice_press: 371 / 240, pearl_milk_frother_bar: 282 / 400, pearl_tea_brewer: 226 / 400, pearl_dessert_chiller: 711 / 400, pearl_herb_crate: 111 / 240, pearl_tea_bonsai: 213 / 240, pearl_ceramic_cup_stack: 368 / 240, pearl_terrarium_orb: 274 / 240, pearl_tea_tree_screen: 390 / 600, otaku_floor_futon: 264 / 400, otaku_sofa_sleeper: 503 / 400, otaku_bunk_manga: 470 / 400, otaku_gaming_pod: 564 / 400, otaku_projector_bed: 598 / 600, otaku_cat_keyboard_cave: 174 / 240, otaku_locker_wardrobe: 516 / 400, otaku_disc_tower: 741 / 240, otaku_figure_vitrine: 310 / 400, otaku_comic_wheel_cart: 180 / 240, otaku_controller_drawers: 282 / 400, otaku_modular_pixel_shelf: 518 / 600, otaku_server_display_rack: 433 / 400, otaku_beanbag: 200 / 240, otaku_kotatsu: 200 / 400, otaku_gaming_chair: 394 / 240, otaku_manga_desk: 371 / 400, otaku_snack_sidecar: 321 / 240, otaku_cocoon_lounger: 601 / 400, otaku_panel_lamp: 1331 / 240, otaku_gooseneck_stand: 461 / 240, otaku_pixel_cube_light: 696 / 240, otaku_arcade_marquee_lamp: 399 / 400, otaku_orbital_neon_floor: 768 / 240, otaku_sleep_timer_totem: 770 / 240, otaku_mini_fridge: 284 / 240, otaku_console_station: 291 / 400, otaku_arcade_cabinet: 477 / 240, otaku_projector_cart: 208 / 240, otaku_triple_monitor_station: 320 / 600, otaku_cactus_cartridge: 235 / 240, rocket_steel_platform_bed: 298 / 400, rocket_cryo_rest_pod: 434 / 400, rocket_observatory_bed: 543 / 600, rocket_landing_cat_pod: 239 / 240, rocket_steel_locker: 418 / 400, rocket_pipe_bookcase: 418 / 400, rocket_tool_chest: 247 / 400, rocket_specimen_drawer: 250 / 400, rocket_orbital_archive: 936 / 600, rocket_bolt_stool: 260 / 240, rocket_workbench: 213 / 400, rocket_drafting_chair: 386 / 240, rocket_pipe_sofa: 337 / 600, rocket_oil_drum_table: 342 / 400, rocket_captain_chair: 342 / 240, rocket_cantilever_desk: 326 / 400, rocket_orbital_ring_lamp: 479 / 240, rocket_solar_array_lamp: 372 / 400, rocket_industrial_fan: 238 / 240, rocket_vacuum_dock: 401 / 240, rocket_coffee_pressure_unit: 508 / 400, rocket_air_purifier: 632 / 240, rocket_hydroponic_unit: 241 / 400, rocket_planetarium_console: 485 / 400, rocket_concrete_succulent: 228 / 240, rocket_pipe_vase: 347 / 240 });
 const ROOM_WALL_ROWS = 2;  // 后墙高 2 格
 const furnTall = fid => !!(FURN_ART[furnName(fid)] && FURN_UP[furnName(fid)]);
-const HOME_ICON = ['🏠', '🏢', '🏰'];
+const HOME_ICON = ['home', 'apt', 'villa'].map(n => ic(n)); // 12c1：家宅升级三档用同套 SVG（原系统 emoji）
 let homeWho = 'c77', homeSub = 'room', homeMode = 'live', homeSel = null, homeDrag = null;
 const homeActor = {}; // ceoId -> {x,y,tx,ty,act,line,until,walk}
 let mallQ = '', mallCat = 'all', mallSub = 'all', mallFilter = { afford:false, owned:false, price:'any', size:'any' };
@@ -1523,11 +1576,11 @@ function homeBook(sub) {
 }
 function homeWhoRow() {
   return `<div class="who-row home-who">${E.CEOS.map(c => { const open = E.homeOpen(state, c.id);
-    return `<button class="who ${c.id === homeWho ? 'on' : ''} ${open ? '' : 'locked'}" data-act="homeWho" data-arg="${c.id}">${open ? ava(c.id) : '<div class="ava">🔒</div>'}<span>${open || c.id !== 'rocket' ? c.name : '？？？'}</span></button>`; }).join('')}</div>`;
+    return `<button class="who ${c.id === homeWho ? 'on' : ''} ${open ? '' : 'locked'}" data-act="homeWho" data-arg="${c.id}">${open ? ava(c.id) : `<div class="ava lock-ava">${LOCK_IC}</div>`}<span>${open || c.id !== 'rocket' ? c.name : '？？？'}</span></button>`; }).join('')}</div>`;
 }
 function homeLocked() {
   const c = E.CEO_BY_ID[homeWho];
-  return `<div class="card dim home-lock"><div class="ava">🔒</div><div class="info"><div class="name">${c.id === 'rocket' ? '？？？' : c.name} 的家还没开放</div><div class="desc">${c.unlock}，加入后就有自己的小屋。</div></div></div>`;
+  return `<div class="card dim home-lock"><div class="ava lock-ava">${LOCK_IC}</div><div class="info"><div class="name">${c.id === 'rocket' ? '？？？' : c.name} 的家还没开放</div><div class="desc">${c.unlock}，加入后就有自己的小屋。</div></div></div>`;
 }
 
 const LIVE_LINES = {
@@ -1571,11 +1624,11 @@ function renderRoom() {
   const wallBlocks = E.wallBlockedCells(state, id).map(([x, y]) => `<i class="wall-block" style="left:${x / T.cols * 100}%;top:${y / E.WALL_ROWS * 100}%;width:${100 / T.cols}%;height:${100 / E.WALL_ROWS}%"></i>`).join('');
   h += `<div class="room tier-${T.id}${hasArt ? ' has-art' : ''}" id="room" data-tier="${T.id}" style="--cols:${T.cols};--rows:${T.rows};--wall:${T.wall};--floor:${T.floor};--trim:${T.trim}">
     ${hasArt ? `<img class="room-art" src="art/home_${artKey}.webp?v=${ART_V}" data-homefb="1" alt="" onerror="this.closest('.room')&&this.closest('.room').classList.remove('has-art')">` : ''}
-    <div class="room-wall" id="roomWall"><span class="rw-deco">${T.id === 'hut' ? '🪟' : T.id === 'apt' ? '🪟 🪟' : '✨🕯️✨'}</span><span class="rw-name">${c.name}的${T.name}</span><div class="wall-grid" id="wallGrid">${wallBlocks}${wallItems}<div class="room-hl hidden" id="wallHl"></div></div></div>
-    <div class="room-floor" id="roomFloor">${floorItems}<div class="home-actor" id="homeActor" style="left:${(homeActorOf(id).x + 0.5) / T.cols * 100}%;top:${(homeActorOf(id).y + 0.5) / T.rows * 100}%"><span class="ha-ava">${ava(id)}</span>${(() => { const ac = homeActorOf(id); return ac.line && ac.until > clock ? `<b class="ha-line">${ac.line}</b>` : ''; })()}<i class="ha-act">${(() => { const ac = homeActorOf(id); return ac.act === 'rest' ? '💤' : ac.act === 'read' ? '📖' : ac.act === 'dress' ? '👕' : ''; })()}</i></div><div class="room-hl hidden" id="roomHl"></div></div></div>`;
+    <div class="room-wall" id="roomWall"><span class="rw-deco">${T.id === 'hut' ? ic('window') : T.id === 'apt' ? ic('window') + ic('window') : ic('spark') + ic('candle') + ic('spark')}</span><span class="rw-name">${c.name}的${T.name}</span><div class="wall-grid" id="wallGrid">${wallBlocks}${wallItems}<div class="room-hl hidden" id="wallHl"></div></div></div>
+    <div class="room-floor" id="roomFloor">${floorItems}<div class="home-actor" id="homeActor" style="left:${(homeActorOf(id).x + 0.5) / T.cols * 100}%;top:${(homeActorOf(id).y + 0.5) / T.rows * 100}%"><span class="ha-ava">${ava(id)}</span>${(() => { const ac = homeActorOf(id); return ac.line && ac.until > clock ? `<b class="ha-line">${ac.line}</b>` : ''; })()}<i class="ha-act">${(() => { const ac = homeActorOf(id); return ac.act === 'rest' ? ic('zz') : ac.act === 'read' ? ic('book') : ac.act === 'dress' ? ic('shirt') : ''; })()}</i></div><div class="room-hl hidden" id="roomHl"></div></div></div>`;
   const st = undoStack(id);
   h += `<div class="mode-tabs" role="tablist"><button class="mt ${homeMode === 'live' ? 'on' : ''}" data-act="homeMode" data-arg="live">${ic('live')}生活</button><button class="mt ${homeMode === 'decor' ? 'on' : ''}" data-act="homeMode" data-arg="decor">${ic('decor')}布置</button></div>`;
-  h += `<div class="room-tools">${homeMode === 'decor' ? (sel ? `<span class="rt-sel">已选：<b>${E.FURN_BY_ID[sel.fid].name}</b></span><button class="buy alt" data-act="homeRot" data-arg="${sel.uid}">↻ 旋转</button><button class="buy alt" data-act="homeStore" data-arg="${sel.uid}">📦 收回</button>`
+  h += `<div class="room-tools">${homeMode === 'decor' ? (sel ? `<span class="rt-sel">已选：<b>${E.FURN_BY_ID[sel.fid].name}</b></span><button class="buy alt" data-act="homeRot" data-arg="${sel.uid}">↻ 旋转</button><button class="buy alt" data-act="homeStore" data-arg="${sel.uid}">${ic('box')}收回</button>`
     : '<span class="rt-sel">布置：点家具选中 / 拖动换位；挂画拖到墙面</span>') : '<span class="rt-sel">生活：点空地走过去 · 点床休息 · 点书架看书 · 点衣柜换装</span>'}
     ${homeMode === 'decor' ? `<button class="buy alt" data-act="homeUndo" data-arg="${id}" ${st.length ? '' : 'disabled'}>↶ 撤销${st.length ? ' ' + st.length : ''}</button>` : ''}</div>`;
   const inv = Object.entries(E.furnInvOf(state)).filter(([, n]) => n > 0);
@@ -1625,7 +1678,7 @@ function renderMall() {
     <select data-act="mallPrice"><option value="any"${mallFilter.price==='any'?' selected':''}>价格</option><option value="low"${mallFilter.price==='low'?' selected':''}>3千以下</option><option value="mid"${mallFilter.price==='mid'?' selected':''}>3千–1.5万</option><option value="high"${mallFilter.price==='high'?' selected':''}>1.5万+</option></select>
     <select data-act="mallSize"><option value="any"${mallFilter.size==='any'?' selected':''}>占地</option><option value="1"${mallFilter.size==='1'?' selected':''}>1×1</option><option value="2"${mallFilter.size==='2'?' selected':''}>含 2 格边</option><option value="3p"${mallFilter.size==='3p'?' selected':''}>3 格+</option></select>
   </div>`;
-  h += `<div class="mall-count">显示 <b>${list.length}</b> / ${E.FURNITURE.length} 件<span class="mall-spacer">后期还会加</span></div>`;
+  h += `<div class="mall-count"><span class="mc-num">显示<b>${list.length}</b>/ ${E.FURNITURE.length} 件</span><span class="mall-spacer">后期还会加</span></div>`;
   h += `<div class="mall-list">`;
   h += list.map(f => { const stt = E.furnStats(state, f.id);
     const where = stt.where.length ? stt.where.map(w => w.name).join('、') : '未摆出';
@@ -1929,5 +1982,5 @@ window.__tzz = { E, get combo() { return combo; }, get critFx() { return critFx;
   get big() { return order; }, get order() { return order; }, get special() { return special; }, get guests() { return guests; },
   hitBig, modalOpen, closeModal, get frozen() { return frozen; },
   audioState() { return AU.ctx ? AU.ctx.state : 'none'; }, showPreview, openAssign, JOB_ART, jobShown, jobURL, showJobArt,
-  HOME_ART, FURN_ART, FURN_UP, homeAct, get homeWho() { return homeWho; }, get homeSub() { return homeSub; }, get homeMode() { return homeMode; }, set homeMode(v) { homeMode = v === 'decor' ? 'decor' : 'live'; }, get homeSel() { return homeSel; }, get homeDrag() { return homeDrag; }, homeActor, LIVE_LINES, homeUndo, resize, get canvasSize() { return { W, H }; } };
+  HOME_ART, FURN_ART, FURN_UP, homeAct, get homeWho() { return homeWho; }, get homeSub() { return homeSub; }, get homeMode() { return homeMode; }, set homeMode(v) { homeMode = v === 'decor' ? 'decor' : 'live'; }, get homeSel() { return homeSel; }, get homeDrag() { return homeDrag; }, homeActor, LIVE_LINES, homeUndo, resize, get canvasSize() { return { W, H }; }, lookOf, drawPerson, drawHead, LOOKS, get bubble() { return bubble; } };
 })();
