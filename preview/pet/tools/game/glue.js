@@ -3,7 +3,7 @@ const PG = window.PetGame, PET_LIBS = !!(PG && window.PetEngine && window.PetArt
 let petRt = null, petView = null, petM = null, petHiddenAt = 0, petManual = false, petShown = '', petWaitShown = null;   // petWaitShown（p4b）：上一帧是不是「等待安置」，变了就重画家宅条
 function petInit(tryN) {
   if (!PET_LIBS) return;
-  fetch('../art/manifest.json?v=p5').then(r => { if (!r.ok) throw new Error('manifest ' + r.status); return r.json(); }).then(m => {
+  fetch('../art/manifest.json?v=p6').then(r => { if (!r.ok) throw new Error('manifest ' + r.status); return r.json(); }).then(m => {
     const v = window.PetArt.validateManifest(m); if (!v.ok) throw new Error(v.errors.join('；'));
     petM = m; petRt = PG.createRuntime({ E, manifest: m }); petView = PG.createView({ manifest: m, PA: window.PetArt, PP: window.PetPuppy, atlasBase: '../art/', ver: 'p5' });
     document.body.dataset.petReady = '1'; dirty = true;
@@ -70,8 +70,9 @@ function confirmPetBuy(home) {
     <div class="mbtns two"><button class="buy ghost" id="mNo">再想想</button><button class="buy red" id="pbYes" ${can ? '' : 'disabled'}>${can ? '确认购买' : '金币不够'}</button></div>`, false);
   $('#mNo').addEventListener('click', closeModal, { once:true });
   $('#pbYes').addEventListener('click', () => {
-    const r = atomic(() => PG.buy(state, E, home, now(), petM)); closeModal();   // 确认时再查一次（弹窗开着时不会变，但不赌）
-    if (!r.ok) { if (r.why !== 'saveFailed') failBuy(null, r.why); return; }
+    petBeforePersist();
+    const r = PG.buy(state, E, home, now(), petM, () => persist(), saveBlocked || frozen); closeModal();   // 12d3：扣款 + 写小狗 + persist 一起走 E.transact，存不上整档回滚
+    if (!r.ok) { if (r.stage === 'save' || r.stage === 'validate' || r.stage === 'blocked') saveFailNote(r, '小狗没买成（金币没扣）'); else failBuy(null, r.why); return; }
     homeWho = home; homeSub = 'room'; homeMode = 'live'; homeSel = null; pageFlip('prev'); $('#panel').scrollTop = 0;
     afterBuy(null, `${P.name} 住进 ${nm} 的家啦！点它摸摸`);
   }, { once:true });

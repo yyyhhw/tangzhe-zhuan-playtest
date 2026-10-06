@@ -405,11 +405,54 @@ section('13. p5：买狗走预览统一钱包（12d addCoins / spendCoins；12d1
   st = fresh(); st.coins = 9000; PG.buy(st, E, 'c77', T0, M); const back = E.loadSave(JSON.stringify(st), null, T0 + 1);
   ok(E.validState(st).length === 0 && E.checkSave(JSON.parse(JSON.stringify(st))).length === 0 && back.source === 'main' && back.st.pet && back.st.pet.home === 'c77' && back.st.coins === 6000, '买完：validState / checkSave 通过；loadSave 往返小狗和余额都在');
   const pg = fs.readFileSync(path.join(__dirname, 'petgame.js'), 'utf8'), app = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
-  ok(!/\.coins\s*-=/.test(pg) && /E\.spendCoins\(st, PET\.price\)/.test(pg) && /E\.walletOk\(st\)/.test(pg), 'petgame.js 不再直接改 coins：扣钱只走 E.spendCoins，先查 E.walletOk');
+  ok(!/\.coins\s*-=/.test(pg) && /E\.transact\(st, \{ price: PET\.price/.test(pg) && !/E\.spendCoins\(/.test(pg) && /E\.walletOk\(st\)/.test(pg), 'p6：petgame.js 不直接改 coins、不再自己 spendCoins：扣钱 + 写 pet + 落盘只走 12d3 统一入口 E.transact，先查 E.walletOk');
   ok(/E\.loadSave\(/.test(app) && /if \(m\.blocked\) saveBlocked = true;\n  if \(window\.PetGame\) PetGame\.norm\(m\.st, E\);/.test(app) && /E\.validState\(state\)/.test(app), 'game/app.js 基于 12d2：读档 E.loadSave（异常 / 不保存模式照旧）后才 norm 小狗，写档前 validState + 备份轮换');
   ok(/const ART_ONE = \{ face_c77:'12d2' \};/.test(app) && /`\.\.\/\.\.\/art\/face_\$\{id\}\.webp\?v=\$\{artV\('face_' \+ id\)\}`/.test(app) && !/face_\$\{id\}\.webp\?v=\$\{ART_V\}/.test(app), '熊大 22:08：game/app.js 基于 12d2 带上 ART_ONE，77 头像地址 = ../../art/face_c77.webp?v=12d2（不再 ?v=11）');
   ok(/E\.walletOk\(state\)/.test(app) && /E\.canAfford\(state, P\.price\)/.test(app), '购买弹窗：余额 / 能不能买走 E.balance / E.canAfford，钱包异常不弹购买窗');
 }
 
-console.log(`\n宠物 p4/p4b/p4c/p5 游戏接入：${pass} 过 / ${fail} 失败`);
+section('14. p6：买狗走 12d3 统一交易入口 E.transact（保存失败整体回滚 / 异常钱包拒买）；宠物 persist 守 12d3 规则');
+{
+  const roomy = () => { const s = fresh(); s.coins = 5000; return s; };
+  // ① 保存成功：扣 3000、写 pet、save 只调一次、看到的是已改好的整档
+  { const s = roomy(); let calls = 0, seen = null; const r = PG.buy(s, E, 'c77', T0, M, (x) => { calls++; seen = { coins: x.coins, pet: !!x.pet }; return true; });
+    ok(r.ok && r.cost === 3000 && s.coins === 2000 && s.pet && s.pet.home === 'c77' && calls === 1 && seen.coins === 2000 && seen.pet, `保存成功：扣 3000、写 pet、save 调 1 次且看到改好的整档（${JSON.stringify(seen)}）`); }
+  // ② 保存失败（返回 false / {ok:false} / 抛错）：整档原地回滚，钱 / pet / rev / 其余字段一个字节都不变，对象引用不变
+  for (const [nm, sv] of [['返回 false', () => false], ['返回 {ok:false}', () => ({ ok: false, why: 'x' })], ['抛错（setItem 爆）', () => { throw new Error('QuotaExceeded'); }], ['返回 undefined', () => undefined]]) {
+    const s = roomy(); s.rev = 41; const before = JSON.stringify(s), ref = s.shops; const r = PG.buy(s, E, 'c77', T0, M, sv);
+    ok(!r.ok && r.stage === 'save' && JSON.stringify(s) === before && !('pet' in s) && s.coins === 5000 && s.rev === 41, `保存失败（${nm}）：买狗整体回滚，金币 5000 / 无 pet / rev 41 / 整档逐字节原样（stage ${r.stage}）`);
+  }
+  // ③ 保存失败后再保存成功：能正常买（回滚没留下半截状态）
+  { const s = roomy(); PG.buy(s, E, 'c77', T0, M, () => false); const r = PG.buy(s, E, 'c77', T0, M, () => true); ok(r.ok && s.coins === 2000 && PG.owned(s), '保存失败回滚后再买一次：正常扣 3000、有狗（没留半截状态）'); }
+  // ④ 异常钱包 / 只读：save 一次都不调
+  for (const [nm, mk] of [['余额 1e20', (s) => { s.coins = 1e20; }], ['余额 NaN', (s) => { s.coins = NaN; }], ['余额 MAX_SAFE+1', (s) => { s.coins = Number.MAX_SAFE_INTEGER + 1; }]]) {
+    const s = roomy(); mk(s); let calls = 0; const before = JSON.stringify(s); const r = PG.buy(s, E, 'c77', T0, M, () => { calls++; return true; });
+    ok(!r.ok && calls === 0 && !('pet' in s) && JSON.stringify(s) === before, `异常钱包（${nm}）：拒买、save 0 次、存档原样（${r.why}）`);
+  }
+  { const s = roomy(); let calls = 0; const r = PG.buy(s, E, 'c77', T0, M, () => { calls++; return true; }, true);
+    ok(!r.ok && r.stage === 'blocked' && calls === 0 && s.coins === 5000 && !('pet' in s), `调用方已知只读（blocked=true，如多标签冻结）：拒买、save 0 次（${r.why}）`); }
+  { const bad = fresh(); bad.coins = 1e20; const L = E.loadSave(JSON.stringify(bad), null, T0); PG.norm(L.st, E); let calls = 0;
+    const r = PG.buy(L.st, E, 'c77', T0, M, () => { calls++; return true; }, L.blocked);
+    ok(L.blocked && !r.ok && calls === 0 && !PG.owned(L.st), `12d3 loadSave 只读档（主档 1e20）：拒买、save 0 次（${r.why}）`); }
+  // ⑤ 跨页写档（E.commitSave）：备份写失败 → 整次放弃、主档不动、买狗回滚
+  { const mem = {}, store = { getItem: (k) => (k in mem ? mem[k] : null), setItem: (k, v) => { if (store.failBak && /-bak$/.test(k)) throw new Error('bak'); mem[k] = String(v); }, removeItem: (k) => { delete mem[k]; } };
+    const s0 = roomy(); s0.rev = 7; mem['tangzhe-preview-save'] = JSON.stringify(s0); const s = E.loadSave(mem['tangzhe-preview-save'], null, T0).st; PG.norm(s, E);
+    store.failBak = true; const main0 = mem['tangzhe-preview-save'];
+    const r1 = PG.buy(s, E, 'c77', T0, M, (x) => E.commitSave(store, 'tangzhe-preview-save', 'tangzhe-preview-save-bak', x));
+    ok(!r1.ok && mem['tangzhe-preview-save'] === main0 && !('tangzhe-preview-save-bak' in mem) && !PG.owned(s) && s.coins === 5000, `跨页 commitSave 备份写失败：整次放弃，主档逐字节不动、内存买狗回滚（${r1.why}）`);
+    store.failBak = false; const r2 = PG.buy(s, E, 'c77', T0, M, (x) => E.commitSave(store, 'tangzhe-preview-save', 'tangzhe-preview-save-bak', x));
+    const disk = JSON.parse(mem['tangzhe-preview-save']);
+    ok(r2.ok && disk.pet && disk.pet.home === 'c77' && disk.coins === 2000 && disk.rev === 8 && mem['tangzhe-preview-save-bak'] === main0 && !E.checkSave(disk).length, `跨页 commitSave 正常：主档有狗、2000 金币、rev 7→8，-bak = 买前主档，checkSave 干净`); }
+  // ⑥ 宠物页 persist 与预览 12d3 逐字一致（封禁返回 false、备份写失败整次放弃）；setItem 次数一致
+  const app = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8'), pre = fs.readFileSync(path.join(__dirname, '..', '..', 'app.js'), 'utf8');
+  const fn = (src) => { const i = src.indexOf('function persist() {'), j = src.indexOf('\n}\n', i); return i < 0 ? '' : src.slice(i, j + 3).replace(/\n  petBeforePersist\(\);[^\n]*/, ''); };
+  ok(fn(app) && fn(app) === fn(pre), '宠物页 persist() = 预览 12d3 persist()（除小狗状态写回一行）：只读返回 false、写前 validState、备份写失败整次放弃主档不动');
+  ok(/if \(saveBlocked\) return false;/.test(fn(app)) && /备份写不进去，这次没有保存/.test(fn(app)), '宠物页 persist：封禁返回 false；备份写失败提示并放弃');
+  const cnt = (src) => (src.match(/localStorage\.setItem\(/g) || []).length;
+  ok(cnt(app) === cnt(pre), `宠物页 localStorage.setItem 次数 = 预览（${cnt(app)} = ${cnt(pre)}）`);
+  ok(/PG\.buy\(state, E, home, now\(\), petM, \(\) => persist\(\), saveBlocked \|\| frozen\)/.test(app) && !/atomic\(\(\) => PG\.buy/.test(app), '购买确认：PG.buy 带 () => persist() 和只读标记走 E.transact（不再套 atomic 二次事务）');
+  ok(/const r = E\.transact\(state, \{ price:price \|\| 0, apply, save:\(\) => persist\(\), blocked:saveBlocked \}\);/.test(app), 'game/app.js 基于 12d3（带 txn / E.transact）');
+}
+
+console.log(`\n宠物 p4/p4b/p4c/p5/p6 游戏接入：${pass} 过 / ${fail} 失败`);
 process.exit(fail ? 1 : 0);

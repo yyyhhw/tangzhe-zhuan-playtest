@@ -18,7 +18,19 @@ CLIPS = [('idle_E', True, False), ('idle_N', True, False), ('idle_S', True, Fals
          ('run_E', True, False), ('run_N', True, False), ('run_S', True, False), ('attention', False, True), ('sniff', False, True), ('hop', False, True),
          ('play', False, True), ('sleep', True, True), ('eat', False, True), ('petted', False, True), ('liedown', False, True), ('getup', False, True)]
 r1 = lambda v: round(v, 1)
-clips, src = {}, {'sidecar': 0, 'noseTip': 0, 'idleS': 0, 'hidden': 0}
+clips, src = {}, {'sidecar': 0, 'noseTip': 0, 'noseDown': 0, 'idleS': 0, 'hidden': 0}
+# p6：低头动作（取球 sniff / 放球 eat）的鼻尖：最前面几列里最低的不透明点
+from PIL import Image as _Im
+_A = _Im.open(os.path.join(ART, 'puppy_atlas_v3.webp')).convert('RGBA').getchannel('A').load()
+HEAD_DOWN, DOWN_OFF = ('sniff', 'eat'), (-3.0, -9.0)
+def nose_full(cell, C=128, COLS=16):
+    # 低头：最靠前 12 px（运行时，= 概念 24）那几列里最低的不透明点 = 垂下去的鼻尖 / 下巴（腿在更后面，量不到）
+    bx, by = (cell % COLS) * C, (cell // COLS) * C
+    xs = [x for x in range(C) if any(_A[bx + x, by + y] > 128 for y in range(C))]; xr = xs[-1]; best = None
+    for x in range(xr - 12, xr + 1):
+        col = [y for y in range(C) if _A[bx + x, by + y] > 128]
+        if col and (best is None or col[-1] > best[1]): best = (x, col[-1])
+    return [best[0] * 2 + 1, best[1] * 2 + 1]
 body = {'E': [256, 0], 'N': [256, 0], 'S': [256, 0]}
 for name, loop, inplace in CLIPS:
     frs = sorted([(c, f) for c, f in F.items() if f['clip'] == name], key=lambda x: x[1]['index'])
@@ -30,6 +42,10 @@ for name, loop, inplace in CLIPS:
             fr = {'cell': cell, 'ms': f['ms'], 'mouth': None, 'mouthHidden': True}; src['hidden'] += 1
         elif s and s['mouth']:
             fr = {'cell': cell, 'ms': f['ms'], 'mouth': [r1(s['mouth'][0]), r1(s['mouth'][1])], 'mouthSrc': 'sidecar'}; src['sidecar'] += 1
+        elif d == 'E' and name in HEAD_DOWN and f['alphaY'][0] - min(g['alphaY'][0] for _, g in frs) >= 10:   # 头顶比本动作站立帧低 ≥ 10 = 低头帧
+            # p6（熊大 22:33）：低头帧鼻尖在身体高度前 55% 以外 → 头部带扫描会落到额头 / 脸颊；改用最靠前 24 概念 px 那几列里最低的不透明点 = 垂下去的鼻尖 / 下巴，嘴往上收 9（球心再 +4 落在嘴上）
+            nx, ny = nose_full(cell)
+            fr = {'cell': cell, 'ms': f['ms'], 'mouth': [r1(nx + DOWN_OFF[0]), r1(ny + DOWN_OFF[1])], 'mouthSrc': 'noseDown'}; src['noseDown'] += 1
         elif d == 'E':
             fr = {'cell': cell, 'ms': f['ms'], 'mouth': [r1(f['noseTip'][0] + OFF[0]), r1(f['noseTip'][1] + OFF[1])], 'mouthSrc': 'noseTip'}; src['noseTip'] += 1
         else:

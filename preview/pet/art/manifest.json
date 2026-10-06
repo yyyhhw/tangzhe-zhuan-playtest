@@ -638,37 +638,37 @@
      "cell": 61,
      "ms": 180,
      "mouth": [
-      240.3,
-      123.3
+      220.0,
+      144.0
      ],
-     "mouthSrc": "noseTip"
+     "mouthSrc": "noseDown"
     },
     {
      "cell": 62,
      "ms": 180,
      "mouth": [
-      234.3,
-      155.3
+      218.0,
+      188.0
      ],
-     "mouthSrc": "noseTip"
+     "mouthSrc": "noseDown"
     },
     {
      "cell": 63,
      "ms": 180,
      "mouth": [
-      236.3,
-      157.3
+      224.0,
+      190.0
      ],
-     "mouthSrc": "noseTip"
+     "mouthSrc": "noseDown"
     },
     {
      "cell": 64,
      "ms": 180,
      "mouth": [
-      244.3,
-      131.3
+      224.0,
+      120.0
      ],
-     "mouthSrc": "noseTip"
+     "mouthSrc": "noseDown"
     },
     {
      "cell": 65,
@@ -919,28 +919,28 @@
      "cell": 89,
      "ms": 170,
      "mouth": [
-      230.3,
-      121.3
+      212.0,
+      146.0
      ],
-     "mouthSrc": "noseTip"
+     "mouthSrc": "noseDown"
     },
     {
      "cell": 90,
      "ms": 170,
      "mouth": [
-      226.3,
-      161.3
+      210.0,
+      194.0
      ],
-     "mouthSrc": "noseTip"
+     "mouthSrc": "noseDown"
     },
     {
      "cell": 91,
      "ms": 170,
      "mouth": [
-      238.3,
-      159.3
+      218.0,
+      178.0
      ],
-     "mouthSrc": "noseTip"
+     "mouthSrc": "noseDown"
     },
     {
      "cell": 92,

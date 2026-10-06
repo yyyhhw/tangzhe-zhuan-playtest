@@ -684,5 +684,24 @@ section('23. p5：熊大 v3 真图集（逐帧量真图：外形 / 落地点 / �
   ok(hit === 0, `测试房间 2 分钟（含抛球）：逐帧按当前真图帧外形查，${frames} 帧里穿家具 ${hit} 帧`);
 }
 
+section('24. p6：熊大 22:33 低头取球——低头帧嘴巴点必须落在垂下去的鼻尖 / 下巴附近（不再按头部带 55% 扫到脸颊）');
+{
+  const M6 = JSON.parse(require('fs').readFileSync(require('path').join(__dirname, 'art', 'manifest.json'), 'utf8'));
+  const atl = (cell) => ATL[cell] || ATL[String(cell)];
+  const pk = M6.actions.pick_ball, dr = M6.actions.drop_ball;
+  const pf = pk.frames[pk.events[0].frame], df = dr.frames[dr.events[0].frame];
+  for (const [nm, clip, fi] of [['取球事件帧 ' + pk.clip + '#' + pf, pk.clip, pf], ['放球事件帧 ' + dr.clip + '#' + df, dr.clip, df]]) {
+    const f = M6.clips[clip].frames[fi], a = atl(f.cell), by = f.mouth[1] + 4, R = 10;
+    ok(a && f.mouthSrc === 'noseDown', `${nm}：嘴巴点来源 = 低头鼻尖（${f.mouthSrc}）`);
+    ok(a && by + R >= a.alphaY[1] - 26 && by - R <= a.alphaY[1], `${nm}：球（中心 y ${by}，半径 ${R}）贴近地面（脚底 ${a && a.alphaY[1]}），不是浮在脸颊高度`);
+    ok(a && f.mouth[0] >= a.alphaX[1] - 40 && f.mouth[0] <= a.alphaX[1], `${nm}：嘴巴 x ${f.mouth[0]} 在最前沿 ${a && a.alphaX[1]} 往后 40 以内（嘴在脸的最前面）`);
+  }
+  // 所有低头帧（头顶比本动作站立帧低 ≥ 10）都改用低头鼻尖；抬头帧不动
+  let n = 0, bad = [];
+  for (const clip of ['sniff', 'eat']) { const fr = M6.clips[clip].frames, top0 = Math.min(...fr.map(f => atl(f.cell).alphaY[0]));
+    fr.forEach((f, i) => { const down = atl(f.cell).alphaY[0] - top0 >= 10; if (down) n++; if (down !== (f.mouthSrc === 'noseDown')) bad.push(clip + '#' + i); }); }
+  ok(n >= 6 && !bad.length, `sniff / eat 低头帧 ${n} 个都用低头鼻尖，抬头帧仍用头部鼻尖（不一致：${bad.join('、') || '无'}）`);
+}
+
 console.log(`\n引擎测试：${pass} 过 / ${fail} 挂`);
 process.exit(fail ? 1 : 0);

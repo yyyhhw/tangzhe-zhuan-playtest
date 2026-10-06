@@ -49,18 +49,21 @@
   }
   const NO_ROOM = '暂时无法入宅：屋里摆满了，没有小狗能站的空地（收起或挪开家具、或升级房子后再来）';
   // M = manifest（身体盒要用）：购买前先查有没有地方站，没有就不扣钱
-  function buy(st, E, home, nowMs, M) {
+  // p6（12d3）：买狗走预览统一交易入口 E.transact——扣款 + 写 pet + 落盘一起成功；任一步失败 st 原地整档回滚（钱 / pet / rev 都还原）
+  //   save：落盘函数（主页面传 () => persist()；跨页传 s => E.commitSave(...)）；不传 = 纯内存（只给单元测试 / 模拟用）
+  //   blocked：调用方已知只读（loadSave blocked / 多标签冻结）时传 true
+  //   返回 { ok:true, cost, home } 或 { ok:false, why, stage?, noRoom?, badWallet? }；stage ∈ blocked / pay / apply / validate / save（来自 transact）
+  function buy(st, E, home, nowMs, M, save, blocked) {
     if (owned(st)) return { ok: false, why: '已经有小狗了（只能养一只）' };
     if (!E.homeOpen(st, home)) return { ok: false, why: '这位 CEO 还没加入' };
     if (!M) return { ok: false, why: '小狗还没准备好，稍后再试' };
     if (!hasRoom(st, E, home, M)) return { ok: false, why: NO_ROOM, noRoom: true };
-    // p5：扣钱走预览统一钱包（12d / 12d1）：钱包异常（坏值 / 余额超安全整数）一律拒绝；spendCoins 自带「旧余额 − 价格 = 新余额」精确断言，失败回滚
-    if (typeof E.spendCoins !== 'function' || typeof E.walletOk !== 'function') return { ok: false, why: '金币数据异常' };
+    if (typeof E.transact !== 'function' || typeof E.walletOk !== 'function') return { ok: false, why: '金币数据异常' };
     if (!E.walletOk(st)) return { ok: false, why: '金币数据异常', badWallet: true };
     if (!E.canAfford(st, PET.price)) return { ok: false, why: '金币不够' };
-    const r = E.spendCoins(st, PET.price);
-    if (!r.ok) return { ok: false, why: r.why || '金币不够' };
-    st.pet = { v: PV, owned: true, home, boughtAt: nowMs || 0, eng: null };
+    const r = E.transact(st, { price: PET.price, blocked: !!blocked, save: typeof save === 'function' ? save : () => true,
+      apply: (s) => { if (owned(s)) return { ok: false, why: '已经有小狗了（只能养一只）' }; s.pet = { v: PV, owned: true, home, boughtAt: nowMs || 0, eng: null }; } });
+    if (!r.ok) return { ok: false, why: r.why || '没有买成', stage: r.stage };
     return { ok: true, cost: r.cost, home };
   }
   function move(st, E, home) {

@@ -11,7 +11,7 @@ def check(c, msg): results.append((bool(c), msg)); print(('  ✓ ' if c else '  
 # p3：页面里逐帧量占位小狗每帧的像素外形（不看 manifest.body，独立核对），算屏幕上的鼻尖 / 尾巴范围
 P3_SETUP = """async () => { if (window.__p3) return true; const P = __pet, M = P.M, PE = P.PE, C = PE.CFG;
   // p5：逐帧量真图——在页面里加载 manifest 指向的真图集，把每个 cell 画出来量 alpha>8 的左右范围（概念 256 坐标），不看 manifest.body
-  const im = new Image(); im.src = 'art/' + M.atlas.image + '?v=p5'; await im.decode();
+  const im = new Image(); im.src = 'art/' + M.atlas.image + '?v=p6'; await im.decode();
   const cv = document.createElement('canvas'); cv.width = 128; cv.height = 128; const x = cv.getContext('2d', { willReadFrequently: true });
   const bb = {}; for (const [name, c] of Object.entries(M.clips)) bb[name] = c.frames.map((f) => { const r = PetArt.cellRect(M, f.cell); x.clearRect(0, 0, 128, 128); x.drawImage(im, r.sx, r.sy, r.s, r.s, 0, 0, 128, 128);
     const d = x.getImageData(0, 0, 128, 128).data; let a = 999, b = -1;

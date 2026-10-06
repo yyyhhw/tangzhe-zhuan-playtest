@@ -1217,23 +1217,76 @@
     return { st, from, wall:hb.wall, badPending };   // wall：读档时墙面整理挪了几幅 / 退了几幅（给页面提示用）；badPending：坏的待领取收益已丢弃
   }
 
-  /* ===== 12d：存档校验 / 备份恢复 ===== */
-  // 读档前检查「会动到金币 / 等级」的字段：有坏值 = 坏档（不归零、不降级），交给 loadSave 走备份
+  /* ===== 12d：存档校验 / 备份恢复（12d3：完整结构校验，熊大 22:08 第 1 / 2 条） ===== */
+  // 读档 / 写档前校验整份存档结构：凡是 migrate 会「静默重建 / 归零 / 降级」的地方，结构不对一律算坏档（不读进来、不写出去）。
+  // 12d3：shops[i] 为 null / 不是对象 / 缺 open·lv·emp（v1 旧档用 hired 代替 emp）都算坏；店铺必须正好 4 家；
+  //       CEO 记录存在就必须是对象且 unlocked / lv / at 齐全合法；家宅、盲盒、仓库、穿搭、计数、时间、rev、cur 类型不对都算坏。
+  //       （缺整个 ceos / homes / gacha 等字段的旧档照常读：那是旧版本本来就没有，不会丢进度。）
+  const isObj = x => !!x && typeof x === 'object' && !Array.isArray(x);
+  const isLv = (x, lo) => Number.isInteger(x) && x >= lo;
   function checkSave(raw) {
-    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return ['save'];
-    const bad = [];
+    if (!isObj(raw)) return ['save'];
+    const bad = [], has = k => raw[k] !== undefined;
+    if (has('v') && !(Number.isInteger(raw.v) && raw.v >= 0)) bad.push('v');
     if (!isAmt(raw.coins)) bad.push('coins');
     else if (raw.coins > SAFE) bad.push('coins>安全整数');   // 12d1：超过 MAX_SAFE_INTEGER 的余额不能当钱包用
     if (raw.coinFrac !== undefined && !(isAmt(raw.coinFrac) && raw.coinFrac < 1)) bad.push('coinFrac');
-    if (raw.shops !== undefined && !Array.isArray(raw.shops)) bad.push('shops');
-    else (raw.shops || []).forEach((o, i) => { if (!o || typeof o !== 'object') return;
-      if (o.lv !== undefined && !isAmt(o.lv)) bad.push('shops[' + i + '].lv');
-      if (o.emp !== undefined && !isAmt(o.emp)) bad.push('shops[' + i + '].emp'); });
-    if (raw.ceos && typeof raw.ceos === 'object') CEOS.forEach(c => { const o = raw.ceos[c.id];
-      if (o && typeof o === 'object' && o.lv !== undefined && !isAmt(o.lv)) bad.push('ceos.' + c.id + '.lv'); });
+    if (has('totalEarned') && !isAmt(raw.totalEarned)) bad.push('totalEarned');   // 超过安全整数的旧统计值保留（不判坏、不裁）
+    if (has('earnedFrac') && !(isAmt(raw.earnedFrac) && raw.earnedFrac < 1)) bad.push('earnedFrac');
+    if (has('rev') && !isAmt(raw.rev)) bad.push('rev');
+    if (!Array.isArray(raw.shops) || raw.shops.length !== SHOPS.length) bad.push('shops');
+    else raw.shops.forEach((o, i) => {
+      const k = 'shops[' + i + ']';
+      if (!isObj(o)) { bad.push(k); return; }
+      if (typeof o.open !== 'boolean') bad.push(k + '.open');
+      if (o.lv === undefined) bad.push(k + '.lv缺失');
+      else if (!isAmt(o.lv)) bad.push(k + '.lv');
+      else if (!Number.isInteger(o.lv) || (o.open && o.lv < 1)) bad.push(k + '.lv');
+      if (o.emp === undefined) { if (typeof o.hired !== 'boolean') bad.push(k + '.emp缺失'); }
+      else if (!isAmt(o.emp)) bad.push(k + '.emp');
+      else if (!Number.isInteger(o.emp) || o.emp > CFG.EMP_MAX) bad.push(k + '.emp');
+    });
+    if (has('ceos')) {
+      if (!isObj(raw.ceos)) bad.push('ceos');
+      else CEOS.forEach(c => { if (!(c.id in raw.ceos)) return; const o = raw.ceos[c.id], k = 'ceos.' + c.id;
+        if (!isObj(o)) { bad.push(k); return; }
+        if (typeof o.unlocked !== 'boolean') bad.push(k + '.unlocked');
+        if (o.lv === undefined) bad.push(k + '.lv缺失');
+        else if (!isAmt(o.lv)) bad.push(k + '.lv');
+        else if (!isLv(o.lv, 1) || o.lv > CFG.CEO_MAX) bad.push(k + '.lv');
+        if (o.at !== undefined && !(Number.isInteger(o.at) && o.at >= -1 && o.at < SHOPS.length)) bad.push(k + '.at');
+      });
+    }
+    if (has('gacha')) {
+      const g = raw.gacha;
+      if (!isObj(g) || !Array.isArray(g.owned) || g.owned.some(id => typeof id !== 'string')) bad.push('gacha');
+      else { if (g.draws !== undefined && !isAmt(g.draws)) bad.push('gacha.draws'); if (g.pity !== undefined && !isAmt(g.pity)) bad.push('gacha.pity');
+        if (g.last != null && !isObj(g.last)) bad.push('gacha.last'); }
+    }
+    if (has('homes')) {
+      if (!isObj(raw.homes)) bad.push('homes');
+      else CEOS.forEach(c => { if (!(c.id in raw.homes)) return; const h = raw.homes[c.id], k = 'homes.' + c.id;
+        if (!isObj(h)) { bad.push(k); return; }
+        if (h.lv !== undefined && !(isLv(h.lv, 1) && h.lv <= HOME_MAX)) bad.push(k + '.lv');
+        if (h.placed !== undefined && (!Array.isArray(h.placed) || h.placed.some(p => !isObj(p)))) bad.push(k + '.placed');
+        if (h.next !== undefined && !isAmt(h.next)) bad.push(k + '.next');
+        if (h.inv !== undefined && !isObj(h.inv)) bad.push(k + '.inv');
+      });
+    }
+    if (has('furnInv') && (!isObj(raw.furnInv) || Object.values(raw.furnInv).some(n => !isAmt(n)))) bad.push('furnInv');
+    if (has('wear') && !isObj(raw.wear)) bad.push('wear');
+    if (has('equip') && raw.equip !== null && !isObj(raw.equip)) bad.push('equip');
+    if (has('crossSeen') && !isObj(raw.crossSeen)) bad.push('crossSeen');
+    if (has('decorHidden') && !Array.isArray(raw.decorHidden)) bad.push('decorHidden');
+    if (has('claimLog') && !Array.isArray(raw.claimLog)) bad.push('claimLog');
+    for (const k of ['taps', 'crits', 'bigCustomers', 'specialCustomers']) if (has(k) && !isAmt(raw[k])) bad.push(k);
+    for (const k of ['lastSeen', 'maxSeen', 'created']) if (has(k) && raw[k] !== null && !isAmt(raw[k])) bad.push(k);
+    if (has('cur') && !(Number.isInteger(raw.cur) && raw.cur >= 0 && raw.cur < SHOPS.length)) bad.push('cur');
+    if (has('dailyDoubleDay') && raw.dailyDoubleDay !== null && typeof raw.dailyDoubleDay !== 'string') bad.push('dailyDoubleDay');
+    // pending（待领取离线收益）坏了沿用 12d：丢弃这一笔并提示，不算整档坏
     return bad;
   }
-  // 内存里的整档在写盘前校验（坏了就不写，调用方恢复上一份好档）
+  // 内存里的整档在写盘前校验（坏了就不写，调用方恢复上一份好档）。12d3：再把序列化后的结果跑一遍 checkSave（写出去的必须读得回来）
   function validState(st) {
     if (!st || typeof st !== 'object') return ['state'];
     const bad = [];
@@ -1244,21 +1297,105 @@
     if (!st.ceos || typeof st.ceos !== 'object') bad.push('ceos');
     else CEOS.forEach(c => { const o = st.ceos[c.id]; if (!o || !isAmt(o.lv)) bad.push('ceos.' + c.id); });
     if (st.pending != null && !pendingOk(st.pending)) bad.push('pending');
+    if (!bad.length) { let raw = null; try { raw = JSON.parse(JSON.stringify(st)); } catch (e) { bad.push('json'); }
+      if (raw) for (const k of checkSave(raw)) if (bad.indexOf(k) < 0) bad.push(k); }
     return bad;
   }
-  // 读档：主档好 → 用主档；主档坏（JSON 读不了 / 金币或等级坏值）→ 用完整备份；备份也不行 → blocked（调用方不覆盖原档、提示）
+  // 12d3：只读（blocked）状态登记表——loadSave 读出的异常档 / 坏档状态放进来，transact / commitSave 一律拒绝（不靠调用方记得传 blocked）
+  const BLOCKED = typeof WeakSet === 'function' ? new WeakSet() : null;
+  function markBlocked(st) { if (BLOCKED && st && typeof st === 'object') BLOCKED.add(st); return st; }
+  function isBlocked(st) { return !!(BLOCKED && st && typeof st === 'object' && BLOCKED.has(st)); }
+  // 读档：主档好 → 用主档；主档坏（JSON 读不了 / 结构不对）→ 用完整备份；备份也不行 → blocked（只读：调用方不覆盖原档、提示）
+  // 12d3：主档缺失 / 空串 / JSON null → 先看备份：备份有效就用备份；没有备份才是新游戏；备份存在但坏了 → blocked（不生成零进度存档再写回去）
   function loadSave(mainStr, bakStr, now) {
     const parse = sv => { if (sv == null || sv === '') return { none:true }; try { const r = JSON.parse(sv); return r == null ? { none:true } : { raw:r }; } catch (e) { return { err:true }; } };
-    const m = parse(mainStr);
-    if (m.none) return Object.assign(migrate(null, now), { source:'new', bad:[], raw:null });
+    const m = parse(mainStr), b = parse(bakStr);
+    const bBad = b.none ? ['none'] : b.err ? ['json'] : checkSave(b.raw);
+    if (m.none) {
+      if (b.none) return Object.assign(migrate(null, now), { source:'new', bad:[], raw:null });
+      if (!bBad.length) return Object.assign(migrate(b.raw, now), { source:'bak', bad:['主档缺失'], raw:b.raw, mainRev:0, mainMissing:true });
+      const r = Object.assign(migrate(null, now), { source:'broken', bad:['主档缺失'], bakBad:bBad, raw:null, mainRev:0, blocked:true, mainMissing:true });
+      markBlocked(r.st); return r;
+    }
     const mBad = m.err ? ['json'] : checkSave(m.raw);
     if (!mBad.length) return Object.assign(migrate(m.raw, now), { source:'main', bad:[], raw:m.raw });
-    const mainRev = m.raw && isAmt(m.raw.rev) ? m.raw.rev : 0;
-    const b = parse(bakStr), bBad = b.none ? ['none'] : b.err ? ['json'] : checkSave(b.raw);
+    const mainRev = m.raw && isObj(m.raw) && isAmt(m.raw.rev) ? m.raw.rev : 0;
     // 12d1：主档余额超出安全整数（如 1e20）→ 原文原样保留、不自动拿备份覆盖，进入异常模式（不写盘、封禁所有交易）；备份是否可用只做提示
-    if (mBad.includes('coins>安全整数')) return Object.assign(migrate(m.raw, now), { source:'unsafe', bad:mBad, raw:m.raw, mainRev, blocked:true, unsafe:true, bakOk:!bBad.length, bakCoins:!bBad.length ? b.raw.coins : null });
+    if (mBad.includes('coins>安全整数')) { const r = Object.assign(migrate(m.raw, now), { source:'unsafe', bad:mBad, raw:m.raw, mainRev, blocked:true, unsafe:true, bakOk:!bBad.length, bakCoins:!bBad.length ? b.raw.coins : null }); markBlocked(r.st); return r; }
     if (!bBad.length) return Object.assign(migrate(b.raw, now), { source:'bak', bad:mBad, raw:b.raw, mainRev });
-    return Object.assign(migrate(m.err ? null : m.raw, now), { source:'broken', bad:mBad, bakBad:bBad, raw:m.raw || null, mainRev, blocked:true });
+    // 主档、备份都不行：只读。显示用的内存状态是新档骨架（不拿坏结构 migrate 重建），永远不会写盘
+    const r = Object.assign(migrate(null, now), { source:'broken', bad:mBad, bakBad:bBad, raw:m.raw || null, mainRev, blocked:true });
+    markBlocked(r.st); return r;
+  }
+
+  /* ===== 12d3：统一交易入口 + 跨页写档（熊大 22:08：扣款成功 ≠ 落盘成功；主页面 / 宠物 / 打僵尸共用一套） ===== */
+  // 整档原地回滚（保持对象引用不变：调用方手里的 st 还是同一个对象）
+  function restoreInPlace(st, snap) {
+    const o = JSON.parse(snap);
+    for (const k of Object.keys(st)) delete st[k];
+    Object.assign(st, o);
+  }
+  const saveOk = r => r === true || (!!r && typeof r === 'object' && r.ok === true);
+  // E.transact(st, { price, apply, save, blocked })
+  //   price：要扣的金币（≥ 0 的数，默认 0；按整数向上取整扣，走 spendCoins 精确断言）
+  //   apply(st, pay)：改状态（加训练等级 / 买狗 / 升级…）；返回 false 或 { ok:false, why } = 放弃；抛错也算放弃
+  //   save(st)：落盘；必须返回 true 或 { ok:true } 才算成功（主页面传 () => persist()；别的页面传 s => E.commitSave(localStorage, 主档键, 备份键, s)）
+  //   blocked：调用方已知只读（坏档 / 余额异常 / 多标签冻结）时传 true
+  // 返回 { ok:true, cost, result } 或 { ok:false, why, stage, result }，stage ∈ blocked / pay / apply / validate / save
+  // 任何一步失败：整档原地回滚到调用前（钱、等级、物品、rev 全部还原），调用方只需提示 why、不改界面、不跳转
+  function transact(st, opts) {
+    const o = opts || {}, price = o.price === undefined ? 0 : o.price;
+    if (!st || typeof st !== 'object') return { ok:false, why:'存档不可用', stage:'blocked' };
+    if (o.blocked || isBlocked(st)) return { ok:false, why:'存档异常（只读模式），不能交易', stage:'blocked' };
+    if (!walletOk(st)) return { ok:false, why:'金币数据异常', stage:'blocked' };
+    if (typeof o.save !== 'function') return { ok:false, why:'没有保存函数', stage:'save' };
+    if (!isAmt(price)) return { ok:false, why:'价格异常', stage:'pay' };
+    const snap = JSON.stringify(st);
+    const fail = (why, stage, result) => { restoreInPlace(st, snap); return { ok:false, why, stage, result }; };
+    let pay = { ok:true, cost:0 };
+    if (price > 0) { pay = spendCoins(st, price); if (!pay.ok) return fail(pay.why, 'pay', pay); }
+    let result;
+    if (typeof o.apply === 'function') {
+      try { result = o.apply(st, pay); } catch (e) { return fail('操作失败', 'apply'); }
+      if (result === false || (result && typeof result === 'object' && result.ok === false)) return fail((result && result.why) || '操作失败', 'apply', result);
+    }
+    const bad = validState(st);
+    if (bad.length) return fail('数据异常（' + bad.slice(0, 3).join('、') + '），没有保存', 'validate');
+    let sv;
+    try { sv = o.save(st); } catch (e) { sv = false; }
+    if (!saveOk(sv)) return fail('保存失败', 'save', result);
+    return { ok:true, cost:pay.cost || 0, result };
+  }
+  // E.commitSave(storage, mainKey, bakKey, st)：跨页写档（宠物页 / 打僵尸页用；主页面 app.js 的 persist() 是同一套规矩）
+  //   ① 只读状态拒绝 ② 写前 validState + checkSave（写出去的必须读得回来）③ 存储里的 rev 比我新 → 拒绝（别的页面写过，先重新读档）
+  //   ④ 当前主档结构坏（或余额异常）→ 拒绝，原文不动 ⑤ 先把当前好主档整份写进 -bak（写失败 / 读回不一致 → 整次放弃，主档不动）
+  //   ⑥ rev + 1 再写主档（失败 → rev 不变，返回失败）。返回 { ok:true, rev } 或 { ok:false, why, stage }
+  function commitSave(storage, mainKey, bakKey, st) {
+    if (!storage || !mainKey || !bakKey || mainKey === bakKey) return { ok:false, why:'存档键不对', stage:'args' };
+    if (isBlocked(st)) return { ok:false, why:'存档异常（只读模式），不能保存', stage:'blocked' };
+    const bad = validState(st);
+    if (bad.length) return { ok:false, why:'数据异常（' + bad.slice(0, 3).join('、') + '），没有保存', stage:'validate' };
+    let prev;
+    try { prev = storage.getItem(mainKey); } catch (e) { return { ok:false, why:'读不到存档', stage:'read' }; }
+    let prevRaw = null;
+    if (prev != null && prev !== '') {
+      try { prevRaw = JSON.parse(prev); } catch (e) { prevRaw = undefined; }
+      if (prevRaw !== null && (prevRaw === undefined || checkSave(prevRaw).length)) return { ok:false, why:'当前存档异常，没有覆盖', stage:'main-bad' };
+      if (prevRaw && isAmt(prevRaw.rev) && prevRaw.rev > (st.rev || 0)) return { ok:false, why:'存档已被别的页面更新，请重新读档', stage:'conflict' };
+    }
+    const rev0 = st.rev;
+    st.rev = (isAmt(rev0) ? rev0 : 0) + 1;
+    const json = JSON.stringify(st);
+    let back = null; try { back = JSON.parse(json); } catch (e) {}
+    const cb = back ? checkSave(back) : ['json'];
+    if (cb.length) { st.rev = rev0; return { ok:false, why:'数据异常（' + cb.slice(0, 3).join('、') + '），没有保存', stage:'validate' }; }
+    if (prevRaw) {
+      try { storage.setItem(bakKey, prev); if (storage.getItem(bakKey) !== prev) throw new Error('bak mismatch'); }
+      catch (e) { st.rev = rev0; return { ok:false, why:'备份写入失败，这次没有保存（原存档未改）', stage:'bak' }; }
+    }
+    try { storage.setItem(mainKey, json); if (storage.getItem(mainKey) !== json) throw new Error('main mismatch'); }
+    catch (e) { st.rev = rev0; try { if (storage.getItem(mainKey) !== prev && prev != null) storage.setItem(mainKey, prev); } catch (x) {} return { ok:false, why:'保存失败（存储不可用）', stage:'main' }; }
+    return { ok:true, rev:st.rev };
   }
 
   /* ================= 12b2：测试房间（只给 ?test=homes 用，不读不写真存档） ================= */
@@ -1310,7 +1447,7 @@
   return { CFG, ROCKET_NAME, TYPES, SHOPS, CEOS, CEO_BY_ID, SIGNS, CROSS, ITEMS, ITEM_BY_ID, REGULAR_ITEMS, SUPER_ITEMS, CARD_COUNT, SET_REWARD, MILESTONES,
     SUPER_OF_SHOP, hasSuper, superMult, rushActive, rushMult, startRush, critChance, critMult, portalReward, gachaComplete,
     COIN_CAP:CFG.COIN_CAP, SAFE_COINS:SAFE, normEarned, walletOk, normWallet, balance, overCap, addCoins, spendCoins, canAfford, priceOk, pendingOk,
-    shopMaxLv, empMaxLv, ceoMaxLv, shopMaxed, empMaxed, ceoMaxed, shopBuyCount, checkSave, validState, loadSave,
+    shopMaxLv, empMaxLv, ceoMaxLv, shopMaxed, empMaxed, ceoMaxed, shopBuyCount, checkSave, validState, loadSave, transact, commitSave, isBlocked, markBlocked,
     milestoneMult, nextMilestone, upgradeCost, bulkUpgradeCost, empCost, ceoCost, empMult, shopBase,
     ceoAt, ceoInfo, shopRate, baseRate, onlineRate, offlineRate, rushOnlineRate, boostActive, orderPayout, settleOrder,
     BIG_ORDERS, SPECIAL_GUESTS, specialReward, settleSpecial, specialInterval,

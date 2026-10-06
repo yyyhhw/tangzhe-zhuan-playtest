@@ -20,7 +20,7 @@ WATCH = """() => { if (window.__pw) return; const PE = window.PetEngine; window.
 # p4a：在页面里逐帧推进，独立按逐帧量出的外形（不读 manifest.body）查身体盒有没有压家具 / 出界，记下播过的动作
 GSTEP = """async (sec) => { const PE = window.PetEngine, w = __tzz.pet.w, C = PE.CFG, M = __tzz.pet.M, K = M.runtime.displayTiles / 256;
   // p5：独立外形 = 页面里加载真图集逐 cell 量 alpha>8 左右范围的并集（不读 manifest.body），只量一次
-  if (!window.__gpx) { const im = new Image(); im.src = '../art/' + M.atlas.image + '?v=p5'; await im.decode(); const cv = document.createElement('canvas'); cv.width = cv.height = 128; const x = cv.getContext('2d', { willReadFrequently: true });
+  if (!window.__gpx) { const im = new Image(); im.src = '../art/' + M.atlas.image + '?v=p6'; await im.decode(); const cv = document.createElement('canvas'); cv.width = cv.height = 128; const x = cv.getContext('2d', { willReadFrequently: true });
     const U = { E: [256, 0], N: [256, 0], S: [256, 0] }; let n = 0;
     for (const c of Object.values(M.clips)) for (const f of c.frames) { const r = window.PetArt.cellRect(M, f.cell); x.clearRect(0, 0, 128, 128); x.drawImage(im, r.sx, r.sy, r.s, r.s, 0, 0, 128, 128); const d = x.getImageData(0, 0, 128, 128).data; let a = 999, b = -1;
       for (let y = 0; y < 128; y++) for (let xx = 0; xx < 128; xx++) if (d[(y * 128 + xx) * 4 + 3] > 8) { if (xx < a) a = xx; if (xx > b) b = xx; } U[c.dir][0] = Math.min(U[c.dir][0], a * 2); U[c.dir][1] = Math.max(U[c.dir][1], (b + 1) * 2); n++; }
@@ -255,6 +255,18 @@ with sync_playwright() as p:
             u5 = pg.evaluate("() => { const r0 = __tzz.saveBlocked; __tzz.homeAct('homePetBuy', 'c77'); const st = __tzz.state; return { blk: r0, uns: __tzz.loadInfo && __tzz.loadInfo.unsafe, pet: 'pet' in st, coins: st.coins, modal: __tzz.modalOpen(), toast: document.getElementById('toast').textContent, api: __tzz.pet.PG.buy(st, __tzz.E, 'c77', Date.now(), __tzz.pet.M) }; }")
             pg.wait_for_timeout(5600); after5 = pg.evaluate("() => localStorage.getItem('" + SAVE + "')")
             check(u5['blk'] and u5['uns'] and not u5['pet'] and u5['coins'] == 1e20 and not u5['modal'] and '金币数据异常' in u5['toast'] and not u5['api']['ok'] and after5 == badJ, f"p5 异常钱包（余额 1e20）：商城点买狗 → 提示金币数据异常、不弹购买窗；接口也拒；6 秒后原档逐字节不变 {u5['toast']}")
+            # p6（12d3）：保存失败（setItem 抛错）时买狗 → E.transact 整体回滚：金币不扣、没有狗、主档 / 备份逐字节不变、不跳进家宅
+            nf = json.loads(raw); nf.pop('pet', None); nf['coins'] = 50000; nf['coinFrac'] = 0; nf['rev'] = (nf.get('rev') or 0) + 150000; nfJ = json.dumps(nf)
+            pg.evaluate("(v) => { localStorage.clear(); localStorage.setItem('" + SAVE + "', v); }", nfJ); boot(pg)
+            pg.evaluate("() => { __tzz.setTab('home'); __tzz.homeAct('homeSub', 'mall'); }"); pg.wait_for_timeout(300)
+            m0 = pg.evaluate("() => [localStorage.getItem('" + SAVE + "'), localStorage.getItem('" + SAVE + "-bak')]")
+            pg.evaluate("() => { window.__realSet = Storage.prototype.setItem; Storage.prototype.setItem = function () { throw new Error('QuotaExceededError'); }; __tzz.homeAct('homePetBuy', 'c77'); }"); pg.wait_for_timeout(300)
+            pg.click('#pbYes'); pg.wait_for_timeout(400)
+            sf = pg.evaluate("() => { const st = __tzz.state, r = { pet: 'pet' in st, coins: st.coins, toast: document.getElementById('toast').textContent, sub: __tzz.homeSub, disk: [localStorage.getItem('" + SAVE + "'), localStorage.getItem('" + SAVE + "-bak')] }; Storage.prototype.setItem = window.__realSet; return r; }")
+            check(not sf['pet'] and sf['coins'] == 50000 and '保存失败' in sf['toast'] and sf['disk'] == m0 and sf['sub'] == 'mall', f"p6 保存失败时买狗：整体回滚（金币 {sf['coins']}、没有狗、主档 / 备份逐字节不变、留在商城）提示「{sf['toast']}」")
+            pg.evaluate("() => __tzz.homeAct('homePetBuy', 'c77')"); pg.wait_for_timeout(300); pg.click('#pbYes'); pg.wait_for_timeout(400)
+            ok6 = pg.evaluate("() => { const d = JSON.parse(localStorage.getItem('" + SAVE + "')); return { pet: !!(d.pet && d.pet.owned), coins: d.coins, rev: d.rev, mem: __tzz.state.coins, bak: JSON.parse(localStorage.getItem('" + SAVE + "-bak')).rev }; }")
+            check(ok6['pet'] and ok6['coins'] == 47000 and ok6['mem'] == 47000 and ok6['rev'] > json.loads(m0[0])['rev'] and ok6['bak'] == ok6['rev'] - 1, f"p6 存储恢复后再买：落盘有狗、47000 金币、rev {json.loads(m0[0])['rev']}→{ok6['rev']}、-bak = 上一份主档（rev {ok6['bak']}）")
             good = json.loads(raw); good['rev'] = (good.get('rev') or 0) + 200000
             pg.evaluate("(v) => { localStorage.clear(); localStorage.setItem('" + SAVE + "', v); }", json.dumps(good)); boot(pg)
             pg.evaluate("() => __tzz.persist()")
