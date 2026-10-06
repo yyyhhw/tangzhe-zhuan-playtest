@@ -203,6 +203,11 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 .pimg img.art{transform:none;object-fit:cover}
 .pchar .pe{position:absolute;right:-14px;bottom:-6px;font-size:28px}
 .comic.two .pt{margin-top:10px}
+.cross-wrap.has-art .comic{display:none}.cross-wrap:not(.has-art) .cross-cap{display:none}
+.cross-art{display:flex;justify-content:center;margin:2px 0 8px}
+.cross-art img{width:min(80vw,340px,calc(100dvh - 330px));min-width:180px;aspect-ratio:1;object-fit:cover;border:3px solid var(--ink);border-radius:12px;background:#fbf4e6;display:block}
+.cross-cap{font-size:12.5px;font-weight:800;line-height:1.45;margin:0 0 10px;text-align:left}
+.cross-cap div{background:#fff;border:2px solid var(--ink);border-radius:10px;padding:3px 8px;margin-top:4px}
 .swap-box{text-align:left;font-size:12.5px;line-height:1.6;border:2.5px solid var(--ink);border-radius:8px;background:#fff6cf;padding:6px 9px;margin:4px 0 6px}
 .swap-box b{background:var(--ink);color:var(--yellow);padding:0 6px;border-radius:3px}
 

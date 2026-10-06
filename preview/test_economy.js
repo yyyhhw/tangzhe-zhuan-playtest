@@ -627,5 +627,92 @@ ok(E.CROSS['rocket@0'].effect === 'bigFreq' && E.CROSS['c77@3'].effect === 'offl
   ok(s4.homes.c77.placed.filter(p => p.fid === 'furn_plant').length === fill4.length && noOverlap(s4, 'c77'), '退仓时植物一件不少且无重叠');
 }
 
+// 11z：熊大 10 件占地审查，9 件收紧（香草木箱园保持 1×1）；独立标记 fpMig11z；按旋转后真实高差锚底边
+{
+  const NEWSZ = { furn_pearl_tea_loft:[2,1], furn_pearl_capsule_daybed:[2,2], furn_pearl_picnic_table:[2,1], furn_otaku_floor_futon:[2,2],
+    furn_otaku_bunk_manga:[2,1], furn_otaku_kotatsu:[2,1], furn_rocket_steel_platform_bed:[2,2], furn_rocket_cryo_rest_pod:[2,2], furn_rocket_captain_chair:[1,1] };
+  const OLDSZ = { furn_pearl_tea_loft:[2,3], furn_pearl_capsule_daybed:[2,3], furn_pearl_picnic_table:[2,2], furn_otaku_floor_futon:[2,3],
+    furn_otaku_bunk_manga:[2,3], furn_otaku_kotatsu:[2,2], furn_rocket_steel_platform_bed:[2,3], furn_rocket_cryo_rest_pod:[2,3], furn_rocket_captain_chair:[1,2] };
+  const META = { furn_pearl_tea_loft:[24000,7], furn_pearl_capsule_daybed:[110000,16], furn_pearl_picnic_table:[1700,2], furn_otaku_floor_futon:[1200,2], furn_otaku_bunk_manga:[15000,4], furn_otaku_kotatsu:[5800,4], furn_rocket_steel_platform_bed:[6800,4], furn_rocket_cryo_rest_pod:[65000,11], furn_rocket_captain_chair:[36000,7] };
+  const badDef = Object.keys(NEWSZ).filter(id => { const f = E.FURN_BY_ID[id]; return !f || f.w !== NEWSZ[id][0] || f.h !== NEWSZ[id][1] || f.price !== META[id][0] || f.lux !== META[id][1]; });
+  ok(badDef.length === 0, '11z 9 件新占地 + ID/价格/豪华度不变 ' + badDef);
+  ok(Object.keys(E.FP_OLD_11Z).length === 9 && Object.keys(E.FP_OLD_11Z).every(id => E.FP_OLD_11Z[id].ow === OLDSZ[id][0] && E.FP_OLD_11Z[id].oh === OLDSZ[id][1]), '11z 旧占地表 9 件对得上');
+  const hb = E.FURN_BY_ID.furn_pearl_herb_crate; ok(hb && hb.w === 1 && hb.h === 1 && !E.FP_OLD_11Z.furn_pearl_herb_crate, '香草木箱园保持 1×1、不迁移');
+  ok(!E.FURN_BY_ID.furn_otaku_kotatsu.layer, '被炉仍是实体家具层（不是地毯层）');
+  ['furn_pearl_tea_loft','furn_pearl_capsule_daybed','furn_otaku_floor_futon','furn_otaku_bunk_manga','furn_rocket_steel_platform_bed','furn_rocket_cryo_rest_pod'].forEach(id => ok(E.furnLiveAct(id) === 'rest', id + ' 仍能休息'));
+
+  const noOverlap = (st, cid) => st.homes[cid].placed.every(p => E.canPlace(st, cid, p.fid, p.x, p.y, p.rot, p.uid, p.surf).ok);
+  // 已跑过 11w 的档（fpMig11w=1）也必须跑 11z；混合旋转
+  const mkMix = order => {
+    const s = E.newState(T0); s.coins = 12345; s.totalEarned = 12345; s.fpMig11w = 1;
+    const rec = [
+      { uid:'a', fid:'furn_pearl_tea_loft', x:0, y:0, rot:0, surf:'floor' },          // 旧 2×3 底=3 → (0,2) 2×1
+      { uid:'b', fid:'furn_otaku_kotatsu', x:2, y:0, rot:0, surf:'floor' },           // 旧 2×2 底=2 → (2,1) 2×1
+      { uid:'c', fid:'furn_rocket_captain_chair', x:4, y:0, rot:0, surf:'floor' },    // 旧 1×2 底=2 → (4,1)
+      { uid:'d', fid:'furn_otaku_bunk_manga', x:2, y:2, rot:1, surf:'floor' },        // rot1 旧 3×2 → 新 1×2：高差 0 → (2,2) 不动
+      { uid:'e', fid:'furn_plant', x:5, y:0, rot:0, surf:'floor' },
+    ];
+    s.homes.c77.placed = order === 'fwd' ? rec : rec.slice().reverse(); s.homes.c77.next = 9; return s;
+  };
+  const res = {};
+  ['fwd', 'rev'].forEach(order => {
+    const s = mkMix(order), ids = ['furn_pearl_tea_loft','furn_otaku_kotatsu','furn_rocket_captain_chair','furn_otaku_bunk_manga','furn_plant'];
+    const own0 = ids.map(id => E.furnStats(s, id).owned);
+    const m = E.migrateFootprints(s);
+    const by = Object.fromEntries(s.homes.c77.placed.map(p => [p.uid, p]));
+    ok(!m.z11.skipped && m.w11.skipped && m.stored === 0, order + '：11w 已跑过跳过，11z 照跑、无退仓 ' + JSON.stringify(m.z11));
+    ok(by.a && by.a.x === 0 && by.a.y === 2, order + '：茶点高架床 (0,0)h3 → (0,2)h1');
+    ok(by.b && by.b.x === 2 && by.b.y === 1, order + '：被炉 (2,0)h2 → (2,1)h1');
+    ok(by.c && by.c.x === 4 && by.c.y === 1, order + '：指挥椅 (4,0)h2 → (4,1)h1');
+    ok(by.d && by.d.x === 2 && by.d.y === 2 && by.d.rot === 1, order + '：上下铺 rot1 高差 0 不挪');
+    ok(by.e && by.e.x === 5 && by.e.y === 0, order + '：无关植物不动');
+    ok(noOverlap(s, 'c77'), order + '：迁移后全局无重叠/越界');
+    ok(ids.every((id, n) => E.furnStats(s, id).owned === own0[n]) && s.coins === 12345 && s.totalEarned === 12345, order + '：件数与金币不变');
+    const m2 = E.migrateFootprints(s);
+    ok(m2.skipped && s.fpMig11z === 1 && by.a.y === 2, order + '：二次迁移跳过（幂等）');
+    const loaded = E.migrate(JSON.parse(JSON.stringify(s)), T0).st;
+    ok(E.migrateFootprints(loaded).skipped && loaded.homes.c77.placed.find(p => p.uid === 'a').y === 2, order + '：刷新读档后标记还在、位置不变');
+    res[order] = JSON.stringify(s.homes.c77.placed.map(p => [p.uid, p.x, p.y]).sort());
+  });
+  ok(res.fwd === res.rev, '11z 记录换序结果一致');
+
+  // 旋转 90°：钢架床旧 2×3 rot1 = 3×2，新 2×2 rot1 = 2×2 → 高差 0；rot2：旧 2×3 → 新 2×2，高差 1
+  const sr = E.newState(T0); sr.fpMig11w = 1;
+  sr.homes.c77.placed = [ { uid:'r1', fid:'furn_rocket_steel_platform_bed', x:0, y:0, rot:1, surf:'floor' }, { uid:'r2', fid:'furn_rocket_cryo_rest_pod', x:3, y:0, rot:2, surf:'floor' } ];
+  sr.homes.c77.next = 3; E.migrateFootprints(sr);
+  const r1 = sr.homes.c77.placed.find(p => p.uid === 'r1'), r2 = sr.homes.c77.placed.find(p => p.uid === 'r2');
+  ok(r1 && r1.x === 0 && r1.y === 0 && r2 && r2.x === 3 && r2.y === 1 && noOverlap(sr, 'c77'), '旋转件按旋转后高差：rot1 不挪，rot2 下移 1 ' + JSON.stringify([r1, r2]));
+
+  // 两个标记都没有的老 11v 档：先 11w 再 11z，同屋混合
+  const sb = E.newState(T0);
+  sb.homes.c77.placed = [ { uid:'w1', fid:'furn_s77_drawer_bed', x:0, y:0, rot:0, surf:'floor' }, { uid:'z1', fid:'furn_otaku_floor_futon', x:2, y:0, rot:0, surf:'floor' } ];
+  sb.homes.c77.next = 3; const mb = E.migrateFootprints(sb);
+  const w1 = sb.homes.c77.placed.find(p => p.uid === 'w1'), z1 = sb.homes.c77.placed.find(p => p.uid === 'z1');
+  ok(!mb.w11.skipped && !mb.z11.skipped && w1.y === 1 && z1.y === 1 && sb.fpMig11w === 1 && sb.fpMig11z === 1 && noOverlap(sb, 'c77'), '老档 11w+11z 依次跑：抽屉床、漫画地铺都锚到 y=1');
+
+  // 边界：越底异常档 → 回退找空位但不抢后面家具的格子；无空位整件退仓
+  const se = E.newState(T0); se.fpMig11w = 1;
+  const plantE = { uid:'p', fid:'furn_plant', x:0, y:0, rot:0, surf:'floor' };
+  se.homes.c77.placed = [ { uid:'x', fid:'furn_rocket_cryo_rest_pod', x:4, y:3, rot:0, surf:'floor' }, plantE ];   // 旧 2×3 底=6 越界 → 锚 y=4 仍越界
+  se.homes.c77.next = 3; const pod0 = E.furnStats(se, 'furn_rocket_cryo_rest_pod').owned;
+  E.migrateFootprints(se);
+  const pe = se.homes.c77.placed.find(p => p.uid === 'p'), xe = se.homes.c77.placed.find(p => p.uid === 'x');
+  ok(pe && pe.x === 0 && pe.y === 0 && noOverlap(se, 'c77') && E.furnStats(se, 'furn_rocket_cryo_rest_pod').owned === pod0, '越底异常档：植物保 (0,0)，休息舱找空位或退仓、件数守恒 ' + (xe ? xe.x + ',' + xe.y : '退仓'));
+  const sf = E.newState(T0); sf.fpMig11w = 1;
+  const fill = []; let n = 1;
+  for (let y = 0; y < 4; y++) for (let x = 0; x < 6; x++) if (!(x === 5 && y === 3)) fill.push({ uid:'f' + (n++), fid:'furn_plant', x, y, rot:0, surf:'floor' });
+  sf.homes.c77.placed = [{ uid:'q', fid:'furn_pearl_capsule_daybed', x:4, y:2, rot:0, surf:'floor' }].concat(fill);
+  sf.homes.c77.next = n; const cap0 = E.furnStats(sf, 'furn_pearl_capsule_daybed').owned, inv0 = (sf.furnInv || {}).furn_pearl_capsule_daybed || 0;
+  const mf = E.migrateFootprints(sf);
+  ok(mf.stored === 1 && !sf.homes.c77.placed.some(p => p.uid === 'q') && E.furnStats(sf, 'furn_pearl_capsule_daybed').owned === cap0 && noOverlap(sf, 'c77'), '满屋无位 → 泡泡躺舱整件回仓，所有权守恒、植物一件不少');
+  ok(sf.homes.c77.placed.filter(p => p.fid === 'furn_plant').length === fill.length, '回仓时植物全在');
+
+  // 新开局买的新占地家具不会被 11z 误挪：首次启动先跑一次（空屋），之后再摆放
+  const sn = E.newState(T0); E.migrateFootprints(sn); sn.coins = 1e9;
+  E.buyFurniture(sn, 'furn_pearl_tea_loft'); const pl = E.placeItem(sn, 'c77', 'furn_pearl_tea_loft', 0, 0, 0);
+  const ln = E.migrate(JSON.parse(JSON.stringify(sn)), T0).st; const mn = E.migrateFootprints(ln);
+  ok(pl.ok && mn.skipped && ln.homes.c77.placed.find(p => p.fid === 'furn_pearl_tea_loft').y === 0, '新档按新占地摆的高架床读档后不被误挪');
+}
+
 console.log(`economy tests: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

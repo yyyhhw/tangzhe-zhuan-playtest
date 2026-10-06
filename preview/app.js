@@ -357,7 +357,7 @@ function avatarURL(id, key) {
   return (avaCache[k] = o.toDataURL());
 }
 // 熊大画的 CEO 头像（图没加载出来就退回画布小人头像）
-const ART_V = '10', PORTRAIT = { c77:1, pearl:1, otaku:1, rocket:1 };
+const ART_V = '11', PORTRAIT = { c77:1, pearl:1, otaku:1, rocket:1 };
 const faceURL = id => PORTRAIT[id] ? `art/face_${id}.webp?v=${ART_V}` : avatarURL(id);
 const bustURL = id => PORTRAIT[id] ? `art/ceo_${id}.webp?v=${ART_V}` : avatarURL(id);
 const faceImg = id => `<img src="${faceURL(id)}"${PORTRAIT[id] ? ` class="art" data-fb="${id}"` : ''} alt="">`;
@@ -365,6 +365,9 @@ const bustImg = id => `<img src="${bustURL(id)}"${PORTRAIT[id] ? ` class="art" d
 // CEO×店铺 任职形象（16 张）：本行用 ceo_<id>.webp，其余放 art/job_<id>_<店id>.webp，交过来一张在 JOB_ART 里登记一张
 const JOB_ART = { c77_tea:1, c77_book:1, c77_tech:1, pearl_bbq:1, pearl_book:1, pearl_tech:1,
   otaku_bbq:1, otaku_tea:1, otaku_tech:1, rocket_bbq:1, rocket_tea:1, rocket_book:1 }; // 熊大 12 张补图已全部到齐
+// 4 张特殊跨行漫画整图（熊大交付原图 → 480² WebP）；图加载失败自动退回两格头像+文字
+const CROSS_ART = { 'rocket@0':'cross_rocket_bbq', 'c77@3':'cross_c77_tech', 'pearl@2':'cross_pearl_book', 'otaku@1':'cross_otaku_tea' };
+const crossURL = k => `art/${CROSS_ART[k]}.webp?v=${ART_V}`;
 const homeShop = id => E.CEO_BY_ID[id].home;
 const hasJobArt = (id, i) => i === homeShop(id) ? !!PORTRAIT[id] : !!JOB_ART[id + '_' + E.SHOPS[i].id];
 const jobURL = (id, i) => i !== homeShop(id) && JOB_ART[id + '_' + E.SHOPS[i].id] ? `art/job_${id}_${E.SHOPS[i].id}.webp?v=${ART_V}` : bustURL(id);
@@ -1393,7 +1396,10 @@ function showComic(k, fresh) {
   if (fresh) { state.crossSeen[k] = true; persist(); sfx('mile'); }
   openModal(`<div class="mbubble">${fresh ? '跨行事件！' : '跨行组合'}</div><div class="mtitle">${c.name} × ${E.SHOPS[+shop].short}：「${x.title}」</div>
     <div class="comic-sfx">${x.sfx}</div>
-    <div class="comic two">${x.panels.map((p, n) => `<div class="panel4"><span class="pn">${n + 1}</span><div class="pchar"><div class="pimg">${faceImg(p[0])}</div><span class="pe">${p[1]}</span></div><div class="pt">${p[2]}</div></div>`).join('')}</div>
+    <div class="cross-wrap${CROSS_ART[k] ? ' has-art' : ''}">
+    ${CROSS_ART[k] ? `<div class="cross-art"><img src="${crossURL(k)}" alt="${x.title}" onerror="var w=this.closest('.cross-wrap');if(w)w.classList.remove('has-art');this.parentNode.remove()"></div>
+    <div class="cross-cap">${x.panels.map(p => `<div>${p[1]} ${p[2]}</div>`).join('')}</div>` : ''}
+    <div class="comic two">${x.panels.map((p, n) => `<div class="panel4"><span class="pn">${n + 1}</span><div class="pchar"><div class="pimg">${faceImg(p[0])}</div><span class="pe">${p[1]}</span></div><div class="pt">${p[2]}</div></div>`).join('')}</div></div>
     <div class="mnote"><b>专属效果：</b>${x.desc}${E.crossActive(state, k) ? '（生效中）' : ''}</div>
     <button class="buy big" id="mOk">知道了</button>`);
   $('#mOk').addEventListener('click', closeModal, { once:true });
@@ -1472,6 +1478,7 @@ Object.assign(FURN_UP, { pearl_cup_carousel: 525 / 240, pearl_bakery_display: 25
 // 11y：missing107 的 106 件新 ID；地毯铺满/墙饰挂墙不登记往上伸
 Object.assign(FURN_ART, { pearl_tea_loft:1, pearl_canopy_lounge:1, pearl_capsule_daybed:1, pearl_tea_cat_hammock:1, pearl_tea_cubby:1, pearl_glass_wardrobe:1, pearl_rattan_bookcase:1, pearl_tea_trolley_shelf:1, pearl_tea_stool:1, pearl_cafe_chair:1, pearl_round_tea_table:1, pearl_scallop_sofa:1, pearl_tea_bar:1, pearl_bar_stool:1, pearl_picnic_table:1, pearl_egg_swing:1, pearl_fan_shade_lamp:1, pearl_tea_arc_lamp:1, pearl_fountain_light:1, pearl_tea_kettle_cart:1, pearl_juice_press:1, pearl_milk_frother_bar:1, pearl_tea_brewer:1, pearl_dessert_chiller:1, pearl_marble_pearl_rug:1, pearl_tea_menu_board:1, pearl_cup_wall_rack:1, pearl_sunburst_mirror:1, pearl_tea_leaf_relief:1, pearl_moon_window_art:1, pearl_herb_crate:1, pearl_tea_bonsai:1, pearl_ceramic_cup_stack:1, pearl_terrarium_orb:1, pearl_tea_tree_screen:1, otaku_floor_futon:1, otaku_sofa_sleeper:1, otaku_bunk_manga:1, otaku_gaming_pod:1, otaku_projector_bed:1, otaku_cat_keyboard_cave:1, otaku_locker_wardrobe:1, otaku_disc_tower:1, otaku_figure_vitrine:1, otaku_comic_wheel_cart:1, otaku_controller_drawers:1, otaku_modular_pixel_shelf:1, otaku_server_display_rack:1, otaku_beanbag:1, otaku_kotatsu:1, otaku_gaming_chair:1, otaku_manga_desk:1, otaku_snack_sidecar:1, otaku_cocoon_lounger:1, otaku_panel_lamp:1, otaku_gooseneck_stand:1, otaku_pixel_cube_light:1, otaku_arcade_marquee_lamp:1, otaku_orbital_neon_floor:1, otaku_sleep_timer_totem:1, otaku_mini_fridge:1, otaku_console_station:1, otaku_arcade_cabinet:1, otaku_projector_cart:1, otaku_triple_monitor_station:1, otaku_pixel_map_rug:1, otaku_speech_bubble_board:1, otaku_manga_page_triptych:1, otaku_controller_wall_mount:1, otaku_pixel_city_lightbox:1, otaku_cactus_cartridge:1, rocket_steel_platform_bed:1, rocket_cryo_rest_pod:1, rocket_observatory_bed:1, rocket_landing_cat_pod:1, rocket_steel_locker:1, rocket_pipe_bookcase:1, rocket_tool_chest:1, rocket_specimen_drawer:1, rocket_orbital_archive:1, rocket_bolt_stool:1, rocket_workbench:1, rocket_drafting_chair:1, rocket_pipe_sofa:1, rocket_oil_drum_table:1, rocket_captain_chair:1, rocket_cantilever_desk:1, rocket_orbital_ring_lamp:1, rocket_solar_array_lamp:1, rocket_industrial_fan:1, rocket_vacuum_dock:1, rocket_coffee_pressure_unit:1, rocket_air_purifier:1, rocket_hydroponic_unit:1, rocket_planetarium_console:1, rocket_workshop_mat:1, rocket_orbit_rug:1, rocket_runway_runner:1, rocket_lunar_relief_rug:1, rocket_blueprint_frame:1, rocket_gear_clock:1, rocket_mission_patch_board:1, rocket_moon_sample_relief:1, rocket_orbital_map_panel:1, rocket_concrete_succulent:1, rocket_pipe_vase:1 });
 Object.assign(FURN_UP, { pearl_tea_loft: 412 / 400, pearl_canopy_lounge: 615 / 600, pearl_capsule_daybed: 336 / 400, pearl_tea_cat_hammock: 132 / 240, pearl_tea_cubby: 447 / 400, pearl_glass_wardrobe: 455 / 400, pearl_rattan_bookcase: 699 / 400, pearl_tea_trolley_shelf: 254 / 240, pearl_tea_stool: 199 / 240, pearl_cafe_chair: 555 / 240, pearl_round_tea_table: 391 / 400, pearl_scallop_sofa: 234 / 600, pearl_tea_bar: 300 / 600, pearl_bar_stool: 667 / 240, pearl_picnic_table: 170 / 400, pearl_egg_swing: 706 / 400, pearl_fan_shade_lamp: 350 / 240, pearl_tea_arc_lamp: 361 / 240, pearl_fountain_light: 209 / 400, pearl_tea_kettle_cart: 256 / 240, pearl_juice_press: 371 / 240, pearl_milk_frother_bar: 282 / 400, pearl_tea_brewer: 226 / 400, pearl_dessert_chiller: 711 / 400, pearl_herb_crate: 111 / 240, pearl_tea_bonsai: 213 / 240, pearl_ceramic_cup_stack: 368 / 240, pearl_terrarium_orb: 274 / 240, pearl_tea_tree_screen: 390 / 600, otaku_floor_futon: 264 / 400, otaku_sofa_sleeper: 503 / 400, otaku_bunk_manga: 470 / 400, otaku_gaming_pod: 564 / 400, otaku_projector_bed: 598 / 600, otaku_cat_keyboard_cave: 174 / 240, otaku_locker_wardrobe: 516 / 400, otaku_disc_tower: 741 / 240, otaku_figure_vitrine: 310 / 400, otaku_comic_wheel_cart: 180 / 240, otaku_controller_drawers: 282 / 400, otaku_modular_pixel_shelf: 518 / 600, otaku_server_display_rack: 433 / 400, otaku_beanbag: 200 / 240, otaku_kotatsu: 200 / 400, otaku_gaming_chair: 394 / 240, otaku_manga_desk: 371 / 400, otaku_snack_sidecar: 321 / 240, otaku_cocoon_lounger: 601 / 400, otaku_panel_lamp: 1331 / 240, otaku_gooseneck_stand: 461 / 240, otaku_pixel_cube_light: 696 / 240, otaku_arcade_marquee_lamp: 399 / 400, otaku_orbital_neon_floor: 768 / 240, otaku_sleep_timer_totem: 770 / 240, otaku_mini_fridge: 284 / 240, otaku_console_station: 291 / 400, otaku_arcade_cabinet: 477 / 240, otaku_projector_cart: 208 / 240, otaku_triple_monitor_station: 320 / 600, otaku_cactus_cartridge: 235 / 240, rocket_steel_platform_bed: 298 / 400, rocket_cryo_rest_pod: 434 / 400, rocket_observatory_bed: 543 / 600, rocket_landing_cat_pod: 239 / 240, rocket_steel_locker: 418 / 400, rocket_pipe_bookcase: 418 / 400, rocket_tool_chest: 247 / 400, rocket_specimen_drawer: 250 / 400, rocket_orbital_archive: 936 / 600, rocket_bolt_stool: 260 / 240, rocket_workbench: 213 / 400, rocket_drafting_chair: 386 / 240, rocket_pipe_sofa: 337 / 600, rocket_oil_drum_table: 342 / 400, rocket_captain_chair: 342 / 240, rocket_cantilever_desk: 326 / 400, rocket_orbital_ring_lamp: 479 / 240, rocket_solar_array_lamp: 372 / 400, rocket_industrial_fan: 238 / 240, rocket_vacuum_dock: 401 / 240, rocket_coffee_pressure_unit: 508 / 400, rocket_air_purifier: 632 / 240, rocket_hydroponic_unit: 241 / 400, rocket_planetarium_console: 485 / 400, rocket_concrete_succulent: 228 / 240, rocket_pipe_vase: 347 / 240 });
+const ROOM_WALL_ROWS = 2;  // 后墙高 2 格
 const furnTall = fid => !!(FURN_ART[furnName(fid)] && FURN_UP[furnName(fid)]);
 const HOME_ICON = ['🏠', '🏢', '🏰'];
 let homeWho = 'c77', homeSub = 'room', homeMode = 'live', homeSel = null, homeDrag = null;
@@ -1484,7 +1491,8 @@ function pushUndo(u) { const s = undoStack(u.ceo); s.push(u); if (s.length > 60)
 function furnInner(fid, rot, inRoom) {
   const f = E.FURN_BY_ID[fid], sz = E.furnSize(fid, rot), odd = rot & 1, n = furnName(fid);
   // 挂画（wall:true）在房间里：顶对齐、贴格子上沿挂（靠天花板），不在格子中间飘；转 90° 的才按中心转
-  const st = inRoom && furnTall(fid) ? `left:0;top:auto;bottom:0;width:100%;height:${sz.w * FURN_UP[n] / sz.h * 100}%;transform:none`
+  // 11z：往上伸的图最高只到「占地 + 2 格后墙」（房间顶边）；超高的（面板灯、光盘塔、计时图腾等）等比缩小、脚底不动，整图不被顶边裁掉
+  const st = inRoom && furnTall(fid) ? `left:0;top:auto;bottom:0;width:100%;height:${Math.min(sz.w * FURN_UP[n], sz.h + ROOM_WALL_ROWS) / sz.h * 100}%;transform:none`
     : inRoom && f.wall && !odd ? `left:50%;top:0;width:100%;height:100%;transform:translateX(-50%)`
     : `width:${odd ? sz.h / sz.w * 100 : 100}%;height:${odd ? sz.w / sz.h * 100 : 100}%;transform:translate(-50%,-50%) rotate(${rot * 90}deg)`;
   return `<div class="fi" style="${st}"><span class="fe">${f.emoji}</span>${FURN_ART[n] ? `<img src="art/furn_${n}.webp?v=${ART_V}" data-homefb="1" alt="">` : ''}</div>`;
@@ -1875,7 +1883,7 @@ function boot() {
   $('#mute').classList.toggle('off', !!state.muted);
   resize();
   const first = !state.taps && !state.totalEarned && state.shops[0].emp === 0;
-  const fpMig = E.migrateFootprint11w(state);
+  const fpMig = E.migrateFootprints(state);
   const wallMig = E.migrateWallPaintings(state);
   const p = E.settleOffline(state, now(), rid);
   persist();
@@ -1893,7 +1901,7 @@ function boot() {
 boot();
 
 // 测试/调试钩子（不影响玩家）
-window.__tzz = { E, get combo() { return combo; }, get critFx() { return critFx; }, critLine, refreshCrit, showComic, showCeoJoin, get state() { return state; }, set state(v) { state = v; }, persist, onReturn, tapShop, act, setTab, switchShop, renderTab,
+window.__tzz = { E, get combo() { return combo; }, get critFx() { return critFx; }, critLine, refreshCrit, showComic, CROSS_ART, crossURL, showCeoJoin, get state() { return state; }, set state(v) { state = v; }, persist, onReturn, tapShop, act, setTab, switchShop, renderTab,
   forceBig() { nextBigAt = 0; if (order) order = null; }, clearVisitors() { order = null; special = null; nextBigAt = clock + 9999; nextSpecialAt = clock + 9999; }, forceSpecial() { nextSpecialAt = 0; special = null; },
   forceSupers() { for (const k in superNext) superNext[k] = 0; updateSupers(); renderTab(); },
   get big() { return order; }, get order() { return order; }, get special() { return special; }, get guests() { return guests; },
