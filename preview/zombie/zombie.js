@@ -50,7 +50,7 @@ if (EMBED) window.addEventListener('message', e => {
 });
 function onState(d) {
   if (!d || d.zb !== 'state') return;
-  pend = false; proto.coins = Math.max(0, fin(d.coins, 0)); proto.blocked = !!d.blocked; Object.assign(proto, ZB.norm(d.z)); if ('ceo' in d) proto.ceo = ZB.heroOf(d.ceo); proto.ready = true;
+  pend = false; proto.coins = Math.max(0, fin(d.coins, 0)); proto.blocked = !!d.blocked; Object.assign(proto, ZB.norm(d.z)); proto.ceo = ZB.heroOf('ceo' in d ? d.ceo : undefined); proto.ready = true;
   if (firstSync) { firstSync = false; selLv = Math.min(MAX_LV, proto.cleared + 1); }
   $('#trainNote').textContent = d.why || (proto.blocked ? '存档异常或已在别的页面打开，暂时不能花金币。' : '和经营共用金币：训练只花钱，打僵尸本身不产金币。');
   renderTrain();
@@ -87,7 +87,7 @@ function newRun(mode, n) {
     t: 0, over: false, win: false, kills: 0, spawnAcc: 0,
     p: { x: W / 2, y: H * 0.62, r: 15 * U, hp: maxHp, maxHp, face: 1, inv: 0, fireCd: 0.3, walk: 0, moving: false },
     dmg: 10 * 1.15 ** lv.atk, interval: fireInterval(lv.rate), ultMul: 1.2 ** lv.ult,
-    skewers: 3, ult: 0, ring: null, frost: null, shake: 0,
+    skewers: 3, ult: 0, ring: null, frost: null, panels: null, wave: null, shake: 0,
     zs: [], bs: [], fx: [], txt: [], seed: 1,
   };
 }
@@ -123,7 +123,54 @@ function nearest() {
   for (const z of G.zs) { if (z.x < -10 || z.x > W + 10 || z.y < -10 || z.y > H + 10) continue; const d = (z.x - p.x) ** 2 + (z.y - p.y) ** 2; if (d < bd) { bd = d; best = z; } }
   return best;
 }
-const fire = () => (G.ceo === 'pearl' ? firePearl() : fire77());
+const heroCnt = () => { const n = G.skewers; return G.ceo === 'pearl' ? `珍珠弹跳 ×${n - 1}` : G.ceo === 'otaku' ? `漫画 ×${Math.ceil(n / 2)}` : G.ceo === 'rocket' ? `火箭 ×${Math.ceil(n / 2)}` : `飞串 ×${n}`; };
+const fire = () => ({ pearl: firePearl, otaku: fireBook, rocket: fireRocket }[G.ceo] || fire77)();
+const ultOn = () => !!(G.ring || G.frost || G.panels || G.wave);
+function nearestTo(x, y) {
+  let best = null, bd = Infinity;
+  for (const z of G.zs) { if (z.hp <= 0 || z.x < -20 || z.x > W + 20 || z.y < -20 || z.y > H + 20) continue; const d = (z.x - x) ** 2 + (z.y - y) ** 2; if (d < bd) { bd = d; best = z; } }
+  return best;
+}
+// 阿宅普攻：回旋漫画书，飞出去再飞回来，来回各能打穿每只僵尸一次
+function fireBook() {
+  const z = nearest(); if (!z) return false;
+  const p = G.p, a0 = Math.atan2(z.y - p.y, z.x - p.x), n = Math.ceil(G.skewers / 2), sp = 360 * U;
+  for (let i = 0; i < n; i++) { const a = a0 + (i - (n - 1) / 2) * 0.5; G.bs.push({ kind: 'book', x: p.x, y: p.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, a, life: 1.6, dmg: G.dmg * 0.9, pierce: 99, rad: 9 * U, age: 0, spin: 0, back: false, hit: new Set() }); }
+  p.face = Math.cos(a0) >= 0 ? 1 : -1;
+  return true;
+}
+// 火箭老板普攻：追踪迷你火箭，命中范围爆炸
+function fireRocket() {
+  const z = nearest(); if (!z) return false;
+  const p = G.p, a0 = Math.atan2(z.y - p.y, z.x - p.x), n = Math.ceil(G.skewers / 2), sp = 300 * U;
+  for (let i = 0; i < n; i++) { const a = a0 + (i - (n - 1) / 2) * 0.6; G.bs.push({ kind: 'rocket', x: p.x, y: p.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, a, life: 1.6, dmg: G.dmg * 1.1, pierce: 0, tgt: z, hit: new Set() }); }
+  p.face = Math.cos(a0) >= 0 ? 1 : -1;
+  return true;
+}
+function steerB(b, dt) {
+  const sp = Math.hypot(b.vx, b.vy); let tx, ty, k;
+  if (b.kind === 'book') {
+    b.age += dt; b.spin += dt * 14;
+    if (!b.back && b.age >= 0.42) { b.back = true; b.hit = new Set(); }
+    if (!b.back) return;
+    tx = G.p.x; ty = G.p.y; k = 9;
+    if (Math.hypot(tx - b.x, ty - b.y) < 16 * U) { b.life = 0; return; }
+  } else {
+    if (!b.tgt || b.tgt.hp <= 0 || !G.zs.includes(b.tgt)) b.tgt = nearestTo(b.x, b.y);
+    if (!b.tgt) return;
+    tx = b.tgt.x; ty = b.tgt.y; k = 5;
+  }
+  const d = Math.hypot(tx - b.x, ty - b.y) || 1, m = Math.min(1, dt * k);
+  b.vx += ((tx - b.x) / d * sp - b.vx) * m; b.vy += ((ty - b.y) / d * sp - b.vy) * m;
+  const s2 = Math.hypot(b.vx, b.vy) || 1; b.vx *= sp / s2; b.vy *= sp / s2; b.a = Math.atan2(b.vy, b.vx);
+}
+const waveR = Wv => Math.hypot(W, H) * Math.min(1, Wv.t / Wv.dur);
+function boom(x, y, dmg) {
+  const r = 36 * U;
+  for (const z of G.zs) { const dx = z.x - x, dy = z.y - y, d = Math.hypot(dx, dy) || 1; if (d < r + z.r) hurtZ(z, dmg, dx / d * 0.6 * U, dy / d * 0.6 * U); }
+  G.fx.push({ x, y, vx: 0, vy: 0, t: 0.25, c: 'rgba(255,159,28,.55)', r: 30 * U });
+  for (let i = 0; i < 6; i++) { const a = rnd() * 7; G.fx.push({ x, y, vx: Math.cos(a) * 120 * U, vy: Math.sin(a) * 120 * U, t: 0.3, c: '#ff9f1c' }); }
+}
 // 珍珠姐普攻：两颗珍珠，打中后弹向附近下一只（弹跳次数随击倒数涨，和 77 的飞串根数同档）
 function firePearl() {
   const z = nearest(); if (!z) return false;
@@ -150,7 +197,9 @@ function fire77() {
   return true;
 }
 function castUlt() {
-  if (!G || G.over || paused || G.ult < 100 || G.ring || G.frost) return false;
+  if (!G || G.over || paused || G.ult < 100 || ultOn()) return false;
+  if (G.ceo === 'otaku') { G.ult = 0; G.panels = { t: 0, waves: 0, next: 0, hits: [] }; G.p.inv = Math.max(G.p.inv, 2.2); toast('分镜轰炸！'); return true; }
+  if (G.ceo === 'rocket') { G.ult = 0; G.wave = { t: 0, dur: 1.1, hit: new Set() }; G.shake = 0.45; G.p.inv = Math.max(G.p.inv, 1.2); toast('星舰冲击波！'); return true; }
   if (G.ceo === 'pearl') { G.ult = 0; G.frost = { t: 0, dur: 3, tick: 0 }; G.shake = 0.25; G.p.inv = Math.max(G.p.inv, 0.6); toast('冰沙风暴！'); return true; }
   G.ult = 0; G.ring = { t: 0, dur: 3.5, tick: 0 }; G.shake = 0.35; G.p.inv = Math.max(G.p.inv, 0.6);
   toast('火圈！'); return true;
@@ -165,7 +214,7 @@ function killZ(i) {
   for (let k = 0; k < 6; k++) G.fx.push({ x: z.x, y: z.y, vx: (rnd() - 0.5) * 160 * U, vy: (rnd() - 0.5) * 160 * U, t: 0.4, c: z.col });
   G.zs.splice(i, 1);
   const want = Math.min(7, 3 + Math.floor(G.kills / 30));
-  if (want > G.skewers) { G.skewers = want; toast(G.ceo === 'pearl' ? `珍珠多弹一下（×${want - 1}）` : `飞串 +1（×${want}）`); }
+  if (want > G.skewers) { G.skewers = want; toast(G.ceo === 'pearl' ? `珍珠多弹一下（×${want - 1}）` : G.ceo === 'otaku' || G.ceo === 'rocket' ? `火力升级：${heroCnt()}` : `飞串 +1（×${want}）`); }
   if (z.type === 'boss') toast('僵尸王倒了！');
 }
 function step(dt) {
@@ -183,11 +232,12 @@ function step(dt) {
   spawner(dt);
   // 飞串
   for (let i = G.bs.length - 1; i >= 0; i--) {
-    const b = G.bs[i]; b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
-    let dead = b.life <= 0 || b.x < -40 || b.x > W + 40 || b.y < -40 || b.y > H + 40;
+    const b = G.bs[i]; if (b.kind === 'book' || b.kind === 'rocket') steerB(b, dt); b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
+    let dead = b.life <= 0 || (b.kind !== 'book' && (b.x < -40 || b.x > W + 40 || b.y < -40 || b.y > H + 40));
     if (!dead) for (const z of G.zs) {
       if (b.hit.has(z)) continue;
-      if ((z.x - b.x) ** 2 + (z.y - b.y) ** 2 < (z.r + 5 * U) ** 2) {
+      if ((z.x - b.x) ** 2 + (z.y - b.y) ** 2 < (z.r + (b.rad || 5 * U)) ** 2) {
+        if (b.kind === 'rocket') { boom(b.x, b.y, b.dmg); dead = true; break; }
         b.hit.add(z); hurtZ(z, b.dmg, b.vx * 0.02, b.vy * 0.02);
         if (b.bounce > 0 && bounceTo(b)) break;
         if (--b.pierce < 0) { dead = true; break; }
@@ -213,6 +263,32 @@ function step(dt) {
     const F = G.frost; F.t += dt; F.tick -= dt;
     if (F.tick <= 0) { F.tick = 0.5; for (const z of G.zs) { z.slow = Math.max(z.slow, 0.6); hurtZ(z, 24 * G.ultMul * (1 + G.t / 90), 0, 0); } }
     if (F.t >= F.dur) G.frost = null;
+  }
+  // 分镜轰炸：5 轮，每轮 4 格漫画分镜砸向僵尸群，期间无敌
+  if (G.panels) {
+    const P = G.panels; P.t += dt; P.next -= dt;
+    if (P.next <= 0 && P.waves < 5) {
+      P.next = 0.4; P.waves++; G.shake = 0.15;
+      const pool = G.zs.filter(z => z.x > 0 && z.x < W && z.y > 0 && z.y < H);
+      for (let k = 0; k < 4; k++) {
+        const t = pool.length ? pool[Math.floor(rnd() * pool.length)] : null, x = t ? t.x : rnd() * W, y = t ? t.y : rnd() * H, r = 58 * U;
+        for (const z of G.zs) if ((z.x - x) ** 2 + (z.y - y) ** 2 < (r + z.r) ** 2) hurtZ(z, 45 * G.ultMul * (1 + G.t / 90), 0, 0);
+        P.hits.push({ x, y, t: 0, a: (rnd() - 0.5) * 0.4 });
+      }
+    }
+    for (const h of P.hits) h.t += dt;
+    P.hits = P.hits.filter(h => h.t < 0.45);
+    if (P.waves >= 5 && !P.hits.length) G.panels = null;
+  }
+  // 星舰冲击波：从老板脚下扩散到全屏，每只僵尸挨一次重击并被震飞
+  if (G.wave) {
+    const Wv = G.wave; Wv.t += dt; const rad = waveR(Wv), p = G.p;
+    for (const z of G.zs) {
+      if (Wv.hit.has(z)) continue;
+      const dx = z.x - p.x, dy = z.y - p.y, d = Math.hypot(dx, dy) || 1;
+      if (d < rad + z.r) { Wv.hit.add(z); hurtZ(z, 110 * G.ultMul * (1 + G.t / 90), dx / d * 22 * U, dy / d * 22 * U); }
+    }
+    if (Wv.t >= Wv.dur) G.wave = null;
   }
   // 僵尸
   for (let i = G.zs.length - 1; i >= 0; i--) {
@@ -262,11 +338,13 @@ function draw() {
   for (let x = (W / 2) % g; x < W; x += g) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
   for (let y = 0; y < H; y += g) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
   if (G.ring) drawRing(G.ring);
+  if (G.wave) drawWave(G.wave);
   const drawHero = HERO_DRAW[G.ceo] || draw77;
   const ents = [...G.zs.map(z => ({ y: z.y, f: () => drawZ(z) })), { y: G.p.y, f: () => drawHero(G.p) }].sort((a, b) => a.y - b.y);
   for (const e of ents) e.f();
-  for (const b of G.bs) (b.kind === 'pearl' ? drawPearl : drawSkewer)(b);
-  for (const f of G.fx) { ctx.globalAlpha = Math.max(0, f.t / 0.4); ctx.fillStyle = f.c; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(f.x, f.y, 4 * U, 0, 7); ctx.fill(); ctx.stroke(); }
+  for (const b of G.bs) (BULLET_DRAW[b.kind] || drawSkewer)(b);
+  if (G.panels) drawPanels(G.panels);
+  for (const f of G.fx) { ctx.globalAlpha = Math.max(0, f.t / 0.4); ctx.fillStyle = f.c; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(f.x, f.y, f.r || 4 * U, 0, 7); ctx.fill(); ctx.stroke(); }
   ctx.globalAlpha = 1;
   ctx.font = `900 ${Math.round(13 * U)}px -apple-system,sans-serif`; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = '#fff';
   for (const f of G.txt) { ctx.globalAlpha = Math.min(1, f.t / 0.3); ctx.strokeText(f.v, f.x, f.y); ctx.fillStyle = INK; ctx.fillText(f.v, f.x, f.y); }
@@ -331,7 +409,89 @@ function drawPearl(b) {
   const s = U; ctx.fillStyle = '#3a2418'; ctx.beginPath(); ctx.arc(b.x, b.y, 5 * s, 0, 7); ctx.fill(); ctx.lineWidth = 1.5 * s; ctx.strokeStyle = INK; ctx.stroke();
   ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.beginPath(); ctx.arc(b.x - 1.6 * s, b.y - 1.6 * s, 1.4 * s, 0, 7); ctx.fill();
 }
-const HERO_DRAW = { c77: draw77, pearl: drawPearlCeo };
+// 阿宅店长：乱翘黑发、圆框眼镜、藏青连帽卫衣、抱漫画（同 ceo_otaku）
+function drawOtaku(p) {
+  const s = U, x = p.x, y = p.y, bob = p.moving ? Math.sin(p.walk) * 2 * s : 0, f = p.face;
+  if (p.inv > 0 && Math.floor(p.inv * 20) % 2) ctx.globalAlpha = 0.5;
+  ctx.fillStyle = 'rgba(20,20,20,.18)'; ctx.beginPath(); ctx.ellipse(x, y + 16 * s, 15 * s, 5 * s, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#3b3b4a'; const lg = p.moving ? Math.sin(p.walk) * 4 * s : 0;
+  ctx.beginPath(); ctx.roundRect(x - 7 * s, y + 6 * s - lg * 0.3, 5 * s, 10 * s + lg * 0.3, 2 * s); ctx.fill(); outline(2 * s);
+  ctx.beginPath(); ctx.roundRect(x + 2 * s, y + 6 * s + lg * 0.3, 5 * s, 10 * s - lg * 0.3, 2 * s); ctx.fill(); outline(2 * s);
+  const hy = y - 18 * s + bob;
+  ctx.fillStyle = '#24305a'; ctx.beginPath(); ctx.ellipse(x, hy + 9 * s, 13 * s, 8 * s, 0, 0, 7); ctx.fill(); outline(2 * s); // 帽兜
+  ctx.fillStyle = '#2b3a67'; ctx.beginPath(); ctx.roundRect(x - 13 * s, y - 8 * s + bob, 26 * s, 19 * s, 7 * s); ctx.fill(); outline();
+  ctx.strokeStyle = '#e8e8e8'; ctx.lineWidth = 1.5 * s; ctx.beginPath(); ctx.moveTo(x - 3 * s, y - 6 * s + bob); ctx.lineTo(x - 3 * s, y + bob); ctx.moveTo(x + 3 * s, y - 6 * s + bob); ctx.lineTo(x + 3 * s, y + bob); ctx.stroke();
+  const bx = x + f * 12 * s, by = y + 1 * s + bob; // 漫画
+  ctx.fillStyle = '#3d7dd8'; ctx.beginPath(); ctx.roundRect(bx - 5 * s, by - 6 * s, 10 * s, 12 * s, 1.5 * s); ctx.fill(); outline(1.8 * s);
+  ctx.fillStyle = '#f28c28'; ctx.beginPath(); ctx.moveTo(bx - 4 * s, by + 5 * s); ctx.lineTo(bx + 4 * s, by - 3 * s); ctx.lineTo(bx + 4 * s, by + 5 * s); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#f3d6bf'; ctx.beginPath(); ctx.arc(x, hy + 1 * s, 10.5 * s, 0, 7); ctx.fill(); outline();
+  ctx.fillStyle = '#2a2420'; ctx.beginPath(); ctx.arc(x, hy - 1 * s, 11.5 * s, Math.PI * 1.02, Math.PI * 1.98); ctx.closePath(); ctx.fill(); outline(2 * s);
+  for (const [dx, dy, a] of [[-9, -6, -0.9], [-3, -11, -0.3], [4, -11, 0.4], [10, -5, 1.1]]) { ctx.save(); ctx.translate(x + dx * s, hy + dy * s); ctx.rotate(a); ctx.beginPath(); ctx.moveTo(-3 * s, 2 * s); ctx.lineTo(0, -5 * s); ctx.lineTo(3 * s, 2 * s); ctx.closePath(); ctx.fill(); ctx.restore(); }
+  const ex = x + f * 2 * s;
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(ex - 4 * s, hy + 2 * s, 1.3 * s, 0, 7); ctx.arc(ex + 4 * s, hy + 2 * s, 1.3 * s, 0, 7); ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.4 * s; ctx.beginPath(); ctx.arc(ex - 4 * s, hy + 2 * s, 3.4 * s, 0, 7); ctx.moveTo(ex + 7.4 * s, hy + 2 * s); ctx.arc(ex + 4 * s, hy + 2 * s, 3.4 * s, 0, 7); ctx.moveTo(ex - 0.6 * s, hy + 2 * s); ctx.lineTo(ex + 0.6 * s, hy + 2 * s); ctx.stroke();
+  ctx.beginPath(); ctx.arc(ex, hy + 6 * s, 2 * s, 0.2, Math.PI - 0.2); ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+// 火箭老板：棕色背头、黑西装配黑T、胸口火箭徽章、手拿玩具火箭（同 ceo_rocket）
+function drawRocketCeo(p) {
+  const s = U, x = p.x, y = p.y, bob = p.moving ? Math.sin(p.walk) * 2 * s : 0, f = p.face;
+  if (p.inv > 0 && Math.floor(p.inv * 20) % 2) ctx.globalAlpha = 0.5;
+  ctx.fillStyle = 'rgba(20,20,20,.18)'; ctx.beginPath(); ctx.ellipse(x, y + 16 * s, 15 * s, 5 * s, 0, 0, 7); ctx.fill();
+  ctx.fillStyle = '#2a2a2e'; const lg = p.moving ? Math.sin(p.walk) * 4 * s : 0;
+  ctx.beginPath(); ctx.roundRect(x - 7 * s, y + 6 * s - lg * 0.3, 5 * s, 10 * s + lg * 0.3, 2 * s); ctx.fill(); outline(2 * s);
+  ctx.beginPath(); ctx.roundRect(x + 2 * s, y + 6 * s + lg * 0.3, 5 * s, 10 * s - lg * 0.3, 2 * s); ctx.fill(); outline(2 * s);
+  ctx.fillStyle = '#3a3a40'; ctx.beginPath(); ctx.roundRect(x - 12 * s, y - 8 * s + bob, 24 * s, 18 * s, 5 * s); ctx.fill(); outline();
+  ctx.fillStyle = '#141414'; ctx.beginPath(); ctx.moveTo(x - 4 * s, y - 8 * s + bob); ctx.lineTo(x + 4 * s, y - 8 * s + bob); ctx.lineTo(x, y + 4 * s + bob); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#55555c'; ctx.lineWidth = 1.5 * s; ctx.beginPath(); ctx.moveTo(x - 4 * s, y - 8 * s + bob); ctx.lineTo(x - 1 * s, y + 3 * s + bob); ctx.moveTo(x + 4 * s, y - 8 * s + bob); ctx.lineTo(x + 1 * s, y + 3 * s + bob); ctx.stroke();
+  ctx.fillStyle = '#f28c28'; ctx.beginPath(); ctx.arc(x - f * 7 * s, y - 3 * s + bob, 1.8 * s, 0, 7); ctx.fill();
+  const rx = x + f * 15 * s, ry = y - 4 * s + bob; // 玩具火箭
+  ctx.fillStyle = '#f28c28'; ctx.beginPath(); ctx.moveTo(rx - 5 * s, ry + 7 * s); ctx.lineTo(rx, ry + 2 * s); ctx.lineTo(rx + 5 * s, ry + 7 * s); ctx.closePath(); ctx.fill(); outline(1.5 * s);
+  ctx.fillStyle = '#fdfdf8'; ctx.beginPath(); ctx.ellipse(rx, ry, 3.6 * s, 8 * s, 0, 0, 7); ctx.fill(); outline(1.8 * s);
+  ctx.fillStyle = '#f28c28'; ctx.beginPath(); ctx.arc(rx, ry - 6 * s, 2.2 * s, Math.PI, 0); ctx.fill();
+  ctx.fillStyle = '#4a90c2'; ctx.beginPath(); ctx.arc(rx, ry - 1 * s, 1.6 * s, 0, 7); ctx.fill();
+  const hy = y - 18 * s + bob;
+  ctx.fillStyle = '#f1cdb0'; ctx.beginPath(); ctx.arc(x, hy + 1 * s, 10.5 * s, 0, 7); ctx.fill(); outline();
+  ctx.fillStyle = '#8a5a32'; ctx.beginPath(); ctx.arc(x, hy - 1 * s, 11 * s, Math.PI * 1.05, Math.PI * 1.95); ctx.closePath(); ctx.fill(); outline(2 * s);
+  ctx.beginPath(); ctx.ellipse(x + f * 3 * s, hy - 9 * s, 8 * s, 4 * s, f * 0.25, 0, 7); ctx.fill(); outline(2 * s); // 背头
+  ctx.fillStyle = INK; ctx.beginPath(); ctx.arc(x + f * 3 * s - 3.5 * s, hy + 2 * s, 1.4 * s, 0, 7); ctx.arc(x + f * 3 * s + 3.5 * s, hy + 2 * s, 1.4 * s, 0, 7); ctx.fill();
+  ctx.strokeStyle = INK; ctx.lineWidth = 1.4 * s; ctx.beginPath(); ctx.arc(x + f * 3 * s, hy + 5 * s, 2.6 * s, 0.3, Math.PI - 0.3); ctx.stroke();
+  ctx.globalAlpha = 1;
+}
+function drawBook(b) {
+  const s = U; ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.spin);
+  ctx.fillStyle = '#3d7dd8'; ctx.fillRect(-8 * s, -6 * s, 16 * s, 12 * s);
+  ctx.fillStyle = '#f28c28'; ctx.beginPath(); ctx.moveTo(-7 * s, 5 * s); ctx.lineTo(7 * s, -5 * s); ctx.lineTo(7 * s, 5 * s); ctx.closePath(); ctx.fill();
+  ctx.lineWidth = 1.8 * s; ctx.strokeStyle = INK; ctx.strokeRect(-8 * s, -6 * s, 16 * s, 12 * s);
+  ctx.restore();
+}
+function drawMini(b) {
+  const s = U; ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.a);
+  ctx.fillStyle = Math.floor(G.t * 20) % 2 ? '#ffd23f' : '#ff9f1c'; ctx.beginPath(); ctx.moveTo(-6 * s, -2.5 * s); ctx.lineTo(-13 * s, 0); ctx.lineTo(-6 * s, 2.5 * s); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = '#fdfdf8'; ctx.beginPath(); ctx.ellipse(0, 0, 7 * s, 3.2 * s, 0, 0, 7); ctx.fill(); ctx.lineWidth = 1.5 * s; ctx.strokeStyle = INK; ctx.stroke();
+  ctx.fillStyle = '#f28c28'; ctx.beginPath(); ctx.arc(5 * s, 0, 2.2 * s, -Math.PI / 2, Math.PI / 2); ctx.fill();
+  ctx.restore();
+}
+function drawPanels(P) {
+  for (const h of P.hits) {
+    const k = Math.min(1, h.t / 0.08), r = 58 * U * (0.7 + 0.3 * k);
+    ctx.save(); ctx.globalAlpha = Math.max(0, 1 - h.t / 0.45); ctx.translate(h.x, h.y); ctx.rotate(h.a);
+    ctx.fillStyle = 'rgba(255,255,255,.8)'; ctx.fillRect(-r, -r, r * 2, r * 2);
+    ctx.lineWidth = 3 * U; ctx.strokeStyle = INK; ctx.strokeRect(-r, -r, r * 2, r * 2);
+    ctx.fillStyle = '#e63946'; ctx.font = `900 ${26 * U}px sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('轰!', 0, 0);
+    ctx.restore();
+  }
+}
+function drawWave(Wv) {
+  const r = waveR(Wv), a = Math.max(0, 1 - Wv.t / Wv.dur);
+  ctx.save(); ctx.globalAlpha = a;
+  ctx.fillStyle = 'rgba(255,159,28,.12)'; ctx.beginPath(); ctx.arc(G.p.x, G.p.y, r, 0, 7); ctx.fill();
+  ctx.lineWidth = 12 * U; ctx.strokeStyle = '#ff9f1c'; ctx.stroke();
+  ctx.lineWidth = 2.5 * U; ctx.strokeStyle = INK; ctx.beginPath(); ctx.arc(G.p.x, G.p.y, r + 6 * U, 0, 7); ctx.stroke();
+  ctx.restore();
+}
+const BULLET_DRAW = { pearl: drawPearl, book: drawBook, rocket: drawMini };
+const HERO_DRAW = { c77: draw77, pearl: drawPearlCeo, otaku: drawOtaku, rocket: drawRocketCeo };
 function drawZ(z) {
   const s = z.r / 13, x = z.x, y = z.y, w = Math.sin(z.wob) * 1.5 * s;
   ctx.fillStyle = 'rgba(20,20,20,.18)'; ctx.beginPath(); ctx.ellipse(x, y + z.r * 0.9, z.r, z.r * 0.35, 0, 0, 7); ctx.fill();
@@ -377,8 +537,8 @@ function hud() {
   $('#hpFill').style.width = (p.hp / p.maxHp * 100) + '%'; $('#hpTxt').textContent = `${Math.ceil(p.hp)} / ${p.maxHp}`;
   $('#clock').textContent = `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
   $('#lvlTxt').textContent = G.mode === 'level' ? `第 ${G.n} 关${isBossLv(G.n) ? '·Boss' : ''}` : `无尽 难度 ${Math.floor(diff())}`;
-  $('#killTxt').textContent = `击倒 ${G.kills}`; $('#skewTxt').textContent = G.ceo === 'pearl' ? `珍珠弹跳 ×${G.skewers - 1}` : `飞串 ×${G.skewers}`;
-  const ub = $('#ultBtn'), ready = G.ult >= 100 && !G.ring && !G.frost;
+  $('#killTxt').textContent = `击倒 ${G.kills}`; $('#skewTxt').textContent = heroCnt();
+  const ub = $('#ultBtn'), ready = G.ult >= 100 && !ultOn();
   $('#ultFill').style.height = G.ult + '%'; ub.disabled = !ready; ub.classList.toggle('ready', ready);
 }
 function renderLv() {
@@ -392,6 +552,8 @@ function renderLv() {
 }
 const HERO_DESC = {
   c77: '拖动屏幕走位，自动扔飞串；能量满了放<b>火圈</b>。撑到倒计时结束就过关，共 50 关，通关后开放无尽模式。',
+  otaku: '拖动屏幕走位，自动甩出回旋漫画：飞出去再飞回来，来回都能打穿僵尸；能量满了放<b>分镜轰炸</b>，五轮漫画分镜砸向僵尸群，期间无敌。撑到倒计时结束就过关，共 50 关，通关后开放无尽模式。',
+  rocket: '拖动屏幕走位，自动发射追踪迷你火箭，命中范围爆炸；能量满了放<b>星舰冲击波</b>，冲击波扫过全屏、把僵尸震飞。撑到倒计时结束就过关，共 50 关，通关后开放无尽模式。',
   pearl: '拖动屏幕走位，自动弹珍珠：打中会弹到下一只僵尸；能量满了放<b>冰沙风暴</b>，全屏冻住僵尸。撑到倒计时结束就过关，共 50 关，通关后开放无尽模式。',
 };
 function renderHero() {

@@ -103,8 +103,6 @@ with sync_playwright() as p:
         check(bad['c'] == 5e10 and bad['lv'] == {'atk': 0, 'rate': 30, 'hp': 0, 'ult': 0} and bad['best'] == 0 and bad['cl'] == 50 and bad['eb'] == {'t': 0, 'kills': 0}, f'{dn} 坏档：非法字段回默认 / 截到范围，不报错 {bad}')
         # 上场角色：?ceo= 模拟烧烤店在任 CEO；技能没做的显示即将开放，没人在任提示去派人，两种都开不了局
         hero = lambda: S(pg, "({h: document.getElementById('heroName').textContent, n: document.getElementById('heroNote').textContent, s: document.getElementById('startBtn').disabled, e: document.getElementById('endlessBtn').disabled, img: document.querySelector('.hero img').getAttribute('src'), st: __zb.start('level', 1), g: !!__zb.G})")
-        pg.goto(URL + '?ceo=otaku'); pg.wait_for_timeout(400); ho = hero()
-        check(ho['h'] == '阿宅店长 打僵尸' and '先用 77' in ho['n'] and not ho['s'] and ho['img'].endswith('face_otaku.webp') and ho['g'], f'{dn} 阿宅在任：技能没做先用 77 的打法，可以开打 {ho}')
         pg.goto(URL + '?ceo=pearl'); pg.wait_for_timeout(400); hp_ = hero()
         check(hp_['h'] == '珍珠姐 打僵尸' and '本局由 珍珠姐' in hp_['n'] and hp_['img'].endswith('face_pearl.webp') and hp_['g'] and S(pg, "__zb.G.ceo") == 'pearl', f'{dn} 珍珠姐在任：显示珍珠姐、可以开打 {hp_}')
         pk = S(pg, """(()=>{ const G = __zb.G; G.p.hp = 1e9; const k = new Set(); let bounced = 0;
@@ -116,6 +114,18 @@ with sync_playwright() as p:
           const ring = !!G.ring; for (let i = 0; i < 100; i++) __zb.step(1/30); return { ok, n, fz, mv, ring, end: G.frost === null }; })()""")
         check(pu['ok'] and pu['n'] > 0 and pu['fz'] == pu['n'] and pu['mv'] < 6 and not pu['ring'] and pu['end'], f'{dn} 珍珠姐大招冰沙风暴：全屏冻住、僵尸几乎不动、不出火圈、3 秒后结束 {pu}')
         pg.screenshot(path=f'{OUT}/{tag}_pearl.png')
+        for cid, nm, kind, lbl, key, eff in [('otaku', '阿宅店长', 'book', '分镜', 'panels', 'G.panels && G.panels.waves >= 2 && G.p.inv > 0'), ('rocket', '火箭老板', 'rocket', '星舰', 'wave', 'G.wave && G.wave.hit.size > 0')]:
+            pg.goto(URL + f'?ceo={cid}'); pg.wait_for_timeout(400); hh = hero()
+            check(hh['h'] == f'{nm} 打僵尸' and f'本局由 {nm}' in hh['n'] and hh['img'].endswith(f'face_{cid}.webp') and hh['g'] and S(pg, "__zb.G.ceo") == cid, f'{dn} {nm}在任：显示本人、可以开打 {hh}')
+            pk = S(pg, """(()=>{ const G = __zb.G; G.p.hp = 1e9; const k = new Set();
+              for (let i = 0; i < 600; i++) { __zb.step(1/30); for (const b of G.bs) k.add(b.kind || 'skewer'); }
+              return { kinds: [...k], kills: G.kills, lbl: document.querySelector('#ultBtn .ult-lbl').textContent }; })()""")
+            check(pk['kinds'] == [kind] and pk['kills'] > 0 and pk['lbl'] == lbl, f'{dn} {nm}普攻：只出{kind}、能击倒，大招按钮「{lbl}」 {pk}')
+            pu = S(pg, f"""(()=>{{ const G = __zb.G; G.ult = 100; const ok = __zb.castUlt(); let eff = false;
+              for (let i = 0; i < 24; i++) {{ __zb.step(1/30); eff = eff || !!({eff}); }}
+              const ring = !!G.ring; for (let i = 0; i < 120; i++) __zb.step(1/30); return {{ ok, eff, ring, end: !G.{key}, again: G.ult < 100 }}; }})()""")
+            check(pu['ok'] and pu['eff'] and not pu['ring'] and pu['end'], f'{dn} {nm}大招：生效、不出火圈、按时结束 {pu}')
+            pg.screenshot(path=f'{OUT}/{tag}_{cid}.png')
         pg.goto(URL + '?ceo=nobody'); pg.wait_for_timeout(400); hn = hero()
         check('派' in hn['n'] and hn['s'] and hn['st'] is False and not hn['g'], f'{dn} 没人在任：提示回经营派 CEO，开不了局 {hn}')
         pg.goto(URL); pg.wait_for_timeout(400); h7 = S(pg, "({h: document.getElementById('heroName').textContent, s: document.getElementById('startBtn').disabled, c: __zb.proto.ceo})")

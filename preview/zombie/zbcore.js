@@ -15,8 +15,8 @@
       endBest: { t: Math.max(0, Math.min(86400, fin(eb.t, 0))), kills: Math.max(0, Math.floor(fin(eb.kills, 0))) } };
   }
   // 上场角色：烧烤店在任 CEO（经营页 zb:'state' 的 ceo 字段，null = 没人在任）。技能做好的才进 PLAYABLE；老经营页不带 ceo 字段时按 77
-  const HEROES = { c77: { name: '77', atk: '飞串', ult: '火圈' }, pearl: { name: '珍珠姐', atk: '珍珠弹', ult: '冰沙风暴', btn: '冰沙' }, otaku: { name: '阿宅店长' }, rocket: { name: '火箭老板' } };
-  const CEO_IDS = Object.keys(HEROES), PLAYABLE = ['c77', 'pearl'];
+  const HEROES = { c77: { name: '77', atk: '飞串', ult: '火圈' }, pearl: { name: '珍珠姐', atk: '珍珠弹', ult: '冰沙风暴', btn: '冰沙' }, otaku: { name: '阿宅店长', atk: '回旋漫画', ult: '分镜轰炸', btn: '分镜' }, rocket: { name: '火箭老板', atk: '迷你火箭', ult: '星舰冲击波', btn: '星舰' } };
+  const CEO_IDS = Object.keys(HEROES), PLAYABLE = ['c77', 'pearl', 'otaku', 'rocket'];
   const heroOf = v => (v === undefined ? 'c77' : CEO_IDS.includes(v) ? v : null);
   // 一局结果并进进度：只认已解锁关（n ≤ cleared+1）且打满时长的胜利；无尽要先通 50 关
   function applyResult(z, res) {
