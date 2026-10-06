@@ -1030,9 +1030,11 @@ with sync_playwright() as p:
         intro = S(sp, """(()=>{const m=document.getElementById('mpanel'), lines=e=>{if(!e) return 0; const r=document.createRange(); r.selectNodeContents(e); return new Set([...r.getClientRects()].filter(q=>q.width>1).map(q=>Math.round(q.top))).size;};
           return {open:!m.closest('.hidden'), x:!!m.querySelector('#mX'), ok:(m.querySelector('#mOk')||{}).textContent, bub:lines(m.querySelector('.mbubble')), title:lines(m.querySelector('.mtitle'))};})()""")
         check(intro['open'] and intro['x'] and '开摊' in (intro['ok'] or '') and intro['bub'] == 1 and intro['title'] == 1, f"12c1 {dname}：开摊介绍弹窗对白泡和标题都是一行（不在 × 旁折行）{intro}")
-        b0 = S(sp, "__tzz.bubble.until"); sp.click('#mX'); sp.wait_for_timeout(400)
+        xl = S(sp, "(()=>{const x=document.querySelector('#mpanel #mX'), r=x.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height/2, hit=(dx,dy)=>{const e=document.elementFromPoint(cx+dx,cy+dy); return !!e && (e===x || x.contains(e));}; return {label:x.getAttribute('aria-label'), w:r.width, h:r.height, cx, cy, hits:[[0,0],[-15,0],[15,0],[0,-15],[0,15]].map(d=>hit(d[0],d[1]))};})()")
+        check(xl['label'] == '关闭' and all(xl['hits']), f"12c3 {dname}：开摊介绍 × 朗读标签是「关闭」（不叫「开摊」），× 中心和上下左右 15px 实测点得到 × 本身 {xl}")
+        b0 = S(sp, "__tzz.bubble.until"); sp.mouse.click(xl['cx'], xl['cy']); sp.wait_for_timeout(400)
         xi = S(sp, "({open:!document.getElementById('modal').classList.contains('hidden'), au:__tzz.audioState(), same:__tzz.bubble.until===" + json.dumps(b0) + "})")
-        check(not xi['open'] and xi['au'] == 'none' and xi['same'], f"12c1 {dname}：开摊介绍点 × 只关窗——不解锁音频、77 不新说开摊台词 {xi}")
+        check(not xi['open'] and xi['au'] == 'none' and xi['same'], f"12c1/12c3 {dname}：开摊介绍按坐标实点 × 只关窗——不解锁音频、77 不新说开摊台词 {xi}")
         if dname == 'iPhone SE':
             sp.reload(); sp.wait_for_timeout(800); b0 = S(sp, "__tzz.bubble.until"); sp.click('#mOk'); sp.wait_for_timeout(400)
             ki = S(sp, "({au:__tzz.audioState(), line:__tzz.bubble.txt, changed:__tzz.bubble.until!==" + json.dumps(b0) + "})")

@@ -1353,8 +1353,8 @@ function openModal(html, burst = true) { mpanel.classList.remove('zoom'); mpanel
 // 12c：统一右上角关闭钮 = 代按弹窗里已有的「再想想 / 好 / 知道了 / 返回」，不另走关闭逻辑（领离线收益这类必须选一个的弹窗没有 ×）
 function modalX() {
   const t = mpanel.querySelector('#mNo, #pvNo') || mpanel.querySelector('#mOk'); mpanel.classList.toggle('has-x', !!t); if (!t) return;
-  mpanel.insertAdjacentHTML('afterbegin', `<button class="cx-close" id="mX" type="button" aria-label="${t.id === 'mOk' ? (t.textContent.trim() || '关闭') : '关闭'}">${ic('close')}</button>`);
-  $('#mX').addEventListener('click', () => { const c = mpanel.querySelector('#mNo, #pvNo') || mpanel.querySelector('#mOk'); if (c && c.dataset.x === 'close') closeModal(); else if (c) c.click(); }); // 12c1：data-x="close" 的弹窗（开摊介绍）× 只关窗，不走「开摊」的解锁音效 / 台词
+  mpanel.insertAdjacentHTML('afterbegin', `<button class="cx-close" id="mX" type="button" aria-label="${t.id === 'mOk' && t.dataset.x !== 'close' ? (t.textContent.trim() || '关闭') : '关闭'}">${ic('close')}</button>`);
+  $('#mX').addEventListener('click', () => { const c = mpanel.querySelector('#mNo, #pvNo') || mpanel.querySelector('#mOk'); if (c && c.dataset.x === 'close') closeModal(); else if (c) c.click(); }); // 12c1：data-x="close" 的弹窗（开摊介绍）× 只关窗，不走「开摊」的解锁音效 / 台词；12c3：这种 × 朗读标签也叫「关闭」
 }
 function closeModal() { modal.classList.add('hidden'); mpanel.innerHTML = ''; if (mq.length && !modalOpen()) setTimeout(() => { if (!modalOpen() && mq.length) mq.shift()(); }, 120); }
 function openSheet(html) { sheetPanel.innerHTML = `<button class="cx-close" id="sheetX" type="button" aria-label="关闭">${ic('close')}</button>` + html; sheet.classList.remove('hidden'); $('#sheetX').addEventListener('click', closeSheet); }
