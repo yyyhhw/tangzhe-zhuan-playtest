@@ -22,9 +22,10 @@ const MAX_TRAIN = ZB.MAX_TRAIN;
 const price = (t, lv) => ZB.price(t.id, lv);
 function fireInterval(lv) { return Math.max(0.2, 0.55 * 0.95 ** lv); }
 function loadProto() {
-  if (EMBED) return Object.assign({ coins: 0, ready: false, blocked: false }, ZB.norm(null));
+  if (EMBED) return Object.assign({ coins: 0, ready: false, blocked: false, ceo: null }, ZB.norm(null));
   let raw = null; try { raw = JSON.parse(localStorage.getItem(PROTO_KEY) || 'null'); } catch (e) { raw = null; }
-  const p = Object.assign({ coins: 5e10, ready: true, blocked: false }, ZB.norm(raw));
+  const q = new URLSearchParams(location.search).get('ceo');
+  const p = Object.assign({ coins: 5e10, ready: true, blocked: false, ceo: ZB.heroOf(q === null ? undefined : q) }, ZB.norm(raw));
   if (raw && typeof raw === 'object') p.coins = Math.max(0, Math.min(1e15, fin(raw.coins, 5e10)));
   return p;
 }
@@ -32,10 +33,11 @@ const proto = loadProto();
 const saveProto = () => { if (EMBED) return; try { localStorage.setItem(PROTO_KEY, JSON.stringify(proto)); } catch (e) {} };
 let pend = false, firstSync = true;
 let port = null;
-// 13a 上场角色（接口，板砖在此基础上做造型 / 技能）：嵌入时 = 经营页 zb:'state' 里的 ceo（烧烤摊现任 CEO id，没有 = null）；单独原型 = c77。
-// 开局时锁进 G.ceo，这局中途经营页再发别的 ceo 也不换人；结算 result 原样回传 ceo。小游戏自己不选人、不写档；画面暂时仍画 77（兜底）。
-let hostCeo = EMBED ? null : 'c77';
-const host = m => { if (port) port.postMessage(m); };
+let lastSent = null;
+const host = m => { lastSent = m; if (port) port.postMessage(m); };
+// 13a 上场角色：嵌入 = 经营页 zb:'state' 的 ceo（烧烤摊现任 CEO，null = 没人）；原型页 = ?ceo=，默认 77。开局锁进 G.ceo，结算回传
+const canPlay = () => !!proto.ceo;
+const skilled = id => ZB.PLAYABLE.includes(id);
 const Wallet = {
   balance: () => proto.coins,
   canSpend: n => proto.ready && !pend && !proto.blocked && isFinite(n) && n > 0 && proto.coins >= n,
@@ -48,7 +50,7 @@ if (EMBED) window.addEventListener('message', e => {
 });
 function onState(d) {
   if (!d || d.zb !== 'state') return;
-  pend = false; if ('ceo' in d) hostCeo = typeof d.ceo === 'string' && d.ceo ? d.ceo : null; proto.coins = Math.max(0, fin(d.coins, 0)); proto.blocked = !!d.blocked; Object.assign(proto, ZB.norm(d.z)); proto.ready = true;
+  pend = false; proto.coins = Math.max(0, fin(d.coins, 0)); proto.blocked = !!d.blocked; Object.assign(proto, ZB.norm(d.z)); if ('ceo' in d) proto.ceo = ZB.heroOf(d.ceo); proto.ready = true;
   if (firstSync) { firstSync = false; selLv = Math.min(MAX_LV, proto.cleared + 1); }
   $('#trainNote').textContent = d.why || (proto.blocked ? '存档异常或已在别的页面打开，暂时不能花金币。' : '和经营共用金币：训练只花钱，打僵尸本身不产金币。');
   renderTrain();
@@ -81,7 +83,7 @@ let selLv = 1;
 function newRun(mode, n) {
   const lv = proto.lv, maxHp = Math.round(100 * 1.12 ** lv.hp);
   return {
-    mode, n, ceo: hostCeo, dur: mode === 'level' ? levelDur(n) : Infinity, nextBoss: mode === 'level' ? (isBossLv(n) ? levelDur(n) - 30 : Infinity) : 60,
+    mode, n, ceo: proto.ceo, dur: mode === 'level' ? levelDur(n) : Infinity, nextBoss: mode === 'level' ? (isBossLv(n) ? levelDur(n) - 30 : Infinity) : 60,
     t: 0, over: false, win: false, kills: 0, spawnAcc: 0,
     p: { x: W / 2, y: H * 0.62, r: 15 * U, hp: maxHp, maxHp, face: 1, inv: 0, fireCd: 0.3, walk: 0, moving: false },
     dmg: 10 * 1.15 ** lv.atk, interval: fireInterval(lv.rate), ultMul: 1.2 ** lv.ult,
@@ -235,7 +237,8 @@ function draw() {
   for (let x = (W / 2) % g; x < W; x += g) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
   for (let y = 0; y < H; y += g) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
   if (G.ring) drawRing(G.ring);
-  const ents = [...G.zs.map(z => ({ y: z.y, f: () => drawZ(z) })), { y: G.p.y, f: () => draw77(G.p) }].sort((a, b) => a.y - b.y);
+  const drawHero = HERO_DRAW[G.ceo] || draw77;
+  const ents = [...G.zs.map(z => ({ y: z.y, f: () => drawZ(z) })), { y: G.p.y, f: () => drawHero(G.p) }].sort((a, b) => a.y - b.y);
   for (const e of ents) e.f();
   for (const b of G.bs) drawSkewer(b);
   for (const f of G.fx) { ctx.globalAlpha = Math.max(0, f.t / 0.4); ctx.fillStyle = f.c; ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.arc(f.x, f.y, 4 * U, 0, 7); ctx.fill(); ctx.stroke(); }
@@ -273,6 +276,7 @@ function draw77(p) {
   ctx.fillStyle = '#f4a3a8'; ctx.beginPath(); ctx.ellipse(x - f * 7 * s, hy - 11 * s, 4 * s, 3 * s, 0.4, 0, 7); ctx.ellipse(x - f * 1 * s, hy - 12 * s, 4 * s, 3 * s, -0.4, 0, 7); ctx.fill(); outline(1.5 * s); // 粉蝴蝶结
   ctx.globalAlpha = 1;
 }
+const HERO_DRAW = { c77: draw77 };
 function drawZ(z) {
   const s = z.r / 13, x = z.x, y = z.y, w = Math.sin(z.wob) * 1.5 * s;
   ctx.fillStyle = 'rgba(20,20,20,.18)'; ctx.beginPath(); ctx.ellipse(x, y + z.r * 0.9, z.r, z.r * 0.35, 0, 0, 7); ctx.fill();
@@ -328,12 +332,18 @@ function renderLv() {
   $('#lvProg').textContent = `已通关 ${proto.cleared} / ${MAX_LV}`;
   $('#lvPrev').disabled = selLv <= 1; $('#lvNext').disabled = selLv >= top;
   const eb = $('#endlessBtn'), open = proto.cleared >= MAX_LV;
-  eb.disabled = !open; eb.textContent = open ? `无尽模式·最好 ${Math.floor(proto.endBest.t)} 秒` : `无尽·通关 ${MAX_LV} 关开放`;
-  const noCeo = EMBED && proto.ready && !hostCeo, sb = $('#startBtn');   // 13a
-  sb.disabled = noCeo; sb.textContent = noCeo ? '烧烤摊没有 CEO，先回经营页派一位' : '开打！'; if (noCeo) eb.disabled = true;
+  eb.disabled = !open || !canPlay(); eb.textContent = open ? `无尽模式·最好 ${Math.floor(proto.endBest.t)} 秒` : `无尽·通关 ${MAX_LV} 关开放`;
+}
+function renderHero() {
+  const id = proto.ceo, h = id && ZB.HEROES[id], name = h ? h.name : 'CEO';
+  $('#heroName').textContent = `${name} 打僵尸`; document.title = `${name} 打僵尸`;
+  const img = $('.hero img'), src = `../art/face_${id || 'c77'}.webp`; if (img.getAttribute('src') !== src) { img.setAttribute('src', src); img.alt = name; }
+  $('#heroNote').textContent = !proto.ready ? '' : !id ? '烧烤摊还没派 CEO：回经营页派一位再来打。' : skilled(id) ? `本局由 ${name} 上场，开打后不换人。` : `${name} 上场：专属技能还在做，这局先用 77 的飞串和火圈。`;
+  const sb = $('#startBtn'); sb.disabled = !canPlay(); sb.textContent = proto.ready && !id ? '烧烤摊没有 CEO，先回经营页派一位' : '开打！';
+  const ub = $('#ultBtn .ult-lbl'); if (ub && h && h.ult) ub.textContent = h.ult;
 }
 function renderTrain() {
-  renderLv();
+  renderLv(); renderHero();
   $('#walletTxt').textContent = proto.ready ? fmt(Wallet.balance()) : '读取中…';
   $('#train').innerHTML = TRAIN.map(t => {
     const lv = proto.lv[t.id], max = lv >= MAX_TRAIN, c = price(t, lv);
@@ -351,7 +361,7 @@ $('#train').addEventListener('click', e => {
 });
 function show(id) { for (const s of ['#menu', '#pause', '#result']) $(s).classList.toggle('hidden', s !== id); $('#hud').classList.toggle('hidden', id === '#menu'); }
 function start(mode, n) {
-  if (EMBED && !hostCeo) return false;   // 13a：烧烤摊没有 CEO 不开局（经营页入口会先让玩家派 CEO）
+  if (!canPlay()) return false;
   if (mode === 'endless' && proto.cleared < MAX_LV) return false;
   if (mode !== 'endless') { mode = 'level'; n = Math.min(Math.max(1, Math.floor(fin(n, selLv))), Math.min(MAX_LV, proto.cleared + 1)); selLv = n; }
   resize(); G = newRun(mode, n); paused = false; joy.on = false; show(null); hud(); last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop); }
@@ -393,6 +403,7 @@ $('#startBtn').addEventListener('click', () => start('level', selLv));
 $('#endlessBtn').addEventListener('click', () => start('endless'));
 $('#againBtn').addEventListener('click', () => {
   if (G && G.wait) return;
+  if (!canPlay()) { G = null; renderTrain(); show('#menu'); draw(); return; }
   if (G && G.mode === 'endless') return start('endless');
   if (G && G.win && proto.cleared >= G.n) return G.n >= MAX_LV ? start('endless') : start('level', G.n + 1);
   start('level', G ? G.n : selLv);
@@ -413,5 +424,5 @@ if (EMBED) {
 selLv = Math.min(MAX_LV, proto.cleared + 1);
 resize(); renderTrain(); draw();
 // 测试钩子：只读状态 + 固定步长推进
-window.__zb = { EMBED, get ceo() { return hostCeo; }, renderResult, send: host, get pend() { return pend; }, get G() { return G; }, proto, Wallet, step, castUlt, start, setPause, joy, PROTO_KEY, price, TRAIN, levelDur, renderTrain, saveProto, MAX_LV };
+window.__zb = { EMBED, get ceo() { return proto.ceo; }, renderResult, send: host, onState, canPlay, get lastSent() { return lastSent; }, get pend() { return pend; }, get G() { return G; }, proto, Wallet, step, castUlt, start, setPause, joy, PROTO_KEY, price, TRAIN, levelDur, renderTrain, saveProto, MAX_LV };
 })();
