@@ -26,7 +26,8 @@ with sync_playwright() as p:
         pg.on('pageerror', lambda e: errs.append(f'pageerror: {e}'))
         pg.on('response', lambda r: r.status >= 400 and errs.append(f'{r.status} {r.url}'))
         pg.on('requestfailed', lambda r: errs.append(f'failed {r.url}'))
-        pg.goto(URL); pg.evaluate("localStorage.clear(); localStorage.setItem('tangzhe-save', '{\"sentinel\":1}')")
+        pg.goto(URL); pg.wait_for_function("document.body.dataset.ready==='1'", timeout=15000)
+        pg.evaluate("localStorage.clear(); localStorage.setItem('tangzhe-save', '{\"sentinel\":1}')")
         pg.goto(URL + '?seed=5'); pg.wait_for_function("document.body.dataset.ready==='1'", timeout=15000)
         pg.wait_for_function("__pet.imagesReady().ok === __pet.imagesReady().total", timeout=15000)
         pg.wait_for_timeout(600)
@@ -136,6 +137,16 @@ with sync_playwright() as p:
     check(pg.evaluate("__pet.artMode") == 'atlas', '图集模式（按 manifest cell 取帧）能跑')
     pg.screenshot(path=f'{SHOTS}/atlas_mode.png')
     check(not errs, '图集模式 0 报错')
+    ctx.close()
+    # 手机网络抖：第一次 manifest 请求失败也能自己重试起来，且不报错
+    ctx = b.new_context(**p.devices['iPhone 15']); pg = ctx.new_page(); errs = []; hits = {'n': 0}
+    pg.on('console', lambda m: m.type == 'error' and errs.append(m.text)); pg.on('pageerror', lambda e: errs.append(str(e)))
+    def flaky(route):
+        hits['n'] += 1
+        route.abort() if hits['n'] == 1 else route.continue_()
+    pg.route('**/art/manifest.json*', flaky)
+    pg.goto(URL + '?fresh=1'); pg.wait_for_function("document.body.dataset.ready==='1'", timeout=15000)
+    check(hits['n'] >= 2 and not errs, f'manifest 第一次没拉到 → 自动重试成功（请求 {hits["n"]} 次，0 报错）')
     ctx.close(); b.close()
 ok = sum(1 for c, _ in results if c)
 print(f'\n端到端：{ok} 过 / {len(results) - ok} 挂')

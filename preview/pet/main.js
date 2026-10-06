@@ -241,7 +241,9 @@
   window.render_game_to_text = () => { const s = PE.snapshot(W); delete s.items; return JSON.stringify(s); };
 
   /* ---------- 启动 ---------- */
-  fetch('art/manifest.json?v=p1').then(r => { if (!r.ok) throw new Error('manifest ' + r.status); return r.json(); }).then(m => {
+  // manifest 加载：手机网络抖一下就重试（最多 4 次），页面正在关闭时不报错
+  let leaving = false; window.addEventListener('pagehide', () => { leaving = true; });
+  function boot(m) {
     const v = PA.validateManifest(m); if (!v.ok) throw new Error(v.errors.join('；'));
     M = m;
     const res = makeWorld(true); resize(); welcomeBack(res);
@@ -249,5 +251,13 @@
     if (Q.get('art') === 'atlas') window.__pet.bakeAtlas();
     document.body.dataset.ready = '1';
     requestAnimationFrame(frame);
-  }).catch(e => { $('label').textContent = '加载失败：' + e.message; console.error(e); });
+  }
+  function loadManifest(tryN) {
+    fetch('art/manifest.json?v=p1').then(r => { if (!r.ok) throw new Error('manifest ' + r.status); return r.json(); }).then(boot).catch(e => {
+      if (leaving) return;
+      if (tryN < 3) { $('label').textContent = '加载中…'; setTimeout(() => loadManifest(tryN + 1), 500 * (tryN + 1)); return; }
+      $('label').textContent = '加载失败：' + e.message + '（下拉刷新试试）'; console.error(e);
+    });
+  }
+  loadManifest(0);
 })();
