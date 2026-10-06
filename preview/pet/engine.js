@@ -44,8 +44,8 @@
     const w = {
       cfg: CFG, byId, manifest, interact, body: bodyBoxes(manifest),
       cols: room.cols, rows: room.rows, wallRows: room.wallRows || 2,
-      front: { ...room.front }, bed: { ...room.bed }, bowl: { ...room.bowl },
-      items: room.items.filter(p => byId[p.fid] && !byId[p.fid].wall).map((p, i) => ({ uid: 'f' + i, fid: p.fid, x: p.x, y: p.y, rot: p.rot || 0 })),
+      front: { ...room.front }, bed: { ...room.bed }, bowl: room.bowl ? { ...room.bowl } : null,   // p4：接进家宅时没有碗（bowl:null）
+      items: room.items.filter(p => byId[p.fid] && !byId[p.fid].wall).map((p, i) => ({ uid: p.uid || 'f' + i, fid: p.fid, x: p.x, y: p.y, rot: p.rot || 0 })),
       wall: (room.wall || []).filter(p => byId[p.fid] && byId[p.fid].wall).map((p, i) => ({ uid: 'w' + i, fid: p.fid, x: p.x, y: p.y, rot: 0 })),
       t: 0, rs: (opt.seed == null ? 12345 : opt.seed) >>> 0,
       obsVer: 0, _obs: null, _obsVer: -1, _grid: null,
@@ -77,7 +77,7 @@
   function obstacles(w) {
     if (w._obsVer !== w.obsVer || !w._obs) {
       w._obs = w.items.filter(p => isSolid(w, p)).map(p => ({ ...itemRect(w, p), uid: p.uid }));
-      w._obs.push({ ...w.bowl, uid: 'pet_bowl' });
+      if (w.bowl) w._obs.push({ ...w.bowl, uid: 'pet_bowl' });
       w._obsVer = w.obsVer; w._grid = null;
     }
     return w._obs;
@@ -244,7 +244,7 @@
   function interactSpot(w, key, uid) {
     const cfg = w.interact[key]; if (!cfg) return null;
     let base, item = null;
-    if (key === 'pet_bed') base = w.bed; else if (key === 'pet_bowl') base = w.bowl;
+    if (key === 'pet_bed') base = w.bed; else if (key === 'pet_bowl') { base = w.bowl; if (!base) return null; }
     else { item = uid ? w.items.find(q => q.uid === uid && q.fid === key) : w.items.find(q => q.fid === key); if (!item) return null; base = itemRect(w, item); }
     const face = cfg.face || 'E', fb = w.body[face];
     const spot = cfg.nose ? { x: base.x + cfg.nose[0] + (face === 'W' ? fb.l : -fb.r), y: base.y + cfg.nose[1] } : { x: base.x + cfg.spot[0], y: base.y + cfg.spot[1] };
@@ -671,7 +671,7 @@
     const rug = isRug(w, p);
     for (const q of w.items) { if (q.uid === uid || isRug(w, q) !== rug) continue; if (ov(me, itemRect(w, q))) return { ok: false, why: '和' + w.byId[q.fid].name + '重叠' }; }
     if (!rug) {
-      if (ov(me, w.bowl)) return { ok: false, why: '压到饭碗了' };
+      if (w.bowl && ov(me, w.bowl)) return { ok: false, why: '压到饭碗了' };
       if (ov(me, w.bed)) return { ok: false, why: '压到小狗的窝了' };
       if (rectDist(w.dog.x, w.dog.y, me) < CFG.R || rectsOverlap(boxAt(w, w.dog.x, w.dog.y, visDir(w)), me, 0)) return { ok: false, why: '小狗站在这儿' };
       if (w.ball.state !== 'carried' && rectDist(w.ball.x, w.ball.y, me) < CFG.BALL_R) return { ok: false, why: '压到球了' };
@@ -683,6 +683,26 @@
     const p = w.items.find(q => q.uid === uid); p.x = x; p.y = y; if (rot != null) p.rot = rot;
     w.obsVer++;
     return { ok: true };
+  }
+
+  /* ---------- 外部布局同步（p4：家宅里摆设 / 升级房子都在游戏那边改，这里整组换上） ----------
+     items 带 uid（沿用家宅里的 uid，互动目标照样按 uid 跟）；dims 变了（升级）一起换；
+     小狗 / 球被新家具压住就挪到最近空地（家宅的摆放规则不认识小狗），正在做的事交给 checkTarget / 重算路径。 */
+  function setLayout(w, lay) {
+    if (lay.cols) w.cols = lay.cols; if (lay.rows) w.rows = lay.rows;
+    if (lay.front) w.front = { ...lay.front };
+    if (lay.bed) w.bed = { ...lay.bed };
+    w.items = (lay.items || []).filter(p => w.byId[p.fid] && !w.byId[p.fid].wall).map((p, i) => ({ uid: p.uid || 'f' + i, fid: p.fid, x: p.x, y: p.y, rot: p.rot || 0 }));
+    w.obsVer++;
+    const d = w.dog; let moved = false;
+    if (!bodyFree(w, d.x, d.y, visDir(w), 1e-6)) {
+      const p = nearestDogPoint(w, d, Math.max(w.cols, w.rows)); if (p) { d.x = p.x; d.y = p.y; moved = true; }
+      if (w.ball.state === 'carried') { /* 嘴里的球跟着走 */ }
+      setPlan(w, 'confused', [...inPlace('attention', { label: '家具搬过来了，挪个地方' }), { k: 'wait', dur: 0.6 }]); fx(w, 'q');
+    }
+    const b = w.ball;
+    if (b.state !== 'carried' && !ballFree(w, b.x, b.y)) { const q = nearestFreePoint(w, b, CFG.BALL_R, Math.max(w.cols, w.rows)); if (q) { b.x = q.x; b.y = q.y; b.vx = b.vy = 0; if (b.state === 'air') { b.state = 'floor'; b.flight = null; b.z = 0; } } }
+    return { ok: true, dogMoved: moved };
   }
 
   /* ---------- 存档 / 离线 ---------- */
@@ -744,7 +764,7 @@
     const ov = (a, b) => a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
     for (const p of w.items) {
       const r = itemRect(w, p);
-      if (!atDef(p) && (r.x < 0 || r.y < 0 || r.x + r.w > w.cols || r.y + r.h > w.rows || (!isRug(w, p) && (ov(r, w.bowl) || ov(r, w.bed))))) back(p);
+      if (!atDef(p) && (r.x < 0 || r.y < 0 || r.x + r.w > w.cols || r.y + r.h > w.rows || (!isRug(w, p) && ((w.bowl && ov(r, w.bowl)) || ov(r, w.bed))))) back(p);
     }
     const conflicts = (p, at) => { const r = at ? itemRect(w, { ...p, ...at }) : itemRect(w, p); let n = 0; for (const q of w.items) if (q !== p && isRug(w, q) === isRug(w, p) && ov(r, itemRect(w, q))) n++; return n; };
     const uidN = (u) => parseInt(String(u).replace(/\D/g, ''), 10) || 0;
@@ -773,7 +793,7 @@
   function drawOrder(w) {
     const list = [];
     for (const p of w.items) if (isSolid(w, p)) { const r = itemRect(w, p); list.push({ kind: 'item', uid: p.uid, y: r.y + r.h }); }
-    list.push({ kind: 'bowl', uid: 'pet_bowl', y: w.bowl.y + w.bowl.h });
+    if (w.bowl) list.push({ kind: 'bowl', uid: 'pet_bowl', y: w.bowl.y + w.bowl.h });
     list.push({ kind: 'dog', uid: 'dog', y: w.dog.y });
     if (w.ball.state !== 'carried') list.push({ kind: 'ball', uid: 'ball', y: w.ball.y });
     return list.sort((a, b) => a.y - b.y);
@@ -781,7 +801,7 @@
   function overlapsFurniture(w, x, y) { return !circleFree(w, x, y, CFG.R - 1e-6) && x >= CFG.R - 1e-6 && y >= CFG.R - 1e-6 && x <= w.cols - CFG.R + 1e-6 && y <= w.rows - CFG.R + 1e-6; }
   function minClearance(w) { let m = Infinity; for (const o of obstacles(w)) m = Math.min(m, rectDist(w.dog.x, w.dog.y, o)); return m; }
 
-  return { CFG, createWorld, update, step, call, pet, throwBall, setRearrange, moveItem, canPlace, serialize, restore, restoreLayout, snapshot, drawOrder, visit,
+  return { CFG, createWorld, update, step, call, pet, throwBall, setRearrange, moveItem, canPlace, serialize, restore, restoreLayout, setLayout, snapshot, drawOrder, visit, nearestDogPoint,
     planPath, reachable, circleFree, segClear, obstacles, itemRect, sizeOf, isSolid, isRug, interactSpot, minClearance, overlapsFurniture, rectDist, callSpot, grid,
     bodyFree, bodyOverlap, boxAt, visDir, segOK };
 });

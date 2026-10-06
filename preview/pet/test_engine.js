@@ -448,5 +448,21 @@ section('15. 压力：40 个种子 × 4 分钟，随机搬家具 + 扔球');
   ok(bad === 0, '160 分钟模拟：0 帧压家具（含鼻尖 / 尾巴）/ 0 帧瞬移');
   console.log(`  （保险机制触发 ${guard} 次）`); }
 
+
+section('19. p4：没有饭碗 / 外部整组换布局（家宅同步）');
+{
+  const room = { cols: 6, rows: 4, wallRows: 2, front: { x: 3, y: 3.7 }, bed: { x: 0, y: 3.1, w: 1.3, h: 0.9 }, bowl: null, items: [{ uid: 'u7', fid: 'furn_sofa', x: 0, y: 0 }, { uid: 'u9', fid: 'furn_catbed', x: 4, y: 1 }] };
+  const w = world(19, room);
+  ok(w.bowl === null && !PE.obstacles(w).some(o => o.uid === 'pet_bowl'), '没有饭碗：不算障碍');
+  ok(w.items.map(p => p.uid).join() === 'u7,u9', '外部 uid 原样（家宅 uid）');
+  w.dog.energy = 5; const r1 = run(w, 240); ok(clean(r1), '没碗 + 很饿很困也正常过日子（' + JSON.stringify(r1) + '）');
+  const lay = { cols: 6, rows: 4, items: [{ uid: 'u7', fid: 'furn_sofa', x: 0, y: 0 }, { uid: 'u9', fid: 'furn_catbed', x: 4, y: 1 }, { uid: 'u12', fid: 'furn_plant', x: Math.min(5, Math.floor(w.dog.x)), y: Math.min(3, Math.floor(w.dog.y)) }] };
+  const v0 = w.obsVer, res = PE.setLayout(w, lay);
+  ok(w.obsVer > v0 && w.items.length === 3 && !PE.bodyOverlap(w), '盆栽摆到小狗脚下：整组换上，小狗挪到空地（moved=' + res.dogMoved + '）');
+  const r2 = run(w, 60); ok(clean(r2), '换布局后正常活动');
+  PE.setLayout(w, { cols: 8, rows: 5, front: { x: 4, y: 4.7 }, items: lay.items });
+  ok(w.cols === 8 && w.rows === 5 && w.front.y === 4.7, '升级房子：尺寸 / 「你」的位置跟着换');
+  PE.call(w); const r3 = run(w, 20, (w) => !(w.dog.step && w.dog.step.k === 'wait' && w.dog.activity === 'called')); ok(clean(r3) && Math.hypot(w.dog.x - 4, w.dog.y - 4.15) < 0.05, '升级后呼唤：跑到新的前沿');
+}
 console.log(`\n引擎测试：${pass} 过 / ${fail} 挂`);
 process.exit(fail ? 1 : 0);
