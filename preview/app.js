@@ -2196,14 +2196,15 @@ window.__tzz = { TEST_MODE, TEST_LV, SAVE_KEY, BAK_KEY, get saveBlocked() { retu
   audioState() { return AU.ctx ? AU.ctx.state : 'none'; }, showPreview, openAssign, JOB_ART, jobShown, jobURL, showJobArt,
   HOME_ART, FURN_ART, FURN_UP, homeAct, get homeWho() { return homeWho; }, get homeSub() { return homeSub; }, get homeMode() { return homeMode; }, set homeMode(v) { homeMode = v === 'decor' ? 'decor' : 'live'; }, get homeSel() { return homeSel; }, get homeDrag() { return homeDrag; }, homeActor, LIVE_LINES, homeUndo, resize, get canvasSize() { return { W, H }; }, pet: petHooks, lookOf, drawPerson, drawHead, LOOKS, get bubble() { return bubble; } };
 /* ================= 打僵尸（zombie/?embed=1，全屏 iframe）=================
-   只和经营共用金币：价格、等级上限、进度校验都在这边按 ZBCore 算，扣款只走 E.spendCoins + atomic（写档失败回滚）。
+   只和经营共用金币：价格、等级上限、进度校验都在这边按 ZBCore 算，训练扣款和结算进度都走 txn → E.transact（扣款 + 改状态 + persist 一起成功，失败整体回滚）。
    小游戏页不写任何存档，也不能加金币；iframe 加载后经营页递给它一个 MessageChannel 端口，只认这个端口发来的 hello / buy / result / close。 */
 function zbState() { return (state.zombie = ZB.norm(state.zombie)); }
 function zbCard() { return `<div class="card zb-card"><div class="ava sq">🧟</div><div class="info"><div class="name">77 打僵尸<span class="tag">小游戏</span></div><div class="desc">花金币练战斗力 · 已通关 <b>${ZB.norm(state.zombie).cleared} / ${ZB.MAX_LV}</b></div></div><button class="buy" data-act="zombie" data-arg="0">去打</button></div>`; }
-function zbReply(why) {
+function zbBlocked() { return frozen || saveBlocked || E.isBlocked(state) || !E.walletOk(state) || !!(loadInfo && (loadInfo.unsafe || loadInfo.blocked)); }
+function zbReply(why, extra) {
   if (!zbOpen || !zbPort) return;
-  const ok = !frozen && E.walletOk(state) && !(loadInfo && loadInfo.unsafe);
-  zbPort.postMessage({ zb:'state', coins: ok ? E.balance(state) : 0, z: zbState(), blocked: !ok, why: why || '' });
+  const ok = !zbBlocked();
+  zbPort.postMessage(Object.assign({ zb:'state', coins: ok ? E.balance(state) : 0, z: zbState(), blocked: !ok, why: why || '' }, extra));
 }
 function openZombie() {
   if (frozen || zbOpen || !ZB) return;
@@ -2213,7 +2214,7 @@ function openZombie() {
     const ch = new MessageChannel(); zbPort = ch.port1; zbPort.onmessage = e => zbMsg(e.data);
     f.contentWindow.postMessage({ zb:'port' }, location.origin, [ch.port2]); zbReply();
   };
-  f.src = 'zombie/?embed=1&v=12e'; $('#zbOverlay').classList.remove('hidden'); audioPause();
+  f.src = 'zombie/?embed=1&v=12e2'; $('#zbOverlay').classList.remove('hidden'); audioPause();
 }
 function closeZombie() {
   if (!zbOpen) return; zbOpen = false; if (zbPort) { zbPort.close(); zbPort = null; }
@@ -2223,22 +2224,32 @@ function zbMsg(d) {
   if (!zbOpen || !d || typeof d !== 'object') return;
   if (d.zb === 'close') return closeZombie();
   if (d.zb === 'hello') return zbReply();
-  if (frozen) return zbReply('游戏已在别的页面打开，这里不能花金币');
+  if (d.zb === 'result') {
+    const ack = { ack:'result' };
+    if (zbBlocked()) return zbReply(frozen ? '游戏已在别的页面打开，这局进度没记上' : '存档异常（只读模式），这局进度没记上', ack);
+    const r = txn(st => {
+      const z = st.zombie = ZB.norm(st.zombie), before = JSON.stringify(z);
+      if (!ZB.applyResult(z, d)) return { ok:false, why:'invalid' };
+      return JSON.stringify(z) === before ? { ok:false, why:'same' } : { ok:true };
+    }, 0, '这局进度没记上');
+    if (r.ok) { dirty = true; return zbReply('', ack); }
+    if (r.stage === 'apply') return zbReply(r.why === 'invalid' ? '这局结果无效，没记上' : '', ack);
+    dirty = true;
+    return zbReply('存档失败，这局进度没记上', ack);
+  }
+  if (zbBlocked()) return zbReply(frozen ? '游戏已在别的页面打开，这里不能花金币' : '存档异常（只读模式），暂时不能花金币');
   if (d.zb === 'buy') {
     if (!ZB.IDS.includes(d.id)) return zbReply();
-    const r = atomic(() => {
-      const z = zbState(), lv = z.lv[d.id];
-      if (lv >= ZB.MAX_TRAIN) return { ok:false, why:'已满级' };
-      const pay = E.spendCoins(state, ZB.price(d.id, lv)); if (!pay.ok) return pay;
+    const lv = zbState().lv[d.id];
+    if (lv >= ZB.MAX_TRAIN) return zbReply('已满级');
+    const r = txn(st => {
+      const z = st.zombie = ZB.norm(st.zombie);
+      if (z.lv[d.id] !== lv) return { ok:false, why:'训练等级已变化，请重试' };
       z.lv[d.id] = lv + 1; return { ok:true };
-    });
+    }, ZB.price(d.id, lv), '训练没生效，没扣金币');
     dirty = true;
-    return zbReply(r && r.ok === false ? (r.why === 'saveFailed' ? '存档失败，没扣金币' : r.why) : '');
-  }
-  if (d.zb === 'result') {
-    const r = atomic(() => { const z = zbState(), before = JSON.stringify(z); return ZB.applyResult(z, d) && JSON.stringify(z) !== before ? { ok:true } : { ok:false }; });
-    if (r.ok) dirty = true;
-    return zbReply(r.why === 'saveFailed' ? '存档失败，这局进度没记上' : '');
+    if (r.ok) return zbReply('');
+    return zbReply(r.stage === 'pay' || r.stage === 'apply' ? r.why : '存档失败，没扣金币');
   }
 }
 Object.defineProperties(window.__tzz, { openZombie:{ value:openZombie }, closeZombie:{ value:closeZombie }, zbOpen:{ get:() => zbOpen } });

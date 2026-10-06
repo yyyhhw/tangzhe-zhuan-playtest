@@ -49,6 +49,7 @@ function onState(d) {
   if (firstSync) { firstSync = false; selLv = Math.min(MAX_LV, proto.cleared + 1); }
   $('#trainNote').textContent = d.why || (proto.blocked ? '存档异常或已在别的页面打开，暂时不能花金币。' : '和经营共用金币：训练只花钱，打僵尸本身不产金币。');
   renderTrain();
+  if (d.ack === 'result' && G && G.over && G.wait) { G.wait = false; G.why = d.why || ''; renderResult(); }
 }
 function fmt(n) {
   if (!isFinite(n)) return '—';
@@ -349,23 +350,31 @@ function start(mode, n) {
   if (mode !== 'endless') { mode = 'level'; n = Math.min(Math.max(1, Math.floor(fin(n, selLv))), Math.min(MAX_LV, proto.cleared + 1)); selLv = n; }
   resize(); G = newRun(mode, n); paused = false; joy.on = false; show(null); hud(); last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop); }
 function end(win) {
-  G.over = true; G.win = win; joy.on = false;
-  proto.best = Math.max(proto.best, G.kills);
+  G.over = true; G.win = win; joy.on = false; G.prevBest = proto.endBest.t; G.why = '';
+  if (EMBED) {
+    // 经营页是唯一写档方：等它回执（ack:'result'）后再按权威进度显示通关 / 解锁，存档失败不报喜
+    G.wait = true; host({ zb: 'result', mode: G.mode, n: G.n, win, t: G.t, kills: G.kills });
+  } else {
+    proto.best = Math.max(proto.best, G.kills);
+    if (G.mode === 'endless') { if (G.t > proto.endBest.t) proto.endBest = { t: G.t, kills: G.kills }; }
+    else if (win) proto.cleared = Math.max(proto.cleared, G.n);
+    saveProto();
+  }
+  renderResult(); show('#result');
+}
+function renderResult() {
+  if (!G || !G.over) return;
   let title, again = '再来一局';
-  if (G.mode === 'endless') {
-    const rec = G.t > proto.endBest.t; if (rec) proto.endBest = { t: G.t, kills: G.kills };
-    title = rec ? '无尽新纪录！' : '无尽结算';
-  } else if (win) {
-    proto.cleared = Math.max(proto.cleared, G.n);
-    title = G.n >= MAX_LV ? `第 ${G.n} 关通关！无尽模式开放` : `第 ${G.n} 关通关！`;
-    again = G.n >= MAX_LV ? '进入无尽' : '下一关';
-  } else title = `第 ${G.n} 关失败…`;
-  saveProto();
-  if (EMBED) host({ zb: 'result', mode: G.mode, n: G.n, win, t: G.t, kills: G.kills });
-  $('#resTitle').textContent = title; $('#againBtn').textContent = again;
+  const saved = G.mode === 'endless' ? proto.endBest.t >= G.t - 1e-6 : proto.cleared >= G.n;
+  if (G.wait) title = '结算中…';
+  else if (G.mode === 'endless') title = G.why ? '无尽结算（没存上）' : saved && G.t > G.prevBest ? '无尽新纪录！' : '无尽结算';
+  else if (G.win && saved) { title = G.n >= MAX_LV ? `第 ${G.n} 关通关！无尽模式开放` : `第 ${G.n} 关通关！`; again = G.n >= MAX_LV ? '进入无尽' : '下一关'; }
+  else if (G.win) { title = `第 ${G.n} 关没存上`; again = '再打一次'; }
+  else title = `第 ${G.n} 关失败…`;
+  $('#resTitle').textContent = title; $('#againBtn').textContent = again; $('#againBtn').disabled = !!G.wait;
+  $('#resNote').textContent = G.wait ? '正在存档…' : G.why;
   $('#resStats').textContent = G.mode === 'endless' ? `坚持 ${Math.floor(G.t)} 秒 · 击倒 ${G.kills} · 最好 ${Math.floor(proto.endBest.t)} 秒`
     : `坚持 ${Math.floor(G.t)} / ${G.dur} 秒 · 击倒 ${G.kills}`;
-  show('#result');
 }
 function setPause(on) { if (!G || G.over) return; paused = on; joy.on = false; show(on ? '#pause' : null); if (!on) last = performance.now(); }
 function loop(now) {
@@ -377,8 +386,9 @@ function loop(now) {
 $('#startBtn').addEventListener('click', () => start('level', selLv));
 $('#endlessBtn').addEventListener('click', () => start('endless'));
 $('#againBtn').addEventListener('click', () => {
+  if (G && G.wait) return;
   if (G && G.mode === 'endless') return start('endless');
-  if (G && G.win) return G.n >= MAX_LV ? start('endless') : start('level', G.n + 1);
+  if (G && G.win && proto.cleared >= G.n) return G.n >= MAX_LV ? start('endless') : start('level', G.n + 1);
   start('level', G ? G.n : selLv);
 });
 $('#lvPrev').addEventListener('click', () => { selLv--; renderLv(); });
@@ -397,5 +407,5 @@ if (EMBED) {
 selLv = Math.min(MAX_LV, proto.cleared + 1);
 resize(); renderTrain(); draw();
 // 测试钩子：只读状态 + 固定步长推进
-window.__zb = { EMBED, send: host, get pend() { return pend; }, get G() { return G; }, proto, Wallet, step, castUlt, start, setPause, joy, PROTO_KEY, price, TRAIN, levelDur, renderTrain, saveProto, MAX_LV };
+window.__zb = { EMBED, renderResult, send: host, get pend() { return pend; }, get G() { return G; }, proto, Wallet, step, castUlt, start, setPause, joy, PROTO_KEY, price, TRAIN, levelDur, renderTrain, saveProto, MAX_LV };
 })();

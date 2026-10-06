@@ -85,6 +85,47 @@ with sync_playwright() as p:
         # 刷新后进度还在（读档不丢 zombie 字段）
         pg.reload(); pg.wait_for_function("window.__tzz && __tzz.state"); m6 = main_st(pg)
         check(m6['z'] and m6['z']['lv']['atk'] == 2 and m6['z']['cleared'] == 1, f'{dn} 刷新经营页后训练 / 通关进度保留 {m6["z"]}')
+        # 第 50 关：经营页写盘失败 → 结算页不报「通关 / 无尽开放」，进度仍 49，原档不动，重打按钮可用
+        S(pg, "__tzz.state.zombie = {lv:{atk:30,rate:30,hp:30,ult:30},cleared:49,best:0,endBest:{t:0,kills:0}}; __tzz.state.coins = 5e10; __tzz.persist(); __tzz.closeModal && __tzz.closeModal(); __tzz.openZombie()")
+        f = zframe(pg); raw49 = S(pg, f"localStorage.getItem('{SAVE}')"); bak49 = S(pg, f"localStorage.getItem('{SAVE}-bak')")
+        S(pg, "window.__ls = Storage.prototype.setItem; Storage.prototype.setItem = function () { throw new Error('QuotaExceededError'); }; 0")
+        S(f, "__zb.start('level', 50); __zb.G.p.hp = 1e9; __zb.G.t = __zb.G.dur - 0.01; __zb.step(0.05)"); pg.wait_for_timeout(400)
+        S(pg, "Storage.prototype.setItem = window.__ls; 0")
+        r50 = S(f, "({t: document.getElementById('resTitle').textContent, n: document.getElementById('resNote').textContent, a: document.getElementById('againBtn').textContent, dis: document.getElementById('againBtn').disabled, vis: !document.getElementById('result').classList.contains('hidden'), c: __zb.proto.cleared, eb: document.getElementById('endlessBtn').disabled})")
+        m50 = main_st(pg)
+        check(r50['vis'] and '通关' not in r50['t'] and '无尽' not in r50['t'] and '存档失败' in r50['n'] and r50['a'] == '再打一次' and not r50['dis'] and r50['c'] == 49 and r50['eb'],
+              f'{dn} 第 50 关写盘失败：结算页提示没存上、不报无尽开放、无尽仍锁 {r50}')
+        check(m50['z']['cleared'] == 49 and m50['coins'] == 5e10 and S(pg, f"localStorage.getItem('{SAVE}')") == raw49 and S(pg, f"localStorage.getItem('{SAVE}-bak')") == bak49 and m50['proto'] is None and m50['formal'] == 'SENTINEL',
+              f'{dn} 第 50 关写盘失败：经营档仍 49、金币不变、主档备份原文不动、不写原型键和正式档 {m50["z"]}')
+        f.locator('#againBtn').tap(); pg.wait_for_timeout(200)
+        g = S(f, "({n: __zb.G && __zb.G.n, mode: __zb.G && __zb.G.mode, over: __zb.G && __zb.G.over})")
+        check(g['n'] == 50 and g['mode'] == 'level' and not g['over'] and '/zombie/' in f.url, f'{dn} 「再打一次」重开第 50 关，不跳无尽、不离开小游戏 {g}')
+        S(f, "__zb.G.p.hp = 1e9; __zb.G.t = __zb.G.dur - 0.01; __zb.step(0.05)"); pg.wait_for_timeout(400)
+        t50 = S(f, "document.getElementById('resTitle').textContent"); m51 = main_st(pg)
+        check('无尽模式开放' in t50 and m51['z']['cleared'] == 50 and m51['savedZ']['cleared'] == 50, f'{dn} 存档正常后第 50 关通关：经营确认后才显示「{t50}」')
+        # 无尽：写盘失败不显示新纪录，最好成绩不变
+        S(f, "__zb.start('endless'); __zb.G.p.hp = 1e9; __zb.G.t = 120"); S(pg, "Storage.prototype.setItem = function () { throw new Error('QuotaExceededError'); }; 0")
+        f.locator('#pauseBtn').tap(); f.locator('#quitBtn').tap(); pg.wait_for_timeout(400); S(pg, "Storage.prototype.setItem = window.__ls; 0")
+        te = S(f, "({t: document.getElementById('resTitle').textContent, n: document.getElementById('resNote').textContent})"); me = main_st(pg)
+        check('新纪录' not in te['t'] and '存档失败' in te['n'] and me['z']['endBest']['t'] == 0 and me['savedZ']['endBest']['t'] == 0, f'{dn} 无尽写盘失败：不报新纪录，最好成绩不变 {te}')
+        f.locator('#againBtn').tap(); S(f, "__zb.G.p.hp = 1e9; __zb.G.t = 120"); f.locator('#pauseBtn').tap(); f.locator('#quitBtn').tap(); pg.wait_for_timeout(400)
+        te2 = S(f, "document.getElementById('resTitle').textContent"); me2 = main_st(pg)
+        check('新纪录' in te2 and me2['savedZ']['endBest']['t'] >= 120, f'{dn} 无尽正常保存：经营确认后才显示「{te2}」')
+        S(f, "__zb.send({zb:'close'})"); pg.wait_for_timeout(200)
+        # 只读坏档（shops[0].lv = -1、无备份 → 经营页 saveBlocked）：小游戏标只读，训练 / 结算都不改内存和存档
+        d0 = json.loads(S(pg, f"localStorage.getItem('{SAVE}')")); d0['coins'] = 5e10; d0['shops'][0]['lv'] = -1; d0['zombie'] = {'lv': {'atk': 0, 'rate': 0, 'hp': 0, 'ult': 0}, 'cleared': 3, 'best': 0, 'endBest': {'t': 0, 'kills': 0}}
+        pg.goto(URL.rsplit('/', 1)[0] + '/zombie/'); S(pg, f"localStorage.removeItem('{SAVE}-bak'); localStorage.setItem('{SAVE}', {json.dumps(json.dumps(d0))})")
+        pg.goto(URL); pg.wait_for_function("window.__tzz && __tzz.state"); rawb = S(pg, f"localStorage.getItem('{SAVE}')")
+        S(pg, "__tzz.closeModal && __tzz.closeModal(); __tzz.openZombie()"); f = zframe(pg)
+        sb = S(pg, "__tzz.saveBlocked"); mb0 = main_st(pg); zb0 = S(f, "({c: __zb.proto.cleared, b: __zb.proto.blocked, dis: [...document.querySelectorAll('#train [data-tr]')].every(x => x.disabled)})")
+        S(f, "__zb.send({zb:'buy',id:'atk'})"); pg.wait_for_timeout(300)
+        S(f, "__zb.start('level', __zb.proto.cleared + 1); __zb.G.p.hp = 1e9; __zb.G.t = __zb.G.dur - 0.01; __zb.step(0.05)"); pg.wait_for_timeout(400)
+        rb = S(f, "({t: document.getElementById('resTitle').textContent, n: document.getElementById('resNote').textContent, lv: __zb.proto.lv.atk, c: __zb.proto.cleared})"); mb = main_st(pg)
+        check(sb and zb0['b'] and zb0['dis'], f'{dn} 只读坏档：经营 saveBlocked={sb}，小游戏也标只读、训练按钮全灰 {zb0}')
+        rawb_same = S(pg, f"localStorage.getItem('{SAVE}')") == rawb
+        check(rb['lv'] == 0 and rb['c'] == zb0['c'] and mb['z']['lv']['atk'] == 0 and mb['z']['cleared'] == zb0['c'] and mb['coins'] == mb0['coins'] and mb['z'] == mb0['z'] and '通关' not in rb['t'] and '只读' in rb['n'] and rawb_same,
+              f'{dn} 只读坏档：硬发训练不扣不升，打满下一关不报通关、提示只读，原档不变 {rb} {mb["coins"]} {mb0["coins"]} {rawb_same}')
+        S(f, "__zb.send({zb:'close'})"); pg.wait_for_timeout(200)
         # 异常档（余额 1e20）：小游戏标记不可花，硬发购买原文一个字节不改
         raw = S(pg, f"localStorage.getItem('{SAVE}')"); d = json.loads(raw); d['coins'] = 1e20
         pg.goto(URL.rsplit('/', 1)[0] + '/zombie/'); S(pg, f"localStorage.setItem('{SAVE}', {json.dumps(json.dumps(d))})")  # 先离开经营页，免得卸载时自动存档盖掉
