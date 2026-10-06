@@ -584,6 +584,8 @@ with sync_playwright() as p:
     # 四位 CEO 的 Lv1 底图都登记了，且原图是 1200×1200
     hl = S(hp, "Promise.all(['c77','pearl','otaku','rocket'].map(id=>new Promise(r=>{ if(!__tzz.HOME_ART[id+'_1']) return r(id+' 没登记'); const im=new Image(); im.onload=()=>r(im.naturalWidth===1200&&im.naturalHeight===1200?null:id+' 尺寸 '+im.naturalWidth+'×'+im.naturalHeight); im.onerror=()=>r(id+' 加载失败'); im.src='art/home_'+id+'_1.webp';}))).then(a=>a.filter(Boolean))")
     check(hl == [], f'四位 CEO 的 Lv1 家宅底图都登记且是 1200×1200 {hl}')
+    hl2 = S(hp, "Promise.all([['c77_2',1600,1400],['c77_3',2000,1600],['pearl_2',1600,1400],['pearl_3',2000,1600]].map(([k,w,h])=>new Promise(r=>{ if(!__tzz.HOME_ART[k]) return r(k+' 没登记'); const im=new Image(); im.onload=()=>r(im.naturalWidth===w&&im.naturalHeight===h?null:k+' 尺寸 '+im.naturalWidth+'×'+im.naturalHeight); im.onerror=()=>r(k+' 加载失败'); im.src='art/home_'+k+'.webp';}))).then(a=>a.filter(Boolean))")
+    check(hl2 == [], f'12b1 77 / 珍珠姐 Lv2/Lv3 底图都登记、加载成功、尺寸对（公寓 1600×1400、豪宅 2000×1600）{hl2}')
     # 存档往返
     h_before = home(); inv_before = S(hp, "JSON.parse(JSON.stringify(__tzz.state.furnInv))")
     hp.reload(); hp.wait_for_timeout(900); close_modals(hp)
@@ -948,7 +950,7 @@ with sync_playwright() as p:
         close_modals(wp)
         wpos = lambda: {q['uid']: (q['x'], q['y'], q.get('surf')) for q in st(wp)['homes']['c77']['placed']}
         w1 = wpos(); s1 = st(wp)
-        check(w1.get('ok') == (0, 0, 'wall') and w1.get('bad') == (5, 1, 'wall') and len(w1) == 2 and not s1['furnInv'].get('furn_painting'), f'12b 真读档（{tag}）：合法画留 (0,0)，坏画挪 (5,1)，没退仓 {w1}')
+        check(w1.get('ok') == (0, 0, 'wall') and w1.get('bad') == (2, 0, 'wall') and len(w1) == 2 and not s1['furnInv'].get('furn_painting'), f'12b/12b1 真读档（{tag}）：合法画留 (0,0)，压在 77 公寓真拱窗上的坏画挪到最近空墙 (2,0)（12b1 前无底图时是 (5,1)），没退仓 {w1}')
         check('墙面整理' in tt and '1 幅' in tt, f'12b 真读档（{tag}）：如实提示挪了 1 幅「{tt}」')
         wp.reload(); wp.wait_for_timeout(700)
         tt2 = S(wp, "(()=>{const t=document.getElementById('toast');return t&&!t.classList.contains('hidden')?t.textContent:''})()")
