@@ -3,6 +3,7 @@
 'use strict';
 const E = window.Economy, CFG = E.CFG;
 const ZB = window.ZBCore; var zbOpen = false, zbPort = null;
+const ZB_SHOP = 0; var zbLastCeo = null;   // 13a：打僵尸属于烧烤摊（店 0）；zbLastCeo = 最近一局结算回传的上场 CEO（只在内存，不写档）
 const SAVE_KEY = 'tangzhe-preview-save', BAK_KEY = 'tangzhe-preview-save-bak', LOCK_KEY = 'tangzhe-preview-tab-lock';
 // 12b2 测试房间：只有网址带 ?test=homes 才进；整局放在内存里，不读、不写任何 localStorage（真存档 / 备份 / 多标签锁都不碰），刷新就重置
 // &lv=3 → 四家都是豪宅，默认四家都是公寓
@@ -1131,7 +1132,8 @@ function doUpgradeShop(i, btn) {
 function act(a, arg, btn) {
   const i = state.cur;
   switch (a) {
-    case 'zombie': openZombie(); return;   // 12e 打僵尸入口（板砖 b640f25）
+    case 'zombie': if (!zbCeo()) return openAssignTo(ZB_SHOP); openZombie(); return;   // 12e 打僵尸入口（板砖 b640f25）；13a：烧烤摊没 CEO → 打开派 CEO 选单
+    case 'zbAssign': return openAssignTo(ZB_SHOP);   // 13a「先派 CEO」
     case 'open': { const r = atomic(() => E.openShop(state, +arg), '开张没有生效，金币已退回'); if (!buyOk(r, btn)) return; afterBuy(btn, E.SHOPS[+arg].name + ' 开张啦！'); signAnim = { shop:+arg, from:'招租中', t0:clock }; handleUnlocks(r.unlocked); break; }
     case 'up': return doUpgradeShop(+arg, btn);
     case 'hire': { const r = atomic(() => E.hireEmp(state, +arg), '雇人没有生效，金币已退回'); if (!buyOk(r, btn)) return; afterBuy(btn, '雇到 ' + E.SHOPS[+arg].emp.name + '！开始自动赚钱'); sayLine('e', E.SHOPS[+arg].emp.line, 3); if (+arg === 3) queueModal(showGachaOpen); break; }
@@ -1221,7 +1223,7 @@ function renderShop() {
       ? `<br>店铺 ${fmt(E.shopBase(i, s.lv))} × 员工 ×${E.empMult(s.emp).toFixed(2)} × CEO ×${info.mult.toFixed(2)}${E.hasSuper(state, i) ? ` × 超级装饰 ×${CFG.SUPER_RATE}` : ''}`
       : '<br>还没员工：不会自动赚钱（可以点画面手动赚）'}
     ${critLine(i)}</div>`;
-  h += zbCard();
+  if (i === ZB_SHOP) h += zbCard();   // 13a：打僵尸是烧烤摊自己的小游戏，入口只在烧烤摊店铺页（其余三家以后各有自己的游戏）
   if (E.hasSuper(state, i)) { const sp = E.ITEM_BY_ID[E.SUPER_OF_SHOP[i]];
     h += `<div class="card super"><div class="ava sq">${SUPER_ICON[sp.id]}</div><div class="info"><div class="name">${sp.name}<span class="tag match">超级装饰</span></div><div class="desc">${sp.desc}</div></div></div>`; }
   h += `<div class="row-head"><div class="sec-title">店铺</div><div class="buyamt">${[1, 10, 'max'].map(a => `<button data-act="amt" data-arg="${a}" class="${buyAmt === a ? 'on' : ''}">${a === 'max' ? 'MAX' : 'x' + a}</button>`).join('')}</div></div>`;
@@ -2199,12 +2201,21 @@ window.__tzz = { TEST_MODE, TEST_LV, SAVE_KEY, BAK_KEY, get saveBlocked() { retu
    只和经营共用金币：价格、等级上限、进度校验都在这边按 ZBCore 算，训练扣款和结算进度都走 txn → E.transact（扣款 + 改状态 + persist 一起成功，失败整体回滚）。
    小游戏页不写任何存档，也不能加金币；iframe 加载后经营页递给它一个 MessageChannel 端口，只认这个端口发来的 hello / buy / result / close。 */
 function zbState() { return (state.zombie = ZB.norm(state.zombie)); }
-function zbCard() { return `<div class="card zb-card"><div class="ava sq">🧟</div><div class="info"><div class="name">77 打僵尸<span class="tag">小游戏</span></div><div class="desc">花金币练战斗力 · 已通关 <b>${ZB.norm(state.zombie).cleared} / ${ZB.MAX_LV}</b></div></div><button class="buy" data-act="zombie" data-arg="0">去打</button></div>`; }
+/* 13a 店铺入口 + 当前 CEO（方案 1：每家店一个小游戏，烧烤摊 = 打僵尸）：
+   谁是烧烤摊现任 CEO 谁上场（E.ceoAt(state, 0)）；四项训练、关卡、首通记录都还在 state.zombie，算店里的共享设备，不挪到任何 CEO 名下、不新增存档字段。
+   zb:'state' 带 ceo（烧烤摊现任 CEO id，没有 = null）；小游戏开局时锁定这个人，结算回传 ceo，经营页只校验 / 记在内存里，不写档。 */
+function zbCeo() { return E.ceoAt(state, ZB_SHOP); }
+function zbCard() {
+  const id = zbCeo(), cleared = ZB.norm(state.zombie).cleared;
+  if (!id) return `<div class="card zb-card hl" data-zb-ceo=""><div class="ava">👔</div><div class="info"><div class="name">打僵尸<span class="tag">小游戏</span></div><div class="desc">烧烤摊没有 CEO，派一位来上场 · <span style="white-space:nowrap">已通关 <b>${cleared}/${ZB.MAX_LV}</b></span></div></div><button class="buy" data-act="zbAssign" data-arg="${ZB_SHOP}">先派 CEO</button></div>`;
+  const c = E.CEO_BY_ID[id], lv = state.ceos[id].lv;
+  return `<div class="card zb-card" data-zb-ceo="${id}">${ava(id)}<div class="info"><div class="name">打僵尸<span class="tag">小游戏</span></div><div class="desc">上场：<b class="zb-who">${c.name}</b> Lv.${lv}（烧烤摊 CEO）· <span style="white-space:nowrap">已通关 <b>${cleared}/${ZB.MAX_LV}</b></span>${id !== 'c77' ? '<br>训练 / 关卡进度是店里共用的' : ''}</div></div><button class="buy" data-act="zombie" data-arg="${ZB_SHOP}">去打</button></div>`;
+}
 function zbBlocked() { return frozen || saveBlocked || E.isBlocked(state) || !E.walletOk(state) || !!(loadInfo && (loadInfo.unsafe || loadInfo.blocked)); }
 function zbReply(why, extra) {
   if (!zbOpen || !zbPort) return;
   const ok = !zbBlocked();
-  zbPort.postMessage(Object.assign({ zb:'state', coins: ok ? E.balance(state) : 0, z: zbState(), blocked: !ok, why: why || '' }, extra));
+  zbPort.postMessage(Object.assign({ zb:'state', coins: ok ? E.balance(state) : 0, z: zbState(), blocked: !ok, why: why || '', ceo: zbCeo() }, extra));   // 13a：ceo = 烧烤摊现任 CEO id / null
 }
 function openZombie() {
   if (frozen || zbOpen || !ZB) return;
@@ -2214,7 +2225,7 @@ function openZombie() {
     const ch = new MessageChannel(); zbPort = ch.port1; zbPort.onmessage = e => zbMsg(e.data);
     f.contentWindow.postMessage({ zb:'port' }, location.origin, [ch.port2]); zbReply();
   };
-  f.src = 'zombie/?embed=1&v=12e2'; $('#zbOverlay').classList.remove('hidden'); audioPause();
+  f.src = 'zombie/?embed=1&v=13a'; $('#zbOverlay').classList.remove('hidden'); audioPause();
 }
 function closeZombie() {
   if (!zbOpen) return; zbOpen = false; if (zbPort) { zbPort.close(); zbPort = null; }
@@ -2226,6 +2237,7 @@ function zbMsg(d) {
   if (d.zb === 'hello') return zbReply();
   if (d.zb === 'result') {
     const ack = { ack:'result' };
+    zbLastCeo = typeof d.ceo === 'string' && Object.prototype.hasOwnProperty.call(E.CEO_BY_ID, d.ceo) ? d.ceo : null;   // 13a：回传的上场 CEO 只认真 CEO id，不影响进度结算、不写档
     if (zbBlocked()) return zbReply(frozen ? '游戏已在别的页面打开，这局进度没记上' : '存档异常（只读模式），这局进度没记上', ack);
     const r = txn(st => {
       const z = st.zombie = ZB.norm(st.zombie), before = JSON.stringify(z);
@@ -2252,5 +2264,5 @@ function zbMsg(d) {
     return zbReply(r.stage === 'pay' || r.stage === 'apply' ? r.why : '存档失败，没扣金币');
   }
 }
-Object.defineProperties(window.__tzz, { openZombie:{ value:openZombie }, closeZombie:{ value:closeZombie }, zbOpen:{ get:() => zbOpen } });
+Object.defineProperties(window.__tzz, { openZombie:{ value:openZombie }, closeZombie:{ value:closeZombie }, zbOpen:{ get:() => zbOpen }, zbCeo:{ value:zbCeo }, zbLastCeo:{ get:() => zbLastCeo }, openAssignTo:{ value:openAssignTo }, zbReply:{ value:zbReply } });
 })();

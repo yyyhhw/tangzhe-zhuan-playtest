@@ -32,6 +32,9 @@ const proto = loadProto();
 const saveProto = () => { if (EMBED) return; try { localStorage.setItem(PROTO_KEY, JSON.stringify(proto)); } catch (e) {} };
 let pend = false, firstSync = true;
 let port = null;
+// 13a 上场角色（接口，板砖在此基础上做造型 / 技能）：嵌入时 = 经营页 zb:'state' 里的 ceo（烧烤摊现任 CEO id，没有 = null）；单独原型 = c77。
+// 开局时锁进 G.ceo，这局中途经营页再发别的 ceo 也不换人；结算 result 原样回传 ceo。小游戏自己不选人、不写档；画面暂时仍画 77（兜底）。
+let hostCeo = EMBED ? null : 'c77';
 const host = m => { if (port) port.postMessage(m); };
 const Wallet = {
   balance: () => proto.coins,
@@ -45,7 +48,7 @@ if (EMBED) window.addEventListener('message', e => {
 });
 function onState(d) {
   if (!d || d.zb !== 'state') return;
-  pend = false; proto.coins = Math.max(0, fin(d.coins, 0)); proto.blocked = !!d.blocked; Object.assign(proto, ZB.norm(d.z)); proto.ready = true;
+  pend = false; if ('ceo' in d) hostCeo = typeof d.ceo === 'string' && d.ceo ? d.ceo : null; proto.coins = Math.max(0, fin(d.coins, 0)); proto.blocked = !!d.blocked; Object.assign(proto, ZB.norm(d.z)); proto.ready = true;
   if (firstSync) { firstSync = false; selLv = Math.min(MAX_LV, proto.cleared + 1); }
   $('#trainNote').textContent = d.why || (proto.blocked ? '存档异常或已在别的页面打开，暂时不能花金币。' : '和经营共用金币：训练只花钱，打僵尸本身不产金币。');
   renderTrain();
@@ -78,7 +81,7 @@ let selLv = 1;
 function newRun(mode, n) {
   const lv = proto.lv, maxHp = Math.round(100 * 1.12 ** lv.hp);
   return {
-    mode, n, dur: mode === 'level' ? levelDur(n) : Infinity, nextBoss: mode === 'level' ? (isBossLv(n) ? levelDur(n) - 30 : Infinity) : 60,
+    mode, n, ceo: hostCeo, dur: mode === 'level' ? levelDur(n) : Infinity, nextBoss: mode === 'level' ? (isBossLv(n) ? levelDur(n) - 30 : Infinity) : 60,
     t: 0, over: false, win: false, kills: 0, spawnAcc: 0,
     p: { x: W / 2, y: H * 0.62, r: 15 * U, hp: maxHp, maxHp, face: 1, inv: 0, fireCd: 0.3, walk: 0, moving: false },
     dmg: 10 * 1.15 ** lv.atk, interval: fireInterval(lv.rate), ultMul: 1.2 ** lv.ult,
@@ -326,6 +329,8 @@ function renderLv() {
   $('#lvPrev').disabled = selLv <= 1; $('#lvNext').disabled = selLv >= top;
   const eb = $('#endlessBtn'), open = proto.cleared >= MAX_LV;
   eb.disabled = !open; eb.textContent = open ? `无尽模式·最好 ${Math.floor(proto.endBest.t)} 秒` : `无尽·通关 ${MAX_LV} 关开放`;
+  const noCeo = EMBED && proto.ready && !hostCeo, sb = $('#startBtn');   // 13a
+  sb.disabled = noCeo; sb.textContent = noCeo ? '烧烤摊没有 CEO，先回经营页派一位' : '开打！'; if (noCeo) eb.disabled = true;
 }
 function renderTrain() {
   renderLv();
@@ -346,6 +351,7 @@ $('#train').addEventListener('click', e => {
 });
 function show(id) { for (const s of ['#menu', '#pause', '#result']) $(s).classList.toggle('hidden', s !== id); $('#hud').classList.toggle('hidden', id === '#menu'); }
 function start(mode, n) {
+  if (EMBED && !hostCeo) return false;   // 13a：烧烤摊没有 CEO 不开局（经营页入口会先让玩家派 CEO）
   if (mode === 'endless' && proto.cleared < MAX_LV) return false;
   if (mode !== 'endless') { mode = 'level'; n = Math.min(Math.max(1, Math.floor(fin(n, selLv))), Math.min(MAX_LV, proto.cleared + 1)); selLv = n; }
   resize(); G = newRun(mode, n); paused = false; joy.on = false; show(null); hud(); last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop); }
@@ -353,7 +359,7 @@ function end(win) {
   G.over = true; G.win = win; joy.on = false; G.prevBest = proto.endBest.t; G.why = '';
   if (EMBED) {
     // 经营页是唯一写档方：等它回执（ack:'result'）后再按权威进度显示通关 / 解锁，存档失败不报喜
-    G.wait = true; host({ zb: 'result', mode: G.mode, n: G.n, win, t: G.t, kills: G.kills });
+    G.wait = true; host({ zb: 'result', mode: G.mode, n: G.n, win, t: G.t, kills: G.kills, ceo: G.ceo });
   } else {
     proto.best = Math.max(proto.best, G.kills);
     if (G.mode === 'endless') { if (G.t > proto.endBest.t) proto.endBest = { t: G.t, kills: G.kills }; }
@@ -407,5 +413,5 @@ if (EMBED) {
 selLv = Math.min(MAX_LV, proto.cleared + 1);
 resize(); renderTrain(); draw();
 // 测试钩子：只读状态 + 固定步长推进
-window.__zb = { EMBED, renderResult, send: host, get pend() { return pend; }, get G() { return G; }, proto, Wallet, step, castUlt, start, setPause, joy, PROTO_KEY, price, TRAIN, levelDur, renderTrain, saveProto, MAX_LV };
+window.__zb = { EMBED, get ceo() { return hostCeo; }, renderResult, send: host, get pend() { return pend; }, get G() { return G; }, proto, Wallet, step, castUlt, start, setPause, joy, PROTO_KEY, price, TRAIN, levelDur, renderTrain, saveProto, MAX_LV };
 })();
