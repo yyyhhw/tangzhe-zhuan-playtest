@@ -11,12 +11,13 @@ const rand = () => { if (crypto && crypto.getRandomValues) return crypto.getRand
 
 /* ================= 存档（版本号 + 多标签防重复） ================= */
 const TAB = rid();
-let frozen = false, state, migratedFrom = null;
+let frozen = false, state, migratedFrom = null, loadWallMig = { moved:0, stored:0 };
 function loadState() {
   let raw = null;
   try { raw = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch (e) { raw = null; }
   if (raw && raw.v !== CFG.SAVE_VERSION) { try { localStorage.setItem(BAK_KEY + '-v' + (raw.v || 0), JSON.stringify(raw)); } catch (e) {} }
   const m = E.migrate(raw, now());
+  loadWallMig = m.wall || { moved:0, stored:0 };
   migratedFrom = raw ? (raw.v !== CFG.SAVE_VERSION ? (raw.v || 0) : null) : null;
   return m.st;
 }
@@ -1896,13 +1897,14 @@ function boot() {
   resize();
   const first = !state.taps && !state.totalEarned && state.shops[0].emp === 0;
   const fpMig = E.migrateFootprints(state);
-  const wallMig = E.migrateWallPaintings(state);
+  const wallMig0 = E.migrateWallPaintings(state);   // 读档时已在 E.migrate 里整理过一次，这里通常是 0；两次加起来如实提示
+  const wallMig = { moved:loadWallMig.moved + wallMig0.moved, stored:loadWallMig.stored + wallMig0.stored };
   const p = E.settleOffline(state, now(), rid);
   persist();
   scheduleBig(); scheduleSpecial(); renderTabs(); setTab('shop');
   if (migratedFrom != null) toast('存档已升级到 v' + CFG.SAVE_VERSION + '（新盲盒 + CEO 穿搭，收藏都保留）', 2600);
   if (fpMig && !fpMig.skipped && (fpMig.shifted || fpMig.stored)) toast(fpMig.stored ? `家具占地收紧：${fpMig.shifted} 件按脚底重锚，${fpMig.stored} 件腾不出空位已退回仓库` : `家具占地收紧：${fpMig.shifted} 件已按脚底重锚`, 3200);
-  if (wallMig && (wallMig.moved || wallMig.stored)) toast(wallMig.stored ? `挂画改挂墙了：${wallMig.moved} 幅上墙，${wallMig.stored} 幅墙面没空已退回仓库` : `挂画改挂墙了：${wallMig.moved} 幅已迁到墙面`, 3200);
+  if (wallMig && (wallMig.moved || wallMig.stored)) toast(wallMig.stored ? `墙面整理：${wallMig.moved} 幅挂画挪到空墙，${wallMig.stored} 幅墙面没空已退回仓库` : `墙面整理：${wallMig.moved} 幅挂画已挪到空墙`, 3200);
   if (p && p.rolledBack) toast('检测到手机时间被往回调，这段时间不发离线收益');
   if (first) queueModal(showIntro);
   if (state.pending) queueModal(showOffline);

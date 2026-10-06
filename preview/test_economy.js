@@ -771,6 +771,47 @@ ok(E.CROSS['rocket@0'].effect === 'bigFreq' && E.CROSS['c77@3'].effect === 'offl
       E.upgradeHome(s, 'c77'); ok(JSON.stringify(s.homes.c77.placed) === fl, '升级时地板家具原位不动');
     }
   } finally { restore(); }
+  // 7) 12b：真实读档链路（E.migrate → normHomeBundle → 墙面整理）和直接整理结果一致；记录顺序对调也一样
+  {
+    const raw = (placed, lv) => ({ v:E.CFG.SAVE_VERSION, coins:1234, ceos:{ c77:{ unlocked:true, lv:1, at:0 } }, furnInv:{ furn_lamp:1 }, homes:{ c77:{ lv, next:9, placed } } });
+    const P = (uid, x, y, surf) => surf === undefined ? { uid, fid:'furn_painting', x, y, rot:0 } : { uid, fid:'furn_painting', x, y, rot:0, surf };
+    const pos = (st) => Object.fromEntries(st.homes.c77.placed.map(p => [p.uid, p.x + ',' + p.y + ',' + p.surf]));
+    const cnt = (st) => st.homes.c77.placed.length + E.invCount(st);
+    const direct = (placed, lv) => { const s = E.newState(T0); s.ceos.c77.unlocked = true; s.homes.c77.lv = lv; s.homes.c77.placed = JSON.parse(JSON.stringify(placed)); const r = E.reconcileWall(s, 'c77'); return { s, r }; };
+    const sane = (st) => st.homes.c77.placed.every(p => E.canPlace(st, 'c77', p.fid, p.x, p.y, p.rot, p.uid, p.surf).ok);
+    // 熊大复现：77 的 Lv2，坏画在 (5,0) 禁区排前面，合法画在 (0,0) 排后面
+    const cases = [
+      ['坏画在前', [P('bad', 5, 0, 'wall'), P('ok', 0, 0, 'wall')], 2],
+      ['合法画在前', [P('ok', 0, 0, 'wall'), P('bad', 5, 0, 'wall')], 2],
+      ['旧地板画在前', [P('old', 0, 3), P('ok', 0, 0, 'wall')], 2],
+      ['Lv3 三幅混排', [P('bad', 8, 0, 'wall'), P('old', 2, 2), P('ok1', 0, 0, 'wall'), P('ok2', 2, 0, 'wall')], 3],
+    ];
+    for (const [name, placed, lv] of cases) {
+      const d = direct(placed, lv), m = E.migrate(raw(JSON.parse(JSON.stringify(placed)), lv), T0), st = m.st;
+      ok(JSON.stringify(pos(st)) === JSON.stringify(pos(d.s)) || ['ok', 'ok1', 'ok2', 'bad', 'old'].every(u => pos(st)[u] === pos(d.s)[u]), '读档链路 = 直接整理（' + name + '）：' + JSON.stringify(pos(st)));
+      ok(m.wall && m.wall.moved === d.r.moved && m.wall.stored === d.r.stored && m.wall.moved + m.wall.stored >= 1, '读档如实报告迁移（' + name + '）moved=' + (m.wall && m.wall.moved) + ' stored=' + (m.wall && m.wall.stored));
+      ok(sane(st) && cnt(st) === placed.length + 1 && st.coins === 1234, '读档后墙面全合法、件数 / 金币守恒（' + name + '）');
+      // 页面 boot 顺序：读档 → 占地迁移 → 再整理一遍，不再动
+      const k = JSON.stringify(st.homes), fp = E.migrateFootprints(st), w2 = E.migrateWallPaintings(st);
+      ok(w2.moved === 0 && w2.stored === 0 && JSON.stringify(st.homes) === k, 'boot 里第二次整理不再动（' + name + '）');
+      // 存档往返：再读一次不变、报告 0
+      const m2 = E.migrate(JSON.parse(JSON.stringify(st)), T0);
+      ok(JSON.stringify(m2.st.homes) === k && m2.wall.moved === 0 && m2.wall.stored === 0, '整理后的档再读：原样、报告 0（' + name + '）');
+    }
+    { const st = E.migrate(raw([P('bad', 5, 0, 'wall'), P('ok', 0, 0, 'wall')], 2), T0).st, ps = pos(st);
+      ok(ps.ok === '0,0,wall' && ps.bad === '5,1,wall', '熊大复现：合法画留 (0,0)，坏画挪 (5,1)：' + JSON.stringify(ps)); }
+    // 顺序对调：同一组画，正序 / 反序读档，每幅画最终位置一样
+    { const base = [P('bad', 6, 0, 'wall'), P('old', 1, 4), P('ok1', 0, 1, 'wall'), P('ok2', 2, 0, 'wall'), P('ok3', 4, 1, 'wall')];
+      const a = pos(E.migrate(raw(JSON.parse(JSON.stringify(base)), 2), T0).st), b = pos(E.migrate(raw(JSON.parse(JSON.stringify(base)).reverse(), 2), T0).st);
+      ok(['ok1', 'ok2', 'ok3'].every(u => a[u] === b[u] && a[u] === base.find(p => p.uid === u).x + ',' + base.find(p => p.uid === u).y + ',wall'), '记录换序：合法画正反序都原位（' + JSON.stringify(a) + ' / ' + JSON.stringify(b) + '）'); }
+    // 墙挂满时坏画排前面：合法画全保留，坏画退仓库（不是合法画被挤去退仓）
+    { const full = [P('bad', 5, 0, 'wall'), P('a', 0, 0, 'wall'), P('b', 2, 0, 'wall'), P('c', 0, 1, 'wall'), P('d', 2, 1, 'wall'), P('e', 4, 1, 'wall'), P('f', 6, 1, 'wall')];
+      const m = E.migrate(raw(JSON.parse(JSON.stringify(full)), 2), T0), ps = pos(m.st);
+      ok(['a', 'b', 'c', 'd', 'e', 'f'].every(u => ps[u] && ps[u] === full.find(p => p.uid === u).x + ',' + full.find(p => p.uid === u).y + ',wall') && !ps.bad && m.wall.stored === 1 && (m.st.furnInv.furn_painting || 0) === 1, '墙满 + 坏画排前：6 幅合法原位，坏画退仓 1 幅'); }
+    // 旧档地板挂画不挡地板家具：同格的沙发照样读回
+    { const m = E.migrate(raw([P('old', 0, 3), { uid:'s', fid:'furn_sofa', x:0, y:3, rot:0, surf:'floor' }], 2), T0), ps = pos(m.st);
+      ok(ps.s === '0,3,floor' && ps.old && ps.old.endsWith(',wall') && m.wall.moved === 1, '旧地板挂画不挡同格沙发：沙发原位，画上墙 ' + JSON.stringify(ps)); }
+  }
   // 6) 底图尺寸：每张 home_<ceo>_<lv>.webp 必须 = 列×200 × (2+行)×200（Lv1 1200×1200、Lv2 1600×1400、Lv3 2000×1600），墙地分界 y=400
   const fs = require('fs'), path = require('path');
   const webpSize = (f) => { const b = fs.readFileSync(f), t = b.toString('ascii', 12, 16);

@@ -935,6 +935,27 @@ with sync_playwright() as p:
     zp.wait_for_timeout(500); zp.locator('#room').screenshot(path=f'{SHOTS}/home_11z_tall.png')
     zc.close()
 
+    # 12b：真实页面读档链路（localStorage → loadState → E.migrate → boot 整理）：坏画排前也不挤走合法画，如实提示；记录换序结果一样；刷新幂等
+    for tag, order in [('坏画在前', ['bad', 'ok']), ('合法画在前', ['ok', 'bad'])]:
+        wc = b.new_context(**dev); wp = wc.new_page(); hook(wp, 'wall12b-' + tag)
+        wp.goto(URL.replace('index.html', 'icon.svg'))
+        recs = {'bad': {'uid': 'bad', 'fid': 'furn_painting', 'x': 5, 'y': 0, 'rot': 0, 'surf': 'wall'}, 'ok': {'uid': 'ok', 'fid': 'furn_painting', 'x': 0, 'y': 0, 'rot': 0, 'surf': 'wall'}}
+        wp.evaluate("""(pl)=>{localStorage.clear(); const T=Date.now(); const s={v:3,rev:3,coins:999,totalEarned:999,fpMig11w:1,fpMig11z:1,shops:[{open:true,lv:4,emp:1},{open:false,lv:0,emp:0},{open:false,lv:0,emp:0},{open:false,lv:0,emp:0}],
+          ceos:{c77:{unlocked:true,lv:2,at:0}},gacha:{owned:[],draws:0,pity:0,last:null},claimLog:[],lastSeen:T-3000,maxSeen:T-3000,created:T-1e6,furnInv:{},
+          homes:{c77:{lv:2,next:9,placed:pl}}}; localStorage.setItem('""" + KEY + """', JSON.stringify(s));}""", [recs[k] for k in order])
+        wp.goto(URL); wp.wait_for_timeout(700)
+        tt = S(wp, "(()=>{const t=document.getElementById('toast');return t&&!t.classList.contains('hidden')?t.textContent:''})()")
+        close_modals(wp)
+        wpos = lambda: {q['uid']: (q['x'], q['y'], q.get('surf')) for q in st(wp)['homes']['c77']['placed']}
+        w1 = wpos(); s1 = st(wp)
+        check(w1.get('ok') == (0, 0, 'wall') and w1.get('bad') == (5, 1, 'wall') and len(w1) == 2 and not s1['furnInv'].get('furn_painting'), f'12b 真读档（{tag}）：合法画留 (0,0)，坏画挪 (5,1)，没退仓 {w1}')
+        check('墙面整理' in tt and '1 幅' in tt, f'12b 真读档（{tag}）：如实提示挪了 1 幅「{tt}」')
+        wp.reload(); wp.wait_for_timeout(700)
+        tt2 = S(wp, "(()=>{const t=document.getElementById('toast');return t&&!t.classList.contains('hidden')?t.textContent:''})()")
+        close_modals(wp); w2 = wpos()
+        check(w2 == w1 and '墙面整理' not in tt2, f'12b 刷新（{tag}）：位置不变、不再提示 {w2}「{tt2}」')
+        wc.close()
+
     print('== 9. 各尺寸 iPhone 视口 ==')
     for name in ['iPhone SE', 'iPhone SE (3rd gen)', 'iPhone 13 Mini', 'iPhone 15', 'iPhone 15 Pro Max', 'iPhone 16 Pro Max']:
         c = b.new_context(**p.devices[name]); q = c.new_page(); hook(q, name)

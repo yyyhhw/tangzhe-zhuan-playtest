@@ -993,7 +993,7 @@
   }
   // 读档整理：缺的补默认；坏家具/越界/重叠退回公共仓库（不丢）；旧版 per-CEO inv 合并进 furnInv
   function normHomeBundle(rawHomes, rawInv) {
-    const inv = {};
+    const inv = {}, wall = { moved:0, stored:0 };
     if (rawInv && typeof rawInv === 'object') for (const [fid, n] of Object.entries(rawInv)) addInv(inv, fid, n);
     const out = {};
     CEOS.forEach(c => {
@@ -1001,30 +1001,27 @@
       // 旧版仓库（按 CEO）→ 并入公共仓库
       if (o.inv && typeof o.inv === 'object') for (const [fid, n] of Object.entries(o.inv)) addInv(inv, fid, n);
       const h = { lv:Math.max(1, Math.min(HOME_MAX, Math.floor(num(o.lv, 1)))), placed:[], next:Math.max(1, Math.floor(num(o.next, 1))) };
-      const tmp = { homes:{ [c.id]:h }, ceos:{ [c.id]:{ unlocked:true } }, furnInv:{} }, seen = {};
+      const tmp = { homes:{ [c.id]:h }, ceos:{ [c.id]:{ unlocked:true } }, furnInv:inv }, seen = {};
       (Array.isArray(o.placed) ? o.placed : []).forEach(p => {
         if (!p || !FURN_BY_ID[p.fid]) return;
         const f = FURN_BY_ID[p.fid], rot = Number.isInteger(p.rot) ? p.rot & 3 : 0;
         const uid = typeof p.uid === 'string' && p.uid && !seen[p.uid] ? p.uid : 'u' + (h.next++);
-        let surf = p.surf === 'wall' || p.surf === 'floor' ? p.surf : (f.wall ? 'wall' : 'floor');
-        // 旧档挂画还在地板上：先按墙面尝试原 x / 找空位，再不行退仓库
-        if (f.wall && surf !== 'wall') {
-          if (Number.isInteger(p.x) && canPlace(tmp, c.id, p.fid, p.x, 0, rot, null, 'wall').ok) { h.placed.push({ uid, fid:p.fid, x:p.x, y:0, rot, surf:'wall' }); seen[uid] = true; }
-          else { const spot = findFree(tmp, c.id, p.fid, rot, 'wall');
-            if (spot) { h.placed.push({ uid, fid:p.fid, x:spot.x, y:spot.y, rot, surf:'wall' }); seen[uid] = true; }
-            else addInv(inv, p.fid, 1); }
+        const surf = p.surf === 'wall' || p.surf === 'floor' ? p.surf : (f.wall ? 'wall' : 'floor');
+        if (f.wall) {
+          // 12b：挂画这里不判合法、不找空位——先原样收下（只做 uid / rot 清洗），等整组布局恢复完，再统一交给 reconcileWall 两遍整理。
+          // 以前这里单遍「当场判 + findFree」，排在前面的坏画会先抢到后面合法画的格子，后者被挤走，读档还报告 0 迁移。
+          // 旧档地板挂画先标 'legacy'（不挡地板件；reconcileWall 视为不合法，按原 x 就近上墙）；原记录顺序保留
+          h.placed.push({ uid, fid:p.fid, x:p.x, y:p.y, rot, surf:surf === 'wall' ? 'wall' : 'legacy' }); seen[uid] = true;
         } else if (Number.isInteger(p.x) && Number.isInteger(p.y) && canPlace(tmp, c.id, p.fid, p.x, p.y, rot, null, surf).ok) {
           h.placed.push({ uid, fid:p.fid, x:p.x, y:p.y, rot, surf }); seen[uid] = true;
-        } else if (f.wall) {   // 挂画原位置现在是禁区（例：旧版自动摆放盖住了窗户）→ 挪到空墙，墙满了才退仓库
-          const spot = findFree(tmp, c.id, p.fid, rot, 'wall');
-          if (spot) { h.placed.push({ uid, fid:p.fid, x:spot.x, y:spot.y, rot, surf:'wall' }); seen[uid] = true; }
-          else addInv(inv, p.fid, 1);
         } else addInv(inv, p.fid, 1);
         const m = /^u(\d+)$/.exec(uid); if (m) h.next = Math.max(h.next, +m[1] + 1);
       });
+      // 整组恢复完（地板件已就位、挂画原样收下）→ 统一墙面整理：合法的先留，坏的挪最近空墙，挂不下退公共仓库
+      const r = reconcileWall(tmp, c.id); wall.moved += r.moved; wall.stored += r.stored;
       out[c.id] = h;
     });
-    return { homes:out, furnInv:inv };
+    return { homes:out, furnInv:inv, wall };
   }
   function normHomes(raw) { return normHomeBundle(raw, null).homes; }
   function normFurnInv(rawInv, rawHomes) { return normHomeBundle(rawHomes, rawInv).furnInv; }
@@ -1092,7 +1089,7 @@
     st.rev = num(raw.rev, 0);
     delete st.hired;
     st.v = CFG.SAVE_VERSION;
-    return { st, from };
+    return { st, from, wall:hb.wall };   // wall：读档时墙面整理挪了几幅 / 退了几幅（给页面提示用）
   }
 
   /* ================= 成就 / 下一步提示 ================= */
