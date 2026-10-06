@@ -28,6 +28,7 @@ function loadState() {
   migratedFrom = raw && m.source !== 'broken' && !m.blocked ? (raw.v !== CFG.SAVE_VERSION ? (raw.v || 0) : null) : null;
   if (m.source === 'bak') m.st.rev = Math.max(m.st.rev || 0, m.mainRev || 0);   // 从备份恢复：rev 不低于坏主档，免得多标签锁误判
   if (m.blocked) saveBlocked = true;
+  if (window.PetGame) PetGame.norm(m.st, E);   // 宠物 p4：没有 pet 字段 = 没买，旧档原样
   return m.st;
 }
 function storedRev() { if (TEST_MODE) return -1; try { const r = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); return r ? (r.rev || 0) : -1; } catch (e) { return -1; } }
@@ -45,6 +46,7 @@ function persist() {
   const t = now();
   if (t > state.lastSeen) state.lastSeen = t;
   state.maxSeen = Math.max(state.maxSeen || 0, state.lastSeen);
+  petBeforePersist();   // 宠物 p4：小狗状态写进 state.pet.eng（同一份存档）
   state.rev++;
   const json = JSON.stringify(state);
   // 完整备份：把当前通过完整校验的主档整份放进 BAK_KEY（README 里已有的 -bak 键，不新增键），再写新主档；坏主档永远不进备份
@@ -1695,7 +1697,7 @@ function renderRoom() {
   const isWall = p => E.itemSurf(p) === 'wall';
   const mkFurn = (p, rows) => {
     const f = E.FURN_BY_ID[p.fid], sz = E.furnSize(p.fid, p.rot);
-    return `<div class="furn ${f.layer === 'rug' ? 'rug' : ''} ${f.wall ? 'wallf' : ''} ${FURN_ART[furnName(p.fid)] ? 'art' : ''} ${furnTall(p.fid) ? 'tall' : ''} ${p.uid === homeSel ? 'sel' : ''}" data-uid="${p.uid}" data-fid="${p.fid}" data-surf="${E.itemSurf(p)}" style="left:${p.x / T.cols * 100}%;top:${p.y / rows * 100}%;width:${sz.w / T.cols * 100}%;height:${sz.h / rows * 100}%;--fc:${f.color}">${furnInner(p.fid, p.rot, true)}<b class="fn">${f.name}</b></div>`;
+    return `<div class="furn ${f.layer === 'rug' ? 'rug' : ''} ${f.wall ? 'wallf' : ''} ${FURN_ART[furnName(p.fid)] ? 'art' : ''} ${furnTall(p.fid) ? 'tall' : ''} ${p.uid === homeSel ? 'sel' : ''}" data-uid="${p.uid}" data-fid="${p.fid}" data-surf="${E.itemSurf(p)}" style="left:${p.x / T.cols * 100}%;top:${p.y / rows * 100}%;width:${sz.w / T.cols * 100}%;height:${sz.h / rows * 100}%;--fc:${f.color};--fz:${10 + (p.y + sz.h) * 10}">${furnInner(p.fid, p.rot, true)}<b class="fn">${f.name}</b></div>`;
   };
   // 墙面挂画 / 地板家具分开渲染；地板前后遮挡：地毯垫最底，其余按底脚行排
   const wallItems = H.placed.filter(isWall).slice().sort((a, b) => a.y - b.y || a.x - b.x).map(p => mkFurn(p, E.WALL_ROWS)).join('');
@@ -1712,6 +1714,7 @@ function renderRoom() {
   h += `<div class="room-tools">${homeMode === 'decor' ? (sel ? `<span class="rt-sel">已选：<b>${E.FURN_BY_ID[sel.fid].name}</b></span><button class="buy alt" data-act="homeRot" data-arg="${sel.uid}">↻ 旋转</button><button class="buy alt" data-act="homeStore" data-arg="${sel.uid}">${ic('box')}收回</button>`
     : '<span class="rt-sel">布置：点家具选中 / 拖动换位；挂画拖到墙面</span>') : '<span class="rt-sel">生活：点空地走过去 · 点床休息 · 点书架看书 · 点衣柜换装</span>'}
     ${homeMode === 'decor' ? `<button class="buy alt" data-act="homeUndo" data-arg="${id}" ${st.length ? '' : 'disabled'}>↶ 撤销${st.length ? ' ' + st.length : ''}</button>` : ''}</div>`;
+  h += petRoomBar(id);
   const inv = Object.entries(E.furnInvOf(state)).filter(([, n]) => n > 0);
   if (homeMode === 'decor') {
     h += `<div class="tray-head"><b>公共家具仓库</b><span>${inv.length ? '按住拖进房间 · 轻点自动摆' : '空空的'}</span><button class="buy alt mall-go" data-act="homeSub" data-arg="mall">${ic('mall')}去商城</button></div>`;
@@ -1747,6 +1750,7 @@ function renderMall() {
   const c = E.CEO_BY_ID[homeWho], open = E.homeOpen(state, homeWho), nm = open || c.id !== 'rocket' ? c.name : '？？？';
   const list = E.FURNITURE.filter(mallMatch);
   let h = `<div class="mall-head"><div>公共仓库 · ${open ? `现看 <b>${nm}</b> 的家` : `<b>${nm}</b> 还没加入，买的先进仓库`}</div><div>余额 ${coinSm}<b id="mallBal">${fmt(E.balance(state))}</b></div></div>`;
+  h += petMallCard();
   h += `<div class="mall-search"><input id="mallSearch" type="search" enterkeyhint="search" placeholder="搜索家具…" value="${mallQ.replace(/"/g, '&quot;')}" autocomplete="off"><button type="button" class="buy alt" data-act="mallClear" ${mallQ || mallCat !== 'all' || mallFilter.afford || mallFilter.owned || mallFilter.price !== 'any' || mallFilter.size !== 'any' ? '' : 'disabled'}>清除</button></div>`;
   h += `<div class="mall-cats" role="tablist"><button class="mc ${mallCat === 'all' ? 'on' : ''}" data-act="mallCat" data-arg="all">全部</button>${E.MALL_CATS.map(c => `<button class="mc ${mallCat === c.id ? 'on' : ''}" data-act="mallCat" data-arg="${c.id}">${c.name}</button>`).join('')}</div>`;
   if (mallCat === 'cabinet') {
@@ -1803,6 +1807,112 @@ function confirmHomeUp(id) {
 }
 // 12d3：摆放 / 移动 / 旋转 / 收回都先 atomic（改 + 落盘一起），这里只处理结果；没存上 → 已回滚、已提示
 const HOME_FAIL = '摆放没有生效，已恢复原样';
+/* ================= 宠物 p4：小狗（PetGame / PetEngine；存档只占 state.pet，一个键都不加） ================= */
+const PG = window.PetGame, PET_LIBS = !!(PG && window.PetEngine && window.PetArt && window.PetPuppy);
+let petRt = null, petView = null, petM = null, petHiddenAt = 0, petManual = false, petShown = '', petWaitShown = null;   // petWaitShown（p4b）：上一帧是不是「等待安置」，变了就重画家宅条
+function petInit(tryN) {
+  if (!PET_LIBS) return;
+  fetch('pet/art/manifest.json?v=p6').then(r => { if (!r.ok) throw new Error('manifest ' + r.status); return r.json(); }).then(m => {
+    const v = window.PetArt.validateManifest(m); if (!v.ok) throw new Error(v.errors.join('；'));
+    petM = m; petRt = PG.createRuntime({ E, manifest: m }); petView = PG.createView({ manifest: m, PA: window.PetArt, PP: window.PetPuppy, atlasBase: 'pet/art/', ver: 'p5' });
+    document.body.dataset.petReady = '1'; dirty = true;
+  }).catch(e => { if ((tryN || 0) < 3) setTimeout(() => petInit((tryN || 0) + 1), 600 * ((tryN || 0) + 1)); else console.warn('小狗没加载到：' + e.message); });
+}
+const petOwned = () => !!(PG && PG.owned(state));
+const petHere = () => petOwned() && state.pet.home === homeWho;
+function petBeforePersist() { if (petRt && state) petRt.beforePersist(state); }
+function petFrame(dt) {
+  if (!petRt) return;
+  const room = tab === 'home' && homeSub === 'room' && !!$('#roomFloor') && E.homeOpen(state, homeWho);
+  const w = petManual ? petRt.sync(state) : petRt.frame(dt, state, { decorHere: room && homeMode === 'decor' && petHere() });
+  const show = !!(w && room && petHere());
+  // p4b：等待安置 ↔ 出来了：重画家宅条（提示 / 按钮）；正看着这个家时，腾出空地出来了给个提示
+  const wt = !!(w && w.noRoom) + '|' + (w ? petRt.homeId : '');
+  if (wt !== petWaitShown) { const was = petWaitShown; petWaitShown = wt; dirty = true; if (was && was.startsWith('true|') && wt === 'false|' + was.slice(5) && show) toast('腾出空地了，小狗跑出来啦', 2200); }
+  petView.draw(show ? w : null, show ? $('#roomFloor') : null);
+  if (!show) return;
+  const lb = $('#petLabel'), af = $('#petAff');
+  if (lb && lb.textContent !== w.dog.label) lb.textContent = w.dog.label;
+  if (af) { const s = '亲密 ' + w.dog.affinity; if (af.textContent !== s) af.textContent = s; }
+  const bb = $('#petBallBtn'); if (bb) { const busy = w.ball.state === 'carried' || w.ball.state === 'air'; if (bb.disabled !== busy) bb.disabled = busy; }
+}
+function petResume() {
+  if (!petRt || !petHiddenAt) return;
+  const away = now() - petHiddenAt; petHiddenAt = 0;
+  if (away < 3000 || !petOwned()) return;
+  const ev = petRt.resume(state);
+  if (ev === 'slept' && tab === 'home' && homeSub === 'room' && petHere()) toast(`你不在的 ${Math.max(1, Math.round(away / 60000))} 分钟，小狗在窝里睡了一觉`, 2400);
+}
+function petMallCard() {
+  if (!PG) return '';
+  const P = PG.PET, own = petOwned(), open = E.homeOpen(state, homeWho), nm = E.CEO_BY_ID[homeWho].name;
+  let b, line;
+  const full = !own && open && petM && !PG.hasRoom(state, E, homeWho, petM);   // p4b：购买前就查有没有地方站
+  if (full) { b = '<button class="buy no" disabled id="petNoRoom">暂时无法<br>入宅</button>'; line = `<b>${nm}</b> 的家摆满了，没有小狗能站的空地；收起或挪开家具、或升级房子后再来（不会扣钱）`; }
+  else if (!own) { b = open ? btn('homePetBuy', homeWho, '购买', P.price) : '<button class="buy no" disabled>未加入</button>'; line = open ? `买了住进 <b>${nm}</b> 的家（只能养一只）` : `${homeWho === 'rocket' ? '这位 CEO' : nm} 还没加入，先切到已加入的 CEO`; }
+  else if (state.pet.home === homeWho) { b = '<button class="buy no" disabled>住这儿</button>'; line = petRt && petRt.waiting && petRt.homeId === homeWho ? `住在 <b>${nm}</b> 的家，<b>等待安置</b>：屋里摆满了，腾出 1 格空地它就出来` : `已经住在 <b>${nm}</b> 的家，去家宅看看它`; }
+  else { b = open ? `<button class="buy alt" data-act="homePetMove" data-arg="${homeWho}">搬过来</button>` : '<button class="buy no" disabled>未加入</button>'; line = `现在住在 <b>${E.CEO_BY_ID[state.pet.home].name}</b> 的家；搬家不花钱`; }
+  return `<div class="card mall-card pet-card" id="petCard" data-pet="${own ? 'owned' : 'none'}" data-room="${full ? 'full' : 'ok'}"><div class="ava sq furn-ico pet-ico"><span>${P.emoji}</span></div><div class="info"><div class="name">${P.name}<span class="tag match">宠物 · 新</span></div>
+    <div class="desc">${P.desc}<br>${line}</div></div>${b}</div>`;
+}
+function petRoomBar(id) {
+  if (!PG) return '';
+  if (!petOwned()) return `<div class="note pet-note" id="petNote">商城新到：${PG.PET.emoji} ${PG.PET.name}（${fmt(PG.PET.price)} 金币），买了就住进来。<button class="buy alt" data-act="homeSub" data-arg="mall">去看看</button></div>`;
+  if (!petRt) return '';   // 12e：没买狗的提示条不等 manifest 加载就画（免得加载完插一条、把家宅往下顶）
+  if (state.pet.home !== id) return `<div class="note pet-note" id="petNote">${PG.PET.emoji} 小狗住在 ${E.CEO_BY_ID[state.pet.home].name} 的家。<button class="buy alt" data-act="homePetMove" data-arg="${id}">接过来</button></div>`;
+  const w = petRt.sync(state);
+  if (w && w.noRoom) return `<div class="note pet-note pet-wait" id="petWait">${PG.PET.emoji} <b>小狗等待安置</b>：屋里摆满了，没有它能站的空地。收起或挪开一件家具（留出 1 格）、或升级房子，它会自己出来。</div>`;   // p4b
+  if (homeMode === 'decor') return `<div class="note pet-note" id="petNote">${PG.PET.emoji} 小狗在旁边等你摆完；摆好切回「生活」，它会自己绕开新家具。</div>`;
+  return `<div class="pet-bar" id="petBar"><div class="pet-lb">${PG.PET.emoji} <b id="petLabel">${w ? w.dog.label : ''}</b><small id="petAff">${w ? '亲密 ' + w.dog.affinity : ''}</small></div>
+    <button class="buy alt" data-act="homePetCall" id="petCallBtn">📣 呼唤</button><button class="buy alt" data-act="homePetPat" id="petPatBtn">✋ 摸摸</button><button class="buy alt" data-act="homePetBall" id="petBallBtn">🎾 抛球</button></div>`;
+}
+function confirmPetBuy(home) {
+  if (!PG) return;
+  const P = PG.PET, bal = E.balance(state), can = E.canAfford(state, P.price), nm = E.CEO_BY_ID[home] ? E.CEO_BY_ID[home].name : '';   // p5：余额 / 能不能买走统一钱包
+  if (petOwned()) { toast('已经有小狗了（只能养一只）'); return; }
+  if (!E.walletOk(state)) { sfx('no'); toast('金币数据异常，现在不能买'); return; }   // p5：12d1 异常钱包（余额超安全整数等）不弹购买窗、不扣钱
+  if (!petM) { toast('小狗还没准备好，稍后再试'); return; }
+  if (!PG.hasRoom(state, E, home, petM)) { sfx('no'); toast(PG.NO_ROOM, 2600); dirty = true; return; }   // p4b：满屋不弹购买窗、不扣钱
+  openModal(`<div class="mbubble">商城 · 宠物</div><div class="buy-prev"><div class="furn-ico big pet-ico"><span>${P.emoji}</span></div></div>
+    <div class="mtitle">${P.name}</div>
+    <table class="pv-table"><tr><td>价格</td><td>${fmt(P.price)}</td></tr><tr><td>当前余额</td><td>${fmt(bal)}</td></tr><tr><td>住进</td><td>${nm} 的家</td></tr><tr class="total"><td>买后余额</td><td class="${can ? '' : 'down'}">${can ? fmt(bal - P.price) : '还差 ' + fmt(P.price - bal)}</td></tr></table>
+    <div class="mnote">${P.desc}以后想换个家，在商城或家宅里点「搬过来」，不花钱。</div>
+    <div class="mbtns two"><button class="buy ghost" id="mNo">再想想</button><button class="buy red" id="pbYes" ${can ? '' : 'disabled'}>${can ? '确认购买' : '金币不够'}</button></div>`, false);
+  $('#mNo').addEventListener('click', closeModal, { once:true });
+  $('#pbYes').addEventListener('click', () => {
+    petBeforePersist();
+    const r = PG.buy(state, E, home, now(), petM, () => persist(), saveBlocked || frozen); closeModal();   // 12d3：扣款 + 写小狗 + persist 一起走 E.transact，存不上整档回滚
+    if (!r.ok) { if (r.stage === 'save' || r.stage === 'validate' || r.stage === 'blocked') saveFailNote(r, '小狗没买成（金币没扣）'); else failBuy(null, r.why); return; }
+    homeWho = home; homeSub = 'room'; homeMode = 'live'; homeSel = null; pageFlip('prev'); $('#panel').scrollTop = 0;
+    afterBuy(null, `${P.name} 住进 ${nm} 的家啦！点它摸摸`);
+  }, { once:true });
+}
+function petMoveHere(home) {
+  petBeforePersist();
+  const r = atomic(() => PG.move(state, E, home));
+  if (!r.ok) { if (r.why !== 'saveFailed') { sfx('no'); toast(r.why); } return; }
+  homeWho = home; homeSub = 'room'; homeMode = 'live'; homeSel = null;
+  const wt = petRt && petRt.sync(state) && petRt.waiting;
+  sfx('tap'); toast(wt ? `小狗搬到 ${E.CEO_BY_ID[home].name} 的家了，但屋里摆满了：先等待安置，腾出空地它就出来` : `小狗搬到 ${E.CEO_BY_ID[home].name} 的家了`, wt ? 2800 : 1900); dirty = true;
+}
+function petDo(k) {
+  if (!petRt || !petHere()) return;
+  const r = k === 'call' ? petRt.call(state) : k === 'pet' ? petRt.pet(state, 'button') : petRt.throwBall(state);
+  if (!r.ok) { sfx('no'); toast(r.why === 'carried' ? '球在它嘴里呢' : r.why === 'flying' ? '球还在飞' : r.why === 'rearrange' ? '先把家具摆好' : r.why === 'waiting' ? '屋里没地方站，先腾出空地' : '现在不行'); return; }
+  sfx('tap'); if (r.ignored === 'asleep') toast('它睡着了，球先放那儿'); else if (r.ignored === 'tired') toast('它太困了，想回窝');
+}
+function petTap(e) {
+  if (!petRt || !petView || !petHere() || !petRt.w) return false;
+  if (!petView.hit(petRt.w, $('#roomFloor'), e.clientX, e.clientY)) return false;
+  petRt.pet(state, 'tap'); sfx('tap'); return true;
+}
+const petHooks = {
+  get rt() { return petRt; }, get w() { return petRt && petRt.w; }, get waiting() { return !!(petRt && petRt.waiting); }, get view() { return petView; }, get M() { return petM; }, PG,
+  manual(on) { petManual = !!on; },
+  advance(sec) { const w = petRt && petRt.sync(state); if (w) window.PetEngine.step(w, sec); return w ? window.PetEngine.snapshot(w) : null; },
+  snapshot() { const w = petRt && petRt.sync(state); return w ? window.PetEngine.snapshot(w) : null; },
+  resume(ms) { petHiddenAt = now() - (ms || 60000); petResume(); }, persist() { return persist(); },
+};
 function homeCommit(r, msg) {
   if (!r.ok) { if (r.why === 'saveFailed') { dirty = true; return false; } sfx('no'); if (!r.same) toast(r.why); return false; }
   if (r.undo) pushUndo(r.undo);
@@ -1820,6 +1930,11 @@ function homeAct(a, arg, b) {
     case 'homeSub': if (homeSub !== arg) { homeSub = arg; homeSel = null; pageFlip(arg === 'mall' ? 'next' : 'prev'); $('#panel').scrollTop = 0; sfx('swoosh'); } dirty = true; return;
     case 'homeWho': if (homeWho !== arg) { homeWho = arg; homeSel = null; sfx('tap'); } if (!E.homeOpen(state, arg)) toast('这位 CEO 还没加入'); dirty = true; return;
     case 'homeUp': return confirmHomeUp(arg);
+    case 'homePetBuy': return confirmPetBuy(arg || homeWho);
+    case 'homePetMove': return petMoveHere(arg || homeWho);
+    case 'homePetCall': return petDo('call');
+    case 'homePetPat': return petDo('pet');
+    case 'homePetBall': return petDo('ball');
     case 'homeBuy': return confirmHomeBuy(arg);
     case 'mallCat': mallCat = arg; if (arg !== 'cabinet') mallSub = 'all'; dirty = true; return;
     case 'mallSub': mallSub = arg; dirty = true; return;
@@ -1870,7 +1985,7 @@ function homeDown(e) {
   if (homeMode === 'live') {
     if (e.button > 0) return;
     if (e.target.closest('.mode-tabs, .room-tools, .book-tabs, .home-who, .tray-head, .mall-go, button')) return;
-    e.preventDefault(); audioUnlock(); homeLiveTap(e); return;
+    e.preventDefault(); audioUnlock(); if (petTap(e)) return; homeLiveTap(e); return;
   }
   const fEl = e.target.closest('#roomFloor .furn, #roomWall .furn'), iEl = e.target.closest('.inv-item');
   if (!fEl && !iEl) { if (homeSel && (e.target.closest('#roomFloor') || e.target.closest('#roomWall'))) { homeSel = null; dirty = true; } return; }
@@ -1993,12 +2108,12 @@ document.addEventListener('gesturestart', e => e.preventDefault());
 let lastTouchEnd = 0;
 document.addEventListener('touchend', e => { const t = Date.now(); if (t - lastTouchEnd < 300 && !e.target.closest('button')) e.preventDefault(); lastTouchEnd = t; }, { passive:false });
 
-function onHide() { if (frozen) return; tick(); if (order) order = null; /* 离线不结算进行中的团单，避免和离线收益纠缠 */ special = null; state.lastSeen = now(); persist(); audioPause(); }
+function onHide() { if (frozen) return; petHiddenAt = now(); tick(); if (order) order = null; /* 离线不结算进行中的团单，避免和离线收益纠缠 */ special = null; state.lastSeen = now(); persist(); audioPause(); }
 function onShow() {
   if (frozen) return;
   if (!lockMine()) { freeze(); return; }
   if (storedRev() > state.rev) { freeze(); return; }
-  tick(); audioResume(); lastFrame = performance.now();
+  tick(); audioResume(); lastFrame = performance.now(); petResume();
 }
 document.addEventListener('visibilitychange', () => { if (document.hidden) onHide(); else onShow(); });
 window.addEventListener('pagehide', onHide);
@@ -2032,6 +2147,7 @@ function frame(ts) {
     } else if (ac.line && ac.until < clock) { ac.line = ''; ac.act = null; if (el) { const b = el.querySelector('.ha-line'), i = el.querySelector('.ha-act'); if (b) b.remove(); if (i) i.textContent = ''; } }
   }
   if (dirty) renderTab();
+  petFrame(dt);   // 宠物 p4：小狗一直在过日子；在它家的生活页才画
   saveAcc += dt; if (saveAcc > 5) { saveAcc = 0; persist(); }
 }
 
@@ -2066,6 +2182,7 @@ function boot() {
   requestAnimationFrame(frame);
 }
 boot();
+petInit();
 
 // 测试/调试钩子（不影响玩家）
 window.__tzz = { TEST_MODE, TEST_LV, SAVE_KEY, BAK_KEY, get saveBlocked() { return saveBlocked; }, get loadInfo() { return loadInfo; }, restoreGood, earn, doUpgradeShop, goPage, txn, atomic, showOffline, homeAutoPlace, showReveal, shopUpgradeCount, get buyAmt() { return buyAmt; }, E, FURN_SIDE, furnInner, get combo() { return combo; }, get critFx() { return critFx; }, critLine, refreshCrit, showComic, showCrossBig, queueModal, CROSS_ART, crossURL, showCeoJoin, get state() { return state; }, set state(v) { state = v; }, persist, onReturn, tapShop, act, setTab, switchShop, renderTab,
@@ -2074,5 +2191,5 @@ window.__tzz = { TEST_MODE, TEST_LV, SAVE_KEY, BAK_KEY, get saveBlocked() { retu
   get big() { return order; }, get order() { return order; }, get special() { return special; }, get guests() { return guests; },
   hitBig, modalOpen, closeModal, get frozen() { return frozen; },
   audioState() { return AU.ctx ? AU.ctx.state : 'none'; }, showPreview, openAssign, JOB_ART, jobShown, jobURL, showJobArt,
-  HOME_ART, FURN_ART, FURN_UP, homeAct, get homeWho() { return homeWho; }, get homeSub() { return homeSub; }, get homeMode() { return homeMode; }, set homeMode(v) { homeMode = v === 'decor' ? 'decor' : 'live'; }, get homeSel() { return homeSel; }, get homeDrag() { return homeDrag; }, homeActor, LIVE_LINES, homeUndo, resize, get canvasSize() { return { W, H }; }, lookOf, drawPerson, drawHead, LOOKS, get bubble() { return bubble; } };
+  HOME_ART, FURN_ART, FURN_UP, homeAct, get homeWho() { return homeWho; }, get homeSub() { return homeSub; }, get homeMode() { return homeMode; }, set homeMode(v) { homeMode = v === 'decor' ? 'decor' : 'live'; }, get homeSel() { return homeSel; }, get homeDrag() { return homeDrag; }, homeActor, LIVE_LINES, homeUndo, resize, get canvasSize() { return { W, H }; }, pet: petHooks, lookOf, drawPerson, drawHead, LOOKS, get bubble() { return bubble; } };
 })();
