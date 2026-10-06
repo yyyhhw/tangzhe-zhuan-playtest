@@ -718,3 +718,5 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 
 /* 12c2：竖放侧面图（art/furn_<名>_side.webp，登记在 app.js FURN_SIDE）；rot 3 水平镜像。没侧面图的保持正面图等比兜底 */
 .furn .fi img.mir{transform:scaleX(-1)}
+/* 12b2 测试房间（?test=homes）角标：提醒这是不存档的假数据 */
+#testBadge{position:fixed;left:50%;bottom:calc(var(--sab,0px) + 80px);transform:translateX(-50%) rotate(-1deg);z-index:59;opacity:.92;pointer-events:none;background:#ffd23f;color:#141414;border:2px solid #141414;border-radius:6px;box-shadow:2px 2px 0 #141414;font-size:11px;font-weight:900;padding:2px 8px;white-space:nowrap}

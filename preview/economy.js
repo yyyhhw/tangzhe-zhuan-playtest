@@ -489,6 +489,11 @@
     c77_3:    ART_WALL([5, 6, 7, 8, 9]),        // 双拱窗 + 藤蔓花（第 6–10 列，左拱柱压到第 6 列）
     pearl_2:  ART_WALL([2, 3, 4, 5, 6, 7]),     // 绿色壁柱（第 3–4 列）+ 装饰墙板 + 半圆拱窗 / 蝴蝶结花饰（第 5–8 列）
     pearl_3:  ART_WALL([4, 5, 6, 7, 8, 9]).concat([[3, 0]]),  // 玻璃花房（第 5–10 列）+ 上排第 4 列垂下的花藤
+    // 12b2：阿宅 / 火箭老板 Lv2、Lv3 底图，同样按实图标（第 N 列 = 从 1 数）
+    otaku_2:  ART_WALL([3, 4, 5, 6, 7]),        // 竖条格栅壁柱（第 4 列右半 + 右墙边）+ 金边柜门（第 5–6 列）+ 手办 / 书 / 绿植灯光书架（第 6–8 列）
+    otaku_3:  ART_WALL([2, 3, 4, 5, 6, 7, 8, 9]),  // 左边奶白软包板只占第 1–2 列；第 3 列起是蓝色灯带 + 大理石波浪板 + 竖条格栅 + 战机 / 手办壁龛（第 7–10 列）
+    rocket_2: ART_WALL([3, 4, 5, 6, 7]),        // 铆钉立柱 + 铜壁灯（第 4 列）+ 大舷窗（第 5–8 列）；第 1–3 列是素面铆钉钢板
+    rocket_3: ART_WALL([3, 4, 5, 6, 7, 8, 9]),  // 穹顶弧梁（第 4–5 列）+ 星空大窗 + 灯带（第 6–10 列）；第 1 列左边一段弧梁压边，挂画盖住无妨，保住小屋左两列
   };
   // 没底图（升级后的公寓 / 豪宅）：emoji 窗户 + 房名牌都靠右上，占第一排最右 3 格；左边永远留空墙，
   // 所以小屋左 2 列挂好的画升级后照样合法（格子只会变大）
@@ -1097,6 +1102,34 @@
     return { st, from, wall:hb.wall };   // wall：读档时墙面整理挪了几幅 / 退了几幅（给页面提示用）
   }
 
+  /* ================= 12b2：测试房间（只给 ?test=homes 用，不读不写真存档） ================= */
+  // 四家都开张、四位 CEO 都在，房子统一到 lv（2 公寓 / 3 豪宅），每家摆好地板家具 + 1 幅挂画，仓库再放几件给测试员自己摆；金币够升级 / 买
+  const TEST_HOME_KIT = [['furn_rug', 2, 2], ['furn_table', 3, 2], ['furn_bed', 0, 0], ['furn_sofa', 2, -1], ['furn_bookshelf', -3, -1], ['furn_lamp', -1, -2], ['furn_plant', -1, -1]];   // 高家具都放前排，不挡后墙底图
+  function testHomesState(now, lv) {
+    lv = lv === 3 ? 3 : 2;
+    const st = newState(now);
+    st.coins = 1e12; st.totalEarned = 1e12; st.taps = 1;
+    st.shops = SHOPS.map(() => ({ open:true, lv:CFG.ROCKET_UNLOCK_LV, emp:1 }));
+    checkUnlocks(st);
+    const report = {};
+    for (const c of CEOS) {
+      const h = homeOf(st, c.id); h.lv = lv; const T = homeTier(lv), got = [];
+      for (const [fid, x0, y0] of TEST_HOME_KIT) {
+        buyFurniture(st, fid);
+        const x = x0 < 0 ? T.cols + x0 : x0, y = y0 < 0 ? T.rows + y0 : y0;
+        let r = placeItem(st, c.id, fid, x, y, 0);
+        if (!r.ok) { const sp = findFree(st, c.id, fid, 0); r = sp ? placeItem(st, c.id, fid, sp.x, sp.y, 0, sp.surf) : r; }
+        got.push(fid + (r.ok ? '' : '✗'));
+      }
+      buyFurniture(st, 'furn_painting'); const sp = findFree(st, c.id, 'furn_painting', 0, 'wall');
+      if (sp) placeItem(st, c.id, 'furn_painting', sp.x, sp.y, 0, 'wall');
+      report[c.id] = got;
+    }
+    for (const [fid, n] of [['furn_painting', 4], ['furn_plant', 2], ['furn_lamp', 1], ['furn_catbed', 1]]) for (let i = 0; i < n; i++) buyFurniture(st, fid);
+    st.coins = 1e12; st.test = 'homes';
+    return st;
+  }
+
   /* ================= 成就 / 下一步提示 ================= */
   function nextGoal(st) {
     const S = st.shops, c = st.coins;
@@ -1124,7 +1157,7 @@
     checkUnlocks, assignCeo, assignCeoWithPayout, creditOnline, previewAssign, signOf, cloneState,
     canOpen, openShop, hireEmp, upgradeEmp, upgradeCeo, upgradeShop,
     dayKey, nextResetTs, clockRolledBack, computeOffline, settleOffline, canDouble, claimOffline,
-    gachaUnlocked, gachaRemaining, gachaOdds, gachaPrice, gachaDraw, cardsComplete, newState, migrate, nextGoal,
+    gachaUnlocked, gachaRemaining, gachaOdds, gachaPrice, gachaDraw, cardsComplete, newState, migrate, nextGoal, testHomesState,
     HOME_TIERS, HOME_MAX, WALL_ROWS, WALL_BLOCK, wallBlockedCells, MALL_CATS, FURNITURE, FURN_BY_ID, newHome, homeTier, homeOf, furnInvOf, homeOpen, furnLiveAct, furnSize, itemSurf, canPlace, findFree, homeUpgradeCost,
     buyFurniture, upgradeHome, placeItem, moveItem, rotateItem, storeItem, undoHome, migrateWallPaintings, reconcileWall, WALL_BLOCK, migrateFootprint11w, migrateFootprint11z, migrateFootprints, FP_OLD_11Z, homeLuxury, invCount, furnStats, normHomes, normFurnInv, normHomeBundle };
 });

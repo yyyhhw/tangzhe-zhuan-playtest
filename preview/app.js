@@ -3,6 +3,10 @@
 'use strict';
 const E = window.Economy, CFG = E.CFG;
 const SAVE_KEY = 'tangzhe-preview-save', BAK_KEY = 'tangzhe-preview-save-bak', LOCK_KEY = 'tangzhe-preview-tab-lock';
+// 12b2 测试房间：只有网址带 ?test=homes 才进；整局放在内存里，不读、不写任何 localStorage（真存档 / 备份 / 多标签锁都不碰），刷新就重置
+// &lv=3 → 四家都是豪宅，默认四家都是公寓
+const TEST_Q = (() => { try { return new URLSearchParams(location.search); } catch (e) { return null; } })();
+const TEST_MODE = !!(TEST_Q && TEST_Q.get('test') === 'homes'), TEST_LV = TEST_Q && TEST_Q.get('lv') === '3' ? 3 : 2;
 const INK = '#141414', PAPER = '#f7f1e3', RED = '#e63946', YELLOW = '#ffd23f', TAU = Math.PI * 2;
 const $ = s => document.querySelector(s);
 const now = () => Date.now();
@@ -13,6 +17,7 @@ const rand = () => { if (crypto && crypto.getRandomValues) return crypto.getRand
 const TAB = rid();
 let frozen = false, state, migratedFrom = null, loadWallMig = { moved:0, stored:0 };
 function loadState() {
+  if (TEST_MODE) { loadWallMig = { moved:0, stored:0 }; migratedFrom = null; return E.testHomesState(now(), TEST_LV); }
   let raw = null;
   try { raw = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); } catch (e) { raw = null; }
   if (raw && raw.v !== CFG.SAVE_VERSION) { try { localStorage.setItem(BAK_KEY + '-v' + (raw.v || 0), JSON.stringify(raw)); } catch (e) {} }
@@ -21,10 +26,11 @@ function loadState() {
   migratedFrom = raw ? (raw.v !== CFG.SAVE_VERSION ? (raw.v || 0) : null) : null;
   return m.st;
 }
-function storedRev() { try { const r = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); return r ? (r.rev || 0) : -1; } catch (e) { return -1; } }
+function storedRev() { if (TEST_MODE) return -1; try { const r = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); return r ? (r.rev || 0) : -1; } catch (e) { return -1; } }
 // 保存 = 先确认没有别的页面写过（rev 比我新就冻结本页），再整份原子写入
 function persist() {
   if (frozen) return false;
+  if (TEST_MODE) { state.rev++; return true; }   // 测试房间：只在内存里，永远不写真存档
   const sr = storedRev();
   if (sr > state.rev) { freeze(); return false; }
   const t = now();
@@ -42,14 +48,14 @@ function atomic(fn) {
   if (!persist()) { state = JSON.parse(snap); return { ok:false, why:'saveFailed' }; }
   return res;
 }
-function claimLock() { try { localStorage.setItem(LOCK_KEY, JSON.stringify({ tab:TAB, t:now() })); } catch (e) {} }
-function lockMine() { try { const v = JSON.parse(localStorage.getItem(LOCK_KEY) || 'null'); return !v || v.tab === TAB; } catch (e) { return true; } }
+function claimLock() { if (TEST_MODE) return; try { localStorage.setItem(LOCK_KEY, JSON.stringify({ tab:TAB, t:now() })); } catch (e) {} }
+function lockMine() { if (TEST_MODE) return true; try { const v = JSON.parse(localStorage.getItem(LOCK_KEY) || 'null'); return !v || v.tab === TAB; } catch (e) { return true; } }
 function freeze() {
   if (frozen) return; frozen = true;
   $('#lockOverlay').classList.remove('hidden'); audioPause();
 }
 window.addEventListener('storage', e => {
-  if (frozen) return;
+  if (frozen || TEST_MODE) return;
   if (e.key === LOCK_KEY && e.newValue) { try { if (JSON.parse(e.newValue).tab !== TAB) freeze(); } catch (x) {} }
   if (e.key === SAVE_KEY && e.newValue) { try { if ((JSON.parse(e.newValue).rev || 0) > state.rev) freeze(); } catch (x) {} }
 });
@@ -404,8 +410,8 @@ function avatarURL(id, key) {
   c.translate(56, 186); c.scale(1.15, 1.15); drawHead(c, lookOf(id), { happy:false });
   return (avaCache[k] = o.toDataURL());
 }
-// 熊大画的 CEO 头像（图没加载出来就退回画布小人头像）
-const ART_V = '11', PORTRAIT = { c77:1, pearl:1, otaku:1, rocket:1 };
+// 熊大画的 CEO 头像（图没加载出来就退回画布小人头像）；12b2 起 77 的 ceo_c77 / face_c77 是漫画新版，换了图所以 ART_V 跟着换
+const ART_V = '12b2', PORTRAIT = { c77:1, pearl:1, otaku:1, rocket:1 };
 const faceURL = id => PORTRAIT[id] ? `art/face_${id}.webp?v=${ART_V}` : avatarURL(id);
 const bustURL = id => PORTRAIT[id] ? `art/ceo_${id}.webp?v=${ART_V}` : avatarURL(id);
 const faceImg = id => `<img src="${faceURL(id)}"${PORTRAIT[id] ? ` class="art" data-fb="${id}"` : ''} alt="">`;
@@ -1537,7 +1543,7 @@ function showIntro() {
 // 美术：画师的图转成 webp 后放 art/，在下面两张表里登记一张就用一张；没登记 / 加载失败 → 用色块 + emoji 占位
 // 房间底图：art/home_<ceo>_<lv>.webp（ceo=c77/pearl/otaku/rocket，lv=1/2/3），例 { c77_1:1 }
 // 底图规格：宽 = 列数×200px，高 = (2 + 行数)×200px；上面 2 格高是后墙，下面是地板格，平行投影无消失点。Lv1 6×4 → 1200×1200，墙地分界 y=400
-const HOME_ART = { c77_1: 1, pearl_1: 1, otaku_1: 1, rocket_1: 1, c77_2: 1, c77_3: 1, pearl_2: 1, pearl_3: 1 };  // 熊大四位 CEO 的 Lv1（原图墙 / 地板在踢脚线底边处分开，分别缩放到 1200×400 + 1200×800）；12b1：77 / 珍珠姐 Lv2 1600×400+1600×1000、Lv3 2000×400+2000×1200，同样在踢脚线底边切开
+const HOME_ART = { c77_1: 1, pearl_1: 1, otaku_1: 1, rocket_1: 1, c77_2: 1, c77_3: 1, pearl_2: 1, pearl_3: 1, otaku_2: 1, otaku_3: 1, rocket_2: 1, rocket_3: 1 };  // 熊大四位 CEO 的 Lv1（原图墙 / 地板在踢脚线底边处分开，分别缩放到 1200×400 + 1200×800）；12b1：77 / 珍珠姐 Lv2 1600×400+1600×1000、Lv3 2000×400+2000×1200，同样在踢脚线底边切开；12b2：阿宅 / 火箭老板 Lv2/Lv3 同法
 const FURN_ART = { bed:1, bookshelf:1, wardrobe:1, table:1, fridge:1, sofa:1, rug:1, plant:1, lamp:1, tv:1, painting:1, catbed:1, rocket_rocket_model:1, rocket_meteor_stand:1, rocket_biosphere_dome:1, s77_cloud_canopy:1, rocket_capsule_bunk:1 };  // +火箭模型/陨石展座/生态圆顶/云朵纱帐床；宽=占地×200（1格240）
 const furnName = fid => fid.replace(/^furn_/, '');
 // 高家具：占地只有底下那排格子，图按「高 / 宽」比例往上伸（盖住后墙），底脚对齐占地底边；值 = 图高 / 图宽（400×600 → 1.5）
@@ -1971,7 +1977,9 @@ function boot() {
   const wallMig = { moved:loadWallMig.moved + wallMig0.moved, stored:loadWallMig.stored + wallMig0.stored };
   const p = E.settleOffline(state, now(), rid);
   persist();
-  scheduleBig(); scheduleSpecial(); renderTabs(); setTab('shop');
+  scheduleBig(); scheduleSpecial(); renderTabs(); setTab(TEST_MODE ? 'home' : 'shop');
+  if (TEST_MODE) { const b = document.createElement('div'); b.id = 'testBadge'; b.textContent = '测试房间 · ' + (TEST_LV === 3 ? '豪宅' : '公寓') + ' · 不存档，刷新重置'; document.body.appendChild(b);
+    const place = () => { const n = $('#bottomNav'); if (n) b.style.bottom = Math.max(8, innerHeight - n.getBoundingClientRect().top + 6) + 'px'; }; place(); addEventListener('resize', place); }
   if (migratedFrom != null) toast('存档已升级到 v' + CFG.SAVE_VERSION + '（新盲盒 + CEO 穿搭，收藏都保留）', 2600);
   if (fpMig && !fpMig.skipped && (fpMig.shifted || fpMig.stored)) toast(fpMig.stored ? `家具占地收紧：${fpMig.shifted} 件按脚底重锚，${fpMig.stored} 件腾不出空位已退回仓库` : `家具占地收紧：${fpMig.shifted} 件已按脚底重锚`, 3200);
   if (wallMig && (wallMig.moved || wallMig.stored)) toast(wallMig.stored ? `墙面整理：${wallMig.moved} 幅挂画挪到空墙，${wallMig.stored} 幅墙面没空已退回仓库` : `墙面整理：${wallMig.moved} 幅挂画已挪到空墙`, 3200);
@@ -1985,7 +1993,7 @@ function boot() {
 boot();
 
 // 测试/调试钩子（不影响玩家）
-window.__tzz = { E, FURN_SIDE, furnInner, get combo() { return combo; }, get critFx() { return critFx; }, critLine, refreshCrit, showComic, showCrossBig, queueModal, CROSS_ART, crossURL, showCeoJoin, get state() { return state; }, set state(v) { state = v; }, persist, onReturn, tapShop, act, setTab, switchShop, renderTab,
+window.__tzz = { TEST_MODE, TEST_LV, SAVE_KEY, E, FURN_SIDE, furnInner, get combo() { return combo; }, get critFx() { return critFx; }, critLine, refreshCrit, showComic, showCrossBig, queueModal, CROSS_ART, crossURL, showCeoJoin, get state() { return state; }, set state(v) { state = v; }, persist, onReturn, tapShop, act, setTab, switchShop, renderTab,
   forceBig() { nextBigAt = 0; if (order) order = null; }, clearVisitors() { order = null; special = null; nextBigAt = clock + 9999; nextSpecialAt = clock + 9999; }, forceSpecial() { nextSpecialAt = 0; special = null; },
   forceSupers() { for (const k in superNext) superNext[k] = 0; updateSupers(); renderTab(); },
   get big() { return order; }, get order() { return order; }, get special() { return special; }, get guests() { return guests; },

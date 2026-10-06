@@ -1188,6 +1188,78 @@ with sync_playwright() as p:
     sc.close()
     errs[:] = [e for e in errs if not (e.startswith('12c2-side') and ('_side.webp' in e or '404' in e))]  # 4b 故意请求不存在的侧面图
 
+    print('== 12b2. 阿宅 / 火箭老板 Lv2/Lv3 底图 + 真禁区；77 漫画新全身 / 头像；测试房间 ?test=homes 不碰真存档 ==')
+    TURL = URL + ('&' if '?' in URL else '?') + 'test=homes'
+    WB12B2 = {'otaku_2': (10, 1600, 1400), 'otaku_3': (16, 2000, 1600), 'rocket_2': (10, 1600, 1400), 'rocket_3': (14, 2000, 1600)}   # 禁区格数 = 列数 × 2 排
+    zc = b.new_context(**p.devices['iPhone 15']); zp = zc.new_page(); hook(zp, '12b2')
+    zp.goto(URL); zp.evaluate("localStorage.clear()"); zp.reload(); zp.wait_for_timeout(800); close_modals(zp)
+    hl3 = S(zp, "Promise.all(" + json.dumps([[k, v[1], v[2]] for k, v in WB12B2.items()]) + ".map(([k,w,h])=>new Promise(r=>{ if(!__tzz.HOME_ART[k]) return r(k+' 没登记'); const im=new Image(); im.onload=()=>r(im.naturalWidth===w&&im.naturalHeight===h?null:k+' 尺寸 '+im.naturalWidth+'×'+im.naturalHeight); im.onerror=()=>r(k+' 加载失败'); im.src='art/home_'+k+'.webp';}))).then(a=>a.filter(Boolean))")
+    check(hl3 == [], f'12b2 阿宅 / 火箭老板 Lv2/Lv3 底图都登记、加载成功、尺寸对（公寓 1600×1400、豪宅 2000×1600）{hl3}')
+    a77 = S(zp, "Promise.all([['ceo_c77',480],['face_c77',192]].map(([n,w])=>new Promise(r=>{const im=new Image(); im.onload=()=>r(im.naturalWidth===w&&im.naturalHeight===w?null:n+' '+im.naturalWidth+'×'+im.naturalHeight); im.onerror=()=>r(n+' 加载失败'); im.src='art/'+n+'.webp?v=12b2';}))).then(a=>a.filter(Boolean))")
+    check(a77 == [], f'12b2 77 漫画新全身 ceo_c77 480×480、头像 face_c77 192×192 都能加载 {a77}')
+    zp.locator('#bottomNav [data-tab="ceo"]').click(); zp.wait_for_timeout(500)
+    srcs = S(zp, "[...document.querySelectorAll('img')].map(i=>i.getAttribute('src')||'').filter(s=>/_c77\\.webp/.test(s))")
+    check(srcs and all(s.endswith('?v=12b2') for s in srcs) and any('face_c77' in s for s in srcs), f'12b2 CEO 页 77 的图都带新缓存号 ?v=12b2（换了图，不吃旧缓存）{srcs[:3]}')
+    S(zp, "(()=>{const s=__tzz.state; s.ceos.otaku.unlocked=true; s.ceos.rocket.unlocked=true; s.coins=1e9; __tzz.persist();})()")
+    zp.locator('#bottomNav [data-tab="home"]').click(); zp.wait_for_timeout(500); close_modals(zp)
+    for key, (nb, W, H) in WB12B2.items():
+        cid, lv = key.split('_')[0], int(key[-1])
+        S(zp, f"(()=>{{const s=__tzz.state; s.homes.{cid}.lv={lv}; s.homes.{cid}.placed=[]; __tzz.persist(); __tzz.homeAct('homeWho','{cid}'); __tzz.renderTab();}})()")
+        zp.wait_for_function("(()=>{const i=document.querySelector('#room .room-art'); return i&&i.complete&&i.naturalWidth>0})()", timeout=15000)
+        g = S(zp, "(()=>{const r=document.getElementById('room'),im=r.querySelector('.room-art'); return {has:r.classList.contains('has-art'), src:im.getAttribute('src'), nw:im.naturalWidth, nh:im.naturalHeight, blocks:document.querySelectorAll('#wallGrid .wall-block').length, n:__tzz.E.wallBlockedCells(__tzz.state,__tzz.homeWho).length}})()")
+        check(g['has'] and g['src'].startswith(f'art/home_{key}.webp') and g['nw'] == W and g['nh'] == H and g['blocks'] == g['n'] == nb, f"12b2 {key}：房间用真底图 {g['nw']}×{g['nh']}，墙面禁区 {g['blocks']} 格（应 {nb}）")
+    zc.close()
+    # —— 测试房间：先造一份真存档（另一个标签开着真游戏），再开 ?test=homes 狂操作，真存档 / 备份 / 多标签锁一个字节都不能变 ——
+    tc = b.new_context(**p.devices['iPhone 15']); rp = tc.new_page(); hook(rp, '12b2-real')
+    rp.goto(URL); rp.evaluate("localStorage.clear()"); rp.reload(); rp.wait_for_timeout(800); close_modals(rp)
+    S(rp, "(()=>{const s=__tzz.state,E=__tzz.E; s.coins=123456; s.taps=77; E.buyFurniture(s,'furn_painting'); E.placeItem(s,'c77','furn_painting',0,1,0,'wall'); __tzz.persist();})()")
+    LS = "(()=>{const o={}; for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i); o[k]=localStorage.getItem(k);} return o})()"
+    rp.close()   # 真游戏标签自己每 5 秒 / 切后台关页时也会存档：先关掉，再从同源的静态页（version.json，不跑游戏）拍 localStorage 快照，下面逐字节比
+    vj = tc.new_page(); vj.goto(URL.rsplit('/', 1)[0] + '/version.json'); snap0 = S(vj, LS); real0 = json.loads(snap0[KEY])
+    tp = tc.new_page(); hook(tp, '12b2-test'); tp.goto(TURL); tp.wait_for_timeout(900)
+    t = S(tp, "(()=>{const s=__tzz.state,b=document.getElementById('testBadge'); return {tm:__tzz.TEST_MODE, tab:document.getElementById('app').dataset.tab, badge:b&&getComputedStyle(b).display!=='none'&&b.getBoundingClientRect().height>0?b.textContent:'', lv:['c77','pearl','otaku','rocket'].map(id=>s.homes[id].lv), open:['c77','pearl','otaku','rocket'].every(id=>s.ceos[id].unlocked), n:['c77','pearl','otaku','rocket'].map(id=>s.homes[id].placed.length), wall:['c77','pearl','otaku','rocket'].map(id=>s.homes[id].placed.filter(q=>q.surf==='wall').length), inv:s.furnInv.furn_painting, coins:s.coins, modal:!document.querySelector('#modal').classList.contains('hidden')}})()")
+    check(t['tm'] and t['tab'] == 'home' and '不存档' in t['badge'] and t['lv'] == [2, 2, 2, 2] and t['open'] and t['n'] == [8, 8, 8, 8] and t['wall'] == [1, 1, 1, 1] and t['inv'] == 4 and t['coins'] >= 1e12 and not t['modal'],
+          f"12b2 ?test=homes：直接进家宅、角标「{t['badge']}」、四家公寓都开、每家 7 件家具 + 1 幅画、仓库 4 幅画、不弹开场 {t['lv']} {t['n']}")
+    S(tp, "__tzz.homeAct('homeWho','otaku'); __tzz.renderTab()"); tp.wait_for_function("(()=>{const i=document.querySelector('#room .room-art'); return i&&i.complete&&i.naturalWidth>0&&[...document.querySelectorAll('#room .furn img')].every(x=>x.complete)})()", timeout=15000)
+    rr = S(tp, "(()=>{const r=document.getElementById('room'); return {has:r.classList.contains('has-art'), src:r.querySelector('.room-art').getAttribute('src'), furn:r.querySelectorAll('.furn').length, blocks:r.querySelectorAll('.wall-block').length}})()")
+    check(rr['has'] and 'home_otaku_2.webp' in rr['src'] and rr['furn'] == 8 and rr['blocks'] == 10, f"12b2 测试房间阿宅公寓：真底图、8 件家具画出来、墙面禁区 {rr['blocks']} 格 {rr['src']}")
+    # 挂画拖到禁区被拒（如实提示），拖到空墙可以；买家具 / 摆 / 升级 / 自动保存都只在内存
+    nb = S(tp, "(()=>{const s=__tzz.state,E=__tzz.E,q=s.homes.otaku.placed.find(x=>x.surf==='wall'); const bad=E.moveItem(s,'otaku',q.uid,4,0), good=E.moveItem(s,'otaku',q.uid,1,1); E.buyFurniture(s,'furn_sofa'); const pl=E.placeItem(s,'otaku','furn_sofa',4,1,0); const up=E.upgradeHome(s,'rocket'); __tzz.persist(); __tzz.renderTab(); return {bad:bad.ok, why:bad.why, good:good.ok, pl:pl.ok, up:up.ok, rocket:s.homes.rocket.lv}})()")
+    check(not nb['bad'] and '窗户' in (nb['why'] or '') and nb['good'] and nb['pl'] and nb['up'] and nb['rocket'] == 3, f"12b2 测试房间：画拖到第 5 列被拒「{nb['why']}」、拖到空墙可以、买 / 摆沙发、火箭老板升豪宅都正常")
+    tp.locator('.mode-tabs [data-arg="decor"]').first.click() if tp.locator('.mode-tabs [data-arg="decor"]').count() else None
+    tp.wait_for_timeout(6500)   # 等过一轮 5 秒自动保存
+    snap1 = S(tp, LS)
+    check(snap1 == snap0 and not S(tp, '__tzz.frozen'), f'12b2 测试房间操作 + 自动保存后：localStorage 一字不差（{len(snap0)} 个键：{sorted(snap0)}）')
+    tp.reload(); tp.wait_for_timeout(900)
+    t2 = S(tp, "(()=>{const s=__tzz.state; return {tm:__tzz.TEST_MODE, rocket:s.homes.rocket.lv, n:s.homes.otaku.placed.length}})()")
+    check(t2['tm'] and t2['rocket'] == 2 and t2['n'] == 8 and S(tp, LS) == snap0, f'12b2 测试房间刷新 = 重置成初始假数据（火箭老板回公寓、阿宅回 8 件），真存档仍不变 {t2}')
+    l3 = tc.new_page(); hook(l3, '12b2-lv3'); l3.goto(TURL + '&lv=3'); l3.wait_for_timeout(900)
+    t3 = S(l3, "(()=>{const s=__tzz.state,ids=['c77','pearl','otaku','rocket']; return {tm:__tzz.TEST_MODE, lv:ids.map(id=>s.homes[id].lv), ok:ids.every(id=>s.homes[id].placed.every(q=>__tzz.E.canPlace(s,id,q.fid,q.x,q.y,q.rot,q.uid,q.surf).ok)), badge:document.getElementById('testBadge').textContent}})()")
+    check(t3['tm'] and t3['lv'] == [3, 3, 3, 3] and t3['ok'] and '豪宅' in t3['badge'], f"12b2 ?test=homes&lv=3：四家都是豪宅、摆放全合法、角标「{t3['badge']}」")
+    l3.close()
+    # 版本自检重开（缓存旧页 → 带新版本号重开）也要保住 test=homes，不会掉回真存档
+    vp = tc.new_page(); hook(vp, '12b2-ver'); vp.route('**/version.json*', lambda r: r.fulfill(status=200, content_type='application/json', body='{"v":"99z"}'))
+    vp.goto(TURL); vp.wait_for_timeout(1500)
+    check('v=99z' in vp.url and 'test=homes' in vp.url and S(vp, '__tzz.TEST_MODE') and S(vp, LS) == snap0, f'12b2 版本自检重开后网址仍带 test=homes（{vp.url.split("/")[-1]}），仍是测试房间、真存档不变')
+    vp.close()
+    # 不带参数 / 参数不对都进不了测试房间：读回的就是刚才那份真存档
+    for q in ['', '?test=home', '?test=HOMES', '?homes=1']:
+        np_ = tc.new_page(); hook(np_, '12b2-no'); np_.goto(URL + q); np_.wait_for_timeout(900)
+        r = S(np_, "(()=>({tm:__tzz.TEST_MODE, coins:Math.floor(__tzz.state.coins), taps:__tzz.state.taps, badge:!!document.getElementById('testBadge'), lv:__tzz.state.homes.otaku.lv, wall:__tzz.state.homes.c77.placed.filter(x=>x.surf==='wall').map(x=>x.x+','+x.y)}))()")
+        check(not r['tm'] and not r['badge'] and r['coins'] == int(real0['coins']) and r['taps'] == 77 and r['lv'] == 1 and r['wall'] == ['0,1'], f"12b2 网址「{q or '（无参数）'}」：不是测试房间，读的是真存档（金币 {r['coins']}、点击 77、77 墙上原来那幅画 {r['wall']}）")
+        np_.close()
+    # 真游戏标签开着的时候再开测试房间：真标签不被挤下线（多标签锁没被改），测试房间也不会因为真标签存档而冻结
+    rp = tc.new_page(); hook(rp, '12b2-real2'); rp.goto(URL); rp.wait_for_timeout(900); close_modals(rp)
+    lock0 = S(rp, "localStorage.getItem('tangzhe-preview-tab-lock')")
+    tp2 = tc.new_page(); hook(tp2, '12b2-test2'); tp2.goto(TURL); tp2.wait_for_timeout(900)
+    S(tp2, "(()=>{const s=__tzz.state,E=__tzz.E; E.buyFurniture(s,'furn_lamp'); E.upgradeHome(s,'c77'); __tzz.persist();})()"); S(rp, "__tzz.persist()"); tp2.wait_for_timeout(6000)
+    lock1 = S(rp, "localStorage.getItem('tangzhe-preview-tab-lock')"); rs = json.loads(S(rp, LS)[KEY])
+    check(lock1 == lock0 and not S(rp, '__tzz.frozen') and not S(tp2, '__tzz.frozen') and rs['homes']['c77']['lv'] == 1 and rs.get('test') is None, f'12b2 真游戏 + 测试房间同时开：真标签没被挤下线、多标签锁没被改，测试房间里升的房子没进真存档（77 仍小屋）')
+    tp2.close()
+    after = json.loads(S(rp, LS)[KEY])
+    check(after.get('test') is None and after['homes']['otaku']['lv'] == 1 and after['coins'] >= real0['coins'], '12b2 真存档里没有任何测试房间的数据（没有 test 标记、阿宅仍是小屋）')
+    tc.close()
+
     print('== 9. 各尺寸 iPhone 视口 ==')
     for name in ['iPhone SE', 'iPhone SE (3rd gen)', 'iPhone 13 Mini', 'iPhone 15', 'iPhone 15 Pro Max', 'iPhone 16 Pro Max']:
         c = b.new_context(**p.devices[name]); q = c.new_page(); hook(q, name)
