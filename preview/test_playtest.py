@@ -956,6 +956,56 @@ with sync_playwright() as p:
         check(w2 == w1 and '墙面整理' not in tt2, f'12b 刷新（{tag}）：位置不变、不再提示 {w2}「{tt2}」')
         wc.close()
 
+    print('== 12c. 漫画 UI 系统：导航图标 / 面板 / 按钮 / 弹窗关闭钮 / 小屏不溢出 / 减少动态 ==')
+    UI_JS = """(()=>{const vw=innerWidth, cs=e=>getComputedStyle(e), R=e=>e.getBoundingClientRect();
+      const nav=[...document.querySelectorAll('#bottomNav button')].map(b=>{const u=b.querySelector('svg.ic use'), h=u&&u.getAttribute('href'), r=R(b), ir=b.querySelector('svg.ic')&&R(b.querySelector('svg.ic'));
+        return {tab:b.dataset.tab, sym:!!(h&&document.querySelector(h)&&document.querySelector(h).tagName.toLowerCase()==='symbol'), iw:ir?Math.round(ir.width):0, w:Math.round(r.width), h:Math.round(r.height), emoji:/\\p{Extended_Pictographic}/u.test(b.textContent), on:b.classList.contains('on')};});
+      const vis=[...document.querySelectorAll('#tabBody .buy, #bottomNav button, #shopTabs button, .book-tabs button, .mode-tabs .mt')].filter(x=>x.offsetParent);
+      const clip=vis.filter(x=>x.scrollWidth>x.clientWidth+1).map(x=>x.textContent.trim().slice(0,12));
+      const panel=document.getElementById('panel'), root=cs(document.documentElement);
+      const card=document.querySelector('#tabBody .card'), buy=document.querySelector('#tabBody .buy:not([disabled])'), sec=document.querySelector('#tabBody .sec-title');
+      return {vw, sw:document.documentElement.scrollWidth, pw:panel.scrollWidth, pc:panel.clientWidth, nav, clip,
+        tok:['--lw-1','--lw-2','--lw-3','--sh-3','--tone-ink','--fs-title','--fs-num','--red-ink'].every(k=>root.getPropertyValue(k).trim()!==''),
+        card:card?{bw:cs(card).borderTopWidth, sh:cs(card).boxShadow}:null, buy:buy?{sh:cs(buy).boxShadow, bw:cs(buy).borderTopWidth}:null, sec:sec?cs(sec).backgroundColor:null};})()"""
+    for dname in ['iPhone SE', 'iPhone SE (3rd gen)', 'iPhone 15']:
+        uc = b.new_context(**p.devices[dname]); up = uc.new_page(); hook(up, 'ui12c-' + dname)
+        up.goto(URL); up.evaluate("localStorage.clear()"); up.reload(); up.wait_for_timeout(800); close_modals(up)
+        up.evaluate("(()=>{const s=__tzz.state,E=__tzz.E; s.coins=5e7; E.hireEmp(s,0); s.shops[0].lv=12; E.openShop(s,1); E.hireEmp(s,1); E.openShop(s,2); E.hireEmp(s,2); E.buyFurniture(s,'furn_painting'); __tzz.persist(); __tzz.renderTab();})()"); up.wait_for_timeout(500); close_modals(up)
+        for tb in ['shop', 'home', 'ceo']:
+            up.locator(f'#bottomNav [data-tab="{tb}"]').click(); up.wait_for_timeout(600); close_modals(up)
+            if tb == 'home': up.evaluate("__tzz.act('homeMode','decor')"); up.wait_for_timeout(300)
+            u = S(up, UI_JS)
+            nv = u['nav']
+            check(len(nv) == 5 and all(n['sym'] and n['iw'] >= 20 and not n['emoji'] and n['h'] >= 44 and n['w'] >= 44 for n in nv) and [n['tab'] for n in nv if n['on']] == [tb],
+                  f"12c {dname} {tb}：底栏 5 个同套线稿图标（symbol 引用、≥20px、无 emoji），按钮 ≥44×44，只有当前页高亮 {[(n['tab'], n['w'], n['h'], n['iw']) for n in nv]}")
+            check(u['sw'] <= u['vw'] and u['pw'] <= u['pc'] + 1 and not u['clip'], f"12c {dname} {tb}：无横向溢出（页 {u['sw']}≤{u['vw']}，面板 {u['pw']}≤{u['pc']}），按钮文字没被裁 {u['clip']}")
+            check(u['tok'] and u['card'] and float(u['card']['bw'][:-2]) >= 3 and '4px 4px' in u['card']['sh'] and u['buy'] and '3px 3px' in u['buy']['sh'] and (u['sec'] == 'rgb(20, 20, 20)' or (tb == 'home' and u['sec'] is None)),
+                  f"12c {dname} {tb}：设计令牌生效（卡片 3.5px 墨边 + 4px 墨影、按钮 3px 墨影、段标题墨底）{u['card']} {u['buy']}")
+        # 弹窗统一关闭钮：× = 代按「再想想」，不改任何东西
+        up.locator('#bottomNav [data-tab="home"]').click(); up.wait_for_timeout(500)
+        h0 = st(up); up.evaluate("__tzz.act('homeUp','c77')"); up.wait_for_timeout(500)
+        xm = S(up, """(()=>{const x=document.querySelector('#mpanel .cx-close'), m=document.querySelector('#mpanel'); if(!x) return null; const r=x.getBoundingClientRect(), M=m.getBoundingClientRect(), bb=document.querySelector('#mpanel .mbubble').getBoundingClientRect();
+          return {w:r.width, h:r.height, inP:r.left>=M.left&&r.right<=M.right&&r.top>=M.top&&r.bottom<=innerHeight, overlap:!(r.right<=bb.left||r.left>=bb.right||r.bottom<=bb.top||r.top>=bb.bottom), use:!!x.querySelector('use[href="#ic-close"]'), hasx:m.classList.contains('has-x')}})()""")
+        check(modal_visible(up) and xm and xm['w'] >= 34 and xm['inP'] and not xm['overlap'] and xm['use'] and xm['hasx'], f'12c {dname}：房子升级弹窗有统一 × 关闭钮（在弹窗内、不压对白泡）{xm}')
+        up.click('#mX'); up.wait_for_timeout(300); h1 = st(up)
+        check(not modal_visible(up) and h1['homes'] == h0['homes'] and h1['coins'] >= h0['coins'] and h1['furnInv'] == h0['furnInv'], f"12c × 关闭升级弹窗：等同「再想想」，房子 / 仓库不变、没扣钱（{round(h0['coins'])} → {round(h1['coins'])}，自动收入照常涨）")
+        up.locator('#bottomNav [data-tab="ceo"]').click(); up.wait_for_timeout(400)
+        c0 = st(up)['ceos']; up.evaluate("__tzz.showPreview('pearl', 0)"); up.wait_for_timeout(400)
+        check(modal_visible(up) and up.locator('#mpanel #mX').count() == 1, f'12c {dname}：调任预览弹窗有 ×')
+        up.click('#mX'); up.wait_for_timeout(300)
+        check(not modal_visible(up) and st(up)['ceos'] == c0, '12c × 关闭调任预览：任职安排不变')
+        up.evaluate("__tzz.openAssign('pearl')"); up.wait_for_timeout(400)
+        check(S(up, "!document.getElementById('sheet').classList.contains('hidden')") and up.locator('#sheetX').count() == 1, f'12c {dname}：调任选店抽屉有 ×')
+        up.click('#sheetX'); up.wait_for_timeout(300)
+        check(S(up, "document.getElementById('sheet').classList.contains('hidden')") and st(up)['ceos'] == c0, '12c 抽屉 × 关闭：不改安排')
+        uc.close()
+    # 减少动态：弹窗 / 提示不弹跳
+    rc = b.new_context(**p.devices['iPhone SE (3rd gen)'], reduced_motion='reduce'); rp = rc.new_page(); hook(rp, 'ui12c-rm')
+    rp.goto(URL); rp.evaluate("localStorage.clear()"); rp.reload(); rp.wait_for_timeout(800)
+    rm = S(rp, "(()=>({m:getComputedStyle(document.getElementById('mpanel')).animationName, t:getComputedStyle(document.getElementById('toast')).animationName, x:!!document.querySelector('#mpanel #mX')}))()")
+    check(rm['m'] == 'none' and rm['t'] == 'none' and rm['x'], f'12c 减少动态：开场弹窗 / 提示条不做弹出动画，× 照常有 {rm}')
+    rc.close()
+
     print('== 9. 各尺寸 iPhone 视口 ==')
     for name in ['iPhone SE', 'iPhone SE (3rd gen)', 'iPhone 13 Mini', 'iPhone 15', 'iPhone 15 Pro Max', 'iPhone 16 Pro Max']:
         c = b.new_context(**p.devices[name]); q = c.new_page(); hook(q, name)

@@ -1031,6 +1031,8 @@ function act(a, arg, btn) {
 function avaCacheClear() { for (const k of Object.keys(avaCache)) delete avaCache[k]; }
 
 /* ================= 界面：标签页 ================= */
+// 12c 漫画 UI：统一线稿图标（index.html 里的 <symbol>，导航 / 翻页签 / 模式签共用同一套）
+const ic = n => `<svg class="ic" aria-hidden="true"><use href="#ic-${n}"/></svg>`;
 const SHOP_ICON = ['🍢', '🧋', '📚', '💻'], TAB_NAME = ['烧烤摊', '奶茶店', '漫画店', '科技'];
 const DECOR_ICON = { d_stool:'🪑', d_lights:'🌶️', d_neon:'🏮', d_board:'🪧', d_balloon:'🎈', d_poster:'📰', d_cat:'🐱', d_plant:'🪴' };
 const TYPE_LABEL = { clothes:'衣服', hat:'帽子', decor:'装饰', card:'故事卡', super:'超级装饰' };
@@ -1294,9 +1296,15 @@ const modal = $('#modal'), mpanel = $('#mpanel'), sheet = $('#sheet'), sheetPane
 const mq = [];
 function modalOpen() { return !modal.classList.contains('hidden') || !sheet.classList.contains('hidden'); }
 function queueModal(fn) { if (modalOpen()) mq.push(fn); else fn(); }
-function openModal(html, burst = true) { mpanel.classList.remove('zoom'); mpanel.innerHTML = html; modal.querySelector('.burst').style.display = burst ? '' : 'none'; modal.classList.remove('hidden'); mpanel.scrollTop = 0; }
+function openModal(html, burst = true) { mpanel.classList.remove('zoom'); mpanel.innerHTML = html; modalX(); modal.querySelector('.burst').style.display = burst ? '' : 'none'; modal.classList.remove('hidden'); mpanel.scrollTop = 0; }
+// 12c：统一右上角关闭钮 = 代按弹窗里已有的「再想想 / 好 / 知道了 / 返回」，不另走关闭逻辑（领离线收益这类必须选一个的弹窗没有 ×）
+function modalX() {
+  const t = mpanel.querySelector('#mNo, #pvNo') || mpanel.querySelector('#mOk'); mpanel.classList.toggle('has-x', !!t); if (!t) return;
+  mpanel.insertAdjacentHTML('afterbegin', `<button class="cx-close" id="mX" type="button" aria-label="${t.id === 'mOk' ? (t.textContent.trim() || '关闭') : '关闭'}">${ic('close')}</button>`);
+  $('#mX').addEventListener('click', () => { const c = mpanel.querySelector('#mNo, #pvNo') || mpanel.querySelector('#mOk'); if (c) c.click(); });
+}
 function closeModal() { modal.classList.add('hidden'); mpanel.innerHTML = ''; if (mq.length && !modalOpen()) setTimeout(() => { if (!modalOpen() && mq.length) mq.shift()(); }, 120); }
-function openSheet(html) { sheetPanel.innerHTML = html; sheet.classList.remove('hidden'); }
+function openSheet(html) { sheetPanel.innerHTML = `<button class="cx-close" id="sheetX" type="button" aria-label="关闭">${ic('close')}</button>` + html; sheet.classList.remove('hidden'); $('#sheetX').addEventListener('click', closeSheet); }
 function closeSheet() { sheet.classList.add('hidden'); sheetPanel.innerHTML = ''; }
 sheet.querySelector('.sheet-bg').addEventListener('click', closeSheet);
 const coinSm = '<span class="coin-ico sm"><span>赚</span></span>';
@@ -1511,7 +1519,7 @@ function furnInner(fid, rot, inRoom) {
 }
 document.addEventListener('error', e => { const el = e.target; if (el && el.tagName === 'IMG' && el.dataset && el.dataset.homefb) { const fu = el.closest('.furn'); if (fu) fu.classList.remove('art'); el.remove(); } }, true);
 function homeBook(sub) {
-  return `<div class="book-tabs" role="tablist"><button data-act="homeGo" data-arg="shop">📖 经营</button><button class="${sub === 'room' ? 'on' : ''}" data-act="homeSub" data-arg="room">🏠 家宅</button><button class="${sub === 'mall' ? 'on' : ''}" data-act="homeSub" data-arg="mall">🛒 商城</button></div>`;
+  return `<div class="book-tabs" role="tablist"><button data-act="homeGo" data-arg="shop">${ic('shop')}经营</button><button class="${sub === 'room' ? 'on' : ''}" data-act="homeSub" data-arg="room">${ic('home')}家宅</button><button class="${sub === 'mall' ? 'on' : ''}" data-act="homeSub" data-arg="mall">${ic('mall')}商城</button></div>`;
 }
 function homeWhoRow() {
   return `<div class="who-row home-who">${E.CEOS.map(c => { const open = E.homeOpen(state, c.id);
@@ -1566,13 +1574,13 @@ function renderRoom() {
     <div class="room-wall" id="roomWall"><span class="rw-deco">${T.id === 'hut' ? '🪟' : T.id === 'apt' ? '🪟 🪟' : '✨🕯️✨'}</span><span class="rw-name">${c.name}的${T.name}</span><div class="wall-grid" id="wallGrid">${wallBlocks}${wallItems}<div class="room-hl hidden" id="wallHl"></div></div></div>
     <div class="room-floor" id="roomFloor">${floorItems}<div class="home-actor" id="homeActor" style="left:${(homeActorOf(id).x + 0.5) / T.cols * 100}%;top:${(homeActorOf(id).y + 0.5) / T.rows * 100}%"><span class="ha-ava">${ava(id)}</span>${(() => { const ac = homeActorOf(id); return ac.line && ac.until > clock ? `<b class="ha-line">${ac.line}</b>` : ''; })()}<i class="ha-act">${(() => { const ac = homeActorOf(id); return ac.act === 'rest' ? '💤' : ac.act === 'read' ? '📖' : ac.act === 'dress' ? '👕' : ''; })()}</i></div><div class="room-hl hidden" id="roomHl"></div></div></div>`;
   const st = undoStack(id);
-  h += `<div class="mode-tabs" role="tablist"><button class="mt ${homeMode === 'live' ? 'on' : ''}" data-act="homeMode" data-arg="live">🚶 生活</button><button class="mt ${homeMode === 'decor' ? 'on' : ''}" data-act="homeMode" data-arg="decor">🛋️ 布置</button></div>`;
+  h += `<div class="mode-tabs" role="tablist"><button class="mt ${homeMode === 'live' ? 'on' : ''}" data-act="homeMode" data-arg="live">${ic('live')}生活</button><button class="mt ${homeMode === 'decor' ? 'on' : ''}" data-act="homeMode" data-arg="decor">${ic('decor')}布置</button></div>`;
   h += `<div class="room-tools">${homeMode === 'decor' ? (sel ? `<span class="rt-sel">已选：<b>${E.FURN_BY_ID[sel.fid].name}</b></span><button class="buy alt" data-act="homeRot" data-arg="${sel.uid}">↻ 旋转</button><button class="buy alt" data-act="homeStore" data-arg="${sel.uid}">📦 收回</button>`
     : '<span class="rt-sel">布置：点家具选中 / 拖动换位；挂画拖到墙面</span>') : '<span class="rt-sel">生活：点空地走过去 · 点床休息 · 点书架看书 · 点衣柜换装</span>'}
     ${homeMode === 'decor' ? `<button class="buy alt" data-act="homeUndo" data-arg="${id}" ${st.length ? '' : 'disabled'}>↶ 撤销${st.length ? ' ' + st.length : ''}</button>` : ''}</div>`;
   const inv = Object.entries(E.furnInvOf(state)).filter(([, n]) => n > 0);
   if (homeMode === 'decor') {
-    h += `<div class="tray-head"><b>公共家具仓库</b><span>${inv.length ? '按住拖进房间 · 轻点自动摆' : '空空的'}</span><button class="buy alt mall-go" data-act="homeSub" data-arg="mall">🛒 去商城</button></div>`;
+    h += `<div class="tray-head"><b>公共家具仓库</b><span>${inv.length ? '按住拖进房间 · 轻点自动摆' : '空空的'}</span><button class="buy alt mall-go" data-act="homeSub" data-arg="mall">${ic('mall')}去商城</button></div>`;
     h += inv.length ? `<div class="inv-strip">${inv.map(([fid, n]) => { const f = E.FURN_BY_ID[fid], stt = E.furnStats(state, fid);
         const where = stt.where.length ? stt.where.map(w => w.name).join('、') : '';
         return `<div class="inv-item" data-fid="${fid}" style="--fc:${f.color}" title="${f.name} ${f.w}×${f.h}${where ? ' · 另有在 ' + where : ''}"><span class="ie">${f.emoji}</span><b>${f.name}</b><small>${f.w}×${f.h}</small><i>×${n}</i></div>`; }).join('')}</div>
@@ -1580,7 +1588,7 @@ function renderRoom() {
       : `<div class="note">仓库空空。去商城买家具，再回来布置 ${c.name} 的房间。</div>`;
   } else {
     h += `<div class="note live-note">生活模式：点地板空位让 ${c.name} 走过去；点<b>床</b>休息、点<b>书架</b>看书、点<b>衣柜</b>换装。要摆家具请切到「布置」。</div>
-      <button class="buy alt mall-go" data-act="homeSub" data-arg="mall">🛒 去商城</button>`;
+      <button class="buy alt mall-go" data-act="homeSub" data-arg="mall">${ic('mall')}去商城</button>`;
   }
   return h;
 }

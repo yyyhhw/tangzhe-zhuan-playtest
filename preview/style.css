@@ -3,6 +3,27 @@
   --sat:env(safe-area-inset-top,0px); --sab:env(safe-area-inset-bottom,0px);
   --sal:env(safe-area-inset-left,0px); --sar:env(safe-area-inset-right,0px);
   --dots:radial-gradient(rgba(20,20,20,.2) 1.1px, transparent 1.5px);
+  /* ===== 12c 漫画 UI 设计令牌（经营 / 家宅 / CEO 及弹窗共用；只改外观，不碰玩法） ===== */
+  /* 墨色：主墨 / 正文 / 说明（正文、说明在纸色上对比度 ≥ 4.5） */
+  --ink-2:#463f36; --ink-3:#655d52;
+  /* 纸与格：页面纸 / 主面板 / 高亮面板 / 禁用斜纹 */
+  --panel:#fffdf7; --panel-2:#fff4d1; --panel-pink:#ffe3ee;
+  --hatch:repeating-linear-gradient(45deg,#f1ece0 0 6px,#e4ddcd 6px 12px);
+  /* 限定强调色：红 = 行动/提醒，黄 = 选中/高亮，蓝 = 焦点；正文用的红加深到 --red-ink（白底 ≥ 5:1） */
+  --red-ink:#c21d2c;
+  /* 线宽三档：细节 / 控件 / 面板 */
+  --lw-1:1.5px; --lw-2:2.5px; --lw-3:3.5px;
+  /* 圆角 */
+  --r-sm:4px; --r-md:8px; --r-lg:12px; --r-pill:999px;
+  /* 硬投影（漫画格错位墨影）：控件 / 按钮 / 面板 / 弹窗 */
+  --sh-1:2px 2px 0 var(--ink); --sh-2:3px 3px 0 var(--ink); --sh-3:4px 4px 0 var(--ink); --sh-4:7px 7px 0 var(--ink);
+  /* 网点（screentone）：墨 / 红 / 黄 */
+  --tone-ink:radial-gradient(rgba(20,20,20,.2) 1.1px,transparent 1.5px) 0 0/6px 6px;
+  --tone-red:radial-gradient(rgba(230,57,70,.38) 1.4px,transparent 1.8px) 0 0/6px 6px;
+  --tone-yel:radial-gradient(rgba(201,140,0,.38) 1.2px,transparent 1.6px) 0 0/5px 5px;
+  /* 字级：标题 / 段标题 / 卡片名 / 正文 / 说明 / 数字 */
+  --fs-title:18px; --fs-h:14px; --fs-name:15px; --fs-body:12px; --fs-cap:11px; --fs-num:30px;
+  --num-shadow:2px 2px 0 var(--yellow); --head-shadow:3px 3px 0 var(--red);
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;background:var(--paper);color:var(--ink);overflow:hidden;
@@ -446,3 +467,185 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 /* 墙面禁区：拖挂画时才显示（斜纹红），和 E.wallBlockedCells 同一份 */
 .wall-block{position:absolute;display:none;pointer-events:none;z-index:1;border-radius:4px;background:repeating-linear-gradient(45deg,rgba(230,57,70,.30) 0 6px,rgba(230,57,70,.08) 6px 12px);outline:1px dashed rgba(230,57,70,.6);outline-offset:-2px}
 .wall-grid.show-block .wall-block{display:block}
+
+
+/* ======================================================================
+   12c 漫画 UI 系统：经营 / 家宅 / CEO 统一（导航图标、面板、按钮、字级、弹窗、进度条、徽标）
+   规则：实线 + 墨影 = 可点的格子 / 面板；虚线 = 说明框；黄 = 选中；红 = 行动 / 提醒；斜纹 = 不可用
+   只叠加外观，不改 ID / data-act / 结构；店景人物、家宅底图、CEO 立绘等第二步（等熊大的规范和图）
+   ====================================================================== */
+/* 页面内容自成一层（z 0），弹窗 / 抽屉 / 提示一定盖在上面（修旧版 WebKit 里锁住的任职签会透到调任抽屉上面） */
+#app{z-index:0}
+/* --- 图标：同一支墨线笔 --- */
+.ic{width:24px;height:24px;display:block;flex:0 0 auto;fill:none;stroke:var(--ink);stroke-width:2;stroke-linejoin:round;stroke-linecap:round;overflow:visible;pointer-events:none;
+  --ica:var(--red);--icy:var(--yellow);--icf:#fff}
+
+/* --- 底部导航：漫画格页签 --- */
+#bottomNav{gap:4px;background:radial-gradient(rgba(20,20,20,.07) 1px,transparent 1.4px) 0 0/6px 6px,var(--panel);border-top:var(--lw-3) solid var(--ink)}
+#bottomNav button{min-height:50px;gap:2px;color:var(--ink-2);font-size:11.5px;letter-spacing:.5px;border-radius:var(--r-md);--ica:#f0a9af;--icy:#fbe6a0;transition:transform .12s ease-out}
+#bottomNav button .ni{display:grid;place-items:center;width:30px;height:26px;font-size:0}
+#bottomNav button.on{color:var(--ink);background:var(--tone-yel),var(--yellow);box-shadow:inset 0 0 0 var(--lw-2) var(--ink),var(--sh-1);transform:translateY(-2px);--ica:var(--red);--icy:#fff6c2}
+#bottomNav button.on .ic{transform:rotate(-6deg) scale(1.08)}
+#bottomNav button:active{transform:translate(1px,1px)}
+#bottomNav button .dot,#shopTabs button .dot{background:var(--red);border:var(--lw-1) solid var(--ink);box-shadow:1px 1px 0 var(--ink)}
+
+/* --- 顶部 --- */
+.icon-btn{border:var(--lw-2) solid var(--ink);box-shadow:var(--sh-1);font-size:0}
+.icon-btn .ic{width:24px;height:24px}
+.icon-btn .ic-off,.icon-btn.off .ic-on{display:none}
+.icon-btn.off .ic-off{display:block}
+.icon-btn.off{background:var(--hatch);text-decoration:none}
+.chip{border:var(--lw-2) solid var(--ink);box-shadow:var(--sh-1);letter-spacing:.3px}
+.chip.used{background:var(--hatch);color:var(--ink-3)}
+.money{border:var(--lw-3) solid var(--ink);border-radius:var(--r-md);box-shadow:var(--sh-3);background:var(--panel)}
+.coin-ico{border-width:3px;box-shadow:inset -4px -4px 0 rgba(0,0,0,.15),1.5px 1.5px 0 var(--ink)}
+#coins{font-size:var(--fs-num);text-shadow:var(--num-shadow);letter-spacing:.5px}
+#cps{color:var(--red-ink)}
+@media (max-height:700px){ #coins{font-size:26px} }
+
+/* --- 店景 / 房间 / 立绘：统一墨框（画面内容第二步再统一） --- */
+#stage{border:var(--lw-3) solid var(--ink);border-radius:var(--r-sm);box-shadow:var(--sh-3)}
+.room{border:var(--lw-3) solid var(--ink);box-shadow:var(--sh-3)}
+.room.tier-villa{box-shadow:var(--sh-3),inset 0 0 0 3px #ffd23f}
+.ava{border:var(--lw-2) solid var(--ink)}
+.card .ava,.pick .ava,.sheet-title .ava{box-shadow:var(--sh-1)}
+.ava.bust{border-width:var(--lw-3);box-shadow:var(--sh-2)}
+.job-pic{border:var(--lw-2) solid var(--ink);box-shadow:var(--sh-1)}
+.job-big img,.cross-art img{border:var(--lw-3) solid var(--ink);box-shadow:var(--sh-2)}
+
+/* --- 选择器（店铺签 / 数量 / 翻页签 / 模式签 / 分类）：选中 = 黄格 + 墨边 --- */
+#shopTabs button{border:var(--lw-2) solid var(--ink);border-radius:var(--r-md);box-shadow:var(--sh-1);transition:transform .1s}
+#shopTabs button small{color:var(--ink-3)}
+#shopTabs button.on{background:var(--tone-yel),var(--yellow);color:var(--ink);box-shadow:var(--sh-2);transform:translateY(-2px)}
+#shopTabs button.on small{color:var(--ink-2)}
+#shopTabs button.locked{background:var(--hatch);color:var(--ink-3);box-shadow:none;border-style:dashed}
+.buyamt,.book-tabs,.mode-tabs{border:var(--lw-2) solid var(--ink);border-radius:var(--r-md);box-shadow:var(--sh-1);background:#fff;overflow:hidden}
+.buyamt button,.book-tabs button,.mode-tabs .mt{border-left:var(--lw-2) solid var(--ink);color:var(--ink);letter-spacing:.3px}
+.buyamt button:first-child,.book-tabs button:first-child,.mode-tabs .mt:first-child{border-left:0}
+.buyamt button.on,.book-tabs button.on,.mode-tabs .mt.on,.mode-tabs .mt.on:last-child{background:var(--tone-yel),var(--yellow);color:var(--ink);box-shadow:inset 0 -3px 0 var(--ink)}
+.book-tabs button,.mode-tabs .mt{display:flex;align-items:center;justify-content:center;gap:4px}
+.book-tabs button .ic,.mode-tabs .mt .ic{width:20px;height:20px}
+.book-tabs button:first-child{background:var(--hatch)}
+.book-tabs button:not(.on):not(:first-child) .ic,.mode-tabs .mt:not(.on) .ic{--ica:#f0a9af;--icy:#fbe6a0}
+.mall-cats .mc,.mall-subs .ms,.mall-filters .mf,.mall-filters select,.job-chip{border:var(--lw-2) solid var(--ink)}
+.mall-cats .mc.on,.mall-subs .ms.on,.job-chip.on,.who.on,.item.sel{background:var(--tone-yel),var(--yellow);box-shadow:var(--sh-1)}
+.item.sel{box-shadow:inset 0 0 0 2px var(--ink),var(--sh-1)}
+.job-chip.lock{background:var(--hatch);opacity:.7}
+.job-chip i,.inv-item i{background:var(--red);border:var(--lw-1) solid var(--ink);box-shadow:1px 1px 0 var(--ink)}
+.mall-search input{border:var(--lw-2) solid var(--ink);border-radius:var(--r-md);box-shadow:inset 2px 2px 0 rgba(20,20,20,.08)}
+.mall-search input:focus{outline:3px solid var(--blue);outline-offset:1px}
+
+/* --- 段标题：墨底说明框 + 红错位影（和 logo 同一语言） --- */
+.sec-title{background:var(--ink);color:#fff;border:var(--lw-2) solid var(--ink);border-radius:2px;box-shadow:var(--head-shadow);font-size:var(--fs-h);letter-spacing:1px;padding:2px 12px 2px 9px;margin:4px 0 9px}
+.sec-title::before{content:"";display:inline-block;width:7px;height:7px;margin-right:7px;vertical-align:2px;background:var(--yellow);transform:rotate(45deg)}
+
+/* --- 面板 / 卡片：墨边 + 硬投影 + 右上网点（主面板 lw-3 / sh-3；子格 lw-2 / sh-1~2） --- */
+.card{background:var(--panel);border:var(--lw-3) solid var(--ink);border-radius:var(--r-md);box-shadow:var(--sh-3);isolation:isolate}
+.card::after{content:"";position:absolute;top:0;right:0;width:64px;height:42px;z-index:-1;pointer-events:none;border-top-right-radius:4px;background:var(--tone-ink);
+  -webkit-mask-image:linear-gradient(215deg,#000 15%,transparent 70%);mask-image:linear-gradient(215deg,#000 15%,transparent 70%)}
+.card.hl{background:var(--panel-2)}
+.card.hl::after,.card.super::after{background:var(--tone-red)}
+.card.dim{opacity:.85;background:var(--hatch);box-shadow:var(--sh-1)}
+.card.dim::after{display:none}
+.card.super{border:var(--lw-3) solid var(--ink)}
+.card.super.dim{background:var(--hatch)}
+#compactHead,.box-hero,.wear-preview{border:var(--lw-3) solid var(--ink);border-radius:var(--r-md);box-shadow:var(--sh-3);background:var(--panel)}
+.cross-item,.story,.pick,.lock-card{border-color:var(--ink)}
+.cross-item,.story{border-width:var(--lw-2);border-radius:var(--r-md);box-shadow:var(--sh-2)}
+.cross-item.on{background:var(--tone-red),var(--panel-pink)}
+.cross-item:active{transform:translate(2px,2px);box-shadow:var(--sh-1)}
+.story.no{background:var(--hatch);color:var(--ink-3);box-shadow:var(--sh-1)}
+.item{border:var(--lw-2) solid var(--ink)}
+.who,.inv-item,#compactHead .ch-card{border:var(--lw-2) solid var(--ink);border-radius:var(--r-md)}
+#compactHead .ch-card{box-shadow:var(--sh-1);background:var(--panel)}
+.job-gal{border:var(--lw-3) solid var(--ink);border-top:none;box-shadow:var(--sh-3);background:var(--tone-ink),#fff6e3}
+/* 面板页眉条：墨底白字 */
+#compactHead{padding:0 10px 8px;overflow:hidden}
+#compactHead .ch-title{margin:0 -10px 8px;padding:4px 10px;background:var(--ink);color:#fff;font-size:var(--fs-h);letter-spacing:1px}
+#compactHead .ch-title::before{content:"";display:inline-block;width:7px;height:7px;margin-right:7px;vertical-align:2px;background:var(--yellow);transform:rotate(45deg)}
+#compactHead .ch-card small,#compactHead .ch-note{color:var(--ink-3)}
+.tray-head b{background:var(--ink);color:var(--yellow);border-color:var(--ink);box-shadow:1.5px 1.5px 0 var(--red)}
+/* 说明框：虚线 = 信息，不可点 */
+.summary,.mall-head{border:var(--lw-2) dashed var(--ink);border-radius:var(--r-md);background:var(--panel)}
+
+/* --- 字级 --- */
+.name,.pick .pk-name,.wear-preview .wp-name,.box-hero .name{font-size:var(--fs-name);font-weight:900;letter-spacing:.3px}
+.desc,.pick .pk-sub,.wear-preview .wp-sub,.cross-item .who,.mnote,.lock-txt{color:var(--ink-2)}
+.desc{font-size:var(--fs-body)}
+.note,.mall-count,.job-hint,.details-fold,.room-tools .rt-sel,.tray-head{color:var(--ink-3)}
+.gain{color:var(--red-ink)}
+.lv{background:var(--ink);color:var(--yellow);border-radius:2px;transform:skewX(-8deg);box-shadow:1.5px 1.5px 0 var(--red);font-variant-numeric:tabular-nums;letter-spacing:.3px}
+.tag{border:var(--lw-1) solid var(--ink);border-radius:var(--r-sm)}
+.tag.cross{color:#fff;background:#d6336c}
+.buy small,.lv,#coins,#cps,.mreward,.pv-table td,.goal-txt,#compactHead .ch-card small,.inv-item i{font-variant-numeric:tabular-nums}
+
+/* --- 按钮：主（黄）/ 确认（红）/ 次（白）/ 买不起 / 禁用 / 按下 --- */
+.buy{border:3px solid var(--ink);border-radius:var(--r-md);box-shadow:var(--sh-2);letter-spacing:.5px;transition:transform .06s,box-shadow .06s}
+.buy:active,.pick:active{transform:translate(3px,3px);box-shadow:0 0 0 var(--ink)}
+.buy.red{background:var(--red);color:#fff;text-shadow:1px 1px 0 var(--ink)}
+.buy.alt,.buy.ghost{background:#fff}
+.buy.no{background:var(--hatch);color:var(--ink-3);text-shadow:none;box-shadow:var(--sh-1)}
+.buy.no small::before{background:#e4ddcd}
+.buy[disabled],.room-tools .buy[disabled]{opacity:1;background:var(--hatch);color:#80786c;border-style:dashed;box-shadow:none;text-shadow:none;cursor:not-allowed}
+.buy[disabled]:active{transform:none}
+.mall-go{flex-direction:row;gap:4px}
+.mall-go .ic{width:18px;height:18px}
+.toggle{border:var(--lw-2) solid var(--ink);box-shadow:var(--sh-1)}
+.toggle:active,#shopTabs button:active,.buyamt button:active,.book-tabs button:active,.mode-tabs .mt:active,.mall-cats .mc:active,.mall-subs .ms:active,.job-chip:active,.who:active{transform:translate(1px,1px)}
+.buy:focus-visible,.pick:focus-visible,.cx-close:focus-visible,#bottomNav button:focus-visible,#shopTabs button:focus-visible,.icon-btn:focus-visible,.chip:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.pick{border-width:var(--lw-2);border-radius:var(--r-md);box-shadow:var(--sh-2)}
+.pick.cur{background:var(--hatch)}
+
+/* --- 进度条：墨框 + 网点底 + 速度线填充 --- */
+.mbar,.goal-bar{border:var(--lw-2) solid var(--ink);border-radius:var(--r-pill);background:var(--tone-ink),#fff}
+.mbar i{background:repeating-linear-gradient(-45deg,rgba(255,255,255,.32) 0 4px,transparent 4px 8px),var(--red)}
+.goal-bar i{background:repeating-linear-gradient(-45deg,rgba(255,255,255,.5) 0 4px,transparent 4px 8px),var(--yellow)}
+#goal{border:var(--lw-2) solid var(--ink);border-radius:var(--r-md);box-shadow:var(--sh-1);background:var(--panel)}
+.goal-txt::before{background:var(--ink);color:var(--yellow);border-radius:2px}
+
+/* --- 弹窗：漫画格 + 对白泡页眉 + 统一关闭钮 --- */
+.mpanel{background:var(--panel);border:4px solid var(--ink);border-radius:var(--r-lg);box-shadow:var(--sh-4);isolation:isolate}
+.mpanel::before{content:"";position:absolute;left:0;right:0;top:0;height:72px;z-index:-1;pointer-events:none;background:var(--tone-yel);
+  -webkit-mask-image:linear-gradient(#000 20%,transparent);mask-image:linear-gradient(#000 20%,transparent)}
+.mbubble{background:#fff;color:var(--ink);border:var(--lw-2) solid var(--ink);border-radius:18px;box-shadow:var(--sh-1);padding:5px 14px;margin-bottom:15px;max-width:100%;transform:rotate(-1.5deg)}
+.mbubble::before,.mbubble::after{content:"";position:absolute;width:0;height:0;border-style:solid;border-color:transparent}
+.mbubble::before{left:20px;bottom:-13px;border-width:12px 8px 0 4px;border-top-color:var(--ink)}
+.mbubble::after{left:22.5px;bottom:-7px;border-width:8px 5px 0 2.5px;border-top-color:#fff}
+.mpanel.has-x .mbubble{max-width:calc(100% - 84px)}
+.mpanel.has-x > .cx-close + .mtitle{padding:0 34px}
+.mtitle,.sheet-title,.lock-title{font-size:var(--fs-title);font-weight:900;letter-spacing:.5px;line-height:1.3}
+.mreward{text-shadow:var(--num-shadow);letter-spacing:.5px}
+.pv-table td{border-bottom:var(--lw-1) dashed #b8b0a2}
+.pv-table tr.total td{border-top:3px solid var(--ink)}
+.up{color:#137a41}
+.down{color:var(--red-ink)}
+.swap-box,.pv-tags div{border-color:var(--ink);border-width:var(--lw-2)}
+.swap-box{background:var(--tone-yel),var(--panel-2)}
+.cx-close{position:absolute;top:8px;right:8px;z-index:3;width:36px;height:36px;padding:0;border:var(--lw-2) solid var(--ink);border-radius:50%;background:#fff;box-shadow:var(--sh-1);display:grid;place-items:center}
+.cx-close::before{content:"";position:absolute;inset:-5px}  /* 触控区 46px */
+.cx-close .ic{width:18px;height:18px}
+.cx-close:active{transform:translate(2px,2px);box-shadow:none}
+/* 底部抽屉（调任选店 / 选 CEO）：同一套格子 + 页眉线 + 关闭钮 */
+.sheet-panel{background:var(--tone-ink),var(--panel);border-top:var(--lw-3) solid var(--ink);box-shadow:0 -4px 0 rgba(20,20,20,.18)}
+.sheet-title{padding:0 44px 9px 0;margin-bottom:12px;border-bottom:var(--lw-2) solid var(--ink);font-size:16px}
+/* 提示条：说明框（caption box） */
+#toast{background:#fffbe3;color:var(--ink);border:var(--lw-2) solid var(--ink);border-radius:var(--r-sm);box-shadow:var(--sh-2);font-weight:900;padding:8px 14px 8px 34px;line-height:1.4}
+#toast::before{content:"!";position:absolute;left:9px;top:50%;margin-top:-9px;width:18px;height:18px;border-radius:50%;background:var(--red);color:#fff;border:var(--lw-1) solid var(--ink);font-size:12px;line-height:15px;text-align:center;box-sizing:border-box}
+.lock-card{border:4px solid var(--ink);border-radius:var(--r-lg);box-shadow:var(--sh-4);background:var(--panel)}
+
+/* --- 小屏：375 / 320 宽不挤 --- */
+@media (max-width:360px){
+  #bottomNav button{font-size:11px;letter-spacing:0}
+  .sec-title{letter-spacing:.5px;padding:2px 9px 2px 7px}
+  .mpanel.has-x .mbubble{font-size:14px}
+  /* 320 宽：任职图缩到 104px，四个店名签不再挤出面板（旧版就溢出 13px） */
+  .job-gal{gap:8px}
+  .job-pic{width:104px;height:104px}
+}
+/* --- 减少动态：关掉弹出 / 抽屉 / 提示 / 闪烁等动画 --- */
+@media (prefers-reduced-motion:reduce){
+  .mpanel,.sheet-panel,#toast,.boost-tag,.modal .burst,#coins.bump,.sfx-word.pop,.panel4,.card.flash,.box-ico.shake svg{animation:none!important}
+  #bottomNav button,#shopTabs button,.buy{transition:none}
+  #bottomNav button.on,#shopTabs button.on{transform:none}
+  #bottomNav button.on .ic{transform:none}
+}
