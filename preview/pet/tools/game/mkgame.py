@@ -1,6 +1,9 @@
 # 从 preview/ 生成 preview/pet/game/ 的快照副本 + 宠物钩子（可重跑；每处替换都断言命中次数）
 import re, pathlib, sys
 SRC = pathlib.Path(__file__).resolve().parents[3]; DST = SRC / 'pet' / 'game'; V = 'p6a'
+# Legacy v1 generator: stop before any file writes when the maintained v2 UI exists.
+if 'const petsHooks' in (SRC / 'app.js').read_text():
+    raise SystemExit('Pet roster v2 is maintained directly. Legacy glue.js regeneration is disabled; no files were written.')
 def rep(s, old, new, n=1):
     c = s.count(old); assert c == n, (old[:80], c); return s.replace(old, new)
 base = (SRC / 'version.json').read_text().strip()
