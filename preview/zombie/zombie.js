@@ -49,17 +49,21 @@ if (EMBED) window.addEventListener('message', e => {
   if (port || e.source !== window.parent || e.origin !== location.origin || !e.data || e.data.zb !== 'port' || !e.ports[0]) return;
   port = e.ports[0]; port.onmessage = ev => onState(ev.data);
 });
+const SFX = window.ZBSfx;
+let hostMute = false, userMute = false;   // hostMute = 经营页静音开关；userMute = 暂停页的声音开关（只在内存）
+function applyMute() { SFX.setMuted(hostMute || userMute); if (!hostMute && !userMute && G && !G.over && !G.pendStart && !paused) SFX.startBgm(diff()); $('#sndBtn').textContent = userMute ? '声音：关' : '声音：开'; }
 function onState(d) {
   if (!d || d.zb !== 'state') return;
   pend = false; proto.coins = Math.max(0, fin(d.coins, 0)); proto.blocked = !!d.blocked; Object.assign(proto, ZB.norm(d.z)); proto.ceo = ZB.heroOf('ceo' in d ? d.ceo : undefined); proto.ready = true;
+  if ('muted' in d) { hostMute = !!d.muted; applyMute(); }
   if (firstSync) { firstSync = false; selLv = Math.min(MAX_LV, proto.cleared + 1); }
   $('#trainNote').textContent = d.why || (proto.blocked ? '存档异常或已在别的页面打开，暂时不能花金币。' : '和经营共用金币：训练只花钱，打僵尸本身不产金币。');
   renderTrain();
   // 13c：父页开局回执——ok 时锁定权威 ceo / runId；失败则回到菜单（父页没登记成功）
   // 只认本局请求的回执：开局后、或 runId 对不上的迟到回执一律忽略（失败回执没带 runId 时只在等待中认）
-  if (d.ack === 'start' && G && G.pendStart && (d.runId === G.runId || (d.ok === false && d.runId === undefined))) {
+  if (d.ack === 'start' && G && G.pendStart && d.runId === G.runId) {
     if (d.ok !== true || !ZB.CEO_IDS.includes(d.ceo)) return abortStart(d.why || '开局登记失败');
-    clearTimeout(G.pendTimer); G.pendStart = false; G.ceo = d.ceo; renderHero(); last = performance.now(); return;
+    clearTimeout(G.pendTimer); G.pendStart = false; G.ceo = d.ceo; renderHero(); last = performance.now(); SFX.startBgm(diff()); return;
   }
   if (d.ack === 'result' && G && G.over && G.wait) { G.wait = false; G.why = d.why || ''; renderResult(); }
 }
@@ -203,7 +207,8 @@ function fire77() {
   p.face = Math.cos(a0) >= 0 ? 1 : -1;
   return true;
 }
-function castUlt() {
+function castUlt() { const ok = castUlt0(); if (ok) SFX.ult(G.ceo); return ok; }
+function castUlt0() {
   if (!G || G.over || G.pendStart || paused || G.ult < 100 || ultOn()) return false;
   if (G.ceo === 'otaku') { G.ult = 0; G.panels = { t: 0, waves: 0, next: 0, hits: [] }; G.p.inv = Math.max(G.p.inv, 2.2); toast('分镜轰炸！'); return true; }
   if (G.ceo === 'rocket') { G.ult = 0; G.wave = { t: 0, dur: 1.1, hit: new Set() }; G.shake = 0.45; G.p.inv = Math.max(G.p.inv, 1.2); toast('星舰冲击波！'); return true; }
@@ -212,11 +217,11 @@ function castUlt() {
   toast('火圈！'); return true;
 }
 function hurtZ(z, d, kx, ky) {
-  z.hp -= d; z.flash = 0.1; z.kx += kx; z.ky += ky;
+  z.hp -= d; z.flash = 0.1; z.kx += kx; z.ky += ky; SFX.hit();
   G.txt.push({ x: z.x, y: z.y - z.r, v: Math.round(d), t: 0.6 });
 }
 function killZ(i) {
-  const z = G.zs[i];
+  const z = G.zs[i]; SFX.kill(z.type === 'boss');
   G.kills++; G.ult = Math.min(100, G.ult + ZT[z.type].ult);
   for (let k = 0; k < 6; k++) G.fx.push({ x: z.x, y: z.y, vx: (rnd() - 0.5) * 160 * U, vy: (rnd() - 0.5) * 160 * U, t: 0.4, c: z.col });
   G.zs.splice(i, 1);
@@ -227,14 +232,14 @@ function killZ(i) {
 function step(dt) {
   if (!G || G.over || G.pendStart) return;
   dt = Math.min(Math.max(fin(dt, 0), 0), 0.05);
-  const p = G.p; G.t += dt;
+  const p = G.p; G.t += dt; SFX.setTempo(diff());
   // 移动
   const mv = joyVec(); p.moving = mv.m > 0.05;
   if (p.moving) { const sp = 150 * U; p.x += mv.x * sp * dt; p.y += mv.y * sp * dt; p.walk += dt * 10; if (Math.abs(mv.x) > 0.2) p.face = mv.x > 0 ? 1 : -1; }
   p.x = Math.min(Math.max(p.x, p.r), W - p.r); p.y = Math.min(Math.max(p.y, p.r + 70 * U), H - p.r);
   p.inv = Math.max(0, p.inv - dt);
   // 普攻
-  p.fireCd -= dt; if (p.fireCd <= 0) { p.fireCd = fire() ? G.interval : 0.1; }
+  p.fireCd -= dt; if (p.fireCd <= 0) { p.fireCd = fire() ? (SFX.shot(G.ceo), G.interval) : 0.1; }
   G.ult = Math.min(100, G.ult + 2 * dt);
   spawner(dt);
   // 飞串
@@ -306,7 +311,7 @@ function step(dt) {
     z.x += (dx / d * sp + z.kx * 10) * dt; z.y += (dy / d * sp + z.ky * 10) * dt;
     z.kx *= 0.85; z.ky *= 0.85; z.flash = Math.max(0, z.flash - dt); z.wob += dt * 6;
     if (d < z.r + p.r && p.inv <= 0 && !(frz && z.type !== 'boss')) {
-      p.hp -= z.dmg; p.inv = 0.8; G.shake = 0.15;
+      p.hp -= z.dmg; p.inv = 0.8; G.shake = 0.15; SFX.hurt();
       if (p.hp <= 0) { p.hp = 0; end(false); return; }
     }
   }
@@ -597,11 +602,13 @@ function newRunId() {
   return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 function start(mode, n) {
+  SFX.unlock();
   if (!canPlay()) return false;
   if (mode === 'endless' && proto.cleared < MAX_LV) return false;
   if (mode !== 'endless') { mode = 'level'; n = Math.min(Math.max(1, Math.floor(fin(n, selLv))), Math.min(MAX_LV, proto.cleared + 1)); selLv = n; }
   resize(); G = newRun(mode, n); G.runId = newRunId();
   paused = false; joy.on = false; show(null); renderHero(); hud(); last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
+  if (!EMBED) SFX.startBgm(diff());
   // 嵌入模式先向父页登记本局，等到对应 runId 的 ok 回执才开始计时（onState ack:'start'），超时回菜单
   if (EMBED) {
     const g = G; g.pendStart = true; toast('开局登记中…');
@@ -610,6 +617,7 @@ function start(mode, n) {
   }
   return true; }
 function abortStart(why) {
+  SFX.stopBgm();
   if (G) clearTimeout(G.pendTimer);
   cancelAnimationFrame(raf); G = null; paused = false;
   if (why) $('#trainNote').textContent = why;
@@ -617,10 +625,11 @@ function abortStart(why) {
 }
 function end(win) {
   if (G.pendStart) return abortStart('');
+  SFX.stopBgm(); if (win) SFX.win(); else SFX.lose();
   G.over = true; G.win = win; joy.on = false; G.prevBest = proto.endBest.t; G.why = '';
   if (EMBED) {
     // 经营页是唯一写档方：等它回执（ack:'result'）后再按权威进度显示通关 / 解锁，存档失败不报喜；带上开局 runId 供父页对照
-    G.wait = true; host({ zb: 'result', mode: G.mode, n: G.n, win, t: G.t, kills: G.kills, ceo: G.ceo, runId: G.runId });
+    G.wait = true; G.resMsg = { zb: 'result', mode: G.mode, n: G.n, win, t: G.t, kills: G.kills, ceo: G.ceo, runId: G.runId }; host(G.resMsg);
   } else {
     proto.best = Math.max(proto.best, G.kills);
     if (G.mode === 'endless') { if (G.t > proto.endBest.t) proto.endBest = { t: G.t, kills: G.kills }; }
@@ -640,10 +649,11 @@ function renderResult() {
   else title = `第 ${G.n} 关失败…`;
   $('#resTitle').textContent = title; $('#againBtn').textContent = again; $('#againBtn').disabled = !!G.wait;
   $('#resNote').textContent = G.wait ? '正在存档…' : G.why;
+  $('#retryBtn').classList.toggle('hidden', !(EMBED && !G.wait && G.resMsg && /^存档失败/.test(G.why)));
   $('#resStats').textContent = G.mode === 'endless' ? `坚持 ${Math.floor(G.t)} 秒 · 击倒 ${G.kills} · 最好 ${Math.floor(proto.endBest.t)} 秒`
     : `坚持 ${Math.floor(G.t)} / ${G.dur} 秒 · 击倒 ${G.kills}`;
 }
-function setPause(on) { if (!G || G.over) return; paused = on; joy.on = false; show(on ? '#pause' : null); if (!on) last = performance.now(); }
+function setPause(on) { if (!G || G.over) return; paused = on; if (on) SFX.stopBgm(); else if (!G.pendStart) SFX.startBgm(diff()); joy.on = false; show(on ? '#pause' : null); if (!on) last = performance.now(); }
 function loop(now) {
   const dt = (now - last) / 1000; last = now;
   if (G && !G.over && !paused) { step(dt); if (G) hud(); }
@@ -663,7 +673,12 @@ $('#lvPrev').addEventListener('click', () => { selLv--; renderLv(); });
 $('#lvNext').addEventListener('click', () => { selLv++; renderLv(); });
 $('#menuBtn').addEventListener('click', () => { G = null; renderTrain(); show('#menu'); draw(); });
 $('#pauseBtn').addEventListener('click', () => setPause(true));
+$('#sndBtn').addEventListener('click', () => { userMute = !userMute; applyMute(); });
+// iPhone 要在用户点按里解锁声音
+for (const ev of ['pointerdown', 'touchend', 'click']) document.addEventListener(ev, () => SFX.unlock(), true);
 $('#resumeBtn').addEventListener('click', () => setPause(false));
+// 存档失败时用同一份结算消息（同 runId）重试，父页按权威进度回执后结算页刷新
+$('#retryBtn').addEventListener('click', () => { if (!G || !G.over || G.wait || !G.resMsg) return; G.wait = true; G.why = ''; renderResult(); host(G.resMsg); });
 $('#quitBtn').addEventListener('click', () => { paused = false; end(false); });
 $('#ultBtn').addEventListener('click', () => { castUlt(); hud(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) setPause(true); });
