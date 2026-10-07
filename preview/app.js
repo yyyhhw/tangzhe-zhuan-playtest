@@ -2,6 +2,7 @@
 (() => {
 'use strict';
 const E = window.Economy, CFG = E.CFG;
+const TD = window.TDCore; let tdOpen = false, tdPort = null, tdGeneration = 0;
 const ZB = window.ZBCore; var zbOpen = false, zbPort = null;
 const ZB_SHOP = 0; var zbLastCeo = null, zbRun = null; const zbUsedRuns = new Set();   // 13d：用过的 runId（本页内存），重复 / 过期的 start 不能把旧局重新激活   // 13a：打僵尸 = 烧烤摊（店 0）；zbLastCeo = 最近一次成功结算的上场 CEO（只在内存）
 // 13c：zbRun = 父页开局登记 { runId, ceoId, startedAt, settled }——结算只认这份记录、同一局只结一次；中途调岗不要求仍在任
@@ -101,7 +102,7 @@ function goPage(url) {
 function claimLock() { if (TEST_MODE) return; try { localStorage.setItem(LOCK_KEY, JSON.stringify({ tab:TAB, t:now() })); } catch (e) {} }
 function lockMine() { if (TEST_MODE) return true; try { const v = JSON.parse(localStorage.getItem(LOCK_KEY) || 'null'); return !v || v.tab === TAB; } catch (e) { return true; } }
 function freeze() {
-  if (frozen) return; frozen = true; if (zbOpen) closeZombie();
+  if (frozen) return; frozen = true; if (zbOpen) closeZombie(); if (tdOpen) closeTD();
   $('#lockOverlay').classList.remove('hidden'); audioPause();
 }
 window.addEventListener('storage', e => {
@@ -146,7 +147,7 @@ function audioUnlock() { // 只能在用户手势里调用（iOS）
   if (!AU.started) { AU.started = true; startBgm(); }
 }
 function audioPause() { if (AU.ctx && AU.ctx.state === 'running') AU.ctx.suspend().catch(() => {}); stopBgm(); }
-function audioResume() { if (!AU.ctx || state.muted || document.hidden || frozen) return; AU.ctx.resume().catch(() => {}); if (AU.started) startBgm(); }
+function audioResume() { if (!AU.ctx || state.muted || document.hidden || frozen || tdOpen) return; AU.ctx.resume().catch(() => {}); if (AU.started) startBgm(); }
 function tone(f, t, dur, type = 'sine', vol = 0.3, dest = AU.sfx, f2) {
   const c = AU.ctx, o = c.createOscillator(), g = c.createGain();
   o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
@@ -1134,6 +1135,7 @@ function doUpgradeShop(i, btn) {
 function act(a, arg, btn) {
   const i = state.cur;
   switch (a) {
+    case 'td': openTD(); return;
     case 'zombie': if (!zbCeo()) return openAssignTo(ZB_SHOP); openZombie(); return;   // 12e 打僵尸入口（板砖 b640f25）；13a：烧烤摊没 CEO → 打开派 CEO 选单
     case 'zbAssign': return openAssignTo(ZB_SHOP);   // 13a「先派 CEO」
     case 'open': { const r = atomic(() => E.openShop(state, +arg), '开张没有生效，金币已退回'); if (!buyOk(r, btn)) return; afterBuy(btn, E.SHOPS[+arg].name + ' 开张啦！'); signAnim = { shop:+arg, from:'招租中', t0:clock }; handleUnlocks(r.unlocked); break; }
@@ -1256,7 +1258,7 @@ function renderShop() {
 }
 // 13h：每家店自己的小游戏入口（只在店铺页最底部）；烧烤摊 = 打僵尸，其余三家以后各有自己的游戏，加在这里
 function shopGameCard(i) {
-  const card = i === ZB_SHOP ? zbCard() : '';
+  const card = i === ZB_SHOP ? zbCard() : i === 3 ? tdCard() : '';
   return card ? `<div class="sec-title shop-game-title">小游戏</div>${card}` : '';
 }
 function ceoPost(id) { const s = state.ceos[id]; return s.at >= 0 ? E.signOf(state, s.at).name : '休息中（空着）'; }
@@ -2114,6 +2116,7 @@ $('#mute').addEventListener('click', () => {
   state.muted = !state.muted; $('#mute').classList.toggle('off', state.muted);
   if (state.muted) { if (AU.master) AU.master.gain.value = 0; audioPause(); }
   else { audioUnlock(); if (AU.master) AU.master.gain.value = 1; audioResume(); }
+  tdController.reply();
   zbReply();   // 13e：小游戏开着时把静音状态同步过去
   if (!persist() && !saveBlocked && !frozen) toast('声音已切换，但保存失败：刷新后会恢复原设置', 2600);   // 12d3：声音开关是设置不是进度，照常生效（不能让玩家关不掉声音），只提示没存上
 });
@@ -2206,6 +2209,44 @@ window.__tzz = { TEST_MODE, TEST_LV, SAVE_KEY, BAK_KEY, get saveBlocked() { retu
   hitBig, modalOpen, closeModal, get frozen() { return frozen; },
   audioState() { return AU.ctx ? AU.ctx.state : 'none'; }, showPreview, openAssign, JOB_ART, jobShown, jobURL, showJobArt,
   HOME_ART, FURN_ART, FURN_UP, homeAct, get homeWho() { return homeWho; }, get homeSub() { return homeSub; }, get homeMode() { return homeMode; }, set homeMode(v) { homeMode = v === 'decor' ? 'decor' : 'live'; }, get homeSel() { return homeSel; }, get homeDrag() { return homeDrag; }, homeActor, LIVE_LINES, homeUndo, resize, get canvasSize() { return { W, H }; }, pet: petHooks, lookOf, drawPerson, drawHead, LOOKS, get bubble() { return bubble; } };
+/* ================= 科技公司塔防：与主钱包同一存档、同一原子交易 ================= */
+function tdCard() {
+  const z = TD.norm(state.td);
+  return `<div class="card td-card"><div class="ava">♜</div><div class="info"><div class="name">机房塔防<span class="tag">样品</span></div><div class="desc">8 种防御塔 · 4 位统帅 · ${TD.WAVES} 波<br>最佳 ${z.best}/${TD.WAVES} 波 · 升级共用经营金币</div></div><button class="buy" data-act="td">去守</button></div>`;
+}
+const tdController = window.TDHost.create({
+  state:() => state, blocked:() => zbBlocked(), balance:() => E.balance(state),
+  transact:(apply, price) => txn(apply, price, '塔防升级或进度没有生效'),
+  changed:() => { dirty = true; }, close:() => closeTD(),
+  send:d => { if (tdOpen && tdPort) tdPort.postMessage(d); }
+});
+function openTD() {
+  if (frozen || tdOpen || zbOpen || !state.shops[3].open) return;
+  tdOpen = true; const f = $('#tdFrame'), generation = ++tdGeneration;
+  const target = new URL('td/index.html?embed=1&v=13j', location.href);
+  f.onload = () => {
+    if (!tdOpen || generation !== tdGeneration) return;
+    // Verify the actual loaded document, not merely an iframe src attribute.
+    let loaded; try { loaded = new URL(f.contentWindow.location.href); } catch (e) { return; }
+    if (loaded.origin !== location.origin || loaded.pathname !== target.pathname) return;
+    if (tdPort) tdPort.close(); tdController.reset();
+    const ch = new MessageChannel(); tdPort = ch.port1;
+    const port = tdPort;
+    port.onmessage = e => { if (tdOpen && generation === tdGeneration && tdPort === port) tdController.msg(e.data); };
+    f.contentWindow.postMessage({td:'port'}, location.origin, [ch.port2]);
+    tdController.reply();
+  };
+  f.src = target.href; $('#tdOverlay').classList.remove('hidden'); audioPause();
+}
+function closeTD() {
+  if (!tdOpen) return;
+  tdOpen = false; tdGeneration++; tdController.reset();
+  if (tdPort) { tdPort.close(); tdPort = null; }
+  const f = $('#tdFrame'); f.onload = null; f.src = 'about:blank';
+  $('#tdOverlay').classList.add('hidden'); dirty = true; audioResume();
+}
+Object.defineProperties(window.__tzz, {openTD:{value:openTD}, closeTD:{value:closeTD}, tdOpen:{get:() => tdOpen}, tdRun:{get:() => tdController.run}, tdReply:{value:() => tdController.reply()}});
+
 /* ================= 打僵尸（zombie/?embed=1，全屏 iframe）=================
    只和经营共用金币：价格、等级上限、进度校验都在这边按 ZBCore 算，训练扣款和结算进度都走 txn → E.transact（扣款 + 改状态 + persist 一起成功，失败整体回滚）。
    小游戏页不写任何存档，也不能加金币；iframe 加载后经营页递给它一个 MessageChannel 端口，只认这个端口发来的 hello / buy / result / close。 */
@@ -2235,7 +2276,7 @@ function openZombie() {
     const ch = new MessageChannel(); zbPort = ch.port1; zbPort.onmessage = e => zbMsg(e.data);
     f.contentWindow.postMessage({ zb:'port' }, location.origin, [ch.port2]); zbReply();
   };
-  f.src = 'zombie/?embed=1&v=13i'; $('#zbOverlay').classList.remove('hidden'); audioPause();
+  f.src = 'zombie/?embed=1&v=13j'; $('#zbOverlay').classList.remove('hidden'); audioPause();
 }
 function closeZombie() {
   if (!zbOpen) return; zbOpen = false; zbRun = null; if (zbPort) { zbPort.close(); zbPort = null; }
