@@ -1,0 +1,1867 @@
+--- a/preview/app.js
++++ b/preview/app.js
+@@ -1156,7 +1156,7 @@
+     case 'card': return showCard(arg);
+     case 'reset': return confirmReset();
+     case 'goShop': switchShop(+arg); setTab('shop'); break;
+-    default: if (a.indexOf('home') === 0 || a.indexOf('mall') === 0) return homeAct(a, arg, btn);
++    default: if (a.indexOf('home') === 0 || a.indexOf('mall') === 0 || a.indexOf('pet') === 0) return homeAct(a, arg, btn);
+   }
+ }
+ function avaCacheClear() { for (const k of Object.keys(avaCache)) delete avaCache[k]; }
+@@ -1822,112 +1822,136 @@
+ }
+ // 12d3：摆放 / 移动 / 旋转 / 收回都先 atomic（改 + 落盘一起），这里只处理结果；没存上 → 已回滚、已提示
+ const HOME_FAIL = '摆放没有生效，已恢复原样';
+-/* ================= 宠物 p4：小狗（PetGame / PetEngine；存档只占 state.pet，一个键都不加） ================= */
++/* Two-slot roster: only the dog has a runtime/atlas in this draft. */
+ const PG = window.PetGame, PET_LIBS = !!(PG && window.PetEngine && window.PetArt && window.PetPuppy);
+-let petRt = null, petView = null, petM = null, petHiddenAt = 0, petManual = false, petShown = '', petWaitShown = null;   // petWaitShown（p4b）：上一帧是不是「等待安置」，变了就重画家宅条
++let petM = null, petHiddenAt = 0, petManual = false;
++const petActors = new Map();
++const petEsc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
++const petRoster = () => PG ? PG.view(state, E) : { rooms:{}, standby:[], pets:{} };
++const petOwned = () => Object.keys(petRoster().pets).length > 0;
++const petToken = () => JSON.stringify(Object.values(petRoster().pets).map(p => [p.uid,p.room,p.species,p.boughtAt]));
++const petName = p => (p.species === 'dog' ? '🐶 小狗' : p.species === 'cat' ? '🐱 猫' : '宠物') + ' · ' + p.uid;
+ function petInit(tryN) {
+   if (!PET_LIBS) return;
+-  fetch('pet/art/manifest.json?v=p6').then(r => { if (!r.ok) throw new Error('manifest ' + r.status); return r.json(); }).then(m => {
++  fetch('pet/art/manifest.json?v=p6').then(r => { if (!r.ok) throw new Error('manifest'); return r.json(); }).then(m => {
+     const v = window.PetArt.validateManifest(m); if (!v.ok) throw new Error(v.errors.join('；'));
+-    petM = m; petRt = PG.createRuntime({ E, manifest: m }); petView = PG.createView({ manifest: m, PA: window.PetArt, PP: window.PetPuppy, atlasBase: 'pet/art/', ver: 'p5' });
+-    document.body.dataset.petReady = '1'; dirty = true;
+-  }).catch(e => { if ((tryN || 0) < 3) setTimeout(() => petInit((tryN || 0) + 1), 600 * ((tryN || 0) + 1)); else console.warn('小狗没加载到：' + e.message); });
+-}
+-const petOwned = () => !!(PG && PG.owned(state));
+-const petHere = () => petOwned() && state.pet.home === homeWho;
+-function petBeforePersist() { if (petRt && state) petRt.beforePersist(state); }
++    petM = m; document.body.dataset.petReady = '1'; dirty = true;
++  }).catch(e => { if ((tryN || 0) < 3) setTimeout(() => petInit((tryN || 0) + 1), 600); else console.warn('宠物资源未加载：' + e.message); });
++}
++function petSyncActors() {
++  const v = petRoster();
++  for (const [uid,a] of petActors) if (!v.pets[uid] || v.pets[uid].species !== 'dog' || !v.pets[uid].room) { a.view.detach(); petActors.delete(uid); }
++  if (petM) for (const p of Object.values(v.pets)) if (p.species === 'dog' && p.room && !petActors.has(p.uid)) {
++    petActors.set(p.uid, { rt:PG.createRuntime({E, manifest:petM, uid:p.uid}), view:PG.createView({manifest:petM, PA:window.PetArt, PP:window.PetPuppy, atlasBase:'pet/art/', ver:'p6', uid:p.uid}) });
++  }
++  return v;
++}
++function petBeforePersist() { for (const a of petActors.values()) a.rt.beforePersist(state); }
++function petPrepare(s) { for (const a of petActors.values()) a.rt.beforePersist(s); }
++function petSave(s) {
++  if (saveBlocked || frozen) return false;
++  if (TEST_MODE) { s.rev++; return true; }
++  const r = E.commitSave(localStorage, SAVE_KEY, BAK_KEY, s);
++  if (r.ok) lastGood = JSON.stringify(s);
++  else if (r.stage === 'conflict') freeze();
++  return r;
++}
+ function petFrame(dt) {
+-  if (!petRt) return;
+-  const room = tab === 'home' && homeSub === 'room' && !!$('#roomFloor') && E.homeOpen(state, homeWho);
+-  const w = petManual ? petRt.sync(state) : petRt.frame(dt, state, { decorHere: room && homeMode === 'decor' && petHere() });
+-  const show = !!(w && room && petHere());
+-  // p4b：等待安置 ↔ 出来了：重画家宅条（提示 / 按钮）；正看着这个家时，腾出空地出来了给个提示
+-  const wt = !!(w && w.noRoom) + '|' + (w ? petRt.homeId : '');
+-  if (wt !== petWaitShown) { const was = petWaitShown; petWaitShown = wt; dirty = true; if (was && was.startsWith('true|') && wt === 'false|' + was.slice(5) && show) toast('腾出空地了，小狗跑出来啦', 2200); }
+-  petView.draw(show ? w : null, show ? $('#roomFloor') : null);
+-  if (!show) return;
+-  const lb = $('#petLabel'), af = $('#petAff');
+-  if (lb && lb.textContent !== w.dog.label) lb.textContent = w.dog.label;
+-  if (af) { const s = '亲密 ' + w.dog.affinity; if (af.textContent !== s) af.textContent = s; }
+-  const bb = $('#petBallBtn'); if (bb) { const busy = w.ball.state === 'carried' || w.ball.state === 'air'; if (bb.disabled !== busy) bb.disabled = busy; }
++  const v = petSyncActors(), room = tab === 'home' && homeSub === 'room' && !!$('#roomFloor');
++  for (const [uid,a] of petActors) {
++    const p = v.pets[uid], w = petManual ? a.rt.sync(state) : a.rt.frame(dt, state, {decorHere:room && p.room === homeWho && homeMode === 'decor'});
++    const show = room && p.room === homeWho;
++    a.view.draw(show ? w : null, show ? $('#roomFloor') : null);
++    const label = document.querySelector('[data-pet-status="'+CSS.escape(uid)+'"]');
++    if (label && w) label.textContent = w.noRoom ? '等待安置：请腾出空地' : w.dog.label + ' · 亲密 ' + w.dog.affinity;
++  }
+ }
+ function petResume() {
+-  if (!petRt || !petHiddenAt) return;
+-  const away = now() - petHiddenAt; petHiddenAt = 0;
+-  if (away < 3000 || !petOwned()) return;
+-  const ev = petRt.resume(state);
+-  if (ev === 'slept' && tab === 'home' && homeSub === 'room' && petHere()) toast(`你不在的 ${Math.max(1, Math.round(away / 60000))} 分钟，小狗在窝里睡了一觉`, 2400);
++  if (!petHiddenAt || petManual) return;
++  petHiddenAt = 0; for (const a of petActors.values()) a.rt.resume(state);
+ }
+ function petMallCard() {
+   if (!PG) return '';
+-  const P = PG.PET, own = petOwned(), open = E.homeOpen(state, homeWho), nm = E.CEO_BY_ID[homeWho].name;
+-  let b, line;
+-  const full = !own && open && petM && !PG.hasRoom(state, E, homeWho, petM);   // p4b：购买前就查有没有地方站
+-  if (full) { b = '<button class="buy no" disabled id="petNoRoom">暂时无法<br>入宅</button>'; line = `<b>${nm}</b> 的家摆满了，没有小狗能站的空地；收起或挪开家具、或升级房子后再来（不会扣钱）`; }
+-  else if (!own) { b = open ? btn('homePetBuy', homeWho, '购买', P.price) : '<button class="buy no" disabled>未加入</button>'; line = open ? `买了住进 <b>${nm}</b> 的家（只能养一只）` : `${homeWho === 'rocket' ? '这位 CEO' : nm} 还没加入，先切到已加入的 CEO`; }
+-  else if (state.pet.home === homeWho) { b = '<button class="buy no" disabled>住这儿</button>'; line = petRt && petRt.waiting && petRt.homeId === homeWho ? `住在 <b>${nm}</b> 的家，<b>等待安置</b>：屋里摆满了，腾出 1 格空地它就出来` : `已经住在 <b>${nm}</b> 的家，去家宅看看它`; }
+-  else { b = open ? `<button class="buy alt" data-act="homePetMove" data-arg="${homeWho}">搬过来</button>` : '<button class="buy no" disabled>未加入</button>'; line = `现在住在 <b>${E.CEO_BY_ID[state.pet.home].name}</b> 的家；搬家不花钱`; }
+-  return `<div class="card mall-card pet-card" id="petCard" data-pet="${own ? 'owned' : 'none'}" data-room="${full ? 'full' : 'ok'}"><div class="ava sq furn-ico pet-ico"><span>${P.emoji}</span></div><div class="info"><div class="name">${P.name}<span class="tag match">宠物 · 新</span></div>
+-    <div class="desc">${P.desc}<br>${line}</div></div>${b}</div>`;
++  return `<div class="card mall-card pet-card" id="petCard"><div class="ava sq furn-ico pet-ico">🐶</div><div class="info"><div class="name">${PG.PET.name}</div><div class="desc">${PG.PET.desc}<br>每个房间最多 2 只。已有宠物可免费调配，待命保留成长。</div></div>${btn('homePetBuy',homeWho,'购买',PG.PET.price)}</div>`;
+ }
+ function petRoomBar(id) {
+-  if (!PG) return '';
+-  if (!petOwned()) return '';   // 12e：没买狗时家宅不加任何提示条（主预览布局一像素不动；小狗只在商城卡片里出现）
+-  if (!petRt) return '';
+-  if (state.pet.home !== id) return `<div class="note pet-note" id="petNote">${PG.PET.emoji} 小狗住在 ${E.CEO_BY_ID[state.pet.home].name} 的家。<button class="buy alt" data-act="homePetMove" data-arg="${id}">接过来</button></div>`;
+-  const w = petRt.sync(state);
+-  if (w && w.noRoom) return `<div class="note pet-note pet-wait" id="petWait">${PG.PET.emoji} <b>小狗等待安置</b>：屋里摆满了，没有它能站的空地。收起或挪开一件家具（留出 1 格）、或升级房子，它会自己出来。</div>`;   // p4b
+-  if (homeMode === 'decor') return `<div class="note pet-note" id="petNote">${PG.PET.emoji} 小狗在旁边等你摆完；摆好切回「生活」，它会自己绕开新家具。</div>`;
+-  return `<div class="pet-bar" id="petBar"><div class="pet-lb">${PG.PET.emoji} <b id="petLabel">${w ? w.dog.label : ''}</b><small id="petAff">${w ? '亲密 ' + w.dog.affinity : ''}</small></div>
+-    <button class="buy alt" data-act="homePetCall" id="petCallBtn">📣 呼唤</button><button class="buy alt" data-act="homePetPat" id="petPatBtn">✋ 摸摸</button><button class="buy alt" data-act="homePetBall" id="petBallBtn">🎾 抛球</button></div>`;
++  if (!PG || !petOwned()) return '';
++  const v = petRoster(), here = v.rooms[id] || [];
++  const slots = [0,1].map(i => { const p = v.pets[here[i]]; return `<div class="pet-slot" data-pet-slot="${i}" ${p ? `data-uid="${petEsc(p.uid)}"` : ''}><b>${p ? petEsc(petName(p)) : '空位 ' + (i+1)}</b>${p ? `<small data-pet-status="${petEsc(p.uid)}">${p.species === 'dog' ? '生活中' : '专属动作待接入'}</small><button class="buy ghost" data-act="petStandby" data-arg="${petEsc(p.uid)}">回待命</button>` : '<small>从下方选择宠物入住</small>'}</div>`; }).join('');
++  const rows = Object.values(v.pets).map(p => `<div class="pet-list-row" data-pet-uid="${petEsc(p.uid)}" data-where="${petEsc(p.room || 'standby')}"><div><b>${petEsc(petName(p))}</b><small>${p.room ? petEsc(E.CEO_BY_ID[p.room].name) + '的家' : '待命 · 成长保留'}</small></div><button class="buy alt" data-act="petPlace" data-arg="${petEsc(p.uid)}" ${p.room === id ? 'disabled' : ''}>${p.room === id ? '已入住' : here.length === 2 ? '选择替换' : '住进来'}</button></div>`).join('');
++  const controls = here.map(uid => v.pets[uid].species === 'dog' ? `<div class="pet-bar"><span class="pet-lb">${petEsc(petName(v.pets[uid]))}</span><button class="buy alt" data-act="homePetCall" data-arg="${petEsc(uid)}">📣 呼唤</button><button class="buy alt" data-act="homePetPat" data-arg="${petEsc(uid)}">✋ 摸摸</button><button class="buy alt" data-act="homePetBall" data-arg="${petEsc(uid)}">🎾 抛球</button></div>` : '').join('');
++  return `<section class="pet-manager"><b>房间宠物 · ${here.length}/2</b><div id="petSlots">${slots}</div>${controls}<details open><summary>已拥有 · ${Object.keys(v.pets).length} 只</summary><div id="petList">${rows}</div></details><small>替换下来的宠物回待命，成长保留，再次入住不收费。</small></section>`;
++}
++function petAfterResult(r) {
++  if (!r.ok) { if (!r.same) { sfx('no'); toast(r.stage === 'save' || r.stage === 'blocked' ? '保存失败：宠物位置与金币均未改变' : r.why || '没有完成'); } dirty = true; return; }
++  for (const a of petActors.values()) a.rt.acknowledgePersist(state);
++  petSyncActors(); sfx('tap'); toast('宠物安排已保存'); dirty = true;
++}
++function petChooseReplacement(home, finish) {
++  const v = petRoster(), ids = (v.rooms[home] || []).slice(), expected = petToken();
++  openModal(`<div id="petReplace"><div class="mtitle">${petEsc(E.CEO_BY_ID[home].name)}的家 · 选择替换</div><p>房间已满（2/2）。只替换你选中的这一只，成长保留，以后可免费接回。</p>${ids.map(uid => `<button class="buy alt pet-replace-option" data-replace-uid="${petEsc(uid)}">${petEsc(petName(v.pets[uid]))} → 待命</button>`).join('')}<button class="buy ghost pet-replace-option" data-act="petReplaceCancel" id="petReplaceCancel">取消</button></div>`, false);
++  $('#petReplaceCancel').addEventListener('click', closeModal, {once:true});
++  for (const b of document.querySelectorAll('#petReplace [data-replace-uid]')) b.addEventListener('click', () => {
++    if (petToken() !== expected) { closeModal(); toast('宠物位置已变化，请重新选择'); dirty = true; return; }
++    const uid = b.dataset.replaceUid; closeModal(); finish(uid);
++  }, {once:true});
++}
++function petPlace(uid, home = homeWho) {
++  const p = petRoster().pets[uid]; if (!p || p.room === home) return;
++  const finish = replace => petAfterResult(PG.assign(state,E,uid,home,{replace,save:petSave,blocked:saveBlocked || frozen,prepare:petPrepare}));
++  if ((petRoster().rooms[home] || []).length >= 2) petChooseReplacement(home,finish); else finish(null);
+ }
+ function confirmPetBuy(home) {
+-  if (!PG) return;
+-  const P = PG.PET, bal = E.balance(state), can = E.canAfford(state, P.price), nm = E.CEO_BY_ID[home] ? E.CEO_BY_ID[home].name : '';   // p5：余额 / 能不能买走统一钱包
+-  if (petOwned()) { toast('已经有小狗了（只能养一只）'); return; }
+-  if (!E.walletOk(state)) { sfx('no'); toast('金币数据异常，现在不能买'); return; }   // p5：12d1 异常钱包（余额超安全整数等）不弹购买窗、不扣钱
+-  if (!petM) { toast('小狗还没准备好，稍后再试'); return; }
+-  if (!PG.hasRoom(state, E, home, petM)) { sfx('no'); toast(PG.NO_ROOM, 2600); dirty = true; return; }   // p4b：满屋不弹购买窗、不扣钱
+-  openModal(`<div class="mbubble">商城 · 宠物</div><div class="buy-prev"><div class="furn-ico big pet-ico"><span>${P.emoji}</span></div></div>
+-    <div class="mtitle">${P.name}</div>
+-    <table class="pv-table"><tr><td>价格</td><td>${fmt(P.price)}</td></tr><tr><td>当前余额</td><td>${fmt(bal)}</td></tr><tr><td>住进</td><td>${nm} 的家</td></tr><tr class="total"><td>买后余额</td><td class="${can ? '' : 'down'}">${can ? fmt(bal - P.price) : '还差 ' + fmt(P.price - bal)}</td></tr></table>
+-    <div class="mnote">${P.desc}以后想换个家，在商城或家宅里点「搬过来」，不花钱。</div>
+-    <div class="mbtns two"><button class="buy ghost" id="mNo">再想想</button><button class="buy red" id="pbYes" ${can ? '' : 'disabled'}>${can ? '确认购买' : '金币不够'}</button></div>`, false);
+-  $('#mNo').addEventListener('click', closeModal, { once:true });
+-  $('#pbYes').addEventListener('click', () => {
+-    petBeforePersist();
+-    const r = PG.buy(state, E, home, now(), petM, () => persist(), saveBlocked || frozen); closeModal();   // 12d3：扣款 + 写小狗 + persist 一起走 E.transact，存不上整档回滚
+-    if (!r.ok) { if (r.stage === 'save' || r.stage === 'validate' || r.stage === 'blocked') saveFailNote(r, '小狗没买成（金币没扣）'); else failBuy(null, r.why); return; }
+-    homeWho = home; homeSub = 'room'; homeMode = 'live'; homeSel = null; pageFlip('prev'); $('#panel').scrollTop = 0;
+-    afterBuy(null, `${P.name} 住进 ${nm} 的家啦！点它摸摸`);
+-  }, { once:true });
+-}
+-function petMoveHere(home) {
+-  petBeforePersist();
+-  const r = atomic(() => PG.move(state, E, home));
+-  if (!r.ok) { if (r.why !== 'saveFailed') { sfx('no'); toast(r.why); } return; }
+-  homeWho = home; homeSub = 'room'; homeMode = 'live'; homeSel = null;
+-  const wt = petRt && petRt.sync(state) && petRt.waiting;
+-  sfx('tap'); toast(wt ? `小狗搬到 ${E.CEO_BY_ID[home].name} 的家了，但屋里摆满了：先等待安置，腾出空地它就出来` : `小狗搬到 ${E.CEO_BY_ID[home].name} 的家了`, wt ? 2800 : 1900); dirty = true;
+-}
+-function petDo(k) {
+-  if (!petRt || !petHere()) return;
+-  const r = k === 'call' ? petRt.call(state) : k === 'pet' ? petRt.pet(state, 'button') : petRt.throwBall(state);
+-  if (!r.ok) { sfx('no'); toast(r.why === 'carried' ? '球在它嘴里呢' : r.why === 'flying' ? '球还在飞' : r.why === 'rearrange' ? '先把家具摆好' : r.why === 'waiting' ? '屋里没地方站，先腾出空地' : '现在不行'); return; }
+-  sfx('tap'); if (r.ignored === 'asleep') toast('它睡着了，球先放那儿'); else if (r.ignored === 'tired') toast('它太困了，想回窝');
++  if (!PG || !petM) { toast('小狗资源还没准备好'); return; }
++  const v = petRoster(), full = (v.rooms[home] || []).length >= 2;
++  const show = (room, replace) => {
++    const expected = petToken(), P = PG.PET, can = E.canAfford(state,P.price);
++    openModal(`<div class="mtitle">购买 ${P.name}</div><p>价格：${fmt(P.price)} 金币<br>当前余额：${fmt(E.balance(state))}<br>${room ? '住进 '+petEsc(E.CEO_BY_ID[room].name)+'的家' : '先回待命，之后免费安排入住'}${replace ? '<br>'+petEsc(petName(petRoster().pets[replace]))+' 回待命，保留成长' : ''}</p><div class="mbtns two"><button class="buy ghost" id="mNo">取消</button><button class="buy red" id="pbYes" ${can ? '' : 'disabled'}>确认购买</button></div>`,false);
++    $('#mNo').addEventListener('click',closeModal,{once:true});
++    $('#pbYes').addEventListener('click',() => {
++      closeModal(); if (petToken() !== expected) { toast('宠物位置已变化，请重新选择'); return; }
++      const r = PG.buy(state,E,room,now(),petM,petSave,saveBlocked || frozen,{replace,prepare:petPrepare}); petAfterResult(r);
++    },{once:true});
++  };
++  if (!E.homeOpen(state,home)) { toast('这位 CEO 还没加入'); return; }
++  if (full) {
++    openModal(`<div class="mtitle">房间已满 · 2/2</div><p>选择一只回待命，或新宠物先待命。已有宠物都保留成长。</p><button class="buy alt pet-replace-option" id="petBuyReplace">选择替换</button><button class="buy alt pet-replace-option" id="petBuyStandby">购买后待命</button><button class="buy ghost pet-replace-option" id="mNo">取消</button>`,false);
++    $('#mNo').addEventListener('click',closeModal,{once:true});
++    $('#petBuyReplace').addEventListener('click',()=>petChooseReplacement(home,uid=>show(home,uid)),{once:true});
++    $('#petBuyStandby').addEventListener('click',()=>show(null,null),{once:true});
++  } else show(home,null);
++}
++function petMoveHere(home) { const p = Object.values(petRoster().pets).find(p => p.room !== home); if (p) petPlace(p.uid,home); }
++function petDo(k,uid) {
++  petSyncActors(); const a = petActors.get(uid), p = petRoster().pets[uid]; if (!a || !p || p.room !== homeWho) return;
++  const r = k === 'call' ? a.rt.call(state) : k === 'pet' ? a.rt.pet(state,'button') : a.rt.throwBall(state);
++  if (!r.ok) { toast(r.why === 'waiting' ? '屋里没地方站，请腾出空地' : '它现在忙着，等一会儿再试'); return; } sfx('tap');
+ }
+ function petTap(e) {
+-  if (!petRt || !petView || !petHere() || !petRt.w) return false;
+-  if (!petView.hit(petRt.w, $('#roomFloor'), e.clientX, e.clientY)) return false;
+-  petRt.pet(state, 'tap'); sfx('tap'); return true;
+-}
+-const petHooks = {
+-  get rt() { return petRt; }, get w() { return petRt && petRt.w; }, get waiting() { return !!(petRt && petRt.waiting); }, get view() { return petView; }, get M() { return petM; }, PG,
+-  manual(on) { petManual = !!on; },
+-  advance(sec) { const w = petRt && petRt.sync(state); if (w) window.PetEngine.step(w, sec); return w ? window.PetEngine.snapshot(w) : null; },
+-  snapshot() { const w = petRt && petRt.sync(state); return w ? window.PetEngine.snapshot(w) : null; },
+-  resume(ms) { petHiddenAt = now() - (ms || 60000); petResume(); }, persist() { return persist(); },
++  const v = petRoster(), floor = $('#roomFloor'); if (!floor) return false;
++  // Topmost drawn pet receives a tap; never broadcast to both overlapping pets.
++  const hit = [...petActors.entries()].map(([uid,a],i) => [uid,a,i]).filter(([uid,a]) => v.pets[uid] && v.pets[uid].room === homeWho && a.rt.w && a.view.hit(a.rt.w,floor,e.clientX,e.clientY)).sort((a,b) => {
++    const ae=a[1].view.els && a[1].view.els.dog, be=b[1].view.els && b[1].view.els.dog;
++    const z=(e,w) => { const n=e && e.style ? Number.parseInt(e.style.zIndex,10) : NaN; return Number.isFinite(n) ? n : 10+Math.floor(w.dog.y*10); };
++    const dz=z(be,b[1].rt.w)-z(ae,a[1].rt.w); if (dz) return dz;
++    // Same z-index: later DOM siblings are painted on top. Raw y is not a tie-breaker.
++    if (ae && be && ae.parentNode === be.parentNode && typeof ae.compareDocumentPosition === 'function') {
++      const order=ae.compareDocumentPosition(be); if (order & 4) return 1; if (order & 2) return -1;
++    }
++    return b[2]-a[2];
++  });
++  if (!hit.length) return false; hit[0][1].rt.pet(state,'tap'); sfx('tap'); return true;
++}
++const petsHooks = {
++  view() { const v=petSyncActors(); for (const [uid,a] of petActors) { a.rt.sync(state); const eng=a.rt.snapshot(); if (eng) v.pets[uid]={...v.pets[uid],eng}; } return v; }, manual(on) { petManual = !!on; lastFrame = performance.now(); },
++  world(uid) { petSyncActors(); const a = petActors.get(uid), w = a && a.rt.sync(state); if (w) { w.pet = w.dog; w.manifest = petM; } return w || null; },
++  step(uid,sec) { const w = this.world(uid); if (w) window.PetEngine.step(w,sec); return w; },
++  toy(uid,x,y) { const a = petActors.get(uid); return a ? a.rt.throwBall(state,{x,y}) : null; },
++  draw() { if (dirty) renderTab(); petFrame(0); },
++  px(uid) { const a = petActors.get(uid), el = a && a.view.els && a.view.els.dog; if (!el) return null; const r=el.getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+r.height*0.7}; },
++  persist() { return persist(); }
+ };
++const petHooks = { PG, get M() { return petM; }, get rt() { return petActors.values().next().value?.rt || null; }, get w() { return this.rt && this.rt.w; }, get view() { return petActors.values().next().value?.view || null; }, get waiting() { return !!(this.rt && this.rt.waiting); }, manual:petsHooks.manual, advance(sec) { const uid=petActors.keys().next().value; const w=petsHooks.step(uid,sec); return w ? window.PetEngine.snapshot(w) : null; }, snapshot() { return this.w ? window.PetEngine.snapshot(this.w) : null; }, resume(ms) { petHiddenAt=now()-(ms||60000); petResume(); }, persist() { return persist(); } };
+ function homeCommit(r, msg) {
+   if (!r.ok) { if (r.why === 'saveFailed') { dirty = true; return false; } sfx('no'); if (!r.same) toast(r.why); return false; }
+   if (r.undo) pushUndo(r.undo);
+@@ -1947,9 +1971,12 @@
+     case 'homeUp': return confirmHomeUp(arg);
+     case 'homePetBuy': return confirmPetBuy(arg || homeWho);
+     case 'homePetMove': return petMoveHere(arg || homeWho);
+-    case 'homePetCall': return petDo('call');
+-    case 'homePetPat': return petDo('pet');
+-    case 'homePetBall': return petDo('ball');
++    case 'petPlace': return petPlace(arg);
++    case 'petStandby': return petAfterResult(PG.assign(state,E,arg,null,{save:petSave,blocked:saveBlocked || frozen,prepare:petPrepare}));
++    case 'petReplaceCancel': return closeModal();
++    case 'homePetCall': return petDo('call',arg);
++    case 'homePetPat': return petDo('pet',arg);
++    case 'homePetBall': return petDo('ball',arg);
+     case 'homeBuy': return confirmHomeBuy(arg);
+     case 'mallCat': mallCat = arg; if (arg !== 'cabinet') mallSub = 'all'; dirty = true; return;
+     case 'mallSub': mallSub = arg; dirty = true; return;
+@@ -2125,9 +2152,9 @@
+ let lastTouchEnd = 0;
+ document.addEventListener('touchend', e => { const t = Date.now(); if (t - lastTouchEnd < 300 && !e.target.closest('button')) e.preventDefault(); lastTouchEnd = t; }, { passive:false });
+ 
+-function onHide() { if (frozen) return; petHiddenAt = now(); tick(); if (order) order = null; /* 离线不结算进行中的团单，避免和离线收益纠缠 */ special = null; state.lastSeen = now(); persist(); audioPause(); }
++function onHide() { if (frozen || petManual) return; petHiddenAt = now(); tick(); if (order) order = null; /* 离线不结算进行中的团单，避免和离线收益纠缠 */ special = null; state.lastSeen = now(); persist(); audioPause(); }
+ function onShow() {
+-  if (frozen) return;
++  if (frozen || petManual) return;
+   if (!lockMine()) { freeze(); return; }
+   if (storedRev() > state.rev) { freeze(); return; }
+   tick(); audioResume(); lastFrame = performance.now(); petResume();
+@@ -2135,7 +2162,7 @@
+ document.addEventListener('visibilitychange', () => { if (document.hidden) onHide(); else onShow(); });
+ window.addEventListener('pagehide', onHide);
+ window.addEventListener('pageshow', e => { if (e.persisted) onShow(); });
+-window.addEventListener('blur', () => { if (!frozen) persist(); });
++window.addEventListener('blur', () => { if (!frozen && !petManual) persist(); });
+ let resizeT = 0;
+ window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(resize, 120); });
+ // 店景区尺寸变了（切回「经营」、App 内置浏览器工具栏收起/展开）就重算画布，避免画布停在 0 高度
+@@ -2147,6 +2174,7 @@
+   requestAnimationFrame(frame);
+   const dt = Math.min(0.1, (ts - lastFrame) / 1000); lastFrame = ts; clock = ts / 1000;
+   if (frozen) return;
++  if (petManual) { if (dirty) renderTab(); petFrame(0); return; }
+   tick(); updateBig(); updateGuests(dt); updateSupers();
+   if (focusT > 0) focusT -= dt; if (shake > 0) shake = Math.max(0, shake - dt * 1.5);
+   if (clock > nextBubbleAt) { nextBubbleAt = clock + 9 + Math.random() * 7; const i = state.cur;
+@@ -2208,7 +2236,7 @@
+   get big() { return order; }, get order() { return order; }, get special() { return special; }, get guests() { return guests; },
+   hitBig, modalOpen, closeModal, get frozen() { return frozen; },
+   audioState() { return AU.ctx ? AU.ctx.state : 'none'; }, showPreview, openAssign, JOB_ART, jobShown, jobURL, showJobArt,
+-  HOME_ART, FURN_ART, FURN_UP, homeAct, get homeWho() { return homeWho; }, get homeSub() { return homeSub; }, get homeMode() { return homeMode; }, set homeMode(v) { homeMode = v === 'decor' ? 'decor' : 'live'; }, get homeSel() { return homeSel; }, get homeDrag() { return homeDrag; }, homeActor, LIVE_LINES, homeUndo, resize, get canvasSize() { return { W, H }; }, pet: petHooks, lookOf, drawPerson, drawHead, LOOKS, get bubble() { return bubble; } };
++  HOME_ART, FURN_ART, FURN_UP, homeAct, get homeWho() { return homeWho; }, get homeSub() { return homeSub; }, get homeMode() { return homeMode; }, set homeMode(v) { homeMode = v === 'decor' ? 'decor' : 'live'; }, get homeSel() { return homeSel; }, get homeDrag() { return homeDrag; }, homeActor, LIVE_LINES, homeUndo, resize, get canvasSize() { return { W, H }; }, pet: petHooks, pets: petsHooks, lookOf, drawPerson, drawHead, LOOKS, get bubble() { return bubble; } };
+ /* ================= 科技公司塔防：与主钱包同一存档、同一原子交易 ================= */
+ function tdCard() {
+   const z = TD.norm(state.td);
+--- /dev/null
++++ b/preview/pet/accept2/PET2_DRAFT.md
+@@ -0,0 +1,65 @@
++# Two pets per room: isolated local draft
++
++This is a local next-preview patch, not a deployed build or the current integration.
++
++## Baseline and scope
++
++- Repository: yyyhhw/tangzhe-zhuan-playtest.
++- Published baseline: 13i, fff02e09d39c11063d3ea07ee51d1689e1c56325.
++- App/economy/index/TD files were copied from the isolated 13j integration candidate. Parent app SHA256: c935d367343df973919df5728135f4d9d0e11c4b74b7b1fffb7daeffe8b8cd28. Economy SHA256: a0751b59b98114d7811919fd33cdecc9a9a6cc94f43b5edff2474aba539db38c. The source candidate was never edited.
++- Unchanged pet dependencies and the standalone pet app were read from the exact 13i revision. Acceptance contract: devin/pet2-accept at d201ca29bcda7b75266e7e7a99cdb585dfc59a61.
++- Rebase only after 13j review/integration. Do not apply the full parent app over unrelated integration changes; review the patch hunks.
++- No remote writes, installation, deployment, formal-root files, or storage-key changes.
++
++## Implementation
++
++- state.pets v2 holds individual records with uid, species, room (null = standby), boughtAt, and an opaque engine payload. The legacy single state.pet migrates once. Excess residents go to standby; duplicate identities resolve to one resident. Unknown species keep their growth payload unchanged.
++- Each room has two explicit slots, a complete owned-pet list with location, free placement, and return-to-standby. A full room requires the user to choose exactly which resident goes to standby. Cancel never starts a transaction. A stale dialog rejects placement instead of using a changed roster.
++- Buying another dog creates a new identity. A full room offers explicit replacement or purchase to standby; there is no automatic eviction. Already-owned pets never need repurchase.
++- All allocation and purchase mutations, including runtime snapshot preparation, happen inside E.transact. Pets use the existing E.commitSave for main/backup readback and revision conflict protection. Public app.persist and economy.js are unchanged by this patch.
++- Each dog has its own runtime, view, interaction controls, initial berth, bed where space permits, and save payload. A tap targets one topmost dog. Furniture-space waiting remains distinct from the two-pet capacity.
++- Unknown species have a textual roster entry only. Cat artwork, animation, and toy/action loop are intentionally absent; dogs are not relabeled as cats. Full acceptance C1–C8 and cat-dependent U7 remain pending separate cat work.
++- The standalone preview/pet/game/app.js shares petgame.js and the preview save, so its pet UI is updated in parallel to avoid reading removed state.pet fields after migration. Its unrelated game behavior remains unchanged.
++- Cache/version files remain the exact 13j baseline (parent 13j, standalone p6b) to preserve the coordinated-version contract. This patch must not be deployed alone: integration owner must advance all affected resource queries, inline version checks and version.json together for the eventual next preview. No release version was claimed.
++
++## Verification commands
++
++Run from a complete repository with the patch applied:
++
++    node preview/pet/accept2/test_pets2_core.js
++    node preview/pet/accept2/test_pets2_ui_vm.js
++    node preview/pet/accept2/test_pets2_roster_runtime.js
++    node preview/td/test_tdhost.js
++    node preview/td/test_td_protocol.js
++    node preview/td/test_td_bridge.js
++    node preview/test_coin_safety.js
++    node preview/test_economy.js
++    node preview/pet/test_engine.js
++    node --check preview/app.js
++    node --check preview/pet/game/app.js
++    node --check preview/pet/game/petgame.js
++
++The UI VM evaluates actual app pet functions using minimal fake DOM/storage, real Economy, and real PetGame. It cannot establish layout, touch-device, atlas appearance, browser lifecycle, or real-browser storage behavior. Tests explicitly compare whole state for cancellation, stale choices, and failure rather than only projections.
++
++## Browser and manual acceptance (pending, not run here)
++
++Use a fresh isolated browser profile and a complete local checkout. Do not run fixture injection against a player's profile or formal site. Freeze after EVERY initial load and reload via __tzz.pets.manual(true); the hook pauses simulation, passive autosave, hide/blur saves and foreground tick. Use __tzz.pets.step(uid, seconds) to advance only the selected pet, then __tzz.pets.draw() before inspecting. __tzz.pets.view() exposes live growth snapshots without changing state.
++
++1. Seed three dog instances (a and b in c77, c in standby), distinct legitimate affinities (51, 62, 73), sufficient coins, and all CEO rooms unlocked. Save only to the preview save in the disposable profile. Reload and freeze again.
++2. Open c77's room. Check exactly two slots, every pet's location, scrolling, 40px+ controls and no horizontal overflow at iPhone SE and 15 sizes. Record screenshots.
++3. Place c. Verify only a/b appear in the replacement chooser. Cancel. Compare the full state and saved bytes with the snapshot from before opening; nothing may change.
++4. Reopen, choose b. Verify a/c in c77, b standby, all growth unchanged and coins unchanged. Read the preview save back, reload, freeze again, and compare the stable roster/growth.
++5. Reopen a full-room chooser and change a participant's room before confirming (test harness only). Capture full state AFTER the intervening change. Confirming the stale chooser must leave that entire state unchanged.
++6. Inject preview backup/main write failures separately in the disposable profile. Placement must fail; whole state, visible slots and stored main must remain the pre-action values. Restore storage methods after each case.
++7. With two dogs, advance 1.5 seconds deterministically and draw. Both must be visible and separable. Tap one, step each 0.25 seconds, draw; only the targeted dog reacts. Confirm the saved growth belongs to the same uid after moving away and back. Two dogs may visually overlap during free movement; topmost-only hit targeting is intentional.
++8. Try purchase to an empty slot, a full room with explicit replacement, and standby; test each cancel, insufficient balance, failed save, and repeated confirm. Verify one successful purchase costs exactly 3000 and allocates exactly one new uid.
++9. Seed an old single-dog state.pet and a four-resident v2 room in separate disposable fixtures. Reload/freeze. Verify legacy growth/location, and 2 residents + 2 standby without loss. Verify unrelated TD, zombie, coins, furniture, and CEO progress after each migration.
++10. Visit the standalone pet preview with the same disposable preview save, then return to main preview. Verify the same roster/growth, no exceptions, and unchanged formal-key sentinel throughout.
++
++Run the unchanged d201ca2 browser acceptance once real browser support and cat implementation are available. Do not call cat-dependent checks passed based on this dog-only draft.
++
++## Independent review corrections
++
++- Runtime snapshot preparation stages a candidate engine payload without immediately advancing the runtime's committed-state comparison baseline. A failed transaction can restore saved state while retaining every pre-transaction live dog world, including unsaved affinity and energy; subsequent sync and retry are part of regression coverage. Default persistence callers use the same staged reconciliation, so the fix is not limited to the pet allocation callback.
++- Tap ordering follows actual rendered z-index, then actual DOM sibling paint order. Equal y, different y within one 0.1-tile layer, and remounted/reordered sprites are covered; raw y is not a tie-breaker for equal CSS layers.
++- Bed berth assignment responds to room roster changes. Removing the first dog and adding another cannot leave both retained/new runtimes on the second berth until refresh. Regression checks compare before/after refresh and preserve live growth.
+--- /dev/null
++++ b/preview/pet/accept2/test_pets2_roster_runtime.js
+@@ -0,0 +1,285 @@
++// Extra roster/runtime regressions. Run: node preview/pet/accept2/test_pets2_roster_runtime.js
++// Keep the original R1–R16 acceptance cases unchanged; these cover integration edge cases.
++'use strict';
++const assert = require('assert');
++const E = require('../../economy.js');
++const PG = require('../game/petgame.js');
++const M = require('../art/manifest.json');
++const clone = value => JSON.parse(JSON.stringify(value));
++const fresh = () => {
++  const st = E.newState(1790000000000);
++  for (const ceo of E.CEOS) st.ceos[ceo.id].unlocked = true;
++  st.coins = 100000;
++  return st;
++};
++const uid = (st, index = 0) => st.pets.list[index].uid;
++let passed = 0;
++const test = (name, run) => { run(); passed++; console.log('PASS ' + name); };
++
++test('independent dog purchases, explicit replacement, and standby ownership', () => {
++  const st = fresh(), startCoins = st.coins;
++  let saves = 0;
++  const save = () => { saves++; return true; };
++  const a = PG.buy(st, E, 'c77', 100, M, save);
++  const b = PG.buy(st, E, 'c77', 100, M, save);
++  assert(a.ok && b.ok && a.uid !== b.uid, 'same-timestamp purchases need unique IDs');
++  assert.equal(st.coins, startCoins - 6000);
++  assert.equal(saves, 2);
++  const full = JSON.stringify(st);
++  const rejected = PG.buy(st, E, 'c77', 100, M, save);
++  assert(rejected.needReplace && !rejected.ok);
++  assert.equal(JSON.stringify(st), full);
++  assert.equal(saves, 2, 'full-room rejection must not save');
++  const standby = PG.buy(st, E, null, 100, M, save);
++  assert(standby.ok);
++  assert.equal(PG.view(st, E).standby[0], standby.uid);
++
++  const aRt = PG.createRuntime({ E, manifest: M, uid: a.uid, now: () => 100 });
++  const bRt = PG.createRuntime({ E, manifest: M, uid: b.uid, now: () => 100 });
++  aRt.sync(st); bRt.sync(st);
++  assert(Math.hypot(aRt.w.dog.x - bRt.w.dog.x, aRt.w.dog.y - bRt.w.dog.y) > 1.2, 'two dogs need distinct initial touch targets');
++  assert.notEqual(aRt.w.bed.x, bRt.w.bed.x, 'empty room has space for separate beds');
++  const beforeB = bRt.w.dog.affinity;
++  aRt.pet(st);
++  assert.equal(bRt.w.dog.affinity, beforeB, 'touching a must not change b');
++  const standbyRt = PG.createRuntime({ E, manifest: M, uid: standby.uid });
++  assert.equal(standbyRt.sync(st), null, 'standby must not simulate');
++  const replacement = PG.buy(st, E, 'c77', 100, M, save, false, { replace: a.uid });
++  assert(replacement.ok);
++  assert(PG.view(st, E).standby.includes(a.uid), 'replaced pet remains owned');
++});
++
++test('failed purchase rolls back wallet, revision, placement, and prepared growth', () => {
++  for (const save of [() => false, () => { throw new Error('quota'); }]) {
++    const st = fresh();
++    PG.buy(st, E, 'c77', 100, M, () => true);
++    PG.buy(st, E, 'c77', 100, M, () => true);
++    const before = JSON.stringify(st);
++    const result = PG.buy(st, E, 'c77', 100, M, save, false, {
++      replace: uid(st),
++      prepare: next => { next.pets.list[0].eng = { affinity: 123 }; next.rev += 4; },
++    });
++    assert(!result.ok);
++    assert.equal(JSON.stringify(st), before);
++  }
++});
++
++test('roster operations preserve opaque growth across every species', () => {
++  const st = fresh();
++  st.pets = { v: 2, list: [
++    { uid: '__proto__', species: 'future-llama', room: 'c77', boughtAt: 0,
++      eng: { v: 93, xp: 987, pet: { friendship: 12 }, dog: { affinity: 99999 }, extension: ['a', 0] } },
++    { uid: 'dog', species: 'dog', room: 'c77', boughtAt: 1,
++      eng: { v: 8, dog: { affinity: 0 }, xp: 454 } },
++  ] };
++  const expectedGrowth = st.pets.list.map(p => JSON.stringify(p.eng));
++  PG.norm(st, E);
++  assert.equal(st.pets.list[0].uid, '__proto__');
++  assert(PG.assign(st, E, '__proto__', 'pearl', { save: () => true }).ok);
++  assert.deepEqual(st.pets.list.map(p => JSON.stringify(p.eng)), expectedGrowth);
++  const before = JSON.stringify(st);
++  Object.freeze(st);
++  assert(PG.view(st, E).pets['__proto__']);
++  assert.equal(JSON.stringify(st), before, 'view must be read-only');
++  const wrongSpecies = PG.createRuntime({ E, manifest: M, uid: '__proto__' });
++  assert.equal(wrongSpecies.sync(st), null);
++  wrongSpecies.beforePersist(st);
++  assert.equal(JSON.stringify(st), before, 'dog runtime must never rewrite another species');
++});
++
++test('runtime snapshots are applied inside assignment rollback boundary', () => {
++  const st = fresh();
++  PG.buy(st, E, 'c77', 100, M, () => true);
++  const id = uid(st), rt = PG.createRuntime({ E, manifest: M, uid: id, now: () => 100 });
++  rt.sync(st); rt.pet(st);
++  const eng = rt.snapshot(), before = JSON.stringify(st);
++  assert(eng.dog.affinity >= 40);
++  const options = { prepare: next => { next.pets.list[0].eng = eng; }, save: () => false };
++  assert(!PG.assign(st, E, id, 'pearl', options).ok);
++  assert.equal(JSON.stringify(st), before);
++  options.save = next => {
++    assert.equal(next.pets.list[0].eng.dog.affinity, eng.dog.affinity);
++    return true;
++  };
++  assert(PG.assign(st, E, id, 'pearl', options).ok);
++  const moved = JSON.stringify(st);
++  rt.beforePersist(st);
++  assert.equal(JSON.stringify(st), moved, 'old-room runtime must not overwrite moved pet');
++  rt.sync(st);
++  assert.equal(rt.homeId, 'pearl');
++  assert.equal(rt.w.dog.affinity, eng.dog.affinity);
++});
++
++test('stale replacement picker cannot apply after room occupants change', () => {
++  const st = fresh();
++  for (let i = 0; i < 3; i++) PG.buy(st, E, i < 2 ? 'c77' : null, 100 + i, M, () => true);
++  const expected = PG.view(st, E);
++  assert(PG.assign(st, E, uid(st, 0), 'pearl', { save: () => true }).ok);
++  const before = JSON.stringify(st);
++  let saves = 0;
++  const result = PG.assign(st, E, uid(st, 2), 'c77', {
++    replace: uid(st, 1), expected, save: () => { saves++; return true; },
++  });
++  assert(!result.ok && result.stale);
++  assert.equal(saves, 0);
++  assert.equal(JSON.stringify(st), before);
++});
++
++test('stale runtimes cannot overwrite newer engines; clone snapshots stay isolated', () => {
++  const st = fresh();
++  PG.buy(st, E, 'c77', 100, M, () => true);
++  const id = uid(st), rt = PG.createRuntime({ E, manifest: M, uid: id, now: () => 100 });
++  rt.sync(st); rt.pet(st);
++  const shadow = clone(st), before = JSON.stringify(st);
++  rt.beforePersist(shadow);
++  assert.equal(JSON.stringify(st), before);
++  const affinity = shadow.pets.list[0].eng.dog.affinity;
++  rt.beforePersist(st);
++  assert.equal(st.pets.list[0].eng.dog.affinity, affinity, 'snapshotting a clone must not invalidate live persistence');
++  st.pets.list[0].eng = { v: 1, dog: { affinity: 88, energy: 70 }, home: 'c77', savedAt: 100 };
++  const external = JSON.stringify(st);
++  rt.beforePersist(st);
++  assert.equal(JSON.stringify(st), external);
++  rt.sync(st);
++  assert.equal(rt.w.dog.affinity, 88);
++  assert(PG.assign(st, E, id, null, { save: () => true }).ok);
++  const standby = JSON.stringify(st);
++  rt.beforePersist(st);
++  assert.equal(JSON.stringify(st), standby);
++  assert.equal(rt.sync(st), null);
++  assert.equal(rt.w, null);
++});
++
++test('ID repair and normalization preserve roster metadata and omit empty rooms', () => {
++  const st = fresh();
++  st.pets = { v: 2, futureRosterMetadata: { unlockedSpecies: ['cat', 'dog'], hintSeen: true }, list: [
++    { uid: '', species: 'cat', room: 'pearl', eng: { custom: 1 } },
++    { uid: null, species: 'cat', room: 'pearl', eng: { custom: 2 } },
++    { uid: 'a', species: 'cat', room: 'pearl', eng: { custom: 3 } },
++    { uid: 'a', species: 'cat', room: 'c77', eng: { custom: 4 } },
++  ] };
++  PG.norm(st, E);
++  assert.deepEqual(st.pets.futureRosterMetadata, { unlockedSpecies: ['cat', 'dog'], hintSeen: true });
++  assert.equal(st.pets.list.length, 3);
++  assert.equal(new Set(st.pets.list.map(p => p.uid)).size, 3);
++  assert.deepEqual(Object.keys(PG.view(st, E).rooms), ['pearl']);
++  assert.equal(PG.view(st, E).standby.length, 1);
++  const before = JSON.stringify(st);
++  PG.norm(st, E);
++  assert.equal(JSON.stringify(st), before);
++});
++
++test('failed replacement and retry preserve every active runtime, including other rooms', () => {
++  for (const save of [() => false, () => { throw new Error('quota'); }]) {
++    const st = fresh();
++    const purchases = ['c77', 'c77', 'pearl', null].map((room, i) => PG.buy(st, E, room, 100 + i, M, () => true));
++    const active = purchases.slice(0, 3).map(p => PG.createRuntime({ E, manifest: M, uid: p.uid, now: () => 100 }));
++    const worlds = active.map((rt, i) => {
++      const world = rt.sync(st);
++      world.dog.affinity = 65 + i;
++      world.dog.energy = 30 + i;
++      return world;
++    });
++    const prepare = next => { for (const rt of active) rt.beforePersist(next, false); };
++    const before = JSON.stringify(st);
++    const failed = PG.assign(st, E, purchases[3].uid, 'c77', { replace: purchases[0].uid, prepare, save });
++    assert(!failed.ok);
++    assert.equal(JSON.stringify(st), before);
++    active.forEach((rt, i) => {
++      assert.strictEqual(rt.sync(st), worlds[i], 'rollback must retain each existing world');
++      assert.equal(rt.w.dog.affinity, 65 + i);
++      assert.equal(rt.w.dog.energy, 30 + i);
++      assert.equal(rt.acknowledgePersist(st), false, 'rolled-back staged save cannot be acknowledged');
++    });
++    assert(PG.assign(st, E, purchases[3].uid, 'c77', { replace: purchases[0].uid, prepare, save: () => true }).ok);
++    assert.equal(active[0].acknowledgePersist(st), false, 'displaced world cannot acknowledge as a resident');
++    assert.equal(active[0].sync(st), null);
++    active.slice(1).forEach((rt, offset) => {
++      const i = offset + 1;
++      assert.equal(rt.acknowledgePersist(st), true);
++      assert.strictEqual(rt.sync(st), worlds[i], 'successful checkpoint retains resident animation world');
++      assert.equal(rt.w.dog.affinity, 65 + i);
++      assert.equal(rt.w.dog.energy, 30 + i);
++    });
++    assert.equal(st.pets.list.find(p => p.uid === purchases[0].uid).eng.dog.affinity, 65);
++    assert.equal(st.pets.list.find(p => p.uid === purchases[0].uid).eng.dog.energy, 30);
++  }
++});
++
++test('multiple snapshots inside one failed transaction retain original rollback baseline', () => {
++  const st = fresh();
++  PG.buy(st, E, 'c77', 100, M, () => true);
++  const rt = PG.createRuntime({ E, manifest: M, uid: uid(st), now: () => 100 });
++  const world = rt.sync(st);
++  world.dog.affinity = 69; world.dog.energy = 32;
++  const before = JSON.stringify(st);
++  assert(!E.transact(st, { price: 0, save: next => {
++    rt.beforePersist(next);
++    world.dog.affinity = 70; world.dog.energy = 31;
++    rt.beforePersist(next); return false;
++  } }).ok);
++  assert.equal(JSON.stringify(st), before);
++  assert.strictEqual(rt.sync(st), world);
++  assert.equal(rt.w.dog.affinity, 70);
++  assert.equal(rt.w.dog.energy, 31);
++});
++
++test('default persistence and consecutive staged saves preserve live progress after rollback', () => {
++  const st = fresh();
++  PG.buy(st, E, 'c77', 100, M, () => true);
++  const rt = PG.createRuntime({ E, manifest: M, uid: uid(st), now: () => 100 });
++  const world = rt.sync(st);
++  world.dog.affinity = 51; world.dog.energy = 55;
++  // A successful generic save, with no frame or explicit acknowledgement afterward.
++  rt.beforePersist(st);
++  const firstSaved = JSON.stringify(st);
++  world.dog.affinity = 66; world.dog.energy = 43;
++  const failed = E.transact(st, {
++    price: 0,
++    save: next => { rt.beforePersist(next); return false; },
++  });
++  assert(!failed.ok);
++  assert.equal(JSON.stringify(st), firstSaved);
++  assert.strictEqual(rt.sync(st), world, 'second save failure must not rebuild from first saved growth');
++  assert.equal(rt.w.dog.affinity, 66);
++  assert.equal(rt.w.dog.energy, 43);
++  // Successful generic persistence is recognized automatically at the next sync.
++  assert(E.transact(st, { price: 0, save: next => { rt.beforePersist(next); return true; } }).ok);
++  assert.strictEqual(rt.sync(st), world);
++  assert.equal(st.pets.list[0].eng.dog.affinity, 66);
++  world.dog.affinity = 67;
++  rt.beforePersist(st);
++  assert.equal(st.pets.list[0].eng.dog.affinity, 67);
++});
++
++test('resident departure renumbers beds without resetting live world or growth', () => {
++  const st = fresh();
++  const a = PG.buy(st, E, 'c77', 100, M, () => true);
++  const b = PG.buy(st, E, 'c77', 101, M, () => true);
++  const ar = PG.createRuntime({ E, manifest: M, uid: a.uid, now: () => 100 });
++  const br = PG.createRuntime({ E, manifest: M, uid: b.uid, now: () => 100 });
++  ar.sync(st); br.sync(st);
++  const worldB = br.w, position = [worldB.dog.x, worldB.dog.y];
++  worldB.dog.affinity = 72; worldB.dog.energy = 38;
++  assert(PG.assign(st, E, a.uid, null, { save: () => true }).ok);
++  assert.strictEqual(br.sync(st), worldB);
++  assert.deepEqual([worldB.dog.x, worldB.dog.y], position);
++  assert.equal(worldB.dog.affinity, 72);
++  assert.equal(worldB.dog.energy, 38);
++  const c = PG.buy(st, E, 'c77', 102, M, () => true);
++  const cr = PG.createRuntime({ E, manifest: M, uid: c.uid, now: () => 100 });
++  cr.sync(st); br.sync(st);
++  assert.notDeepEqual(br.w.bed, cr.w.bed, 'survivor and new resident need separate beds immediately');
++  const beds = [clone(br.w.bed), clone(cr.w.bed)];
++  br.beforePersist(st); cr.beforePersist(st);
++  const reloaded = E.migrate(clone(st), 100).st;
++  PG.norm(reloaded, E);
++  const br2 = PG.createRuntime({ E, manifest: M, uid: b.uid, now: () => 100 });
++  const cr2 = PG.createRuntime({ E, manifest: M, uid: c.uid, now: () => 100 });
++  br2.sync(reloaded); cr2.sync(reloaded);
++  assert.deepEqual([br2.w.bed, cr2.w.bed], beds, 'refresh retains the same distinct bed assignment');
++  assert.equal(br2.w.dog.affinity, 72);
++  assert.equal(br2.w.dog.energy, 38);
++});
++
++console.log(passed + ' extra roster/runtime cases passed');
+--- /dev/null
++++ b/preview/pet/accept2/test_pets2_ui_vm.js
+@@ -0,0 +1,523 @@
++// Two-slot app UI logic regression, without a browser or third-party packages.
++// Run: node preview/pet/accept2/test_pets2_ui_vm.js
++// Executes the actual pet section from app.js in a VM. Economy, PetGame, and
++// PetEngine are real; only modal DOM, surrounding app globals, and storage are
++// in-memory fakes. This does NOT test layout, CSS, canvas drawing, browser event
++// propagation, WebKit, device touch behavior, or cat animation acceptance.
++'use strict';
++const assert = require('node:assert/strict');
++const fs = require('node:fs');
++const path = require('node:path');
++const vm = require('node:vm');
++const ROOT = path.resolve(__dirname, '../..');
++const E = require(path.join(ROOT, 'economy.js'));
++const PG = require(path.join(ROOT, 'pet/game/petgame.js'));
++const PE = require(path.join(ROOT, 'pet/engine.js'));
++const PA = require(path.join(ROOT, 'pet/art.js'));
++const PP = require(path.join(ROOT, 'pet/puppy.js'));
++const MANIFEST = JSON.parse(fs.readFileSync(path.join(ROOT, 'pet/art/manifest.json'), 'utf8'));
++const APP = fs.readFileSync(path.join(ROOT, 'app.js'), 'utf8');
++const START = APP.indexOf('const PG = window.PetGame');
++const END = APP.indexOf('function homeCommit(', START);
++assert(START >= 0 && END > START, 'Cannot locate actual app.js pet UI source; update extraction boundaries, never copy the implementation into the test.');
++for (const name of ['view', 'assign', 'norm', 'createRuntime', 'createView']) {
++  assert.equal(typeof PG[name], 'function', 'Missing PetGame.' + name + '; UI assertions have not run.');
++}
++const PET_SOURCE = APP.slice(START, END);
++function sourceBetween(start, end) {
++  const a = APP.indexOf(start), b = APP.indexOf(end, a + start.length);
++  assert(a >= 0 && b > a, 'Cannot locate app contract source: ' + start);
++  return APP.slice(a, b);
++}
++const ACT_SOURCE = sourceBetween('function act(a, arg, btn)', 'function avaCacheClear(');
++const HOME_ACT_SOURCE = sourceBetween('function homeAct(a, arg, b)', 'function homeCellAt(');
++const MAIN = 'tangzhe-preview-save', BAK = 'tangzhe-preview-save-bak';
++const FORMAL = 'tangzhe-save', SENTINEL = 'formal-save-sentinel-do-not-touch';
++const T0 = 1790000000000;
++const HOMES = E.CEOS.map(c => c.id);
++const clone = value => JSON.parse(JSON.stringify(value));
++const snapshot = value => JSON.stringify(value);
++const decode = s => s.replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&');
++
++// Tiny DOM only models the selectors and direct listeners used by the extracted
++// pet modal functions. Rendered room markup is inspected separately as text.
++class Element {
++  constructor(attrs = {}) {
++    this.attrs = attrs;
++    this.dataset = {};
++    this.listeners = [];
++    this.disabled = Object.prototype.hasOwnProperty.call(attrs, 'disabled');
++    for (const [name, value] of Object.entries(attrs)) if (name.startsWith('data-')) {
++      this.dataset[name.slice(5).replace(/-([a-z])/g, (_, c) => c.toUpperCase())] = value;
++    }
++  }
++  addEventListener(type, fn, opts = {}) { this.listeners.push({ type, fn, once: !!opts.once }); }
++  click() {
++    if (this.disabled) return;
++    for (const listener of this.listeners.slice()) if (listener.type === 'click') {
++      if (listener.once) this.listeners.splice(this.listeners.indexOf(listener), 1);
++      listener.fn({ target: this, currentTarget: this });
++    }
++  }
++}
++function tags(html, name) {
++  return [...html.matchAll(new RegExp('<' + name + '\\b([^>]*)>', 'g'))].map(match => {
++    const attrs = {};
++    for (const a of match[1].matchAll(/([\w-]+)="([^"]*)"/g)) attrs[a[1]] = decode(a[2]);
++    if (/\bdisabled\b/.test(match[1])) attrs.disabled = '';
++    return new Element(attrs);
++  });
++}
++class ModalDOM {
++  constructor() {
++    this.modal = null;
++    this.openCount = 0;
++    this.floor = new Element({ id: 'roomFloor' });
++    this.floor.getBoundingClientRect = () => ({ left: 10, top: 20, width: 600, height: 600 });
++    this.body = { dataset: {} };
++  }
++  open(html) { this.modal = { html, buttons: tags(html, 'button') }; this.openCount++; }
++  close() { this.modal = null; }
++  querySelector(selector) {
++    if (selector === '#roomFloor') return this.floor;
++    if (selector.startsWith('[data-pet-status=')) return null;
++    if (selector.startsWith('#')) return this.modal && this.modal.buttons.find(b => b.attrs.id === selector.slice(1)) || null;
++    throw new Error('Unmodeled DOM selector: ' + selector);
++  }
++  querySelectorAll(selector) {
++    assert.equal(selector, '#petReplace [data-replace-uid]', 'New selector needs explicit fake-DOM support.');
++    return this.modal ? this.modal.buttons.filter(b => 'replaceUid' in b.dataset) : [];
++  }
++}
++class MemoryStorage {
++  constructor(st) {
++    this.data = new Map([[MAIN, snapshot(st)], [BAK, snapshot(st)], [FORMAL, SENTINEL]]);
++    this.ops = [];
++    this.failKey = null;
++    this.dropKey = null;
++  }
++  getItem(key) { this.ops.push(['get', key]); return this.data.has(key) ? this.data.get(key) : null; }
++  setItem(key, value) {
++    this.ops.push(['set', key]);
++    if (key === this.failKey) { const e = new Error('Simulated quota'); e.name = 'QuotaExceededError'; throw e; }
++    if (key === this.dropKey) return; // Silent write failure exercises real readback verification.
++    this.data.set(key, String(value));
++  }
++  snap() { return snapshot([...this.data.entries()]); }
++  writes() { return this.ops.filter(op => op[0] === 'set'); }
++}
++function fresh({ engines = true, list } = {}) {
++  const st = E.migrate(null, T0).st;
++  for (const id of HOMES) { st.ceos[id].unlocked = true; st.ceos[id].lv = Math.max(1, st.ceos[id].lv || 1); }
++  st.coins = 1000000;
++  st.pets = { v: 2, list: (list || [
++    { uid: 'a', species: 'dog', room: HOMES[0] },
++    { uid: 'b', species: 'dog', room: HOMES[0] },
++    { uid: 'c', species: 'cat', room: null },
++    { uid: 'd', species: 'dog', room: HOMES[1] },
++  ]).map((p, i) => Object.assign({ boughtAt: T0 + i, eng: engines ? {
++    v: 1, home: p.room, dog: { x: 1, y: 1, affinity: 51 + i, energy: 61 + i }, savedAt: T0,
++  } : null }, p)) };
++  PG.norm(st, E);
++  assert.deepEqual(E.validState(st), [], 'Test fixture must pass actual Economy validation.');
++  assert.deepEqual(E.checkSave(clone(st)), [], 'Test fixture must be readable by actual Economy.');
++  return st;
++}
++function harness(options = {}) {
++  const state = options.state || fresh(options);
++  const document = new ModalDOM(), storage = new MemoryStorage(state);
++  const commits = [], toasts = [], sounds = [];
++  const economy = Object.assign({}, E, { commitSave(...args) {
++    const result = E.commitSave(...args);
++    commits.push({ result: clone(result), args: args.slice(1, 3) });
++    return result;
++  } });
++  const ctx = vm.createContext({
++    E: economy, state, localStorage: storage, document,
++    window: { PetGame: PG, PetEngine: PE, PetArt: PA, PetPuppy: PP, Node: { DOCUMENT_POSITION_PRECEDING: 2, DOCUMENT_POSITION_FOLLOWING: 4 } },
++    Node: { DOCUMENT_POSITION_PRECEDING: 2, DOCUMENT_POSITION_FOLLOWING: 4 },
++    saveBlocked: false, frozen: false, TEST_MODE: false, SAVE_KEY: MAIN, BAK_KEY: BAK,
++    lastGood: storage.data.get(MAIN), dirty: false, homeWho: HOMES[0], tab: 'home', homeSub: 'room', homeMode: 'live', lastFrame: 0,
++    $: selector => document.querySelector(selector),
++    openModal: html => document.open(html), closeModal: () => document.close(),
++    toast: text => toasts.push(text), sfx: sound => sounds.push(sound),
++    now: () => T0, performance: { now: () => 0 }, CSS: { escape: value => value }, console,
++    fmt: value => String(value), btn: () => '',
++    freeze: () => { ctx.frozen = true; },
++    persist: () => { throw new Error('Unexpected generic persist: pet assignments must use petSave / E.commitSave.'); },
++    renderTab: () => {},
++  });
++  vm.runInContext("'use strict';\n" + PET_SOURCE + ACT_SOURCE + HOME_ACT_SOURCE + '\nthis.petUI = { act, petPlace, petRoomBar, petDo, petTap, petChooseReplacement, petSyncActors, petSave, petsHooks, petActors, setManifest(m) { petM = m; } };', ctx, { filename: path.join(ROOT, 'app.js:pet-section-and-dispatch') });
++  return { ctx, ui: ctx.petUI, document, storage, commits, toasts, sounds, state };
++}
++function choices(h) { return h.document.querySelectorAll('#petReplace [data-replace-uid]'); }
++function choose(h, uid) {
++  const b = choices(h).find(el => el.dataset.replaceUid === uid);
++  assert(b, 'No replacement button for ' + uid);
++  b.click();
++}
++function buyDialog(h, mode) {
++  h.ui.setManifest(MANIFEST); h.ui.act('homePetBuy', HOMES[0]);
++  assert.deepEqual(h.document.modal.buttons.map(b => b.attrs.id), ['petBuyReplace', 'petBuyStandby', 'mNo']);
++  assert.equal(h.document.querySelector('#pbYes'), null, 'Full room must request replace/standby before charging.');
++  if (mode === 'replace') {
++    h.document.querySelector('#petBuyReplace').click();
++    assert.deepEqual(choices(h).map(el => el.dataset.replaceUid), ['a', 'b']);
++    choose(h, 'a');
++  } else h.document.querySelector('#petBuyStandby').click();
++  const yes = h.document.querySelector('#pbYes');
++  assert(yes, 'Explicit purchase confirmation missing.');
++  return yes;
++}
++function assertIsolation(h) {
++  assert.equal(h.storage.data.get(FORMAL), SENTINEL, 'Formal save sentinel changed.');
++  assert.deepEqual([...h.storage.data.keys()].sort(), [MAIN, BAK, FORMAL].sort(), 'Unexpected storage key created.');
++  assert(h.storage.ops.every(([, key]) => key === MAIN || key === BAK), 'Pet UI accessed a non-preview key.');
++}
++function assertReadback(h, key) {
++  const write = h.storage.ops.findIndex(op => op[0] === 'set' && op[1] === key);
++  assert(write >= 0 && h.storage.ops.slice(write + 1).some(op => op[0] === 'get' && op[1] === key), key + ' was not read back after writing.');
++}
++function assertFailedWithoutMutation(h, before, stored, markup) {
++  assert.equal(snapshot(h.state), before, 'Entire in-memory save must roll back, including engines, coins, and revision.');
++  assert.equal(h.storage.snap(), stored, 'Previously seeded storage must remain unchanged.');
++  assert.equal(h.ui.petRoomBar(HOMES[0]), markup, 'Rendered pet slots/list must remain unchanged.');
++  assert(!h.toasts.includes('宠物安排已保存'), 'Failed operation reported success.');
++  assertIsolation(h);
++}
++let passed = 0, failed = 0;
++function test(label, run) {
++  try { run(); passed++; console.log('PASS ' + label); }
++  catch (error) { failed++; console.error('FAIL ' + label + '\n' + error.stack); }
++}
++
++test('VM-U1/U2: exactly two slots; every owned pet has its current location', () => {
++  const h = harness(), html = h.ui.petRoomBar(HOMES[0]);
++  const slots = tags(html, 'div').filter(el => 'petSlot' in el.dataset);
++  assert.deepEqual(slots.map(el => [el.dataset.petSlot, el.dataset.uid]), [['0', 'a'], ['1', 'b']]);
++  const rows = tags(html, 'div').filter(el => 'petUid' in el.dataset);
++  assert.deepEqual(rows.map(el => [el.dataset.petUid, el.dataset.where]), [['a', HOMES[0]], ['b', HOMES[0]], ['c', 'standby'], ['d', HOMES[1]]]);
++  assert(html.includes(E.CEO_BY_ID[HOMES[1]].name + '的家'));
++  assert(html.includes('待命'));
++  assert.deepEqual(tags(html, 'button').filter(el => el.dataset.act === 'homePetPat').map(el => el.dataset.arg), ['a', 'b']);
++  const otherSlots = tags(h.ui.petRoomBar(HOMES[1]), 'div').filter(el => 'petSlot' in el.dataset);
++  assert.equal(otherSlots.length, 2); assert.equal(otherSlots[0].dataset.uid, 'd'); assert.equal(otherSlots[1].dataset.uid, undefined);
++  assertIsolation(h);
++});
++test('VM-source-contract: parent and standalone pet UI are identical apart from relative art paths', () => {
++  const standalone = fs.readFileSync(path.join(ROOT, 'pet/game/app.js'), 'utf8');
++  const start = standalone.indexOf('const PG = window.PetGame'), end = standalone.indexOf('function homeCommit(', start);
++  assert(start >= 0 && end > start, 'Cannot locate standalone pet source.');
++  assert.equal(standalone.slice(start, end).replaceAll("'../art/", "'pet/art/"), PET_SOURCE);
++  assert(/a\.indexOf\('pet'\)\s*===\s*0\)\s*return homeAct\(a, arg, btn\)/.test(standalone), 'Standalone dispatch must route pet actions.');
++  assert(/function onShow\(\)\s*\{\s*if \(frozen \|\| petManual\) return;/.test(standalone), 'Standalone show lifecycle must honor manual mode.');
++});
++test('VM-U3/U4: modal contains only both residents; cancel leaves the full save byte-for-byte unchanged', () => {
++  const h = harness(), before = snapshot(h.state), stored = h.storage.snap();
++  h.ui.petPlace('c');
++  assert.deepEqual(choices(h).map(el => el.dataset.replaceUid), ['a', 'b']);
++  h.document.querySelector('#petReplaceCancel').click();
++  assert.equal(h.document.modal, null); assert.equal(snapshot(h.state), before); assert.equal(h.storage.snap(), stored);
++  assert.equal(h.commits.length, 0); assert.equal(h.storage.writes().length, 0); assertIsolation(h);
++});
++test('VM-U11: placing a current resident again opens no modal and never saves', () => {
++  const h = harness(), before = snapshot(h.state), stored = h.storage.snap();
++  h.ui.petPlace('a');
++  assert.equal(h.document.openCount, 0); assert.equal(snapshot(h.state), before); assert.equal(h.storage.snap(), stored);
++  assert.equal(h.commits.length, 0); assertIsolation(h);
++});
++test('VM-dispatch: actual act() and homeAct() route place, cancel, and standby actions', () => {
++  const h = harness(), before = snapshot(h.state);
++  h.ui.act('petPlace', 'c');
++  assert.deepEqual(choices(h).map(el => el.dataset.replaceUid), ['a', 'b']);
++  h.ui.act('petReplaceCancel');
++  assert.equal(h.document.modal, null); assert.equal(snapshot(h.state), before);
++  h.ui.act('petStandby', 'a');
++  assert(PG.view(h.state, E).standby.includes('a')); assert.equal(h.commits.length, 1);
++  assert.equal(h.storage.data.get(MAIN), snapshot(h.state)); assertIsolation(h);
++});
++test('VM-manual: actual hide/show/blur/frame lifecycle code cannot tick or autosave in manual mode', () => {
++  const h = harness(), before = snapshot(h.state), stored = h.storage.snap();
++  const calls = [], events = {};
++  Object.assign(h.ctx, {
++    tick: () => calls.push('tick'), audioPause: () => calls.push('audioPause'), audioResume: () => calls.push('audioResume'),
++    lockMine: () => { calls.push('lockMine'); return true; }, storedRev: () => { calls.push('storedRev'); return 0; },
++    requestAnimationFrame: () => {}, clock: 0, order: {}, special: {},
++  });
++  h.ctx.window.addEventListener = (name, fn) => { events[name] = fn; };
++  const blur = APP.match(/^window\.addEventListener\('blur',.*$/m);
++  assert(blur, 'Cannot locate actual blur listener.');
++  vm.runInContext("'use strict';\n" + sourceBetween('function onHide()', "document.addEventListener('visibilitychange'") + blur[0] + '\n' + sourceBetween('function frame(ts)', 'function boot()'), h.ctx);
++  h.ui.petsHooks.manual(true); h.ctx.onHide(); h.ctx.onShow(); events.blur(); h.ctx.frame(1000);
++  assert.deepEqual(calls, []); assert.equal(snapshot(h.state), before); assert.equal(h.storage.snap(), stored);
++  assert.equal(h.storage.ops.length, 0); assert.equal(h.commits.length, 0); assertIsolation(h);
++});
++for (const uid of ['a', 'c']) test('VM-race: stale replacement dialog rejected after ' + uid + ' changes room', () => {
++  const h = harness(); h.ui.petPlace('c');
++  const staleButton = choices(h).find(el => el.dataset.replaceUid === 'b');
++  const change = PG.assign(h.state, E, uid, HOMES[2], { save: () => true });
++  assert(change.ok, 'Race setup did not succeed.');
++  const afterRace = snapshot(h.state), stored = h.storage.snap();
++  staleButton.click();
++  assert.equal(snapshot(h.state), afterRace, 'Stale click changed the entire post-race state.');
++  assert.equal(h.storage.snap(), stored); assert.equal(h.commits.length, 0); assert.equal(h.document.modal, null);
++  assert(h.toasts.some(text => /位置已变化/.test(text))); assertIsolation(h);
++});
++test('VM-U5: choosing a resident uses real commitSave, verifies readback, and survives reload', () => {
++  const h = harness(), before = clone(h.state), raw = h.storage.data.get(MAIN);
++  const growth = Object.fromEntries(Object.entries(PG.view(h.state, E).pets).map(([uid, p]) => [uid, snapshot(p.eng)]));
++  h.ui.petPlace('c'); choose(h, 'b');
++  assert.equal(h.document.modal, null); assert.equal(h.commits.length, 1); assert.equal(h.commits[0].result.ok, true);
++  assert.deepEqual(h.commits[0].args, [MAIN, BAK]); assertReadback(h, BAK); assertReadback(h, MAIN);
++  const view = PG.view(h.state, E);
++  assert.deepEqual(view.rooms[HOMES[0]], ['a', 'c']); assert(view.standby.includes('b'));
++  assert.equal(h.state.coins, before.coins); assert.equal(h.state.rev, before.rev + 1);
++  for (const [uid, p] of Object.entries(view.pets)) assert.equal(snapshot(p.eng), growth[uid]);
++  const unrelated = s => { const out = clone(s); delete out.pets; delete out.pet; delete out.rev; return out; };
++  assert.deepEqual(unrelated(h.state), unrelated(before));
++  assert.equal(h.storage.data.get(MAIN), snapshot(h.state)); assert.equal(h.storage.data.get(BAK), raw);
++  const reloaded = E.loadSave(h.storage.data.get(MAIN), h.storage.data.get(BAK), T0).st;
++  PG.norm(reloaded, E); assert.deepEqual(PG.view(reloaded, E), view);
++  assert.equal(h.ctx.lastGood, snapshot(h.state)); assert(h.toasts.includes('宠物安排已保存')); assertIsolation(h);
++});
++test('VM-U5b: a vacancy assigns directly without replacement and commits once', () => {
++  const h = harness(); h.ui.petPlace('c', HOMES[1]);
++  assert.equal(h.document.openCount, 0); assert.equal(h.commits.length, 1); assert.equal(h.commits[0].result.ok, true);
++  assert.deepEqual(PG.view(h.state, E).rooms[HOMES[1]], ['c', 'd']);
++  assert.equal(h.storage.data.get(MAIN), snapshot(h.state)); assertIsolation(h);
++});
++test('VM-live-view: uninitialized saved engines expose stable live growth without mutating the save', () => {
++  const h = harness({ engines: false }), before = snapshot(h.state); h.ui.setManifest(MANIFEST);
++  const live = h.ui.petsHooks.view();
++  for (const uid of ['a', 'b', 'd']) assert.equal(live.pets[uid].eng.dog.affinity, PE.CFG.AFF0);
++  assert.equal(snapshot(h.state), before, 'Viewing live growth mutated saved state.');
++  live.pets.a.eng.dog.affinity = 777;
++  assert.equal(h.ui.petsHooks.world('a').dog.affinity, PE.CFG.AFF0, 'View exposed the mutable runtime snapshot.');
++  assert.equal(snapshot(h.state), before);
++  h.ui.petPlace('c'); choose(h, 'b');
++  assert.equal(h.commits[0].result.ok, true);
++  const saved = snapshot(h.state), after = h.ui.petsHooks.view();
++  for (const uid of ['a', 'b', 'd']) assert.equal(after.pets[uid].eng.dog.affinity, PE.CFG.AFF0, 'Replacement changed live growth for ' + uid);
++  assert.equal(snapshot(h.state), saved, 'Viewing after replacement mutated saved state.'); assertIsolation(h);
++});
++test('VM-buy-cancel: every full-room purchase decision remains nonmutating until confirmation', () => {
++  for (const stage of ['initial', 'picker', 'replace', 'standby']) {
++    const h = harness(), before = snapshot(h.state), stored = h.storage.snap(); h.ui.setManifest(MANIFEST);
++    if (stage === 'replace' || stage === 'standby') buyDialog(h, stage);
++    else {
++      h.ui.act('homePetBuy', HOMES[0]);
++      assert.equal(h.document.querySelector('#pbYes'), null);
++      if (stage === 'picker') h.document.querySelector('#petBuyReplace').click();
++    }
++    h.document.querySelector(stage === 'picker' ? '#petReplaceCancel' : '#mNo').click();
++    assert.equal(h.document.modal, null); assert.equal(snapshot(h.state), before, 'Cancelled stage: ' + stage);
++    assert.equal(h.storage.snap(), stored); assert.equal(h.commits.length, 0); assert.equal(h.storage.writes().length, 0); assertIsolation(h);
++  }
++});
++for (const mode of ['replace', 'standby']) test('VM-buy-' + mode + ': explicit confirmation charges once, persists, and reads back', () => {
++  const h = harness(), before = clone(h.state), raw = h.storage.data.get(MAIN);
++  const yes = buyDialog(h, mode);
++  assert.equal(snapshot(h.state), snapshot(before)); assert.equal(h.commits.length, 0);
++  yes.click(); yes.click(); // Direct listeners are once-only, so a queued repeat cannot charge twice.
++  const v = PG.view(h.state, E), newIds = Object.keys(v.pets).filter(uid => !['a', 'b', 'c', 'd'].includes(uid));
++  assert.equal(newIds.length, 1); const uid = newIds[0];
++  assert.equal(h.state.coins, before.coins - PG.PET.price); assert.equal(h.state.rev, before.rev + 1);
++  assert.equal(h.commits.length, 1); assert.equal(h.commits[0].result.ok, true); assert.equal(h.document.modal, null);
++  assert.equal(v.pets[uid].species, 'dog');
++  if (mode === 'replace') { assert.deepEqual(v.rooms[HOMES[0]], ['b', uid]); assert(v.standby.includes('a')); }
++  else { assert.deepEqual(v.rooms[HOMES[0]], ['a', 'b']); assert(v.standby.includes(uid)); }
++  for (const p of before.pets.list) assert.equal(snapshot(v.pets[p.uid].eng), snapshot(p.eng), 'Purchase changed existing growth.');
++  assertReadback(h, MAIN); assertReadback(h, BAK);
++  assert.equal(h.storage.data.get(MAIN), snapshot(h.state)); assert.equal(h.storage.data.get(BAK), raw); assertIsolation(h);
++});
++for (const mode of ['replace', 'standby']) test('VM-buy-stale-' + mode + ': stale confirmation preserves the complete post-race state', () => {
++  const h = harness(), yes = buyDialog(h, mode);
++  assert(PG.assign(h.state, E, 'b', HOMES[2], { save: () => true }).ok);
++  const afterRace = snapshot(h.state), stored = h.storage.snap();
++  yes.click();
++  assert.equal(snapshot(h.state), afterRace); assert.equal(h.storage.snap(), stored); assert.equal(h.commits.length, 0);
++  assert(h.toasts.some(text => /位置已变化/.test(text))); assert.equal(h.document.modal, null); assertIsolation(h);
++});
++for (const key of [BAK, MAIN]) test('VM-buy-quota: ' + key + ' failure rolls back new ownership, payment, and live engine snapshots', () => {
++  const h = harness({ engines: false }); h.ui.setManifest(MANIFEST);
++  h.ui.petsHooks.world('a').dog.affinity = 88;
++  const before = snapshot(h.state), stored = h.storage.snap(), markup = h.ui.petRoomBar(HOMES[0]);
++  const yes = buyDialog(h, 'replace'); h.storage.failKey = key; yes.click();
++  assert.equal(h.commits.length, 1); assert.equal(h.commits[0].result.ok, false);
++  assertFailedWithoutMutation(h, before, stored, markup);
++});
++for (const key of [BAK, MAIN]) test('VM-U6: quota failure at ' + key + ' rolls back full state, even with live engine preparation', () => {
++  const h = harness({ engines: false }); h.ui.setManifest(MANIFEST);
++  h.ui.petsHooks.world('a').dog.affinity = 88;
++  h.ui.petsHooks.world('b').dog.affinity = 99;
++  const before = snapshot(h.state), stored = h.storage.snap(), markup = h.ui.petRoomBar(HOMES[0]);
++  h.storage.failKey = key;
++  h.ui.petPlace('c'); choose(h, 'b');
++  assert.equal(h.commits.length, 1); assert.equal(h.commits[0].result.ok, false);
++  assert.equal(h.commits[0].result.stage, key === BAK ? 'bak' : 'main');
++  assertFailedWithoutMutation(h, before, stored, markup);
++  assert(h.toasts.some(text => /保存失败/.test(text)));
++});
++for (const key of [BAK, MAIN]) test('VM-readback: silently dropped ' + key + ' write cannot report success', () => {
++  const h = harness({ engines: false }); h.ui.setManifest(MANIFEST);
++  h.ui.petsHooks.world('a').dog.affinity = 88;
++  h.ui.petsHooks.world('b').dog.affinity = 99;
++  // A distinct, valid prior backup ensures a silently dropped backup write is detectable.
++  if (key === BAK) { const old = clone(h.state); old.coins--; h.storage.data.set(BAK, snapshot(old)); }
++  const before = snapshot(h.state), stored = h.storage.snap(), markup = h.ui.petRoomBar(HOMES[0]);
++  h.storage.dropKey = key; h.ui.petPlace('c'); choose(h, 'a');
++  assert.equal(h.commits.length, 1); assert.equal(h.commits[0].result.ok, false); assertReadback(h, key);
++  assertFailedWithoutMutation(h, before, stored, markup);
++});
++for (const mode of ['quota', 'silent']) for (const key of [BAK, MAIN]) test('VM-live-rollback: ' + mode + ' ' + key + ' failure preserves live worlds and unsaved growth through resync and retry', () => {
++  const h = harness({ engines: false }); h.ui.setManifest(MANIFEST);
++  const worlds = { a: h.ui.petsHooks.world('a'), b: h.ui.petsHooks.world('b'), d: h.ui.petsHooks.world('d') };
++  worlds.a.dog.affinity = 88; worlds.a.dog.energy = 12.75;
++  worlds.b.dog.affinity = 99; worlds.b.dog.energy = 34.5;
++  worlds.d.dog.affinity = 70; worlds.d.dog.energy = 45.25;
++  const growth = Object.fromEntries(Object.entries(worlds).map(([uid, w]) => [uid, { affinity: w.dog.affinity, energy: w.dog.energy }]));
++  const liveBefore = Object.fromEntries(Object.entries(worlds).map(([uid, w]) => [uid, snapshot(PE.snapshot(w))]));
++  if (mode === 'silent' && key === BAK) { const old = clone(h.state); old.coins--; h.storage.data.set(BAK, snapshot(old)); }
++  const before = snapshot(h.state), stored = h.storage.snap(), markup = h.ui.petRoomBar(HOMES[0]);
++  h.storage[mode === 'quota' ? 'failKey' : 'dropKey'] = key;
++  h.ui.petPlace('c'); choose(h, 'b');
++  assert.equal(h.commits.length, 1); assert.equal(h.commits[0].result.ok, false);
++  assertFailedWithoutMutation(h, before, stored, markup);
++  for (const [uid, oldWorld] of Object.entries(worlds)) {
++    const synced = h.ui.petsHooks.world(uid);
++    assert.equal(synced, oldWorld, 'Failed preparation rebuilt live world ' + uid + ' on next sync.');
++    assert.equal(snapshot(PE.snapshot(synced)), liveBefore[uid], 'Unsaved live affinity/energy changed after failed-save sync for ' + uid);
++  }
++  const liveView = h.ui.petsHooks.view();
++  for (const [uid, values] of Object.entries(growth)) for (const [field, value] of Object.entries(values)) assert.equal(liveView.pets[uid].eng.dog[field], value);
++  assertFailedWithoutMutation(h, before, stored, markup);
++  // Recovery must retain both the displaced dog and unaffected resident/off-room
++  // dogs. A retry must save their exact live growth, rather than the old checkpoint.
++  h.storage.failKey = h.storage.dropKey = null;
++  h.ui.petPlace('c'); choose(h, 'b');
++  assert.equal(h.commits.length, 2); assert.equal(h.commits[1].result.ok, true);
++  const after = h.ui.petsHooks.view(), savedAfter = snapshot(h.state);
++  assert.deepEqual(after.rooms[HOMES[0]], ['a', 'c']); assert(after.standby.includes('b'));
++  for (const [uid, values] of Object.entries(growth)) for (const [field, value] of Object.entries(values)) {
++    assert.equal(after.pets[uid].eng.dog[field], value, 'Successful retry lost live ' + field + ' for ' + uid);
++    assert.equal(PG.view(h.state, E).pets[uid].eng.dog[field], value, 'Successful retry failed to persist ' + field + ' for ' + uid);
++  }
++  assert.equal(h.ui.petsHooks.world('a'), worlds.a, 'Successful retry rebuilt the unaffected resident.');
++  assert.equal(h.ui.petsHooks.world('d'), worlds.d, 'Successful retry rebuilt the unaffected off-room dog.');
++  assert.equal(snapshot(h.state), savedAfter); assert.equal(h.storage.data.get(MAIN), savedAfter);
++  assert.equal(h.state.coins, JSON.parse(before).coins); assert.equal(h.state.rev, JSON.parse(before).rev + 1); assertIsolation(h);
++});
++for (const flag of ['saveBlocked', 'frozen']) test('VM-blocked: ' + flag + ' forbids writes and preserves full state', () => {
++  const h = harness(), before = snapshot(h.state), stored = h.storage.snap(), markup = h.ui.petRoomBar(HOMES[0]);
++  h.ctx[flag] = true; h.ui.petPlace('c'); choose(h, 'b');
++  assert.equal(h.commits.length, 0); assert.equal(h.storage.writes().length, 0);
++  assertFailedWithoutMutation(h, before, stored, markup);
++});
++test('VM-conflict: a newer stored revision wins; local assignment rolls back and freezes', () => {
++  const h = harness(), newer = clone(h.state); newer.rev += 5;
++  h.storage.data.set(MAIN, snapshot(newer));
++  const before = snapshot(h.state), stored = h.storage.snap(), markup = h.ui.petRoomBar(HOMES[0]);
++  h.ui.petPlace('c'); choose(h, 'a');
++  assert.equal(h.commits.length, 1); assert.equal(h.commits[0].result.stage, 'conflict'); assert.equal(h.ctx.frozen, true);
++  assert.equal(h.storage.writes().length, 0); assertFailedWithoutMutation(h, before, stored, markup);
++});
++test('VM-U7: direct controls target one real dog runtime; another room is not interactive', () => {
++  const h = harness({ engines: false }); h.ui.setManifest(MANIFEST);
++  const a = h.ui.petsHooks.world('a'), b = h.ui.petsHooks.world('b'), d = h.ui.petsHooks.world('d');
++  assert(a && b && d); assert.notEqual(a, b);
++  const beforeA = snapshot(PE.snapshot(a)), beforeB = snapshot(PE.snapshot(b)), beforeD = snapshot(PE.snapshot(d));
++  h.ui.act('homePetPat', 'a');
++  assert.notEqual(snapshot(PE.snapshot(a)), beforeA, 'Selected dog did not react.');
++  assert.equal(snapshot(PE.snapshot(b)), beforeB, 'Other resident dog reacted.');
++  assert.equal(snapshot(PE.snapshot(d)), beforeD, 'Dog in another room reacted.');
++  const afterA = snapshot(PE.snapshot(a));
++  h.ui.petDo('pet', 'd'); h.ui.petDo('pet', 'missing');
++  assert.equal(snapshot(PE.snapshot(a)), afterA); assert.equal(snapshot(PE.snapshot(b)), beforeB); assert.equal(snapshot(PE.snapshot(d)), beforeD);
++  assertIsolation(h);
++});
++test('VM-U7b: overlapping tap goes only to the topmost resident, not all dogs', () => {
++  const h = harness({ engines: false }); h.ui.setManifest(MANIFEST);
++  const a = h.ui.petsHooks.world('a'), b = h.ui.petsHooks.world('b'), d = h.ui.petsHooks.world('d');
++  a.dog.x = b.dog.x = d.dog.x = 2;
++  a.dog.y = 2; b.dog.y = 2.1; d.dog.y = 2.2;
++  const beforeA = snapshot(PE.snapshot(a)), beforeB = snapshot(PE.snapshot(b)), beforeD = snapshot(PE.snapshot(d));
++  const tile = 600 / a.cols;
++  assert.equal(h.ui.petTap({ clientX: 10 + 2 * tile, clientY: 20 + 1.6 * tile }), true);
++  assert.equal(snapshot(PE.snapshot(a)), beforeA); assert.notEqual(snapshot(PE.snapshot(b)), beforeB); assert.equal(snapshot(PE.snapshot(d)), beforeD);
++  assert.equal(h.ui.petTap({ clientX: -100, clientY: -100 }), false); assertIsolation(h);
++});
++for (const scenario of [
++  { name: 'equal y uses later insertion when sprites are not drawn', ay: 2.04, by: 2.04, top: 'b' },
++  { name: 'same 0.1 layer favors later insertion even with a lower y', ay: 2.09, by: 2.01, top: 'b' },
++  { name: 'equal y follows actual DOM order rather than map order', ay: 2.04, by: 2.04, top: 'a', order: ['b', 'a'] },
++  { name: 'same layer favors the lower-y later DOM sibling', ay: 2.01, by: 2.09, top: 'a', order: ['b', 'a'] },
++  { name: 'rendered z-index takes precedence over current world y and sibling order', ay: 2.01, by: 2.19, top: 'a', order: ['a', 'b'], z: { a: 40, b: 30 } },
++]) test('VM-tap-layer: ' + scenario.name, () => {
++  const h = harness({ engines: false }); h.ui.setManifest(MANIFEST);
++  const worlds = { a: h.ui.petsHooks.world('a'), b: h.ui.petsHooks.world('b'), d: h.ui.petsHooks.world('d') };
++  worlds.a.dog.x = worlds.b.dog.x = worlds.d.dog.x = 2;
++  worlds.a.dog.y = scenario.ay; worlds.b.dog.y = scenario.by; worlds.d.dog.y = 2.2;
++  if (scenario.order) {
++    // Minimal connected sprite nodes exercise actual app sorting without drawing
++    // canvas or pretending that this is a browser rendering assertion.
++    const nodes = {};
++    for (const [index, uid] of scenario.order.entries()) nodes[uid] = {
++      uid, index, parentNode: h.document.floor, isConnected: true,
++      style: { zIndex: String(scenario.z ? scenario.z[uid] : 10 + Math.floor(worlds[uid].dog.y * 10)) },
++      compareDocumentPosition(other) { return this.index < other.index ? 4 : this.index > other.index ? 2 : 0; },
++    };
++    for (const uid of scenario.order) {
++      const actor = h.ui.petActors.get(uid), original = actor.view;
++      actor.view = { ...original, els: { dog: nodes[uid] } };
++    }
++  }
++  const before = Object.fromEntries(Object.entries(worlds).map(([uid, w]) => [uid, snapshot(PE.snapshot(w))]));
++  const tile = 600 / worlds.a.cols;
++  assert.equal(h.ui.petTap({ clientX: 10 + 2 * tile, clientY: 20 + 1.6 * tile }), true);
++  for (const [uid, w] of Object.entries(worlds)) {
++    if (uid === scenario.top) assert.notEqual(snapshot(PE.snapshot(w)), before[uid], 'Topmost dog did not receive the tap.');
++    else assert.equal(snapshot(PE.snapshot(w)), before[uid], 'A non-topmost dog received the tap: ' + uid);
++  }
++  assertIsolation(h);
++});
++test('VM-tap-remount: the newly appended sprite becomes topmost without changing actor map order', () => {
++  const h = harness({ engines: false }); h.ui.setManifest(MANIFEST);
++  const a = h.ui.petsHooks.world('a'), b = h.ui.petsHooks.world('b');
++  a.dog.x = b.dog.x = 2; a.dog.y = 2.01; b.dog.y = 2.09;
++  const node = index => ({ index, parentNode: h.document.floor, isConnected: true, style: { zIndex: '30' },
++    compareDocumentPosition(other) { return this.index < other.index ? 4 : this.index > other.index ? 2 : 0; } });
++  const oldA = node(0), nodeB = node(1), actorA = h.ui.petActors.get('a'), actorB = h.ui.petActors.get('b');
++  actorA.view = { ...actorA.view, els: { dog: oldA } }; actorB.view = { ...actorB.view, els: { dog: nodeB } };
++  const point = { clientX: 10 + 2 * (600 / a.cols), clientY: 20 + 1.6 * (600 / a.cols) };
++  const beforeA = snapshot(PE.snapshot(a)), beforeB = snapshot(PE.snapshot(b));
++  assert.equal(h.ui.petTap(point), true);
++  assert.equal(snapshot(PE.snapshot(a)), beforeA); assert.notEqual(snapshot(PE.snapshot(b)), beforeB);
++  oldA.parentNode = null; oldA.isConnected = false;
++  actorA.view = { ...actorA.view, els: { dog: node(2) } }; // Simulate a remount appended after b.
++  const mapOrder = [...h.ui.petActors.keys()], midA = snapshot(PE.snapshot(a)), midB = snapshot(PE.snapshot(b));
++  assert.equal(h.ui.petTap(point), true);
++  assert.notEqual(snapshot(PE.snapshot(a)), midA, 'Remounted later sibling did not receive the second tap.');
++  assert.equal(snapshot(PE.snapshot(b)), midB, 'Former topmost dog received the second tap.');
++  assert.deepEqual([...h.ui.petActors.keys()], mapOrder); assertIsolation(h);
++});
++test('VM-escaping: quotes and HTML in uid remain text and the selected identity round-trips', () => {
++  const hostile = 'pet"><img src=x onerror="bad">&\'';
++  const h = harness({ list: [
++    { uid: hostile, species: 'dog', room: HOMES[0] },
++    { uid: 'b', species: 'dog', room: HOMES[0] },
++    { uid: 'c', species: 'cat', room: null },
++  ] });
++  const html = h.ui.petRoomBar(HOMES[0]);
++  assert(!html.includes('<img')); assert(!html.includes(hostile));
++  assert(html.includes('pet&quot;&gt;&lt;img src=x onerror=&quot;bad&quot;&gt;&amp;&#39;'));
++  const slots = tags(html, 'div').filter(el => 'petSlot' in el.dataset);
++  assert.equal(slots.length, 2); assert.equal(slots[0].dataset.uid, hostile);
++  h.ui.act('petPlace', 'c');
++  assert(!h.document.modal.html.includes('<img'));
++  assert.deepEqual(choices(h).map(el => el.dataset.replaceUid), [hostile, 'b']);
++  choose(h, hostile);
++  assert.equal(h.commits[0].result.ok, true); assert(PG.view(h.state, E).standby.includes(hostile)); assertIsolation(h);
++});
++
++console.log(`UI VM cases passed ${passed}, failed ${failed}. No browser/layout/device claims.`);
++process.exitCode = failed ? 1 : 0;
+--- a/preview/pet/game/app.js
++++ b/preview/pet/game/app.js
+@@ -1150,7 +1150,7 @@
+     case 'card': return showCard(arg);
+     case 'reset': return confirmReset();
+     case 'goShop': switchShop(+arg); setTab('shop'); break;
+-    default: if (a.indexOf('home') === 0 || a.indexOf('mall') === 0) return homeAct(a, arg, btn);
++    default: if (a.indexOf('home') === 0 || a.indexOf('mall') === 0 || a.indexOf('pet') === 0) return homeAct(a, arg, btn);
+   }
+ }
+ function avaCacheClear() { for (const k of Object.keys(avaCache)) delete avaCache[k]; }
+@@ -1810,112 +1810,136 @@
+ }
+ // 12d3：摆放 / 移动 / 旋转 / 收回都先 atomic（改 + 落盘一起），这里只处理结果；没存上 → 已回滚、已提示
+ const HOME_FAIL = '摆放没有生效，已恢复原样';
+-/* ================= 宠物 p4：小狗（PetGame / PetEngine；存档只占 state.pet，一个键都不加） ================= */
++/* Two-slot roster: only the dog has a runtime/atlas in this draft. */
+ const PG = window.PetGame, PET_LIBS = !!(PG && window.PetEngine && window.PetArt && window.PetPuppy);
+-let petRt = null, petView = null, petM = null, petHiddenAt = 0, petManual = false, petShown = '', petWaitShown = null;   // petWaitShown（p4b）：上一帧是不是「等待安置」，变了就重画家宅条
++let petM = null, petHiddenAt = 0, petManual = false;
++const petActors = new Map();
++const petEsc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
++const petRoster = () => PG ? PG.view(state, E) : { rooms:{}, standby:[], pets:{} };
++const petOwned = () => Object.keys(petRoster().pets).length > 0;
++const petToken = () => JSON.stringify(Object.values(petRoster().pets).map(p => [p.uid,p.room,p.species,p.boughtAt]));
++const petName = p => (p.species === 'dog' ? '🐶 小狗' : p.species === 'cat' ? '🐱 猫' : '宠物') + ' · ' + p.uid;
+ function petInit(tryN) {
+   if (!PET_LIBS) return;
+-  fetch('../art/manifest.json?v=p6').then(r => { if (!r.ok) throw new Error('manifest ' + r.status); return r.json(); }).then(m => {
++  fetch('../art/manifest.json?v=p6').then(r => { if (!r.ok) throw new Error('manifest'); return r.json(); }).then(m => {
+     const v = window.PetArt.validateManifest(m); if (!v.ok) throw new Error(v.errors.join('；'));
+-    petM = m; petRt = PG.createRuntime({ E, manifest: m }); petView = PG.createView({ manifest: m, PA: window.PetArt, PP: window.PetPuppy, atlasBase: '../art/', ver: 'p5' });
+-    document.body.dataset.petReady = '1'; dirty = true;
+-  }).catch(e => { if ((tryN || 0) < 3) setTimeout(() => petInit((tryN || 0) + 1), 600 * ((tryN || 0) + 1)); else console.warn('小狗没加载到：' + e.message); });
+-}
+-const petOwned = () => !!(PG && PG.owned(state));
+-const petHere = () => petOwned() && state.pet.home === homeWho;
+-function petBeforePersist() { if (petRt && state) petRt.beforePersist(state); }
++    petM = m; document.body.dataset.petReady = '1'; dirty = true;
++  }).catch(e => { if ((tryN || 0) < 3) setTimeout(() => petInit((tryN || 0) + 1), 600); else console.warn('宠物资源未加载：' + e.message); });
++}
++function petSyncActors() {
++  const v = petRoster();
++  for (const [uid,a] of petActors) if (!v.pets[uid] || v.pets[uid].species !== 'dog' || !v.pets[uid].room) { a.view.detach(); petActors.delete(uid); }
++  if (petM) for (const p of Object.values(v.pets)) if (p.species === 'dog' && p.room && !petActors.has(p.uid)) {
++    petActors.set(p.uid, { rt:PG.createRuntime({E, manifest:petM, uid:p.uid}), view:PG.createView({manifest:petM, PA:window.PetArt, PP:window.PetPuppy, atlasBase:'../art/', ver:'p6', uid:p.uid}) });
++  }
++  return v;
++}
++function petBeforePersist() { for (const a of petActors.values()) a.rt.beforePersist(state); }
++function petPrepare(s) { for (const a of petActors.values()) a.rt.beforePersist(s); }
++function petSave(s) {
++  if (saveBlocked || frozen) return false;
++  if (TEST_MODE) { s.rev++; return true; }
++  const r = E.commitSave(localStorage, SAVE_KEY, BAK_KEY, s);
++  if (r.ok) lastGood = JSON.stringify(s);
++  else if (r.stage === 'conflict') freeze();
++  return r;
++}
+ function petFrame(dt) {
+-  if (!petRt) return;
+-  const room = tab === 'home' && homeSub === 'room' && !!$('#roomFloor') && E.homeOpen(state, homeWho);
+-  const w = petManual ? petRt.sync(state) : petRt.frame(dt, state, { decorHere: room && homeMode === 'decor' && petHere() });
+-  const show = !!(w && room && petHere());
+-  // p4b：等待安置 ↔ 出来了：重画家宅条（提示 / 按钮）；正看着这个家时，腾出空地出来了给个提示
+-  const wt = !!(w && w.noRoom) + '|' + (w ? petRt.homeId : '');
+-  if (wt !== petWaitShown) { const was = petWaitShown; petWaitShown = wt; dirty = true; if (was && was.startsWith('true|') && wt === 'false|' + was.slice(5) && show) toast('腾出空地了，小狗跑出来啦', 2200); }
+-  petView.draw(show ? w : null, show ? $('#roomFloor') : null);
+-  if (!show) return;
+-  const lb = $('#petLabel'), af = $('#petAff');
+-  if (lb && lb.textContent !== w.dog.label) lb.textContent = w.dog.label;
+-  if (af) { const s = '亲密 ' + w.dog.affinity; if (af.textContent !== s) af.textContent = s; }
+-  const bb = $('#petBallBtn'); if (bb) { const busy = w.ball.state === 'carried' || w.ball.state === 'air'; if (bb.disabled !== busy) bb.disabled = busy; }
++  const v = petSyncActors(), room = tab === 'home' && homeSub === 'room' && !!$('#roomFloor');
++  for (const [uid,a] of petActors) {
++    const p = v.pets[uid], w = petManual ? a.rt.sync(state) : a.rt.frame(dt, state, {decorHere:room && p.room === homeWho && homeMode === 'decor'});
++    const show = room && p.room === homeWho;
++    a.view.draw(show ? w : null, show ? $('#roomFloor') : null);
++    const label = document.querySelector('[data-pet-status="'+CSS.escape(uid)+'"]');
++    if (label && w) label.textContent = w.noRoom ? '等待安置：请腾出空地' : w.dog.label + ' · 亲密 ' + w.dog.affinity;
++  }
+ }
+ function petResume() {
+-  if (!petRt || !petHiddenAt) return;
+-  const away = now() - petHiddenAt; petHiddenAt = 0;
+-  if (away < 3000 || !petOwned()) return;
+-  const ev = petRt.resume(state);
+-  if (ev === 'slept' && tab === 'home' && homeSub === 'room' && petHere()) toast(`你不在的 ${Math.max(1, Math.round(away / 60000))} 分钟，小狗在窝里睡了一觉`, 2400);
++  if (!petHiddenAt || petManual) return;
++  petHiddenAt = 0; for (const a of petActors.values()) a.rt.resume(state);
+ }
+ function petMallCard() {
+   if (!PG) return '';
+-  const P = PG.PET, own = petOwned(), open = E.homeOpen(state, homeWho), nm = E.CEO_BY_ID[homeWho].name;
+-  let b, line;
+-  const full = !own && open && petM && !PG.hasRoom(state, E, homeWho, petM);   // p4b：购买前就查有没有地方站
+-  if (full) { b = '<button class="buy no" disabled id="petNoRoom">暂时无法<br>入宅</button>'; line = `<b>${nm}</b> 的家摆满了，没有小狗能站的空地；收起或挪开家具、或升级房子后再来（不会扣钱）`; }
+-  else if (!own) { b = open ? btn('homePetBuy', homeWho, '购买', P.price) : '<button class="buy no" disabled>未加入</button>'; line = open ? `买了住进 <b>${nm}</b> 的家（只能养一只）` : `${homeWho === 'rocket' ? '这位 CEO' : nm} 还没加入，先切到已加入的 CEO`; }
+-  else if (state.pet.home === homeWho) { b = '<button class="buy no" disabled>住这儿</button>'; line = petRt && petRt.waiting && petRt.homeId === homeWho ? `住在 <b>${nm}</b> 的家，<b>等待安置</b>：屋里摆满了，腾出 1 格空地它就出来` : `已经住在 <b>${nm}</b> 的家，去家宅看看它`; }
+-  else { b = open ? `<button class="buy alt" data-act="homePetMove" data-arg="${homeWho}">搬过来</button>` : '<button class="buy no" disabled>未加入</button>'; line = `现在住在 <b>${E.CEO_BY_ID[state.pet.home].name}</b> 的家；搬家不花钱`; }
+-  return `<div class="card mall-card pet-card" id="petCard" data-pet="${own ? 'owned' : 'none'}" data-room="${full ? 'full' : 'ok'}"><div class="ava sq furn-ico pet-ico"><span>${P.emoji}</span></div><div class="info"><div class="name">${P.name}<span class="tag match">宠物 · 新</span></div>
+-    <div class="desc">${P.desc}<br>${line}</div></div>${b}</div>`;
++  return `<div class="card mall-card pet-card" id="petCard"><div class="ava sq furn-ico pet-ico">🐶</div><div class="info"><div class="name">${PG.PET.name}</div><div class="desc">${PG.PET.desc}<br>每个房间最多 2 只。已有宠物可免费调配，待命保留成长。</div></div>${btn('homePetBuy',homeWho,'购买',PG.PET.price)}</div>`;
+ }
+ function petRoomBar(id) {
+-  if (!PG) return '';
+-  if (!petOwned()) return '';   // 12e：没买狗时家宅不加任何提示条（主预览布局一像素不动；小狗只在商城卡片里出现）
+-  if (!petRt) return '';
+-  if (state.pet.home !== id) return `<div class="note pet-note" id="petNote">${PG.PET.emoji} 小狗住在 ${E.CEO_BY_ID[state.pet.home].name} 的家。<button class="buy alt" data-act="homePetMove" data-arg="${id}">接过来</button></div>`;
+-  const w = petRt.sync(state);
+-  if (w && w.noRoom) return `<div class="note pet-note pet-wait" id="petWait">${PG.PET.emoji} <b>小狗等待安置</b>：屋里摆满了，没有它能站的空地。收起或挪开一件家具（留出 1 格）、或升级房子，它会自己出来。</div>`;   // p4b
+-  if (homeMode === 'decor') return `<div class="note pet-note" id="petNote">${PG.PET.emoji} 小狗在旁边等你摆完；摆好切回「生活」，它会自己绕开新家具。</div>`;
+-  return `<div class="pet-bar" id="petBar"><div class="pet-lb">${PG.PET.emoji} <b id="petLabel">${w ? w.dog.label : ''}</b><small id="petAff">${w ? '亲密 ' + w.dog.affinity : ''}</small></div>
+-    <button class="buy alt" data-act="homePetCall" id="petCallBtn">📣 呼唤</button><button class="buy alt" data-act="homePetPat" id="petPatBtn">✋ 摸摸</button><button class="buy alt" data-act="homePetBall" id="petBallBtn">🎾 抛球</button></div>`;
++  if (!PG || !petOwned()) return '';
++  const v = petRoster(), here = v.rooms[id] || [];
++  const slots = [0,1].map(i => { const p = v.pets[here[i]]; return `<div class="pet-slot" data-pet-slot="${i}" ${p ? `data-uid="${petEsc(p.uid)}"` : ''}><b>${p ? petEsc(petName(p)) : '空位 ' + (i+1)}</b>${p ? `<small data-pet-status="${petEsc(p.uid)}">${p.species === 'dog' ? '生活中' : '专属动作待接入'}</small><button class="buy ghost" data-act="petStandby" data-arg="${petEsc(p.uid)}">回待命</button>` : '<small>从下方选择宠物入住</small>'}</div>`; }).join('');
++  const rows = Object.values(v.pets).map(p => `<div class="pet-list-row" data-pet-uid="${petEsc(p.uid)}" data-where="${petEsc(p.room || 'standby')}"><div><b>${petEsc(petName(p))}</b><small>${p.room ? petEsc(E.CEO_BY_ID[p.room].name) + '的家' : '待命 · 成长保留'}</small></div><button class="buy alt" data-act="petPlace" data-arg="${petEsc(p.uid)}" ${p.room === id ? 'disabled' : ''}>${p.room === id ? '已入住' : here.length === 2 ? '选择替换' : '住进来'}</button></div>`).join('');
++  const controls = here.map(uid => v.pets[uid].species === 'dog' ? `<div class="pet-bar"><span class="pet-lb">${petEsc(petName(v.pets[uid]))}</span><button class="buy alt" data-act="homePetCall" data-arg="${petEsc(uid)}">📣 呼唤</button><button class="buy alt" data-act="homePetPat" data-arg="${petEsc(uid)}">✋ 摸摸</button><button class="buy alt" data-act="homePetBall" data-arg="${petEsc(uid)}">🎾 抛球</button></div>` : '').join('');
++  return `<section class="pet-manager"><b>房间宠物 · ${here.length}/2</b><div id="petSlots">${slots}</div>${controls}<details open><summary>已拥有 · ${Object.keys(v.pets).length} 只</summary><div id="petList">${rows}</div></details><small>替换下来的宠物回待命，成长保留，再次入住不收费。</small></section>`;
++}
++function petAfterResult(r) {
++  if (!r.ok) { if (!r.same) { sfx('no'); toast(r.stage === 'save' || r.stage === 'blocked' ? '保存失败：宠物位置与金币均未改变' : r.why || '没有完成'); } dirty = true; return; }
++  for (const a of petActors.values()) a.rt.acknowledgePersist(state);
++  petSyncActors(); sfx('tap'); toast('宠物安排已保存'); dirty = true;
++}
++function petChooseReplacement(home, finish) {
++  const v = petRoster(), ids = (v.rooms[home] || []).slice(), expected = petToken();
++  openModal(`<div id="petReplace"><div class="mtitle">${petEsc(E.CEO_BY_ID[home].name)}的家 · 选择替换</div><p>房间已满（2/2）。只替换你选中的这一只，成长保留，以后可免费接回。</p>${ids.map(uid => `<button class="buy alt pet-replace-option" data-replace-uid="${petEsc(uid)}">${petEsc(petName(v.pets[uid]))} → 待命</button>`).join('')}<button class="buy ghost pet-replace-option" data-act="petReplaceCancel" id="petReplaceCancel">取消</button></div>`, false);
++  $('#petReplaceCancel').addEventListener('click', closeModal, {once:true});
++  for (const b of document.querySelectorAll('#petReplace [data-replace-uid]')) b.addEventListener('click', () => {
++    if (petToken() !== expected) { closeModal(); toast('宠物位置已变化，请重新选择'); dirty = true; return; }
++    const uid = b.dataset.replaceUid; closeModal(); finish(uid);
++  }, {once:true});
++}
++function petPlace(uid, home = homeWho) {
++  const p = petRoster().pets[uid]; if (!p || p.room === home) return;
++  const finish = replace => petAfterResult(PG.assign(state,E,uid,home,{replace,save:petSave,blocked:saveBlocked || frozen,prepare:petPrepare}));
++  if ((petRoster().rooms[home] || []).length >= 2) petChooseReplacement(home,finish); else finish(null);
+ }
+ function confirmPetBuy(home) {
+-  if (!PG) return;
+-  const P = PG.PET, bal = E.balance(state), can = E.canAfford(state, P.price), nm = E.CEO_BY_ID[home] ? E.CEO_BY_ID[home].name : '';   // p5：余额 / 能不能买走统一钱包
+-  if (petOwned()) { toast('已经有小狗了（只能养一只）'); return; }
+-  if (!E.walletOk(state)) { sfx('no'); toast('金币数据异常，现在不能买'); return; }   // p5：12d1 异常钱包（余额超安全整数等）不弹购买窗、不扣钱
+-  if (!petM) { toast('小狗还没准备好，稍后再试'); return; }
+-  if (!PG.hasRoom(state, E, home, petM)) { sfx('no'); toast(PG.NO_ROOM, 2600); dirty = true; return; }   // p4b：满屋不弹购买窗、不扣钱
+-  openModal(`<div class="mbubble">商城 · 宠物</div><div class="buy-prev"><div class="furn-ico big pet-ico"><span>${P.emoji}</span></div></div>
+-    <div class="mtitle">${P.name}</div>
+-    <table class="pv-table"><tr><td>价格</td><td>${fmt(P.price)}</td></tr><tr><td>当前余额</td><td>${fmt(bal)}</td></tr><tr><td>住进</td><td>${nm} 的家</td></tr><tr class="total"><td>买后余额</td><td class="${can ? '' : 'down'}">${can ? fmt(bal - P.price) : '还差 ' + fmt(P.price - bal)}</td></tr></table>
+-    <div class="mnote">${P.desc}以后想换个家，在商城或家宅里点「搬过来」，不花钱。</div>
+-    <div class="mbtns two"><button class="buy ghost" id="mNo">再想想</button><button class="buy red" id="pbYes" ${can ? '' : 'disabled'}>${can ? '确认购买' : '金币不够'}</button></div>`, false);
+-  $('#mNo').addEventListener('click', closeModal, { once:true });
+-  $('#pbYes').addEventListener('click', () => {
+-    petBeforePersist();
+-    const r = PG.buy(state, E, home, now(), petM, () => persist(), saveBlocked || frozen); closeModal();   // 12d3：扣款 + 写小狗 + persist 一起走 E.transact，存不上整档回滚
+-    if (!r.ok) { if (r.stage === 'save' || r.stage === 'validate' || r.stage === 'blocked') saveFailNote(r, '小狗没买成（金币没扣）'); else failBuy(null, r.why); return; }
+-    homeWho = home; homeSub = 'room'; homeMode = 'live'; homeSel = null; pageFlip('prev'); $('#panel').scrollTop = 0;
+-    afterBuy(null, `${P.name} 住进 ${nm} 的家啦！点它摸摸`);
+-  }, { once:true });
+-}
+-function petMoveHere(home) {
+-  petBeforePersist();
+-  const r = atomic(() => PG.move(state, E, home));
+-  if (!r.ok) { if (r.why !== 'saveFailed') { sfx('no'); toast(r.why); } return; }
+-  homeWho = home; homeSub = 'room'; homeMode = 'live'; homeSel = null;
+-  const wt = petRt && petRt.sync(state) && petRt.waiting;
+-  sfx('tap'); toast(wt ? `小狗搬到 ${E.CEO_BY_ID[home].name} 的家了，但屋里摆满了：先等待安置，腾出空地它就出来` : `小狗搬到 ${E.CEO_BY_ID[home].name} 的家了`, wt ? 2800 : 1900); dirty = true;
+-}
+-function petDo(k) {
+-  if (!petRt || !petHere()) return;
+-  const r = k === 'call' ? petRt.call(state) : k === 'pet' ? petRt.pet(state, 'button') : petRt.throwBall(state);
+-  if (!r.ok) { sfx('no'); toast(r.why === 'carried' ? '球在它嘴里呢' : r.why === 'flying' ? '球还在飞' : r.why === 'rearrange' ? '先把家具摆好' : r.why === 'waiting' ? '屋里没地方站，先腾出空地' : '现在不行'); return; }
+-  sfx('tap'); if (r.ignored === 'asleep') toast('它睡着了，球先放那儿'); else if (r.ignored === 'tired') toast('它太困了，想回窝');
++  if (!PG || !petM) { toast('小狗资源还没准备好'); return; }
++  const v = petRoster(), full = (v.rooms[home] || []).length >= 2;
++  const show = (room, replace) => {
++    const expected = petToken(), P = PG.PET, can = E.canAfford(state,P.price);
++    openModal(`<div class="mtitle">购买 ${P.name}</div><p>价格：${fmt(P.price)} 金币<br>当前余额：${fmt(E.balance(state))}<br>${room ? '住进 '+petEsc(E.CEO_BY_ID[room].name)+'的家' : '先回待命，之后免费安排入住'}${replace ? '<br>'+petEsc(petName(petRoster().pets[replace]))+' 回待命，保留成长' : ''}</p><div class="mbtns two"><button class="buy ghost" id="mNo">取消</button><button class="buy red" id="pbYes" ${can ? '' : 'disabled'}>确认购买</button></div>`,false);
++    $('#mNo').addEventListener('click',closeModal,{once:true});
++    $('#pbYes').addEventListener('click',() => {
++      closeModal(); if (petToken() !== expected) { toast('宠物位置已变化，请重新选择'); return; }
++      const r = PG.buy(state,E,room,now(),petM,petSave,saveBlocked || frozen,{replace,prepare:petPrepare}); petAfterResult(r);
++    },{once:true});
++  };
++  if (!E.homeOpen(state,home)) { toast('这位 CEO 还没加入'); return; }
++  if (full) {
++    openModal(`<div class="mtitle">房间已满 · 2/2</div><p>选择一只回待命，或新宠物先待命。已有宠物都保留成长。</p><button class="buy alt pet-replace-option" id="petBuyReplace">选择替换</button><button class="buy alt pet-replace-option" id="petBuyStandby">购买后待命</button><button class="buy ghost pet-replace-option" id="mNo">取消</button>`,false);
++    $('#mNo').addEventListener('click',closeModal,{once:true});
++    $('#petBuyReplace').addEventListener('click',()=>petChooseReplacement(home,uid=>show(home,uid)),{once:true});
++    $('#petBuyStandby').addEventListener('click',()=>show(null,null),{once:true});
++  } else show(home,null);
++}
++function petMoveHere(home) { const p = Object.values(petRoster().pets).find(p => p.room !== home); if (p) petPlace(p.uid,home); }
++function petDo(k,uid) {
++  petSyncActors(); const a = petActors.get(uid), p = petRoster().pets[uid]; if (!a || !p || p.room !== homeWho) return;
++  const r = k === 'call' ? a.rt.call(state) : k === 'pet' ? a.rt.pet(state,'button') : a.rt.throwBall(state);
++  if (!r.ok) { toast(r.why === 'waiting' ? '屋里没地方站，请腾出空地' : '它现在忙着，等一会儿再试'); return; } sfx('tap');
+ }
+ function petTap(e) {
+-  if (!petRt || !petView || !petHere() || !petRt.w) return false;
+-  if (!petView.hit(petRt.w, $('#roomFloor'), e.clientX, e.clientY)) return false;
+-  petRt.pet(state, 'tap'); sfx('tap'); return true;
+-}
+-const petHooks = {
+-  get rt() { return petRt; }, get w() { return petRt && petRt.w; }, get waiting() { return !!(petRt && petRt.waiting); }, get view() { return petView; }, get M() { return petM; }, PG,
+-  manual(on) { petManual = !!on; },
+-  advance(sec) { const w = petRt && petRt.sync(state); if (w) window.PetEngine.step(w, sec); return w ? window.PetEngine.snapshot(w) : null; },
+-  snapshot() { const w = petRt && petRt.sync(state); return w ? window.PetEngine.snapshot(w) : null; },
+-  resume(ms) { petHiddenAt = now() - (ms || 60000); petResume(); }, persist() { return persist(); },
++  const v = petRoster(), floor = $('#roomFloor'); if (!floor) return false;
++  // Topmost drawn pet receives a tap; never broadcast to both overlapping pets.
++  const hit = [...petActors.entries()].map(([uid,a],i) => [uid,a,i]).filter(([uid,a]) => v.pets[uid] && v.pets[uid].room === homeWho && a.rt.w && a.view.hit(a.rt.w,floor,e.clientX,e.clientY)).sort((a,b) => {
++    const ae=a[1].view.els && a[1].view.els.dog, be=b[1].view.els && b[1].view.els.dog;
++    const z=(e,w) => { const n=e && e.style ? Number.parseInt(e.style.zIndex,10) : NaN; return Number.isFinite(n) ? n : 10+Math.floor(w.dog.y*10); };
++    const dz=z(be,b[1].rt.w)-z(ae,a[1].rt.w); if (dz) return dz;
++    // Same z-index: later DOM siblings are painted on top. Raw y is not a tie-breaker.
++    if (ae && be && ae.parentNode === be.parentNode && typeof ae.compareDocumentPosition === 'function') {
++      const order=ae.compareDocumentPosition(be); if (order & 4) return 1; if (order & 2) return -1;
++    }
++    return b[2]-a[2];
++  });
++  if (!hit.length) return false; hit[0][1].rt.pet(state,'tap'); sfx('tap'); return true;
++}
++const petsHooks = {
++  view() { const v=petSyncActors(); for (const [uid,a] of petActors) { a.rt.sync(state); const eng=a.rt.snapshot(); if (eng) v.pets[uid]={...v.pets[uid],eng}; } return v; }, manual(on) { petManual = !!on; lastFrame = performance.now(); },
++  world(uid) { petSyncActors(); const a = petActors.get(uid), w = a && a.rt.sync(state); if (w) { w.pet = w.dog; w.manifest = petM; } return w || null; },
++  step(uid,sec) { const w = this.world(uid); if (w) window.PetEngine.step(w,sec); return w; },
++  toy(uid,x,y) { const a = petActors.get(uid); return a ? a.rt.throwBall(state,{x,y}) : null; },
++  draw() { if (dirty) renderTab(); petFrame(0); },
++  px(uid) { const a = petActors.get(uid), el = a && a.view.els && a.view.els.dog; if (!el) return null; const r=el.getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+r.height*0.7}; },
++  persist() { return persist(); }
+ };
++const petHooks = { PG, get M() { return petM; }, get rt() { return petActors.values().next().value?.rt || null; }, get w() { return this.rt && this.rt.w; }, get view() { return petActors.values().next().value?.view || null; }, get waiting() { return !!(this.rt && this.rt.waiting); }, manual:petsHooks.manual, advance(sec) { const uid=petActors.keys().next().value; const w=petsHooks.step(uid,sec); return w ? window.PetEngine.snapshot(w) : null; }, snapshot() { return this.w ? window.PetEngine.snapshot(this.w) : null; }, resume(ms) { petHiddenAt=now()-(ms||60000); petResume(); }, persist() { return persist(); } };
+ function homeCommit(r, msg) {
+   if (!r.ok) { if (r.why === 'saveFailed') { dirty = true; return false; } sfx('no'); if (!r.same) toast(r.why); return false; }
+   if (r.undo) pushUndo(r.undo);
+@@ -1935,9 +1959,12 @@
+     case 'homeUp': return confirmHomeUp(arg);
+     case 'homePetBuy': return confirmPetBuy(arg || homeWho);
+     case 'homePetMove': return petMoveHere(arg || homeWho);
+-    case 'homePetCall': return petDo('call');
+-    case 'homePetPat': return petDo('pet');
+-    case 'homePetBall': return petDo('ball');
++    case 'petPlace': return petPlace(arg);
++    case 'petStandby': return petAfterResult(PG.assign(state,E,arg,null,{save:petSave,blocked:saveBlocked || frozen,prepare:petPrepare}));
++    case 'petReplaceCancel': return closeModal();
++    case 'homePetCall': return petDo('call',arg);
++    case 'homePetPat': return petDo('pet',arg);
++    case 'homePetBall': return petDo('ball',arg);
+     case 'homeBuy': return confirmHomeBuy(arg);
+     case 'mallCat': mallCat = arg; if (arg !== 'cabinet') mallSub = 'all'; dirty = true; return;
+     case 'mallSub': mallSub = arg; dirty = true; return;
+@@ -2111,9 +2138,9 @@
+ let lastTouchEnd = 0;
+ document.addEventListener('touchend', e => { const t = Date.now(); if (t - lastTouchEnd < 300 && !e.target.closest('button')) e.preventDefault(); lastTouchEnd = t; }, { passive:false });
+ 
+-function onHide() { if (frozen) return; petHiddenAt = now(); tick(); if (order) order = null; /* 离线不结算进行中的团单，避免和离线收益纠缠 */ special = null; state.lastSeen = now(); persist(); audioPause(); }
++function onHide() { if (frozen || petManual) return; petHiddenAt = now(); tick(); if (order) order = null; /* 离线不结算进行中的团单，避免和离线收益纠缠 */ special = null; state.lastSeen = now(); persist(); audioPause(); }
+ function onShow() {
+-  if (frozen) return;
++  if (frozen || petManual) return;
+   if (!lockMine()) { freeze(); return; }
+   if (storedRev() > state.rev) { freeze(); return; }
+   tick(); audioResume(); lastFrame = performance.now(); petResume();
+@@ -2121,7 +2148,7 @@
+ document.addEventListener('visibilitychange', () => { if (document.hidden) onHide(); else onShow(); });
+ window.addEventListener('pagehide', onHide);
+ window.addEventListener('pageshow', e => { if (e.persisted) onShow(); });
+-window.addEventListener('blur', () => { if (!frozen) persist(); });
++window.addEventListener('blur', () => { if (!frozen && !petManual) persist(); });
+ let resizeT = 0;
+ window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTimeout(resize, 120); });
+ // 店景区尺寸变了（切回「经营」、App 内置浏览器工具栏收起/展开）就重算画布，避免画布停在 0 高度
+@@ -2133,6 +2160,7 @@
+   requestAnimationFrame(frame);
+   const dt = Math.min(0.1, (ts - lastFrame) / 1000); lastFrame = ts; clock = ts / 1000;
+   if (frozen) return;
++  if (petManual) { if (dirty) renderTab(); petFrame(0); return; }
+   tick(); updateBig(); updateGuests(dt); updateSupers();
+   if (focusT > 0) focusT -= dt; if (shake > 0) shake = Math.max(0, shake - dt * 1.5);
+   if (clock > nextBubbleAt) { nextBubbleAt = clock + 9 + Math.random() * 7; const i = state.cur;
+@@ -2194,6 +2222,6 @@
+   get big() { return order; }, get order() { return order; }, get special() { return special; }, get guests() { return guests; },
+   hitBig, modalOpen, closeModal, get frozen() { return frozen; },
+   audioState() { return AU.ctx ? AU.ctx.state : 'none'; }, showPreview, openAssign, JOB_ART, jobShown, jobURL, showJobArt,
+-  HOME_ART, FURN_ART, FURN_UP, homeAct, get homeWho() { return homeWho; }, get homeSub() { return homeSub; }, get homeMode() { return homeMode; }, set homeMode(v) { homeMode = v === 'decor' ? 'decor' : 'live'; }, get homeSel() { return homeSel; }, get homeDrag() { return homeDrag; }, homeActor, LIVE_LINES, homeUndo, resize, get canvasSize() { return { W, H }; }, pet: petHooks, lookOf, drawPerson, drawHead, LOOKS, get bubble() { return bubble; } };
++  HOME_ART, FURN_ART, FURN_UP, homeAct, get homeWho() { return homeWho; }, get homeSub() { return homeSub; }, get homeMode() { return homeMode; }, set homeMode(v) { homeMode = v === 'decor' ? 'decor' : 'live'; }, get homeSel() { return homeSel; }, get homeDrag() { return homeDrag; }, homeActor, LIVE_LINES, homeUndo, resize, get canvasSize() { return { W, H }; }, pet: petHooks, pets: petsHooks, lookOf, drawPerson, drawHead, LOOKS, get bubble() { return bubble; } };
+ })();
+ 
+--- a/preview/pet/game/petgame.css
++++ b/preview/pet/game/petgame.css
+@@ -26,3 +26,17 @@
+ .pet-card #petNoRoom{max-width:96px;white-space:normal;line-height:1.25;padding:6px 8px}
+ .pet-wait{border-color:#e07a3f;background:#fff4e6;line-height:1.5}
+ 
++
++/* Two-slot responsive management. */
++.pet-manager{margin:10px 0;padding:10px;border:2px solid #c38655;border-radius:12px;background:#fff6e8;min-width:0}
++#petSlots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:8px 0}
++.pet-slot{min-height:84px;padding:8px;border:1px dashed #ae795a;border-radius:8px;min-width:0;overflow-wrap:anywhere}
++.pet-slot small,.pet-list-row small{display:block;font-size:11px;line-height:1.5}
++.pet-slot b,.pet-list-row b{font-size:12px}
++.pet-slot .buy{min-height:40px;margin-top:5px;font-size:12px;width:100%}
++.pet-list-row{display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #dbbea3}
++.pet-list-row>div{flex:1;min-width:0;overflow-wrap:anywhere}
++.pet-list-row .buy{min-height:40px;flex-shrink:0;font-size:12px}
++.pet-replace-option{display:block;min-height:44px;width:100%;margin-top:10px;white-space:normal;overflow-wrap:anywhere}
++#petReplace{max-height:65vh;overflow-y:auto}
++.pet-manager summary{padding:8px 0;min-height:40px}
+--- a/preview/pet/game/petgame.js
++++ b/preview/pet/game/petgame.js
+@@ -1,77 +1,163 @@
+-/* 宠物 p4 — 小狗接进完整游戏：商城购买 → 进某位 CEO 的家宅 → 自主活动 + 呼唤 / 摸摸 / 抛球 → 刷新后存档保留。
+-   存档：只用游戏原有存档里的一个字段 state.pet（不新增 / 不改名任何 localStorage 键）。没有 pet 字段 = 还没买，旧档照常读。
+-     state.pet = { v:1, owned:true, home:'<ceoId>', boughtAt:<ms>, eng:<引擎存档：小狗 / 球 / 精力 / 亲密，不含家具> | null }
+-   家具：一律以家宅里的摆设为准（engine.setLayout 整组同步，uid 沿用），小狗的窝自动找空地，不占家具格。
+-   美术：manifest 与原型共用 ../art/manifest.json；熊大正式图到了 = 换图集文件 + manifest 改 placeholder:false / atlas.image，代码不用动。
+-   p4b：屋里没有小狗能站的空地（合法摆满）是正常状态——没买：购买前就查（hasRoom），没位置提示「暂时无法入宅」，不扣钱；
+-        已经有了（读档满屋 / 布置挡满 / 搬进满屋 / 升级前后）：所有权不动，进「等待安置」（引擎 w.noRoom），腾出空地自动出来。
+-        读档逐字段校验 pet / pet.eng（有限数值 + 范围，缺失给默认，合法 0 保留），坏字段不再清掉所有权。 */
++/* 宠物名单 v2：每个家最多两只，其他宠物待命。
++   state.pets = { v:2, list:[{ uid, species, room:null|ceoId, boughtAt, eng }] }。
++   旧 state.pet 自动迁移；只使用原游戏主存档，不新增 localStorage 键。
++   调配与购买通过 E.transact，保存失败整档回滚；各物种成长存档原样随实例保留。
++   小狗运行时按 uid 独立恢复 / 模拟 / 持久化，待命不运行。 */
+ (function (root, factory) {
+   if (typeof module === 'object' && module.exports) module.exports = factory(require('../engine.js'), require('../room.js'));
+   else root.PetGame = factory(root.PetEngine, root.PetRoom);
+ })(typeof self !== 'undefined' ? self : this, function (PE, PR) {
+   'use strict';
+   const PET = { id: 'pet_dog', name: '暖棕白小狗', emoji: '🐶', price: 3000, desc: '会自己在家里逛、闻家具、回窝睡觉；能呼唤、摸摸、抛球。只陪玩，不加产速。' };
+-  const PV = 1;
++  const PV = 2, MAX_PER_ROOM = 2;
+   const BED = { w: 1.3, h: 0.9 };
+   // 家宅里的互动：自己的窝 + 原型里配过站位的猫窝类家具（家具在哪由家宅决定，站位按鼻尖反推，站不下就不去）
+   const INTERACT = Object.assign({ pet_bed: { spot: [0.65, 0.5], face: 'E', action: 'sleep', label: '小窝' } },
+     ...Object.keys(PR.INTERACT).filter(k => k !== 'pet_bed' && k !== 'pet_bowl').map(k => ({ [k]: PR.INTERACT[k] })));
+ 
+-  /* ---------- 存档字段（纯函数，Node 可测） ---------- */
++  /* ---------- 宠物名单（纯数据；调配不解释任何物种的成长存档） ---------- */
+   const isObj = (v) => !!v && typeof v === 'object' && !Array.isArray(v);
+   const finN = (v) => typeof v === 'number' && Number.isFinite(v);
+-  function firstOpen(E, st) { const c = E.CEOS.find(c => E.homeOpen(st, c.id)); return c ? c.id : 'c77'; }
+-  // 读档整理：没有 pet 字段就保持没有（不往旧档里加东西）；pet 不是对象（字符串 / 数组 / null）或明确 owned:false = 没买，删掉；
+-  // p4b：pet 是对象 = 买过（这个字段只有购买会写）——owned / home / boughtAt / eng 哪个坏了就修哪个，所有权保留：
+-  //   家不存在 / 没开放 → 搬到第一个开放的家（精力 / 亲密照样带过去，从门口进）；boughtAt 非法 → 0；
+-  //   eng 逐字段校验（engine.sanitizeSave：有限数值 + 范围，缺失给默认，合法 0 保留）；eng 整个不是对象 / 版本不对 → null（小狗还在，重新进门）
++  const validUid = (v) => typeof v === 'string' && v.trim().length > 0;
++  const validRoom = (st, E, room) => isObj(st) && isObj(st.ceos) && typeof room === 'string' && Object.prototype.hasOwnProperty.call(E.CEO_BY_ID, room) && E.homeOpen(st, room);
++  const storedList = (st) => st && isObj(st.pets) && Array.isArray(st.pets.list) ? st.pets.list : [];
++  const legacyOwned = (st) => !!(st && isObj(st.pet) && st.pet.owned !== false);
++  function freshUid(list, prefix) {
++    const used = new Set(list.filter(isObj).map(p => p.uid));
++    let n = 1, uid = prefix;
++    while (used.has(uid)) uid = prefix + '-' + (++n);
++    return uid;
++  }
++  // Build a normalized copy. It is also used by view(), which never mutates the save.
++  // Unknown species and their complete engine payloads are deliberately opaque here.
++  function rosterOf(st, E) {
++    const raw = storedList(st).slice();
++    if (legacyOwned(st)) {
++      const p = st.pet, uid = validUid(p.uid) ? p.uid : 'pet-dog-legacy';
++      if (!raw.some(q => isObj(q) && q.uid === uid)) raw.push({ uid, species: 'dog', room: p.home, boughtAt: p.boughtAt, eng: p.eng });
++    }
++    const list = [], seen = new Set(), counts = Object.create(null);
++    // Reserve existing IDs first so repairs cannot collide with later valid records.
++    const reserved = raw.filter(isObj).map(p => ({ uid: p.uid }));
++    raw.forEach((p, index) => {
++      if (!isObj(p)) return;
++      let uid = p.uid;
++      if (!validUid(uid)) { uid = freshUid(reserved, 'pet-recovered-' + (index + 1)); reserved.push({ uid }); }
++      if (seen.has(uid)) return;
++      seen.add(uid);
++      let room = validRoom(st, E, p.room) ? p.room : null;
++      if (room !== null && (counts[room] || 0) >= MAX_PER_ROOM) room = null;
++      if (room !== null) counts[room] = (counts[room] || 0) + 1;
++      list.push({ ...p, uid, species: validUid(p.species) ? p.species : 'dog', room,
++        boughtAt: finN(p.boughtAt) && p.boughtAt >= 0 && p.boughtAt <= 8.64e15 ? p.boughtAt : 0,
++        eng: p.eng === undefined ? null : p.eng });
++    });
++    return list;
++  }
+   function norm(st, E) {
+-    if (!st || !('pet' in st)) return null;
+-    const p = st.pet;
+-    if (!isObj(p) || p.owned === false) { delete st.pet; return null; }
+-    p.owned = true; p.v = PV;
+-    if (typeof p.home !== 'string' || !E.homeOpen(st, p.home)) p.home = firstOpen(E, st);
+-    if (!finN(p.boughtAt) || p.boughtAt < 0 || p.boughtAt > 8.64e15) p.boughtAt = 0;
+-    const e = PE.sanitizeSave(p.eng);
+-    if (e && (typeof e.home !== 'string' || !E.CEO_BY_ID[e.home])) e.home = p.home;
+-    p.eng = e;
+-    return p;
+-  }
+-  const owned = (st) => !!(st && isObj(st.pet) && st.pet.owned === true);
+-  // p4b：这个家现在有没有小狗能站的地方（和真正入宅用同一个建世界流程；按布局缓存）
++    if (!isObj(st) || (!('pet' in st) && !('pets' in st))) return null;
++    const list = rosterOf(st, E);
++    if (list.length || 'pets' in st || legacyOwned(st)) st.pets = { ...(isObj(st.pets) ? st.pets : {}), v: PV, list };
++    if ('pet' in st) delete st.pet;
++    return st.pets || null;
++  }
++  function view(st, E) {
++    const rooms = Object.create(null), pets = Object.create(null), standby = [];
++    for (const p of rosterOf(st, E)) {
++      pets[p.uid] = p;
++      if (p.room === null) standby.push(p.uid);
++      else (rooms[p.room] || (rooms[p.room] = [])).push(p.uid);
++    }
++    return { rooms, standby, pets };
++  }
++  const owned = (st, uid) => storedList(st).some(p => isObj(p) && (uid == null || p.uid === uid)) || (uid == null && legacyOwned(st));
++  // A replacement picker captures PG.view(). Only identity/placement is compared:
++  // elapsed time, animation and live engine snapshots do not make a picker stale.
++  function placementKey(v) {
++    if (typeof v === 'string') { try { v = JSON.parse(v); } catch (e) { return null; } }
++    if (!isObj(v) || !isObj(v.rooms) || !Array.isArray(v.standby) || !isObj(v.pets)) return null;
++    return JSON.stringify({ rooms: Object.keys(v.rooms).sort().map(k => [k, v.rooms[k]]), standby: v.standby,
++      pets: Object.keys(v.pets).sort().map(uid => [uid, v.pets[uid] && v.pets[uid].species, v.pets[uid] && v.pets[uid].boughtAt]) });
++  }
++  function checkExpected(v, expected) {
++    return expected === undefined || (placementKey(expected) !== null && placementKey(expected) === placementKey(v));
++  }
++  function placement(st, E, uid, room, o, purchasing) {
++    const v = view(st, E), p = purchasing ? null : v.pets[uid];
++    if (!purchasing && !p) return { ok: false, why: '找不到这只宠物' };
++    if (room !== null && !validRoom(st, E, room)) return { ok: false, why: '这位 CEO 还没加入' };
++    // Same room is a true no-op, even in a full room or with replace=self.
++    if (p && p.room === room) return { ok: false, same: true, noop: true, why: room === null ? '已经在待命了' : '已经在这个家了' };
++    if (!checkExpected(v, o.expected)) return { ok: false, stale: true, why: '宠物位置已经变了，请重新选择' };
++    const occupants = room === null ? [] : v.rooms[room] || [], replacement = o.replace == null ? null : o.replace;
++    if (replacement !== null && (room === null || replacement === uid || !occupants.includes(replacement)))
++      return { ok: false, why: '替换对象已经不在这间房，请重新选择', stale: true };
++    if (occupants.length >= MAX_PER_ROOM && replacement === null)
++      return { ok: false, why: '这个家已经有两只宠物，请选择换下哪一只', needReplace: true, occupants: occupants.slice() };
++    return { ok: true, replacement, key: placementKey(v) };
++  }
++  function preparePlacement(st, E, uid, room, o, purchasing, checked) {
++    const current = placement(st, E, uid, room, o, purchasing);
++    if (!current.ok || current.key !== checked.key) return current.ok ? { ok: false, stale: true, why: '宠物位置已经变了，请重新选择' } : current;
++    norm(st, E);
++    // Runtime snapshots enter the transaction after its rollback snapshot exists.
++    if (typeof o.prepare === 'function' && o.prepare(st) === false) return { ok: false, why: '宠物状态没有准备好' };
++    const after = placement(st, E, uid, room, o, purchasing);
++    if (!after.ok || after.key !== checked.key) return after.ok ? { ok: false, stale: true, why: '宠物位置已经变了，请重新选择' } : after;
++    if (after.replacement !== null) storedList(st).find(p => p.uid === after.replacement).room = null;
++    return after;
++  }
++  function assign(st, E, uid, room, opt) {
++    const o = opt || {}, checked = placement(st, E, uid, room, o, false);
++    if (!checked.ok) return checked;
++    if (typeof E.transact !== 'function') return { ok: false, why: '存档交易不可用' };
++    const r = E.transact(st, { price: 0, blocked: !!o.blocked, save: o.save,
++      apply: (s) => {
++        const ready = preparePlacement(s, E, uid, room, o, false, checked);
++        if (!ready.ok) return ready;
++        storedList(s).find(p => p.uid === uid).room = room;
++        return { uid, room, replaced: ready.replacement };
++      } });
++    if (!r.ok) return Object.assign({}, r.result, { ok: false, why: r.why || '没有调配成功', stage: r.stage });
++    return { ok: true, cost: 0, uid, room, home: room, replaced: r.result.replaced };
++  }
++  // This probes furniture space, separately from the two-pet roster capacity.
+   let roomCache = { key: null, M: null, ok: true };
+   function hasRoom(st, E, home, M) {
+-    if (!M) return false;
++    if (!M || !validRoom(st, E, home)) return false;
+     const L = layoutOf(st, E, home);
+     if (roomCache.key !== L.key || roomCache.M !== M) roomCache = { key: L.key, M, ok: !mkWorld(E, M, L, 1).noRoom };
+     return roomCache.ok;
+   }
+   const NO_ROOM = '暂时无法入宅：屋里摆满了，没有小狗能站的空地（收起或挪开家具、或升级房子后再来）';
+-  // M = manifest（身体盒要用）：购买前先查有没有地方站，没有就不扣钱
+-  // p6（12d3）：买狗走预览统一交易入口 E.transact——扣款 + 写 pet + 落盘一起成功；任一步失败 st 原地整档回滚（钱 / pet / rev 都还原）
+-  //   save：落盘函数（主页面传 () => persist()；跨页传 s => E.commitSave(...)）；不传 = 纯内存（只给单元测试 / 模拟用）
+-  //   blocked：调用方已知只读（loadSave blocked / 多标签冻结）时传 true
+-  //   返回 { ok:true, cost, home } 或 { ok:false, why, stage?, noRoom?, badWallet? }；stage ∈ blocked / pay / apply / validate / save（来自 transact）
+-  function buy(st, E, home, nowMs, M, save, blocked) {
+-    if (owned(st)) return { ok: false, why: '已经有小狗了（只能养一只）' };
+-    if (!E.homeOpen(st, home)) return { ok: false, why: '这位 CEO 还没加入' };
++  // Each purchase is a new dog instance. A null home purchases directly to standby.
++  // Legacy parameters stay in place; the final options add replacement and snapshots.
++  function buy(st, E, home, nowMs, M, save, blocked, opt) {
++    const o = opt || {}, checked = placement(st, E, null, home, o, true);
++    if (!checked.ok) return checked;
+     if (!M) return { ok: false, why: '小狗还没准备好，稍后再试' };
+-    if (!hasRoom(st, E, home, M)) return { ok: false, why: NO_ROOM, noRoom: true };
++    if (home !== null && !hasRoom(st, E, home, M)) return { ok: false, why: NO_ROOM, noRoom: true };
+     if (typeof E.transact !== 'function' || typeof E.walletOk !== 'function') return { ok: false, why: '金币数据异常' };
+     if (!E.walletOk(st)) return { ok: false, why: '金币数据异常', badWallet: true };
+     if (!E.canAfford(st, PET.price)) return { ok: false, why: '金币不够' };
++    const stamp = finN(nowMs) && nowMs >= 0 && nowMs <= 8.64e15 ? nowMs : 0;
+     const r = E.transact(st, { price: PET.price, blocked: !!blocked, save: typeof save === 'function' ? save : () => true,
+-      apply: (s) => { if (owned(s)) return { ok: false, why: '已经有小狗了（只能养一只）' }; s.pet = { v: PV, owned: true, home, boughtAt: nowMs || 0, eng: null }; } });
+-    if (!r.ok) return { ok: false, why: r.why || '没有买成', stage: r.stage };
+-    return { ok: true, cost: r.cost, home };
+-  }
+-  function move(st, E, home) {
+-    if (!owned(st)) return { ok: false, why: '还没有小狗' };
+-    if (!E.homeOpen(st, home)) return { ok: false, why: '这位 CEO 还没加入' };
+-    if (st.pet.home === home) return { ok: false, why: '小狗已经在这个家了', same: true };
+-    st.pet.home = home;
+-    return { ok: true, home };
++      apply: (s) => {
++        const ready = preparePlacement(s, E, null, home, o, true, checked);
++        if (!ready.ok) return ready;
++        if (!isObj(s.pets)) s.pets = { v: PV, list: [] };
++        const list = storedList(s), uid = freshUid(list, 'pet-dog-' + stamp.toString(36));
++        list.push({ uid, species: 'dog', room: home, boughtAt: stamp, eng: null });
++        return { uid, replaced: ready.replacement };
++      } });
++    if (!r.ok) return Object.assign({}, r.result, { ok: false, why: r.why || '没有买成', stage: r.stage });
++    return { ok: true, cost: r.cost, uid: r.result.uid, home, room: home, replaced: r.result.replaced };
++  }
++  // Compatibility convenience for a single dog; new UI dispatches assign by uid.
++  function move(st, E, home, opt) {
++    const first = rosterOf(st, E).find(p => p.species === 'dog');
++    if (!first) return { ok: false, why: '还没有小狗' };
++    return assign(st, E, first.uid, home, opt || { save: () => true });
+   }
+   // 家宅 → 引擎布局：只要地上的家具（挂画在墙上不挡路），uid 原样；「你」站在房间前沿正中
+   function layoutOf(st, E, home) {
+@@ -86,45 +172,78 @@
+     const sp = INTERACT.pet_bed.spot;
+     return PE.bodyFree(w, b.x + sp[0], b.y + sp[1], 'E', 1e-6) && PE.bodyFree(w, b.x + sp[0], b.y + sp[1], 'H', 1e-6);
+   }
+-  function pickBed(w, prev) {
+-    if (prev && bedOK(w, prev)) return { ...prev };
++  function pickBed(w, prev, avoid) {
++    const free = (b) => bedOK(w, b) && !(avoid || []).some(a => b.x < a.x + a.w && a.x < b.x + b.w && b.y < a.y + a.h && a.y < b.y + b.h);
++    if (prev && free(prev)) return { ...prev };
+     for (let y = +(w.rows - BED.h).toFixed(2); y >= -1e-9; y = +(y - 0.25).toFixed(2))
+-      for (let x = 0; x + BED.w <= w.cols + 1e-9; x = +(x + 0.25).toFixed(2)) { const b = { x, y, w: BED.w, h: BED.h }; if (bedOK(w, b)) return b; }
++      for (let x = 0; x + BED.w <= w.cols + 1e-9; x = +(x + 0.25).toFixed(2)) { const b = { x, y, w: BED.w, h: BED.h }; if (free(b)) return b; }
++    if (avoid && avoid.length) return pickBed(w, prev);
+     return { x: 0, y: Math.max(0, w.rows - BED.h), w: BED.w, h: BED.h, blocked: true };   // 屋里摆满了：窝画在左前角，小狗原地趴着睡
+   }
+ 
+-  function mkWorld(E, M, L, seed) {
++  function mkWorld(E, M, L, seed, start) {
+     return PE.createWorld({ catalog: E.FURNITURE, room: { cols: L.cols, rows: L.rows, wallRows: 2, front: L.front, bed: { x: 0, y: L.rows - BED.h, w: BED.w, h: BED.h }, bowl: null, items: L.items },
+-      interact: INTERACT, manifest: M, seed });
+-  }
+-
+-  /* ---------- 运行时（无 DOM，Node 可测） ---------- */
++      interact: INTERACT, manifest: M, seed, start });
++  }
++
++  /* ---------- 小狗运行时（每个 uid 一份；无 DOM，Node 可测） ---------- */
+   function createRuntime(opt) {
+     const E = opt.E, M = opt.manifest, now = opt.now || (() => Date.now());
+-    let w = null, homeId = null, key = '', decor = false, lastEvent = '', simAt = 0, restored = null;   // simAt = 最后一次真的在模拟的时间（存档的 savedAt 用它：页面藏起来后不再跑，回来按离线算）
+-    function build(st) {
+-      const p = st.pet, L = layoutOf(st, E, p.home);
+-      w = mkWorld(E, M, L, ((p.boughtAt || 1) % 2147483647) >>> 0);   // p4b：满屋也不崩（w.noRoom = 等待安置）
+-      w.bed = pickBed(w, null); w.obsVer++;
+-      const eng = p.eng; let res = null;
+-      if (eng && eng.home === p.home) { res = PE.restore(w, Object.assign({}, eng, { items: [] }), now()); lastEvent = res.ok && res.elapsed > 20 ? 'slept' : 'back'; }
+-      else if (eng) {   // 搬家：精力 / 亲密带过去，人从门口（前沿）进来
+-        res = PE.restore(w, Object.assign({}, eng, { items: [], savedAt: now(), dog: Object.assign({}, eng.dog, { x: L.front.x - 0.8, y: L.front.y - 0.6, asleep: false }) }), now());
++    let w = null, homeId = null, petUid = null, key = '', decor = false, lastEvent = '', simAt = 0, restored = null;
++    let generation = '', sourceEng = '', sourceState = null, berth = 0;
++    const stagedEngs = new Set();
++    const token = (v) => { try { return JSON.stringify(v); } catch (e) { return ''; } };
++    function record(st) {
++      const list = storedList(st);
++      if (opt.uid != null) return list.find(p => isObj(p) && p.uid === opt.uid && p.species === 'dog') || null;
++      return list.find(p => isObj(p) && p.species === 'dog') || (legacyOwned(st) ? st.pet : null);
++    }
++    const roomOf = (p) => p && ('room' in p ? p.room : p.home);
++    const uidOf = (p) => p && (p.uid || 'pet-dog-legacy');
++    const generationOf = (p) => token([uidOf(p), p && (p.species || 'dog'), p && p.boughtAt]);
++    function reset() { w = null; homeId = petUid = null; key = generation = sourceEng = ''; sourceState = null; stagedEngs.clear(); restored = null; }
++    const berthOf = (st, uid, room) => Math.max(0, storedList(st).filter(p => isObj(p) && p.room === room).findIndex(p => p.uid === uid)) % MAX_PER_ROOM;
++    const runtimeBed = (prev) => pickBed(w, prev, berth ? [pickBed(w, null)] : null);
++    const canonicalBed = () => runtimeBed(berth ? { x: w.cols - BED.w, y: w.rows - BED.h, w: BED.w, h: BED.h } : null);
++    function build(st, p) {
++      const room = roomOf(p), L = layoutOf(st, E, room), uid = uidOf(p);
++      let seed = ((p.boughtAt || 1) % 2147483647) >>> 0;
++      for (let i = 0; i < uid.length; i++) seed = (Math.imul(seed, 31) + uid.charCodeAt(i)) >>> 0;
++      berth = berthOf(st, uid, room);
++      const start = { x: L.front.x + (berth === 0 ? -0.8 : 0.8), y: L.rows - 1.6 };
++      w = mkWorld(E, M, L, seed, start);
++      w.bed = canonicalBed(); w.obsVer++;
++      // Runtime-specific validation stays in the dog engine. Roster migration and
++      // placement must not clamp or discard another species' growth payload.
++      const eng = PE.sanitizeSave(p.eng); let res = null;
++      if (eng && eng.home === room) { res = PE.restore(w, Object.assign({}, eng, { items: [] }), now()); lastEvent = res.ok && res.elapsed > 20 ? 'slept' : 'back'; }
++      else if (eng) {
++        res = PE.restore(w, Object.assign({}, eng, { items: [], savedAt: now(), dog: Object.assign({}, eng.dog, { x: start.x, y: L.front.y - 0.6, asleep: false }) }), now());
+         if (!w.noRoom) w.dog.label = '刚搬来，东张西望'; lastEvent = 'moved';
+       } else lastEvent = 'arrived';
+       if (w.noRoom) lastEvent = 'waiting';
+       if (w.dog.step && !w.dog.step.k) w.dog.step = null;
+-      homeId = p.home; key = L.key; decor = false; simAt = now();
++      homeId = room; petUid = uid; key = L.key; decor = false; simAt = now();
++      generation = generationOf(p); sourceEng = token(p.eng); sourceState = st; stagedEngs.clear();
+       restored = { x: w.dog.x, y: w.dog.y, affinity: w.dog.affinity, energy: w.dog.energy, inBed: !!(res && res.inBed), elapsed: res ? res.elapsed : 0, waiting: !!w.noRoom };
+       return res;
+     }
+     function sync(st) {
+-      if (!owned(st)) { w = null; homeId = null; key = ''; return null; }
+-      if (!w || homeId !== st.pet.home) { build(st); return w; }
+-      const L = layoutOf(st, E, homeId);
+-      if (L.key !== key) {
+-        PE.setLayout(w, { cols: L.cols, rows: L.rows, front: L.front, items: L.items });
+-        const nb = pickBed(w, w.bed); if (nb.x !== w.bed.x || nb.y !== w.bed.y) { w.bed = nb; w.obsVer++; }
++      const p = record(st), room = roomOf(p);
++      if (!p || !validRoom(st, E, room)) { reset(); return null; }
++      // The exact payload we staged is our own save, not an external update.
++      // A transaction rollback instead restores sourceEng, keeping live progress.
++      acknowledgePersist(st);
++      if (!w || homeId !== room || petUid !== uidOf(p) || generation !== generationOf(p) || sourceEng !== token(p.eng)) { build(st, p); return w; }
++      sourceState = st; stagedEngs.clear();
++      const L = layoutOf(st, E, homeId), nextBerth = berthOf(st, petUid, homeId), berthChanged = nextBerth !== berth;
++      if (L.key !== key || berthChanged) {
++        if (L.key !== key) PE.setLayout(w, { cols: L.cols, rows: L.rows, front: L.front, items: L.items });
++        berth = nextBerth;
++        // Membership changes can renumber the surviving resident. Reassign its
++        // bed without rebuilding the world, teleporting it, or losing live growth.
++        const nb = berthChanged ? canonicalBed() : runtimeBed(w.bed);
++        if (nb.x !== w.bed.x || nb.y !== w.bed.y) { w.bed = nb; w.obsVer++; }
+         key = L.key;
+       }
+       return w;
+@@ -138,18 +257,39 @@
+       simAt = now();
+       return w;
+     }
++    function snapshot() {
++      if (!w || homeId === null) return null;
++      const s = PE.serialize(w, simAt || now()); delete s.items; s.home = homeId;
++      return s;
++    }
+     function beforePersist(st) {
+-      if (!w || !owned(st) || st.pet.home !== homeId) return;
+-      const s = PE.serialize(w, simAt || now()); delete s.items; s.home = homeId;
+-      st.pet.eng = s;
+-    }
+-    // 页面藏起来很久再回来：先存一份，再按存档重建（离线 = 在窝里睡，回精力，不扣亲密）
+-    function resume(st) { if (!owned(st) || !w) return null; beforePersist(st); w = null; sync(st); return lastEvent; }
++      const p = record(st);
++      // A displaced/standby pet, a changed instance, or a newer engine payload
++      // must never be overwritten by an old room's still-mounted runtime.
++      if (!w || !p || roomOf(p) !== homeId || generationOf(p) !== generation) return false;
++      const current = token(p.eng);
++      if (current !== sourceEng && !stagedEngs.has(current)) return false;
++      p.eng = snapshot();
++      // Keep the original baseline and every exact staged payload until sync.
++      // This covers repeated collection inside one transaction and consecutive
++      // transactions without a frame between them, regardless of which rolls back.
++      if (st === sourceState) stagedEngs.add(token(p.eng));
++      return true;
++    }
++    function acknowledgePersist(st) {
++      const p = record(st);
++      // Call after success, or let sync recognize our own staged save. Refuse
++      // moved/replaced pets and unrelated external payloads; never write state here.
++      if (!w || st !== sourceState || !p || roomOf(p) !== homeId || generationOf(p) !== generation || !stagedEngs.has(token(p.eng))) return false;
++      sourceEng = token(p.eng); stagedEngs.clear();
++      return true;
++    }
++    function resume(st) { if (!w) return sync(st); beforePersist(st); w = null; sync(st); return lastEvent; }
+     const act = (st, fn) => { if (!sync(st)) return { ok: false, why: 'none' }; if (w.noRoom) return { ok: false, why: 'waiting' }; return fn(w); };
+     return {
+-      get w() { return w; }, get homeId() { return homeId; }, get lastEvent() { return lastEvent; }, get restored() { return restored; },
++      get w() { return w; }, get uid() { return petUid || opt.uid || null; }, get homeId() { return homeId; }, get lastEvent() { return lastEvent; }, get restored() { return restored; },
+       get waiting() { return !!(w && w.noRoom); },
+-      sync, frame, beforePersist, resume, reset() { w = null; homeId = null; key = ''; },
++      sync, frame, snapshot, beforePersist, acknowledgePersist, resume, reset,
+       call: (st) => act(st, PE.call), pet: (st, how) => act(st, (w) => PE.pet(w, how || 'button')), throwBall: (st, t) => act(st, (w) => PE.throwBall(w, t)),
+     };
+   }
+@@ -175,7 +315,9 @@
+     function mk(cls, tag) { const e = document.createElement(tag || 'div'); e.className = cls; e.setAttribute('aria-hidden', 'true'); return e; }
+     function ensure(floor) {
+       if (els && els.floor === floor && els.dog.parentNode === floor) return els;
+-      const bed = mk('pet-bed'), ball = mk('pet-ball'), dog = mk('pet-dog'), cv = mk('pet-cv', 'canvas'), fx = mk('pet-fx'), tag = mk('pet-tag');
++      detach();
++      const bed = mk('pet-bed'), ball = mk('pet-ball'), dog = mk('pet-dog pet-sprite'), cv = mk('pet-cv', 'canvas'), fx = mk('pet-fx'), tag = mk('pet-tag');
++      if (opt.uid != null) for (const el of [bed, ball, dog]) el.setAttribute('data-uid', String(opt.uid));
+       dog.appendChild(cv); dog.appendChild(fx); dog.appendChild(tag);
+       floor.appendChild(bed); floor.appendChild(ball); floor.appendChild(dog);
+       els = { floor, bed, ball, dog, cv, ctx: cv.getContext('2d'), fx, tag, fxSeen: 0, label: '' }; cvW = cvH = 0;
+@@ -231,6 +373,6 @@
+     return { draw, hit, detach, get artMode() { return atlas ? 'atlas' : 'placeholder'; }, get els() { return els; } };
+   }
+ 
+-  return { PET, PV, BED, INTERACT, NO_ROOM, norm, owned, buy, move, hasRoom, layoutOf, pickBed, bedOK, createRuntime, createView, padXOf };
++  return { PET, PV, MAX_PER_ROOM, BED, INTERACT, NO_ROOM, norm, view, owned, assign, buy, move, hasRoom, layoutOf, pickBed, bedOK, createRuntime, createView, padXOf };
+ });
+ 
