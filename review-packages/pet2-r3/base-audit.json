@@ -1,0 +1,216 @@
+{
+  "pinned_commit": "932ba25db38112d5bb1f190cb53c5ea3973bccf9",
+  "verified": [
+    {
+      "path": "preview/test_shop_game_bottom_13h.py",
+      "git_blob_sha": "8033cd1ae772783c45761e170203b382dd13382f",
+      "expected_git_blob_sha": "8033cd1ae772783c45761e170203b382dd13382f",
+      "byte_count": 6553
+    },
+    {
+      "path": "preview/version.json",
+      "git_blob_sha": "7dcc3fd1e574e68cddcfd71fd3ea29cc8b58f214",
+      "expected_git_blob_sha": "7dcc3fd1e574e68cddcfd71fd3ea29cc8b58f214",
+      "byte_count": 12
+    },
+    {
+      "path": "preview/test_shop_entry_13a.py",
+      "git_blob_sha": "b8d3af7253beea335b1b90607ebbbd9c10c405a6",
+      "expected_git_blob_sha": "b8d3af7253beea335b1b90607ebbbd9c10c405a6",
+      "byte_count": 25365
+    },
+    {
+      "path": "preview/index.html",
+      "git_blob_sha": "35d315f2237b2b32363fb228fb1430ec94832062",
+      "expected_git_blob_sha": "35d315f2237b2b32363fb228fb1430ec94832062",
+      "byte_count": 11562
+    },
+    {
+      "path": "preview/test_economy.js",
+      "git_blob_sha": "605b58deded00e84d61632dd1db068f8c5210784",
+      "expected_git_blob_sha": "605b58deded00e84d61632dd1db068f8c5210784",
+      "byte_count": 100956
+    },
+    {
+      "path": "preview/economy.js",
+      "git_blob_sha": "7e94c74f50e2bd3c0dd5d194603e145422e5ab6b",
+      "expected_git_blob_sha": "7e94c74f50e2bd3c0dd5d194603e145422e5ab6b",
+      "byte_count": 123117
+    },
+    {
+      "path": "preview/test_coin_safety.js",
+      "git_blob_sha": "07121a68534bfbe474cd34a99ef61955e8b2abd5",
+      "expected_git_blob_sha": "07121a68534bfbe474cd34a99ef61955e8b2abd5",
+      "byte_count": 56952
+    },
+    {
+      "path": "preview/app.js",
+      "git_blob_sha": "3871e26c0895c3305f669c0af24de09dca9ee4a0",
+      "expected_git_blob_sha": "3871e26c0895c3305f669c0af24de09dca9ee4a0",
+      "byte_count": 221524
+    },
+    {
+      "path": "preview/pet/art.js",
+      "git_blob_sha": "cb04f590fcc2424cfe5b347dee9fecb4282fdc3f",
+      "expected_git_blob_sha": "cb04f590fcc2424cfe5b347dee9fecb4282fdc3f",
+      "byte_count": 8280
+    },
+    {
+      "path": "preview/pet/test_engine.js",
+      "git_blob_sha": "bd4c50722106706c07ccacc4198af934e75f8799",
+      "expected_git_blob_sha": "bd4c50722106706c07ccacc4198af934e75f8799",
+      "byte_count": 66666
+    },
+    {
+      "path": "preview/pet/puppy.js",
+      "git_blob_sha": "469cae581360b10680b0fe88436157b2c31680b3",
+      "expected_git_blob_sha": "469cae581360b10680b0fe88436157b2c31680b3",
+      "byte_count": 9923
+    },
+    {
+      "path": "preview/pet/room.js",
+      "git_blob_sha": "781661d7028d35334249ab7e18276cea0433845e",
+      "expected_git_blob_sha": "781661d7028d35334249ab7e18276cea0433845e",
+      "byte_count": 3079
+    },
+    {
+      "path": "preview/pet/engine.js",
+      "git_blob_sha": "9f1067129f12d0c6e4d8efac6db3a82088f9a58d",
+      "expected_git_blob_sha": "9f1067129f12d0c6e4d8efac6db3a82088f9a58d",
+      "byte_count": 65606
+    },
+    {
+      "path": "preview/td/test_td_parent_e2e.py",
+      "git_blob_sha": "2e05cfe4954bc5d6023cd339d80d357d707a742d",
+      "expected_git_blob_sha": "2e05cfe4954bc5d6023cd339d80d357d707a742d",
+      "byte_count": 5318
+    },
+    {
+      "path": "preview/td/INTEGRATION.md",
+      "git_blob_sha": "2788b302c61ae8d3e03a3dbc96c84d34b59b5b09",
+      "expected_git_blob_sha": "2788b302c61ae8d3e03a3dbc96c84d34b59b5b09",
+      "byte_count": 5894
+    },
+    {
+      "path": "preview/td/index.html",
+      "git_blob_sha": "a2a8755c1369da46cbf4c50f57e0d26c36ac11f0",
+      "expected_git_blob_sha": "a2a8755c1369da46cbf4c50f57e0d26c36ac11f0",
+      "byte_count": 4298
+    },
+    {
+      "path": "preview/td/test_tdhost.js",
+      "git_blob_sha": "4eefa1315240bb144619975ccc5844b22ebd3b11",
+      "expected_git_blob_sha": "4eefa1315240bb144619975ccc5844b22ebd3b11",
+      "byte_count": 5106
+    },
+    {
+      "path": "preview/td/test_td_bridge.js",
+      "git_blob_sha": "527b8a5ff4627b624ac35cea26d7bc7442f07b16",
+      "expected_git_blob_sha": "527b8a5ff4627b624ac35cea26d7bc7442f07b16",
+      "byte_count": 4080
+    },
+    {
+      "path": "preview/td/tdhost.js",
+      "git_blob_sha": "695bb43b7e9b79bcfae52f19d9380187b0d30eb2",
+      "expected_git_blob_sha": "695bb43b7e9b79bcfae52f19d9380187b0d30eb2",
+      "byte_count": 4725
+    },
+    {
+      "path": "preview/td/td.css",
+      "git_blob_sha": "c5fb744bc614de898c818863bc67ceacaf90d173",
+      "expected_git_blob_sha": "c5fb744bc614de898c818863bc67ceacaf90d173",
+      "byte_count": 5346
+    },
+    {
+      "path": "preview/td/test_td_protocol.js",
+      "git_blob_sha": "6ef54034e8a4f71c74a7619a803025748d4a0f7c",
+      "expected_git_blob_sha": "6ef54034e8a4f71c74a7619a803025748d4a0f7c",
+      "byte_count": 4952
+    },
+    {
+      "path": "preview/td/test_td.py",
+      "git_blob_sha": "60a9d569493baadba28dbfc61f8f924cc4db4c83",
+      "expected_git_blob_sha": "60a9d569493baadba28dbfc61f8f924cc4db4c83",
+      "byte_count": 18158
+    },
+    {
+      "path": "preview/td/tdcore.js",
+      "git_blob_sha": "cdc9ca272281df0fc9b273ffad9d0f6f9206d81d",
+      "expected_git_blob_sha": "cdc9ca272281df0fc9b273ffad9d0f6f9206d81d",
+      "byte_count": 3200
+    },
+    {
+      "path": "preview/td/td.js",
+      "git_blob_sha": "6fe233fdb6facafa8ea23dcbd2214365e98ea472",
+      "expected_git_blob_sha": "6fe233fdb6facafa8ea23dcbd2214365e98ea472",
+      "byte_count": 34947
+    },
+    {
+      "path": "preview/zombie/zbcore.js",
+      "git_blob_sha": "cfbea69a9aadaf286063ac6ae3cb23f8abd38ff7",
+      "expected_git_blob_sha": "cfbea69a9aadaf286063ac6ae3cb23f8abd38ff7",
+      "byte_count": 2814
+    },
+    {
+      "path": "preview/pet/game/petgame.css",
+      "git_blob_sha": "0cd5152b95778cc6aae0ebc805c96af9e360c168",
+      "expected_git_blob_sha": "0cd5152b95778cc6aae0ebc805c96af9e360c168",
+      "byte_count": 2366
+    },
+    {
+      "path": "preview/pet/game/version.json",
+      "git_blob_sha": "7488ab7de39be4db8460f9c115b113b8350b8d1a",
+      "expected_git_blob_sha": "7488ab7de39be4db8460f9c115b113b8350b8d1a",
+      "byte_count": 12
+    },
+    {
+      "path": "preview/pet/game/petgame.js",
+      "git_blob_sha": "6a76bba2d519d8d28f07b27272932b3d8e159e57",
+      "expected_git_blob_sha": "6a76bba2d519d8d28f07b27272932b3d8e159e57",
+      "byte_count": 18885
+    },
+    {
+      "path": "preview/pet/game/index.html",
+      "git_blob_sha": "26df45a1ad0ac5be861c6980ec3ceb1eadbabe99",
+      "expected_git_blob_sha": "26df45a1ad0ac5be861c6980ec3ceb1eadbabe99",
+      "byte_count": 11322
+    },
+    {
+      "path": "preview/pet/game/economy.js",
+      "git_blob_sha": "dbaf7778ab9f9a5be95296abaec9ad80f70e9882",
+      "expected_git_blob_sha": "dbaf7778ab9f9a5be95296abaec9ad80f70e9882",
+      "byte_count": 122486
+    },
+    {
+      "path": "preview/pet/game/app.js",
+      "git_blob_sha": "072b4ae7a61d7e9bcf7312440b675661791fabe2",
+      "expected_git_blob_sha": "072b4ae7a61d7e9bcf7312440b675661791fabe2",
+      "byte_count": 209877
+    },
+    {
+      "path": "preview/pet/art/puppy_atlas_v3.json",
+      "git_blob_sha": "077cfdf3f527e53b0d47169ab216e94af6ebecc5",
+      "expected_git_blob_sha": "077cfdf3f527e53b0d47169ab216e94af6ebecc5",
+      "byte_count": 30031
+    },
+    {
+      "path": "preview/pet/art/manifest.json",
+      "git_blob_sha": "f23e78d664ecf3cbeb218aa02f846d6dc2d6b4c8",
+      "expected_git_blob_sha": "f23e78d664ecf3cbeb218aa02f846d6dc2d6b4c8",
+      "byte_count": 15548
+    },
+    {
+      "path": "preview/pet/tools/game/mkgame.py",
+      "git_blob_sha": "45807a389beab6a186d672def3616774d515b360",
+      "expected_git_blob_sha": "45807a389beab6a186d672def3616774d515b360",
+      "byte_count": 6395
+    },
+    {
+      "path": "preview/pet/tools/game/glue.js",
+      "git_blob_sha": "db5e59470605b310b947b2e971502696dd397dc3",
+      "expected_git_blob_sha": "db5e59470605b310b947b2e971502696dd397dc3",
+      "byte_count": 10281
+    }
+  ],
+  "mismatches": []
+}
