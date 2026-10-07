@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<!-- 塔防 t1（科技公司小游戏样品）：单独打开 = 原型（模拟余额，只存 tangzhe-td-proto）；经营页用 ?embed=1 嵌入 = 共用经营金币，由经营页扣款写档（td:* 消息）。音效复用 ../zombie/zbsfx.js，头像复用 ../art。 -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#f7f1e3">
+<meta name="format-detection" content="telephone=no">
+<title>科技公司塔防</title>
+<link rel="icon" href="../icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="td.css?v=t1">
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="hud" class="hidden">
+  <div class="hud-top">
+    <div class="pill" id="lifeTxt">❤ 20</div>
+    <div class="pill" id="cashTxt">建设点 160</div>
+    <div class="pill" id="waveTxt">波 0/10</div>
+    <button class="icon-btn" id="pauseBtn" type="button" aria-label="暂停">II</button>
+  </div>
+  <div id="toast" class="toast"></div>
+  <div id="bar">
+    <div id="barMain">
+      <div class="bar-tip" id="barTip">点空地造塔 · 点路面让统帅走位</div>
+      <button class="buy" id="waveBtn" type="button">开波</button>
+      <button id="ultBtn" type="button" aria-label="大招" disabled><span class="ult-fill" id="ultFill"></span><span class="ult-lbl" id="ultLbl">星舰</span></button>
+    </div>
+    <div id="barBuild" class="hidden"><div class="tw-grid" id="twGrid"></div><button class="buy" id="buildX" type="button">取消</button></div>
+    <div id="barTower" class="hidden"><div class="bar-tip" id="twInfo"></div><button class="buy" id="twUp" type="button">升级</button><button class="buy" id="twSell" type="button">拆除</button><button class="buy" id="twX" type="button">取消</button></div>
+  </div>
+</div>
+
+<section id="menu" class="screen">
+  <button class="buy hidden" id="exitBtn" type="button">‹ 返回经营</button>
+  <div class="card hero">
+    <img id="heroImg" src="../art/face_rocket.webp" alt="" width="88" height="88">
+    <div>
+      <h1 id="heroName">科技公司塔防</h1>
+      <p id="heroDesc"></p>
+    </div>
+  </div>
+  <div class="card">
+    <div class="row"><h2>选统帅</h2><span class="note">统帅不占塔位，同名 CEO 塔有额外效果</span></div>
+    <div class="cmd-pick" id="cmdPick"></div>
+  </div>
+  <div class="card">
+    <div class="row"><h2>地图</h2><span class="wallet" id="lvProg"></span></div>
+    <div class="lvsel"><button class="buy" id="lvPrev" type="button" aria-label="上一关">‹</button><div><b id="lvTxt">第 1 关</b><small id="lvInfo"></small></div><button class="buy" id="lvNext" type="button" aria-label="下一关">›</button></div>
+  </div>
+  <div class="card">
+    <div class="row"><h2>永久升级</h2><span class="wallet"><span id="walletLbl">模拟余额</span> <b id="walletTxt">0</b></span></div>
+    <p class="note" id="upNote">单独打开是原型模式：用模拟金币，不碰经营存档。</p>
+    <h3>防御塔</h3><div id="upTowers"></div>
+    <h3>统帅</h3><div id="upCmds"></div>
+  </div>
+  <button class="buy big red" id="startBtn" type="button">开守！</button>
+</section>
+
+<section id="pause" class="screen dim hidden">
+  <div class="card center">
+    <h2>暂停中</h2>
+    <button class="buy big" id="resumeBtn" type="button">继续</button>
+    <button class="buy" id="sndBtn" type="button">声音：开</button>
+    <button class="buy" id="quitBtn" type="button">退出本局</button>
+  </div>
+</section>
+
+<section id="result" class="screen dim hidden">
+  <div class="card center">
+    <h2 id="resTitle">守住了！</h2>
+    <p id="resStats"></p>
+    <p class="note" id="resNote"></p>
+    <button class="buy hidden" id="retryBtn" type="button">重试保存</button>
+    <button class="buy big red" id="againBtn" type="button">再来一局</button>
+    <button class="buy" id="menuBtn" type="button">回升级</button>
+  </div>
+</section>
+
+<script src="tdcore.js?v=t1"></script>
+<script src="../zombie/zbsfx.js?v=z10"></script>
+<script src="td.js?v=t1"></script>
+</body>
+</html>

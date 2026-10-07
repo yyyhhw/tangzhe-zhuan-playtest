@@ -97,3 +97,5 @@ iPhone 竖屏 Safari 漫画风挂机小游戏。**试玩链接，不是正式上
 13f：合入板砖 104ea0b（打僵尸音效 zbsfx.js + 13e 复核四条，子页 z9）；父页只改两处开局失败回执带 runId。iframe `v=13f`，缓存号 13f。回归：economy 534、coin_safety 522、音效 52、打僵尸嵌入 135、原型 93、商店入口 115、联合链路 20。根目录不动。
 
 13g：合入板砖 32d786d（熊大 10:44 两条：背景乐只在已开打、没暂停、前台、没静音时启动，迟到的开局回执遇暂停/后台不响；冰沙位移测试按僵尸对象比较）。`app.js` 只改 iframe `v=13g`；打僵尸子页缓存号 z10，主页缓存号 13g。回归：economy 534、coin_safety 522、音效 57、打僵尸嵌入 135、原型 93、商店入口 115、联合链路 20。根目录不动。
+
+塔防样品（板砖，科技公司小游戏，熊大规格）：`td/`（tdcore.js 规则、td.js 玩法、test_td.py 验收）。一张图 10 波（第 5 波小 Boss、第 10 波 Boss）；8 种塔（烧烤火炉 / 奶茶冷饮 / 书页发射 / 科技电塔 + 77 / 珍珠 / 阿宅 / 火箭 4 座 CEO 塔），4 位统帅开局选定、不占塔位，各带全局技能，同名塔有额外效果；数值集中在 td.js 的 `P` / `CMD`。局内造塔用建设点（每局重置 160，不兑换金币）；主金币只做永久升级（8 塔 + 4 统帅，各 30 级，价格见 `TDCore.price`）。单独打开 = 原型（模拟余额，只写 `tangzhe-td-proto`）；`?embed=1` 嵌入时经由 MessageChannel 收 `{td:'port'}`，发 `td:hello / buy{id} / start{runId,n,cmd} / result{runId,n,win,waves,cmd,kills} / close`，收 `td:'state'{coins,z,blocked,muted,ack?,runId?,ok?,why?}`，本页不写任何存档——父页接入（`E.transact` 扣款、塔防等级 / 进度单独存、科技公司店铺页底部入口）归熊二。测试：`python3 td/test_td.py [td 页 URL]`（WebKit 模拟 SE / iPhone 15，非真机）。
