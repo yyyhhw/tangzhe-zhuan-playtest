@@ -1,0 +1,140 @@
+{
+ "sofa": {
+  "src": "furn_sofa_rot1_v2_mcp.png",
+  "orig": [
+   836,
+   1881
+  ],
+  "thumb": [
+   455,
+   1024
+  ],
+  "bbox": [
+   76,
+   19,
+   387,
+   996
+  ],
+  "H240": 753,
+  "front": [
+   [
+    132.5,
+    995
+   ],
+   [
+    333.5,
+    995
+   ]
+  ],
+  "front_ref": 835,
+  "rear_ref": 91,
+  "ref": "扶手顶后/前棱：后扶手后棱 y91 ↔ 前扶手前棱 y835（前棱到前脚接地=扶手高 160px）",
+  "rear_y": 251,
+  "bw": 311,
+  "depth_px": 744,
+  "depth_cells": 2.392,
+  "orig_front": [
+   [
+    243,
+    1828
+   ],
+   [
+    613,
+    1828
+   ]
+  ],
+  "orig_rear_y": 461
+ },
+ "pearl_scallop_sofa": {
+  "src": "furn_pearl_scallop_sofa_rot1_v2_mcp.png",
+  "orig": [
+   836,
+   1881
+  ],
+  "thumb": [
+   455,
+   1024
+  ],
+  "bbox": [
+   82,
+   10,
+   376,
+   993
+  ],
+  "H240": 805,
+  "front": [
+   [
+    138,
+    992
+   ],
+   [
+    348.5,
+    992
+   ]
+  ],
+  "front_ref": 788,
+  "rear_ref": 92,
+  "ref": "涡卷扶手：后扶手后棱 y92 ↔ 前扶手前立面上沿 y788（扶手高 204px；若取 758 则后脚再前移 30px）",
+  "rear_y": 296,
+  "bw": 294,
+  "depth_px": 696,
+  "depth_cells": 2.367,
+  "orig_front": [
+   [
+    254,
+    1822
+   ],
+   [
+    640,
+    1822
+   ]
+  ],
+  "orig_rear_y": 544
+ },
+ "rocket_pipe_sofa": {
+  "src": "furn_rocket_pipe_sofa_rot1_v2_mcp.png",
+  "orig": [
+   874,
+   1800
+  ],
+  "thumb": [
+   497,
+   1024
+  ],
+  "bbox": [
+   95,
+   9,
+   424,
+   1000
+  ],
+  "H240": 722,
+  "front": [
+   [
+    128,
+    999
+   ],
+   [
+    392,
+    999
+   ]
+  ],
+  "front_ref": 853,
+  "rear_ref": 57,
+  "ref": "横管蓝皮套上沿：后 y57 ↔ 前 y853（到前脚接地 146px）",
+  "rear_y": 203,
+  "bw": 329,
+  "depth_px": 796,
+  "depth_cells": 2.419,
+  "orig_front": [
+   [
+    225,
+    1756
+   ],
+   [
+    689,
+    1756
+   ]
+  ],
+  "orig_rear_y": 357
+ }
+}

@@ -1,0 +1,349 @@
+{
+ "results": [
+  {
+   "fid": "sofa",
+   "rot": 1,
+   "src": "art/furn_sofa_side.webp",
+   "nw": 240,
+   "nh": 753,
+   "cw": 47,
+   "frontDevPx": 0,
+   "rearDevPx": 28.6,
+   "frontDevCell": 0,
+   "rearDevCell": 0.61,
+   "feetX": [
+    0.18,
+    0.83
+   ],
+   "imgTopOverCell": 0.14,
+   "inRoom": true,
+   "dev": "SE"
+  },
+  {
+   "fid": "pearl_scallop_sofa",
+   "rot": 1,
+   "src": "art/furn_pearl_scallop_sofa_side.webp",
+   "nw": 240,
+   "nh": 805,
+   "cw": 47,
+   "frontDevPx": 0,
+   "rearDevPx": 29.2,
+   "frontDevCell": 0,
+   "rearDevCell": 0.62,
+   "feetX": [
+    0.19,
+    0.91
+   ],
+   "imgTopOverCell": 0.35,
+   "inRoom": true,
+   "dev": "SE"
+  },
+  {
+   "fid": "rocket_pipe_sofa",
+   "rot": 1,
+   "src": "art/furn_rocket_pipe_sofa_side.webp",
+   "nw": 240,
+   "nh": 722,
+   "cw": 47,
+   "frontDevPx": 0,
+   "rearDevPx": 27.3,
+   "frontDevCell": 0,
+   "rearDevCell": 0.58,
+   "feetX": [
+    0.1,
+    0.9
+   ],
+   "imgTopOverCell": 0.01,
+   "inRoom": true,
+   "dev": "SE"
+  },
+  {
+   "dev": "SE",
+   "rot": 1,
+   "placed": [
+    "u1",
+    "u2",
+    "u3",
+    "u4",
+    "u5"
+   ],
+   "horizontal_ctrl": [
+    {
+     "fid": "furn_sofa",
+     "src": "art/furn_sofa.webp",
+     "w": 3,
+     "h": 1,
+     "imgH": 1.13,
+     "foot": 0
+    },
+    {
+     "fid": "furn_pearl_scallop_sofa",
+     "src": "art/furn_pearl_scallop_sofa.webp",
+     "w": 3,
+     "h": 1,
+     "imgH": 1.17,
+     "foot": 0
+    }
+   ]
+  },
+  {
+   "fid": "sofa",
+   "rot": 3,
+   "src": "art/furn_sofa_side.webp",
+   "nw": 240,
+   "nh": 753,
+   "cw": 47,
+   "frontDevPx": 0,
+   "rearDevPx": 28.6,
+   "frontDevCell": 0,
+   "rearDevCell": 0.61,
+   "feetX": [
+    0.82,
+    0.17
+   ],
+   "imgTopOverCell": 0.14,
+   "inRoom": true,
+   "dev": "SE"
+  },
+  {
+   "fid": "pearl_scallop_sofa",
+   "rot": 3,
+   "src": "art/furn_pearl_scallop_sofa_side.webp",
+   "nw": 240,
+   "nh": 805,
+   "cw": 47,
+   "frontDevPx": 0,
+   "rearDevPx": 29.2,
+   "frontDevCell": 0,
+   "rearDevCell": 0.62,
+   "feetX": [
+    0.81,
+    0.09
+   ],
+   "imgTopOverCell": 0.35,
+   "inRoom": true,
+   "dev": "SE"
+  },
+  {
+   "fid": "rocket_pipe_sofa",
+   "rot": 3,
+   "src": "art/furn_rocket_pipe_sofa_side.webp",
+   "nw": 240,
+   "nh": 722,
+   "cw": 47,
+   "frontDevPx": 0,
+   "rearDevPx": 27.3,
+   "frontDevCell": 0,
+   "rearDevCell": 0.58,
+   "feetX": [
+    0.9,
+    0.1
+   ],
+   "imgTopOverCell": 0.01,
+   "inRoom": true,
+   "dev": "SE"
+  },
+  {
+   "dev": "SE",
+   "rot": 3,
+   "placed": [
+    "u6",
+    "u7",
+    "u8",
+    "u9",
+    "u10"
+   ],
+   "horizontal_ctrl": [
+    {
+     "fid": "furn_rocket_pipe_sofa",
+     "src": "art/furn_rocket_pipe_sofa.webp",
+     "w": 3,
+     "h": 1,
+     "imgH": 1.68,
+     "foot": 0
+    },
+    {
+     "fid": "furn_sofa",
+     "src": "art/furn_sofa.webp",
+     "w": 3,
+     "h": 1,
+     "imgH": 1.13,
+     "foot": 0
+    }
+   ]
+  },
+  {
+   "fid": "sofa",
+   "rot": 1,
+   "src": "art/furn_sofa_side.webp",
+   "nw": 240,
+   "nh": 753,
+   "cw": 59.2,
+   "frontDevPx": 0,
+   "rearDevPx": 36,
+   "frontDevCell": 0,
+   "rearDevCell": 0.61,
+   "feetX": [
+    0.18,
+    0.83
+   ],
+   "imgTopOverCell": 0.14,
+   "inRoom": true,
+   "dev": "iP15"
+  },
+  {
+   "fid": "pearl_scallop_sofa",
+   "rot": 1,
+   "src": "art/furn_pearl_scallop_sofa_side.webp",
+   "nw": 240,
+   "nh": 805,
+   "cw": 59.2,
+   "frontDevPx": 0,
+   "rearDevPx": 36.8,
+   "frontDevCell": 0,
+   "rearDevCell": 0.62,
+   "feetX": [
+    0.19,
+    0.91
+   ],
+   "imgTopOverCell": 0.35,
+   "inRoom": true,
+   "dev": "iP15"
+  },
+  {
+   "fid": "rocket_pipe_sofa",
+   "rot": 1,
+   "src": "art/furn_rocket_pipe_sofa_side.webp",
+   "nw": 240,
+   "nh": 722,
+   "cw": 59.2,
+   "frontDevPx": 0,
+   "rearDevPx": 34.4,
+   "frontDevCell": 0,
+   "rearDevCell": 0.58,
+   "feetX": [
+    0.1,
+    0.9
+   ],
+   "imgTopOverCell": 0.01,
+   "inRoom": true,
+   "dev": "iP15"
+  },
+  {
+   "dev": "iP15",
+   "rot": 1,
+   "placed": [
+    "u1",
+    "u2",
+    "u3",
+    "u4",
+    "u5"
+   ],
+   "horizontal_ctrl": [
+    {
+     "fid": "furn_sofa",
+     "src": "art/furn_sofa.webp",
+     "w": 3,
+     "h": 1,
+     "imgH": 1.12,
+     "foot": 0
+    },
+    {
+     "fid": "furn_pearl_scallop_sofa",
+     "src": "art/furn_pearl_scallop_sofa.webp",
+     "w": 3,
+     "h": 1,
+     "imgH": 1.17,
+     "foot": 0
+    }
+   ]
+  },
+  {
+   "fid": "sofa",
+   "rot": 3,
+   "src": "art/furn_sofa_side.webp",
+   "nw": 240,
+   "nh": 753,
+   "cw": 59.2,
+   "frontDevPx": 0,
+   "rearDevPx": 36,
+   "frontDevCell": 0,
+   "rearDevCell": 0.61,
+   "feetX": [
+    0.82,
+    0.17
+   ],
+   "imgTopOverCell": 0.14,
+   "inRoom": true,
+   "dev": "iP15"
+  },
+  {
+   "fid": "pearl_scallop_sofa",
+   "rot": 3,
+   "src": "art/furn_pearl_scallop_sofa_side.webp",
+   "nw": 240,
+   "nh": 805,
+   "cw": 59.2,
+   "frontDevPx": 0,
+   "rearDevPx": 36.8,
+   "frontDevCell": 0,
+   "rearDevCell": 0.62,
+   "feetX": [
+    0.81,
+    0.09
+   ],
+   "imgTopOverCell": 0.35,
+   "inRoom": true,
+   "dev": "iP15"
+  },
+  {
+   "fid": "rocket_pipe_sofa",
+   "rot": 3,
+   "src": "art/furn_rocket_pipe_sofa_side.webp",
+   "nw": 240,
+   "nh": 722,
+   "cw": 59.2,
+   "frontDevPx": 0,
+   "rearDevPx": 34.4,
+   "frontDevCell": 0,
+   "rearDevCell": 0.58,
+   "feetX": [
+    0.9,
+    0.09
+   ],
+   "imgTopOverCell": 0.01,
+   "inRoom": true,
+   "dev": "iP15"
+  },
+  {
+   "dev": "iP15",
+   "rot": 3,
+   "placed": [
+    "u6",
+    "u7",
+    "u8",
+    "u9",
+    "u10"
+   ],
+   "horizontal_ctrl": [
+    {
+     "fid": "furn_rocket_pipe_sofa",
+     "src": "art/furn_rocket_pipe_sofa.webp",
+     "w": 3,
+     "h": 1,
+     "imgH": 1.68,
+     "foot": 0
+    },
+    {
+     "fid": "furn_sofa",
+     "src": "art/furn_sofa.webp",
+     "w": 3,
+     "h": 1,
+     "imgH": 1.12,
+     "foot": 0
+    }
+   ]
+  }
+ ],
+ "console_errors": []
+}
