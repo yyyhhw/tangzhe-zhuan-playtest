@@ -1,0 +1,20 @@
+// Local-only replay regression; uses disposable storage, never the user's save.
+const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');
+import fs from 'node:fs';import assert from 'node:assert/strict';
+const out=new URL(process.env.STORY_TEST_OUTPUT||'./story-output/',import.meta.url);fs.mkdirSync(out,{recursive:true});const b=await chromium.launch({headless:true}),results=[];
+for(const entry of ['/preview/','/preview/pet/game/'])for(const fixture of [{width:320,owned:['k_1','k_4']},{width:375,owned:[]},{width:393,owned:Array.from({length:8},(_,i)=>'k_'+(i+1))}]){
+ const c=await b.newContext({viewport:{width:fixture.width,height:852},isMobile:true,hasTouch:true,deviceScaleFactor:2});await c.addInitScript(()=>{let t;Object.defineProperty(window,'__tzz',{get:()=>t,set:v=>{t=v;v?.pets?.manual(true)}})});const p=await c.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message));
+ const boot=async()=>{await p.waitForFunction(()=>window.__tzz);await p.evaluate(async()=>{for(let i=0;i<4;i++){if(__tzz.modalOpen())__tzz.closeModal();await new Promise(r=>setTimeout(r,60))}__tzz.setTab('col');__tzz.renderTab()})};
+ await p.goto('http://127.0.0.1:8765'+entry);await boot();await p.evaluate(owned=>{const E=__tzz.E,s=E.newState(Date.now());s.coins=12345;s.muted=true;s.gacha.owned=['c_apron',...owned];s.gacha.last=null;localStorage.setItem(__tzz.SAVE_KEY,JSON.stringify(s));localStorage.setItem(__tzz.BAK_KEY,JSON.stringify(s));localStorage.setItem('tangzhe-save','FORMAL-SENTINEL')},fixture.owned);await p.reload();await boot();
+ const snapshot=()=>p.evaluate(()=>JSON.stringify({state:__tzz.state,main:localStorage.getItem(__tzz.SAVE_KEY),bak:localStorage.getItem(__tzz.BAK_KEY),formal:localStorage.getItem('tangzhe-save')}));const before=await snapshot();
+ assert.equal(await p.locator('.story-open').count(),fixture.owned.length);assert.equal(await p.locator('.story.no').count(),8-fixture.owned.length);assert.equal(await p.locator('.story.no [data-act]').count(),0);
+ for(const id of ['k_missing','c_apron',...Array.from({length:8},(_,i)=>'k_'+(i+1)).filter(id=>!fixture.owned.includes(id))]){await p.evaluate(id=>__tzz.act('card',id),id);assert.equal(await p.locator('#storyReplay').count(),0)}
+ for(const [i,id] of fixture.owned.entries()){
+  const card=p.locator(`.story-open[data-arg="${id}"]`);await card.scrollIntoViewIfNeeded();await card.focus();await p.keyboard.press('Enter');const expected=await p.evaluate(id=>__tzz.E.ITEM_BY_ID[id],id);assert.equal(await p.locator('#storyReplayTitle').innerText(),expected.name);assert.equal(await p.locator('#storyReplay .mnote').innerText(),expected.text);assert.equal(await p.locator('#storyReplay img').count(),0);
+  if(i===0)await p.screenshot({path:new URL(`${entry.includes('/game/')?'standalone':'main'}-${fixture.width}-replay.png`,out).pathname});
+  if(i%2)await p.locator('#mX').click();else await p.keyboard.press('Escape');assert.equal(await p.locator('#storyReplay').count(),0);assert(await card.evaluate(el=>el===document.activeElement));assert.equal(await snapshot(),before);
+  await card.click();await p.locator('#mOk').click();assert.equal(await snapshot(),before);
+ }
+ assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);assert.deepEqual(errors,[]);await p.locator('.story').first().scrollIntoViewIfNeeded();await p.screenshot({path:new URL(`${entry.includes('/game/')?'standalone':'main'}-${fixture.width}-collection.png`,out).pathname});await p.reload();await boot();assert.deepEqual(await p.evaluate(()=>__tzz.state.gacha.owned),['c_apron',...fixture.owned]);assert.equal(await p.evaluate(()=>__tzz.state.coins),12345);
+ const row={entry,width:fixture.width,owned:fixture.owned,status:'pass',lockedAndInvalidGuard:true,readOnlyReplay:true,keyboardAndFocus:true,reloadProgress:true,noImageInvented:true,errors};results.push(row);fs.writeFileSync(new URL('results.json',out),JSON.stringify(results,null,2));console.log(JSON.stringify(row));await c.close();
+}await b.close();

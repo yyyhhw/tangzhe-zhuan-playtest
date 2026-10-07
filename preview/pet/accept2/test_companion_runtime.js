@@ -27,12 +27,12 @@ console.log('PASS six species: rollback retains live growth; unknown engine vers
  assert(PG.registerSpecies('cat',m,{naturalWidth:m.atlas.size[0],naturalHeight:m.atlas.size[1],companionAtlases:Object.fromEntries(Object.entries(m.atlases||{}).map(([key,a])=>[key,{naturalWidth:a.size[0],naturalHeight:a.size[1]}]))},'local-real-prototype').ok);
  const r=PG.buy(s,E,'c77',stamp,m,()=>true,false,{species:'cat',prototype:true});assert(r.ok);
  const rt=PG.createRuntime({E,manifest:m,species:'cat',uid:r.uid,now:()=>stamp});rt.sync(s);
- const before=rt.snapshot().pet,xy=[before.x,before.y];assert(rt.throwBall(s).ok);rt.step(1);
+ const before=rt.snapshot().pet,xy=[before.x,before.y];assert.equal(rt.throwBall(s).why,'noRoute');rt.step(1);
  assert.deepEqual([rt.w.dog.x,rt.w.dog.y],xy,'cat without walking frames must not slide');
- assert.equal(rt.snapshot().pet.affinity,before.affinity+1,'in-place toy play should reward this cat');
- assert(rt.throwBall(s).ok);assert.equal(rt.snapshot().pet.affinity,before.affinity+1,'repeat play uses same gain cooldown');
+ assert.equal(rt.snapshot().pet.affinity,before.affinity,'missing walking frames must not award fake play');
+ assert.equal(rt.throwBall(s).why,'noRoute');assert.equal(rt.snapshot().pet.affinity,before.affinity);
 }
-console.log('PASS no-walk cat fallback: in-place toy play gains once, respects cooldown, no sliding');
+console.log('PASS no-walk cat rejects spatial play without sliding or fake completion');
 {
  const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto'),m=require('../art/cat/manifest.json');
  assert(PA.validateManifest(m).ok);for(const [name,n] of Object.entries({walk_E:8,walk_N:4,walk_S:4,run_E:6}))assert.equal(m.clips[name].frames.length,n);
@@ -47,10 +47,10 @@ console.log('PASS cat locomotion source counts, cross-image S order, groom06-onl
  const PC=require('../companions.js'),m=require('../art/cat/manifest.json');
  for(const [dir,dx,dy,clipName] of [['E',1,0,'run_E'],['W',-1,0,'run_E'],['N',0,-1,'walk_N'],['S',0,1,'walk_S']]){
   const w=PC.createWorld({catalog:[],room:{cols:8,rows:6,items:[],front:{x:4,y:5.7},bed:{x:0,y:5,w:1,h:1}},interact:{},manifest:m,start:{x:4,y:3}});
-  assert(PC.throwBall(w,{x:4+dx,y:3+dy}).ok);PC.step(w,.2);assert.equal(w.dog.dir,dir);assert.equal(w.dog.anim.name,clipName);assert(Math.hypot(w.dog.x-4,w.dog.y-3)>.1);PC.step(w,3);assert.equal(w.dog.affinity,41);
+  assert(PC.throwBall(w,{x:4+dx,y:3+dy}).ok);PC.step(w,.2);assert.equal(w.dog.dir,dir);assert.equal(w.dog.anim.name,clipName);assert(Math.hypot(w.dog.x-4,w.dog.y-3)>.1);for(let n=0;w.game&&n<900;n++)PC.step(w,.1);assert.equal(w.spatialStats.completed,1);assert.equal(w.dog.affinity,41);
  }
 }
-console.log('PASS actual cat routes: E/W use run_E (W mirrored), N/S use corresponding walks, arrival rewards one play');
+console.log('PASS actual cat routes: E/W use run_E (W mirrored), N/S use corresponding walks, completed return counts one play');
 {
  const PC=require('../companions.js'),summaries={};
  for(const species of Object.keys(PC.CONFIG)){

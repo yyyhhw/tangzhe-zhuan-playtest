@@ -574,11 +574,11 @@ function drawRushBanner(c, i, t) {
 }
 function drawDecorFront(c, i, t) {
   const l = L();
-  if (decorOn('d_balloon')) { const by = l.awnY + l.awnH * 2.4 + Math.sin(t * 1.8) * 3 * U; c.strokeStyle = INK; c.lineWidth = 1.2 * U; c.beginPath(); c.moveTo(W * 0.075, by); c.lineTo(W * 0.085, by + 30 * U); c.stroke(); emo(c, '🎈', W * 0.075, by + 2 * U, 22 * U); }
+  if (decorOn('d_balloon')) { const by = l.awnY + l.awnH * 2.4 + Math.sin(t * 1.8) * 3 * U; c.strokeStyle = INK; c.lineWidth = 1.2 * U; c.beginPath(); c.moveTo(W * 0.075, by); c.lineTo(W * 0.085, by + 30 * U); c.stroke(); emo(c, '🎈', W * 0.075, by + 2 * U, 29 * U); }
   if (decorOn('d_poster')) { c.save(); c.translate(W * 0.9, l.counterY - 4 * U); c.rotate(0.06); rr(c, -16 * U, -24 * U, 32 * U, 40 * U, 2 * U); inkFill(c, '#fff', 2 * U);
     c.fillStyle = RED; c.font = `900 ${9 * U}px sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('热血', 0, -12 * U); c.fillStyle = INK; c.fillText('连载', 0, 0); c.fillStyle = '#ffd23f'; c.fillRect(-12 * U, 8 * U, 24 * U, 4 * U); c.restore(); }
-  if (decorOn('d_cat')) emo(c, '🐱', W * 0.66, l.counterY - 3 * U + (Math.sin(t * 5) > 0.9 ? -2 * U : 0), 18 * U);
-  if (decorOn('d_plant')) emo(c, '🪴', W * 0.955, l.ground + 4 * U, 22 * U);
+  if (decorOn('d_cat')) emo(c, '🐱', W * 0.66, l.counterY - 3 * U + (Math.sin(t * 5) > 0.9 ? -2 * U : 0), 25 * U);
+  if (decorOn('d_plant')) emo(c, '🪴', W * 0.94, l.ground + 4 * U, 30 * U);
   if (decorOn('d_board')) { // 龙门阵黑板
     const x = W * 0.1, y = l.ground; c.strokeStyle = INK; c.lineWidth = 2.5 * U; c.beginPath(); c.moveTo(x - 14 * U, y); c.lineTo(x - 4 * U, y - 46 * U); c.moveTo(x + 14 * U, y); c.lineTo(x + 4 * U, y - 46 * U); c.stroke();
     rr(c, x - 17 * U, y - 46 * U, 34 * U, 30 * U, 3 * U); inkFill(c, '#2d3a2e', 2.5 * U);
@@ -1152,7 +1152,7 @@ function act(a, arg, btn) {
     case 'wearWho': wardrobeWho = arg; dirty = true; break;
     case 'jobView': { const [who, k] = arg.split(':'); jobView[who] = { i:+k, at:state.ceos[who].at }; dirty = true; sfx('tap'); break; }
     case 'jobBig': { const [who, k] = arg.split(':'); return showJobArt(who, +k); }
-    case 'decor': { atomic(() => { const h = state.decorHidden || (state.decorHidden = []); const k = h.indexOf(arg); if (k >= 0) h.splice(k, 1); else h.push(arg); return { ok:true }; }, '装饰显示没有切换'); dirty = true; bgKey = ''; break; }
+    case 'decor': { if (E.ITEM_BY_ID[arg]?.type !== 'decor' || !state.gacha.owned.includes(arg)) return; const r = atomic(() => { const h = state.decorHidden || (state.decorHidden = []); const k = h.indexOf(arg); if (k >= 0) h.splice(k, 1); else h.push(arg); return { ok:true }; }, '装饰显示没有切换'); dirty = true; bgKey = ''; if (r.ok) toast(decorOn(arg) ? '已摆出：四家店共用，开店后可见' : '已从四家店收起'); break; }
     case 'card': return showCard(arg);
     case 'reset': return confirmReset();
     case 'goShop': switchShop(+arg); setTab('shop'); break;
@@ -1165,6 +1165,7 @@ function avaCacheClear() { for (const k of Object.keys(avaCache)) delete avaCach
 // 12c 漫画 UI：统一线稿图标（index.html 里的 <symbol>，导航 / 翻页签 / 模式签共用同一套）
 const ic = n => `<svg class="ic" aria-hidden="true"><use href="#ic-${n}"/></svg>`;
 const SHOP_ICON = ['bbq', 'tea', 'book', 'tech'].map(n => ic(n)), LOCK_IC = ic('lock'), TAB_NAME = ['烧烤摊', '奶茶店', '漫画店', '科技'];
+const DECOR_SPOT = { d_stool:'门口左侧的小椅', d_lights:'遮阳棚下的辣椒串灯', d_neon:'招牌右侧的霓虹牌', d_board:'门口左侧的黑板', d_balloon:'店面左边的气球', d_poster:'柜台右边的海报', d_cat:'柜台上的招财猫', d_plant:'门口右侧的绿植' };
 const DECOR_ICON = { d_stool:'🪑', d_lights:'🌶️', d_neon:'🏮', d_board:'🪧', d_balloon:'🎈', d_poster:'📰', d_cat:'🐱', d_plant:'🪴' };
 const TYPE_LABEL = { clothes:'衣服', hat:'帽子', decor:'装饰', card:'故事卡', super:'超级装饰' };
 const thumbCache = {};
@@ -1340,15 +1341,15 @@ function renderCol() {
   const supers = E.SUPER_ITEMS.filter(it => own.has(it.id));
   if (supers.length) { h += `<div class="sec-title">超级装饰（常驻生效）</div>`;
     h += supers.map(it => `<div class="card super"><div class="ava sq">${SUPER_ICON[it.id]}</div><div class="info"><div class="name">${it.name}<span class="tag match">${E.SHOPS[it.shop].short}</span></div><div class="desc">${it.desc}</div></div></div>`).join(''); }
-  h += `<div class="sec-title">店铺装饰</div>`;
+  h += `<div class="sec-title">店铺装饰</div><div class="note">四家店共用，开店后可见；只改变店景，不增加产速。<button class="decor-view" data-act="goShop" data-arg="${state.cur}">查看店景 ›</button></div>`;
   const decors = E.ITEMS.filter(i => i.type === 'decor');
   h += decors.map(d => own.has(d.id)
-    ? `<div class="card"><div class="ava sq">${DECOR_ICON[d.id]}</div><div class="info"><div class="name">${d.name}</div><div class="desc">摆在每家店门口（不加产速）</div></div><button class="toggle ${decorOn(d.id) ? 'on' : ''}" data-act="decor" data-arg="${d.id}">${decorOn(d.id) ? '摆着' : '收起'}</button></div>`
+    ? `<div class="card decor-card" data-decor="${d.id}"><div class="ava sq">${DECOR_ICON[d.id]}</div><div class="info"><div class="name">${d.name}</div><div class="desc"><b class="decor-state">${decorOn(d.id) ? '已摆出 · 四家店' : '已收起'}</b><br>${DECOR_SPOT[d.id]}</div></div><button class="toggle ${decorOn(d.id) ? 'on' : ''}" aria-label="${decorOn(d.id) ? '收起' : '摆出'}${d.name}" data-act="decor" data-arg="${d.id}">${decorOn(d.id) ? '收起' : '摆出'}</button></div>`
     : `<div class="card dim"><div class="ava sq">❓</div><div class="info"><div class="name">？？？</div><div class="desc">盲盒里抽</div></div></div>`).join('');
   const cards = E.ITEMS.filter(i => i.type === 'card');
   h += `<div class="sec-title">故事卡图鉴 ${cards.filter(c => own.has(c.id)).length}/${cards.length}</div>`;
   h += cards.map((c, k) => own.has(c.id)
-    ? `<div class="story"><b>${k + 1}. ${c.name}</b><p>${c.text}</p></div>` : `<div class="story no"><b>${k + 1}. ？？？</b><p>还没收集</p></div>`).join('');
+    ? `<button type="button" class="story story-open" data-act="card" data-arg="${c.id}" aria-label="重看故事卡：${c.name}"><b>${k + 1}. ${c.name}</b><span class="story-text">${c.text}</span><span class="story-replay-hint">已收集 · 点击重看 ›</span></button>` : `<div class="story no" aria-label="第 ${k + 1} 张故事卡，未收集"><b>${k + 1}. ？？？</b><p>还没收集</p></div>`).join('');
   h += `<div class="note">${setDone ? `✅ 已集齐 ${cards.length} 张故事卡：解锁专属外观「金牌摊主」（金马甲 + 金厨师帽），在衣橱里给任意 CEO 换上。` : `集齐 ${cards.length} 张故事卡，解锁专属外观「金牌摊主」（金马甲 + 金厨师帽）。`}</div>`;
   h += `<div class="sec-title">设置</div><div class="card"><div class="info"><div class="name">存档</div><div class="desc">版本 v${state.v} · 自动保存在本机浏览器 · 每日双倍按马来西亚时间早上 5 点重置</div></div>
     <button class="buy ghost" data-act="reset" data-arg="">重新开始</button></div><div class="note">试玩版 · 只花游戏金币，没有任何真钱购买。</div>`;
@@ -1588,7 +1589,7 @@ function showReveal(resumed) {
   const last = state.gacha.last; if (!last) return;
   const it = E.ITEM_BY_ID[last.id]; if (!it) return; const sup = it.type === 'super', total = E.ITEMS.length, done = E.gachaComplete(state);
   sfx(sup ? 'mile' : 'reveal'); popWord(sup ? '超级！' : '开！'); if (sup) { focusT = 0.8; shake = 0.5; }
-  const note = it.type === 'card' ? '“' + it.text + '”<br>' : it.type === 'decor' ? '已经摆进店里（收藏页可收起）<br>' : sup ? `<b>${it.desc}</b><br>已经放进${E.SHOPS[it.shop].name}，常驻生效<br>` : '去收藏页给 CEO 换上<br>';
+  const note = it.type === 'card' ? '“' + it.text + '”<br>' : it.type === 'decor' ? '已摆进四家店，开店后可见（收藏页可收起）<br>' : sup ? `<b>${it.desc}</b><br>已经放进${E.SHOPS[it.shop].name}，常驻生效<br>` : '去收藏页给 CEO 换上<br>';
   openModal(`<div class="mbubble">${resumed ? '上次开盒的结果' : sup ? '✨ 超级装饰！✨' : '开盒！'}</div>
     <div style="display:flex;justify-content:center;margin:4px 0"><div class="item ${sup ? 'superpop' : ''}" style="width:110px;font-size:14px">${itemIcon(it.id)}<b>${it.name}</b></div></div>
     <div class="mtitle">${TYPE_LABEL[it.type]}：${it.name}</div>
@@ -1601,7 +1602,15 @@ function showReveal(resumed) {
   const mc = $('#mCol'); if (mc) mc.addEventListener('click', () => { closeModal(); setTab('col'); }, { once:true });
   const ms = $('#mGoShop'); if (ms) ms.addEventListener('click', () => { closeModal(); switchShop(it.shop); setTab('shop'); }, { once:true });
 }
-function showCard(id) { const it = E.ITEM_BY_ID[id]; openModal(`<div class="mtitle">${it.name}</div><div class="mnote">${it.text}</div><button class="buy big" id="mOk">好</button>`); $('#mOk').addEventListener('click', closeModal, { once:true }); }
+function showCard(id) {
+  const it = E.ITEM_BY_ID[id];
+  // Replaying is read-only: ownership comes from the existing collection IDs.
+  if (!it || it.type !== 'card' || !state.gacha.owned.includes(id)) return;
+  const opener = document.activeElement;
+  openModal(`<section id="storyReplay" aria-labelledby="storyReplayTitle"><div class="mtitle" id="storyReplayTitle">${it.name}</div><div class="mnote">${it.text}</div><button type="button" class="buy big" id="mOk">返回收藏</button></section>`, false);
+  $('#mOk').addEventListener('click', () => { closeModal(); if (opener && opener.isConnected) opener.focus({preventScroll:true}); }, {once:true});
+  $('#mOk').focus({preventScroll:true});
+}
 function confirmReset() {
   openModal(`<div class="mtitle">确定重新开始？</div><div class="mnote">所有店铺、CEO、员工、金币和收藏都会清空，不能恢复。</div>
     <div class="mbtns two"><button class="buy ghost" id="mNo">取消</button><button class="buy red" id="mYes">清空重来</button></div>`, false);
@@ -1847,12 +1856,12 @@ function petInit(tryN) {
 }
 async function petLoadSpecies() {
   try {
-    const response=await fetch('pet/art/species.json?v=13k-pets-floor1'); if(!response.ok)throw Error('species catalog');
+    const response=await fetch('pet/art/species.json?v=13k-night1'); if(!response.ok)throw Error('species catalog');
     const entries=await response.json();
     for(const entry of entries) {
       if(!PG.SPECIES[entry.species] || entry.species==='dog' || !/^[a-z_]+$/.test(entry.species))continue;
       try {
-        const base='pet/art/'+entry.species+'/', r=await fetch(base+'manifest.json?v=13k-pets-floor1');if(!r.ok)throw Error('manifest');
+        const base='pet/art/'+entry.species+'/', r=await fetch(base+'manifest.json?v=13k-night1');if(!r.ok)throw Error('manifest');
         const m=await r.json(), check=window.PetArt.validateManifest(m);if(!check.ok)throw Error(check.errors.join(';'));
         const image=new Image();image.src=base+m.atlas.image;await image.decode();
         image.companionAtlases={};await Promise.all(Object.entries(m.atlases||{}).map(async([key,a])=>{const im=new Image();im.src=base+a.image;await im.decode();image.companionAtlases[key]=im;}));
@@ -2010,7 +2019,7 @@ function petMoveHere(home) { const p = Object.values(petRoster().pets).find(p =>
 function petDo(k,uid) {
   petSyncActors(); const a = petActors.get(uid), p = petRoster().pets[uid]; if (!a || !p || p.room !== homeWho) return;
   const r = k === 'call' ? a.rt.call(state) : k === 'pet' ? a.rt.pet(state,'button') : a.rt.throwBall(state);
-  if (!r.ok) { toast(r.why === 'waiting' ? PET_WAIT : r.why === 'unsupported' ? PET_UNSUP : '它现在忙着，等一会儿再试'); return; } sfx('tap');
+  if (!r.ok) { toast(r.why === 'waiting' ? PET_WAIT : r.why === 'unsupported' ? PET_UNSUP : r.why === 'noRoute' ? '空地不够跑一圈：挪开一些家具，再来玩吧' : '它现在忙着，等一会儿再试'); return; } sfx('tap');
 }
 function petTap(e) {
   const v = petRoster(), floor = $('#roomFloor'); if (!floor) return false;
@@ -2398,7 +2407,7 @@ function openZombie() {
     const ch = new MessageChannel(); zbPort = ch.port1; zbPort.onmessage = e => zbMsg(e.data);
     f.contentWindow.postMessage({ zb:'port' }, location.origin, [ch.port2]); zbReply();
   };
-  f.src = 'zombie/?embed=1&v=13k'; $('#zbOverlay').classList.remove('hidden'); audioPause();
+  f.src = 'zombie/?embed=1&v=13k-night1'; $('#zbOverlay').classList.remove('hidden'); audioPause();
 }
 function closeZombie() {
   if (!zbOpen) return; zbOpen = false; zbRun = null; if (zbPort) { zbPort.close(); zbPort = null; }
@@ -2465,3 +2474,5 @@ window.render_game_to_text = () => JSON.stringify({coordinates:'floor tiles; ori
 window.advanceTime = ms => { petManual=true;petSyncActors();for(const a of petActors.values()){a.rt.sync(state);a.rt.step(Math.max(0,ms)/1000);}petsHooks.draw(); };
 
 })();
+
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.querySelector('#storyReplay')){e.preventDefault();document.querySelector('#storyReplay #mOk').click();}});

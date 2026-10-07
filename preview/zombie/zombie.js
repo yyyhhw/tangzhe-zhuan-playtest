@@ -1,5 +1,5 @@
 'use strict';
-// 打僵尸：只有 77。单独打开 = 原型模式（模拟余额，只存 PROTO_KEY）；?embed=1 嵌在经营页里 = 金币、训练、进度都由经营页管（postMessage），本页不写任何存档。
+// 打僵尸：四位 CEO 使用各自技能，共用训练等级。单独打开 = 原型模式（模拟余额，只存 PROTO_KEY）；?embed=1 嵌在经营页里 = 金币、训练、进度都由经营页管（postMessage），本页不写任何存档。
 (() => {
 const ZB = window.ZBCore;
 const EMBED = /[?&]embed=1(&|$)/.test(location.search) && window.parent !== window;
@@ -12,11 +12,12 @@ const $ = s => document.querySelector(s);
 const fin = (v, d) => (typeof v === 'number' && isFinite(v) ? v : d);
 
 // ---- 训练（价格 / 上限在 zbcore.js）----
+const trainingHero = () => ZB.HEROES[proto.ceo] || { name: 'CEO', atk: '普攻', ult: '大招' };
 const TRAIN = [
-  { id: 'atk',  name: '串串火候', desc: lv => `普攻伤害 ×${(1.15 ** lv).toFixed(2)}` },
-  { id: 'rate', name: '翻串手速', desc: lv => `出串间隔 ${fireInterval(lv).toFixed(2)} 秒` },
-  { id: 'hp',   name: '摊主体力', desc: lv => `生命 ${Math.round(100 * 1.12 ** lv)}` },
-  { id: 'ult',  name: '火圈加柴', desc: lv => `火圈伤害 ×${(1.2 ** lv).toFixed(2)}` },
+  { id: 'atk',  get name() { return `${trainingHero().atk}威力`; }, desc: lv => `${trainingHero().atk}伤害 ×${(1.15 ** lv).toFixed(2)}` },
+  { id: 'rate', get name() { return `${trainingHero().atk}出手`; }, desc: lv => `${trainingHero().atk}间隔 ${fireInterval(lv).toFixed(2)} 秒` },
+  { id: 'hp',   get name() { return `${trainingHero().name}体力`; }, desc: lv => `生命 ${Math.round(100 * 1.12 ** lv)}` },
+  { id: 'ult',  get name() { return `${trainingHero().ult}强化`; }, desc: lv => `${trainingHero().ult}伤害 ×${(1.2 ** lv).toFixed(2)}` },
 ];
 const MAX_TRAIN = ZB.MAX_TRAIN;
 const price = (t, lv) => ZB.price(t.id, lv);
