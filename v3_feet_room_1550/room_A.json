@@ -1,0 +1,521 @@
+{
+ "results": [
+  {
+   "fid": "sofa",
+   "rot": 1,
+   "nw": 240,
+   "nh": 899,
+   "cw": 47,
+   "drawW_cells": 1,
+   "drawH_cells": 3.745,
+   "frontDevPx": -0.0,
+   "frontDevCell": -0.001,
+   "rearDevPx": 0.2,
+   "rearDevCell": 0.004,
+   "frontX": [
+    0.17,
+    0.83
+   ],
+   "rearX": [
+    0.89
+   ],
+   "imgLeftCell": 0,
+   "imgRightCell": 0,
+   "imgTopAboveBack": 0.75,
+   "inRoom": true,
+   "dev": "SE",
+   "cfg": "A"
+  },
+  {
+   "fid": "pearl_scallop_sofa",
+   "rot": 1,
+   "nw": 240,
+   "nh": 958,
+   "cw": 47,
+   "drawW_cells": 1,
+   "drawH_cells": 3.99,
+   "frontDevPx": -0.0,
+   "frontDevCell": -0.001,
+   "rearDevPx": -11,
+   "rearDevCell": -0.234,
+   "frontX": [
+    0.25,
+    0.89
+   ],
+   "rearX": [
+    0.9
+   ],
+   "imgLeftCell": 0,
+   "imgRightCell": 0,
+   "imgTopAboveBack": 0.99,
+   "inRoom": true,
+   "dev": "SE",
+   "cfg": "A"
+  },
+  {
+   "fid": "rocket_pipe_sofa",
+   "rot": 1,
+   "nw": 240,
+   "nh": 947,
+   "cw": 47,
+   "drawW_cells": 1,
+   "drawH_cells": 3.945,
+   "frontDevPx": -0.0,
+   "frontDevCell": -0.001,
+   "rearDevPx": -14.3,
+   "rearDevCell": -0.305,
+   "frontX": [
+    0.11,
+    0.88
+   ],
+   "rearX": [
+    0.9
+   ],
+   "imgLeftCell": 0,
+   "imgRightCell": 0,
+   "imgTopAboveBack": 0.95,
+   "inRoom": true,
+   "dev": "SE",
+   "cfg": "A"
+  },
+  {
+   "dev": "SE",
+   "cfg": "A",
+   "rot": 1,
+   "placed": [
+    "u1",
+    "u2",
+    "u3",
+    "u4",
+    "u5"
+   ],
+   "horizontal_ctrl": [
+    {
+     "fid": "furn_sofa",
+     "src": "art/furn_sofa.webp",
+     "w": 3,
+     "h": 1,
+     "foot": 0
+    },
+    {
+     "fid": "furn_pearl_scallop_sofa",
+     "src": "art/furn_pearl_scallop_sofa.webp",
+     "w": 3,
+     "h": 1,
+     "foot": 0
+    }
+   ]
+  },
+  {
+   "fid": "sofa",
+   "rot": 3,
+   "nw": 240,
+   "nh": 899,
+   "cw": 47,
+   "drawW_cells": 1,
+   "drawH_cells": 3.745,
+   "frontDevPx": -0.0,
+   "frontDevCell": -0.001,
+   "rearDevPx": 0.2,
+   "rearDevCell": 0.004,
+   "frontX": [
+    0.83,
+    0.17
+   ],
+   "rearX": [
+    0.11
+   ],
+   "imgLeftCell": 0,
+   "imgRightCell": -0.0,
+   "imgTopAboveBack": 0.75,
+   "inRoom": true,
+   "dev": "SE",
+   "cfg": "A"
+  },
+  {
+   "fid": "pearl_scallop_sofa",
+   "rot": 3,
+   "nw": 240,
+   "nh": 958,
+   "cw": 47,
+   "drawW_cells": 1,
+   "drawH_cells": 3.99,
+   "frontDevPx": -0.0,
+   "frontDevCell": -0.001,
+   "rearDevPx": -11,
+   "rearDevCell": -0.234,
+   "frontX": [
+    0.75,
+    0.11
+   ],
+   "rearX": [
+    0.1
+   ],
+   "imgLeftCell": 0,
+   "imgRightCell": -0.0,
+   "imgTopAboveBack": 0.99,
+   "inRoom": true,
+   "dev": "SE",
+   "cfg": "A"
+  },
+  {
+   "fid": "rocket_pipe_sofa",
+   "rot": 3,
+   "nw": 240,
+   "nh": 947,
+   "cw": 47,
+   "drawW_cells": 1,
+   "drawH_cells": 3.945,
+   "frontDevPx": -0.0,
+   "frontDevCell": -0.001,
+   "rearDevPx": -14.3,
+   "rearDevCell": -0.305,
+   "frontX": [
+    0.89,
+    0.12
+   ],
+   "rearX": [
+    0.1
+   ],
+   "imgLeftCell": 0,
+   "imgRightCell": -0.0,
+   "imgTopAboveBack": 0.95,
+   "inRoom": true,
+   "dev": "SE",
+   "cfg": "A"
+  },
+  {
+   "dev": "SE",
+   "cfg": "A",
+   "rot": 3,
+   "placed": [
+    "u6",
+    "u7",
+    "u8",
+    "u9",
+    "u10"
+   ],
+   "horizontal_ctrl": [
+    {
+     "fid": "furn_rocket_pipe_sofa",
+     "src": "art/furn_rocket_pipe_sofa.webp",
+     "w": 3,
+     "h": 1,
+     "foot": 0
+    },
+    {
+     "fid": "furn_sofa",
+     "src": "art/furn_sofa.webp",
+     "w": 3,
+     "h": 1,
+     "foot": 0
+    }
+   ]
+  },
+  {
+   "dev": "SE",
+   "cfg": "A",
+   "liveTap": {
+    "act": "walk",
+    "line": "地板巴适得很。"
+   },
+   "rot0": {
+    "fid": "furn_sofa",
+    "rot": 1,
+    "x": 0,
+    "y": 1,
+    "ok": true,
+    "src": "art/furn_sofa_side.webp",
+    "cls": "side"
+   },
+   "rot1": {
+    "fid": "furn_pearl_scallop_sofa",
+    "rot": 1,
+    "x": 3,
+    "y": 1,
+    "ok": true,
+    "src": "art/furn_pearl_scallop_sofa_side.webp",
+    "cls": "side"
+   },
+   "rot2": {
+    "fid": "furn_rocket_pipe_sofa",
+    "rot": 2,
+    "x": 3,
+    "y": 0,
+    "ok": true,
+    "src": "art/furn_rocket_pipe_sofa.webp",
+    "cls": ""
+   },
+   "drag": {
+    "rot": 1,
+    "x": 2,
+    "y": -0.0,
+    "ok": true
+   },
+   "dragFeet": {
+    "frontDevPx": -0.0,
+    "rearDevPx": 0.2,
+    "inRoom": true
+   }
+  },
+  {
+   "fid": "sofa",
+   "rot": 1,
+   "nw": 240,
+   "nh": 899,
+   "cw": 59.2,
+   "drawW_cells": 1,
+   "drawH_cells": 3.745,
+   "frontDevPx": -0.0,
+   "frontDevCell": -0.0,
+   "rearDevPx": 0.2,
+   "rearDevCell": 0.004,
+   "frontX": [
+    0.17,
+    0.83
+   ],
+   "rearX": [
+    0.89
+   ],
+   "imgLeftCell": 0,
+   "imgRightCell": 0,
+   "imgTopAboveBack": 0.75,
+   "inRoom": true,
+   "dev": "iP15",
+   "cfg": "A"
+  },
+  {
+   "fid": "pearl_scallop_sofa",
+   "rot": 1,
+   "nw": 240,
+   "nh": 958,
+   "cw": 59.2,
+   "drawW_cells": 1,
+   "drawH_cells": 3.991,
+   "frontDevPx": -0.0,
+   "frontDevCell": -0.0,
+   "rearDevPx": -13.9,
+   "rearDevCell": -0.234,
+   "frontX": [
+    0.25,
+    0.89
+   ],
+   "rearX": [
+    0.9
+   ],
+   "imgLeftCell": 0,
+   "imgRightCell": 0,
+   "imgTopAboveBack": 0.99,
+   "inRoom": true,
+   "dev": "iP15",
+   "cfg": "A"
+  },
+  {
+   "fid": "rocket_pipe_sofa",
+   "rot": 1,
+   "nw": 240,
+   "nh": 947,
+   "cw": 59.2,
+   "drawW_cells": 1,
+   "drawH_cells": 3.945,
+   "frontDevPx": -0.0,
+   "frontDevCell": -0.0,
+   "rearDevPx": -18.1,
+   "rearDevCell": -0.305,
+   "frontX": [
+    0.11,
+    0.88
+   ],
+   "rearX": [
+    0.9
+   ],
+   "imgLeftCell": 0,
+   "imgRightCell": 0,
+   "imgTopAboveBack": 0.95,
+   "inRoom": true,
+   "dev": "iP15",
+   "cfg": "A"
+  },
+  {
+   "dev": "iP15",
+   "cfg": "A",
+   "rot": 1,
+   "placed": [
+    "u1",
+    "u2",
+    "u3",
+    "u4",
+    "u5"
+   ],
+   "horizontal_ctrl": [
+    {
+     "fid": "furn_sofa",
+     "src": "art/furn_sofa.webp",
+     "w": 3,
+     "h": 1,
+     "foot": 0
+    },
+    {
+     "fid": "furn_pearl_scallop_sofa",
+     "src": "art/furn_pearl_scallop_sofa.webp",
+     "w": 3,
+     "h": 1,
+     "foot": 0
+    }
+   ]
+  },
+  {
+   "fid": "sofa",
+   "rot": 3,
+   "nw": 240,
+   "nh": 899,
+   "cw": 59.2,
+   "drawW_cells": 1,
+   "drawH_cells": 3.745,
+   "frontDevPx": -0.0,
+   "frontDevCell": -0.0,
+   "rearDevPx": 0.2,
+   "rearDevCell": 0.004,
+   "frontX": [
+    0.83,
+    0.17
+   ],
+   "rearX": [
+    0.11
+   ],
+   "imgLeftCell": -0.003,
+   "imgRightCell": 0.003,
+   "imgTopAboveBack": 0.75,
+   "inRoom": true,
+   "dev": "iP15",
+   "cfg": "A"
+  },
+  {
+   "fid": "pearl_scallop_sofa",
+   "rot": 3,
+   "nw": 240,
+   "nh": 958,
+   "cw": 59.2,
+   "drawW_cells": 1,
+   "drawH_cells": 3.991,
+   "frontDevPx": -0.0,
+   "frontDevCell": -0.0,
+   "rearDevPx": -13.9,
+   "rearDevCell": -0.234,
+   "frontX": [
+    0.75,
+    0.1
+   ],
+   "rearX": [
+    0.1
+   ],
+   "imgLeftCell": -0.003,
+   "imgRightCell": 0.003,
+   "imgTopAboveBack": 0.99,
+   "inRoom": true,
+   "dev": "iP15",
+   "cfg": "A"
+  },
+  {
+   "fid": "rocket_pipe_sofa",
+   "rot": 3,
+   "nw": 240,
+   "nh": 947,
+   "cw": 59.2,
+   "drawW_cells": 1,
+   "drawH_cells": 3.945,
+   "frontDevPx": -0.0,
+   "frontDevCell": -0.0,
+   "rearDevPx": -18.1,
+   "rearDevCell": -0.305,
+   "frontX": [
+    0.88,
+    0.12
+   ],
+   "rearX": [
+    0.09
+   ],
+   "imgLeftCell": -0.003,
+   "imgRightCell": 0.003,
+   "imgTopAboveBack": 0.95,
+   "inRoom": true,
+   "dev": "iP15",
+   "cfg": "A"
+  },
+  {
+   "dev": "iP15",
+   "cfg": "A",
+   "rot": 3,
+   "placed": [
+    "u6",
+    "u7",
+    "u8",
+    "u9",
+    "u10"
+   ],
+   "horizontal_ctrl": [
+    {
+     "fid": "furn_rocket_pipe_sofa",
+     "src": "art/furn_rocket_pipe_sofa.webp",
+     "w": 3,
+     "h": 1,
+     "foot": 0
+    },
+    {
+     "fid": "furn_sofa",
+     "src": "art/furn_sofa.webp",
+     "w": 3,
+     "h": 1,
+     "foot": 0
+    }
+   ]
+  },
+  {
+   "dev": "iP15",
+   "cfg": "A",
+   "liveTap": {
+    "act": "walk",
+    "line": "走两步耍下！"
+   },
+   "rot0": {
+    "fid": "furn_sofa",
+    "rot": 1,
+    "x": 0,
+    "y": 1,
+    "ok": true,
+    "src": "art/furn_sofa_side.webp",
+    "cls": "side"
+   },
+   "rot1": {
+    "fid": "furn_pearl_scallop_sofa",
+    "rot": 1,
+    "x": 3,
+    "y": 1,
+    "ok": true,
+    "src": "art/furn_pearl_scallop_sofa_side.webp",
+    "cls": "side"
+   },
+   "rot2": {
+    "fid": "furn_rocket_pipe_sofa",
+    "rot": 2,
+    "x": 3,
+    "y": 0,
+    "ok": true,
+    "src": "art/furn_rocket_pipe_sofa.webp",
+    "cls": ""
+   },
+   "drag": {
+    "rot": 1,
+    "x": 2,
+    "y": 0,
+    "ok": true
+   },
+   "dragFeet": {
+    "frontDevPx": -0.0,
+    "rearDevPx": 0.2,
+    "inRoom": true
+   }
+  }
+ ],
+ "errors": []
+}
