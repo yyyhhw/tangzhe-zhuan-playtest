@@ -3,6 +3,8 @@
 'use strict';
 const E = window.Economy, CFG = E.CFG;
 const ZB = window.ZBCore; var zbOpen = false, zbPort = null;
+const ZB_SHOP = 0; var zbLastCeo = null, zbRun = null; const zbUsedRuns = new Set();   // 13d：用过的 runId（本页内存），重复 / 过期的 start 不能把旧局重新激活   // 13a：打僵尸 = 烧烤摊（店 0）；zbLastCeo = 最近一次成功结算的上场 CEO（只在内存）
+// 13c：zbRun = 父页开局登记 { runId, ceoId, startedAt, settled }——结算只认这份记录、同一局只结一次；中途调岗不要求仍在任
 const SAVE_KEY = 'tangzhe-save', BAK_KEY = 'tangzhe-save-bak', LOCK_KEY = 'tangzhe-tab-lock';
 // 12b2 测试房间：只有网址带 ?test=homes 才进；整局放在内存里，不读、不写任何 localStorage（真存档 / 备份 / 多标签锁都不碰），刷新就重置
 // &lv=3 → 四家都是豪宅，默认四家都是公寓
@@ -460,9 +462,10 @@ function avatarURL(id, key) {
   return (avaCache[k] = o.toDataURL());
 }
 // 熊大画的 CEO 头像（图没加载出来就退回画布小人头像）；12b2 起 77 的 ceo_c77 / face_c77 是漫画新版，换了图所以 ART_V 跟着换
-const ART_V = '13', PORTRAIT = { c77:1, pearl:1, otaku:1, rocket:1 };
+const ART_V = '14', PORTRAIT = { c77:1, pearl:1, otaku:1, rocket:1 };
 // 12d2：单图缓存号——只换一张图时只改这张，不动整体 ART_V。77 头像 face_c77 换回 12b2 之前的原版（杨总 19:30 / 熊大 19:34），全身 ceo_c77 保留漫画新版
-const ART_ONE = {};   // v13：整体缓存号已换成 13，单图缓存号清空（机制保留）
+// 13i：77 店铺全身 ceo_c77 也换回 12b2 之前的原版（红衣深色围裙拿烤肉夹，= 6a732db / 72323b4^，杨总 11:36 / 熊大 11:38）；分镜格落地灯换熊大紧凑版（同名换图，单图缓存号）
+const ART_ONE = {};   // v14：整体缓存号已换成 14，单图缓存号清空（机制保留）
 const artV = n => ART_ONE[n] || ART_V;
 const faceURL = id => PORTRAIT[id] ? `art/face_${id}.webp?v=${artV('face_' + id)}` : avatarURL(id);
 const bustURL = id => PORTRAIT[id] ? `art/ceo_${id}.webp?v=${artV('ceo_' + id)}` : avatarURL(id);
@@ -1131,7 +1134,8 @@ function doUpgradeShop(i, btn) {
 function act(a, arg, btn) {
   const i = state.cur;
   switch (a) {
-    case 'zombie': openZombie(); return;   // 12e 打僵尸入口（板砖 b640f25）
+    case 'zombie': if (!zbCeo()) return openAssignTo(ZB_SHOP); openZombie(); return;   // 12e 打僵尸入口（板砖 b640f25）；13a：烧烤摊没 CEO → 打开派 CEO 选单
+    case 'zbAssign': return openAssignTo(ZB_SHOP);   // 13a「先派 CEO」
     case 'open': { const r = atomic(() => E.openShop(state, +arg), '开张没有生效，金币已退回'); if (!buyOk(r, btn)) return; afterBuy(btn, E.SHOPS[+arg].name + ' 开张啦！'); signAnim = { shop:+arg, from:'招租中', t0:clock }; handleUnlocks(r.unlocked); break; }
     case 'up': return doUpgradeShop(+arg, btn);
     case 'hire': { const r = atomic(() => E.hireEmp(state, +arg), '雇人没有生效，金币已退回'); if (!buyOk(r, btn)) return; afterBuy(btn, '雇到 ' + E.SHOPS[+arg].emp.name + '！开始自动赚钱'); sayLine('e', E.SHOPS[+arg].emp.line, 3); if (+arg === 3) queueModal(showGachaOpen); break; }
@@ -1221,7 +1225,6 @@ function renderShop() {
       ? `<br>店铺 ${fmt(E.shopBase(i, s.lv))} × 员工 ×${E.empMult(s.emp).toFixed(2)} × CEO ×${info.mult.toFixed(2)}${E.hasSuper(state, i) ? ` × 超级装饰 ×${CFG.SUPER_RATE}` : ''}`
       : '<br>还没员工：不会自动赚钱（可以点画面手动赚）'}
     ${critLine(i)}</div>`;
-  h += zbCard();
   if (E.hasSuper(state, i)) { const sp = E.ITEM_BY_ID[E.SUPER_OF_SHOP[i]];
     h += `<div class="card super"><div class="ava sq">${SUPER_ICON[sp.id]}</div><div class="info"><div class="name">${sp.name}<span class="tag match">超级装饰</span></div><div class="desc">${sp.desc}</div></div></div>`; }
   h += `<div class="row-head"><div class="sec-title">店铺</div><div class="buyamt">${[1, 10, 'max'].map(a => `<button data-act="amt" data-arg="${a}" class="${buyAmt === a ? 'on' : ''}">${a === 'max' ? 'MAX' : 'x' + a}</button>`).join('')}</div></div>`;
@@ -1248,7 +1251,13 @@ function renderShop() {
     h += `<div class="card hl"><div class="ava">👔</div><div class="info"><div class="name">CEO 空缺</div><div class="desc">派一位 CEO 来：专长对口 ×${CFG.MATCH_MULT}，跨行 ×${CFG.CROSS_MULT} + 专属事件</div></div>
       <button class="buy" data-act="assignTo" data-arg="${i}">派 CEO</button></div>`;
   }
+  h += shopGameCard(i);   // 13h（杨总 11:30 经营优先）：小游戏入口统一放店铺页最下面（CEO 任职 / 调离区块之后），顶部不再放大入口
   return h;
+}
+// 13h：每家店自己的小游戏入口（只在店铺页最底部）；烧烤摊 = 打僵尸，其余三家以后各有自己的游戏，加在这里
+function shopGameCard(i) {
+  const card = i === ZB_SHOP ? zbCard() : '';
+  return card ? `<div class="sec-title shop-game-title">小游戏</div>${card}` : '';
 }
 function ceoPost(id) { const s = state.ceos[id]; return s.at >= 0 ? E.signOf(state, s.at).name : '休息中（空着）'; }
 function jobGallery(id) {
@@ -1627,12 +1636,13 @@ Object.assign(FURN_ART, { pearl_cup_carousel:1, pearl_bakery_display:1, pearl_si
 Object.assign(FURN_UP, { pearl_cup_carousel: 525 / 240, pearl_bakery_display: 252 / 400, pearl_sideboard_island: 225 / 600, pearl_archive_apothecary: 355 / 600, pearl_conversation_pit: 335 / 600, pearl_tea_gongfu_desk: 211 / 600, pearl_paper_pear_lamp: 521 / 240, pearl_tea_glass_lamp: 1006 / 240, pearl_boba_globe_lamp: 932 / 240, otaku_floor_chair: 231 / 240, otaku_modular_couch: 264 / 600, otaku_arcade_bench: 254 / 400, otaku_streaming_desk: 291 / 600, otaku_pixel_succulent: 211 / 240, otaku_manga_book_stack: 236 / 240, otaku_robot_planter: 241 / 240, otaku_aquatic_pixel_tank: 163 / 400, rocket_field_cot: 430 / 400, rocket_cargo_crate: 229 / 240, rocket_mesh_rack: 328 / 400, rocket_airlock_wardrobe: 633 / 400, rocket_rail_bench: 177 / 600, rocket_mission_table: 414 / 600, rocket_zero_g_lounger: 392 / 400, rocket_cage_lamp: 369 / 240, rocket_tripod_searchlight: 367 / 240, rocket_pipe_valve_lamp: 480 / 240, rocket_rocket_nozzle_light: 266 / 240 });
 // 11y：missing107 的 106 件新 ID；地毯铺满/墙饰挂墙不登记往上伸
 Object.assign(FURN_ART, { pearl_tea_loft:1, pearl_canopy_lounge:1, pearl_capsule_daybed:1, pearl_tea_cat_hammock:1, pearl_tea_cubby:1, pearl_glass_wardrobe:1, pearl_rattan_bookcase:1, pearl_tea_trolley_shelf:1, pearl_tea_stool:1, pearl_cafe_chair:1, pearl_round_tea_table:1, pearl_scallop_sofa:1, pearl_tea_bar:1, pearl_bar_stool:1, pearl_picnic_table:1, pearl_egg_swing:1, pearl_fan_shade_lamp:1, pearl_tea_arc_lamp:1, pearl_fountain_light:1, pearl_tea_kettle_cart:1, pearl_juice_press:1, pearl_milk_frother_bar:1, pearl_tea_brewer:1, pearl_dessert_chiller:1, pearl_marble_pearl_rug:1, pearl_tea_menu_board:1, pearl_cup_wall_rack:1, pearl_sunburst_mirror:1, pearl_tea_leaf_relief:1, pearl_moon_window_art:1, pearl_herb_crate:1, pearl_tea_bonsai:1, pearl_ceramic_cup_stack:1, pearl_terrarium_orb:1, pearl_tea_tree_screen:1, otaku_floor_futon:1, otaku_sofa_sleeper:1, otaku_bunk_manga:1, otaku_gaming_pod:1, otaku_projector_bed:1, otaku_cat_keyboard_cave:1, otaku_locker_wardrobe:1, otaku_disc_tower:1, otaku_figure_vitrine:1, otaku_comic_wheel_cart:1, otaku_controller_drawers:1, otaku_modular_pixel_shelf:1, otaku_server_display_rack:1, otaku_beanbag:1, otaku_kotatsu:1, otaku_gaming_chair:1, otaku_manga_desk:1, otaku_snack_sidecar:1, otaku_cocoon_lounger:1, otaku_panel_lamp:1, otaku_gooseneck_stand:1, otaku_pixel_cube_light:1, otaku_arcade_marquee_lamp:1, otaku_orbital_neon_floor:1, otaku_sleep_timer_totem:1, otaku_mini_fridge:1, otaku_console_station:1, otaku_arcade_cabinet:1, otaku_projector_cart:1, otaku_triple_monitor_station:1, otaku_pixel_map_rug:1, otaku_speech_bubble_board:1, otaku_manga_page_triptych:1, otaku_controller_wall_mount:1, otaku_pixel_city_lightbox:1, otaku_cactus_cartridge:1, rocket_steel_platform_bed:1, rocket_cryo_rest_pod:1, rocket_observatory_bed:1, rocket_landing_cat_pod:1, rocket_steel_locker:1, rocket_pipe_bookcase:1, rocket_tool_chest:1, rocket_specimen_drawer:1, rocket_orbital_archive:1, rocket_bolt_stool:1, rocket_workbench:1, rocket_drafting_chair:1, rocket_pipe_sofa:1, rocket_oil_drum_table:1, rocket_captain_chair:1, rocket_cantilever_desk:1, rocket_orbital_ring_lamp:1, rocket_solar_array_lamp:1, rocket_industrial_fan:1, rocket_vacuum_dock:1, rocket_coffee_pressure_unit:1, rocket_air_purifier:1, rocket_hydroponic_unit:1, rocket_planetarium_console:1, rocket_workshop_mat:1, rocket_orbit_rug:1, rocket_runway_runner:1, rocket_lunar_relief_rug:1, rocket_blueprint_frame:1, rocket_gear_clock:1, rocket_mission_patch_board:1, rocket_moon_sample_relief:1, rocket_orbital_map_panel:1, rocket_concrete_succulent:1, rocket_pipe_vase:1 });
-Object.assign(FURN_UP, { pearl_tea_loft: 412 / 400, pearl_canopy_lounge: 615 / 600, pearl_capsule_daybed: 336 / 400, pearl_tea_cat_hammock: 132 / 240, pearl_tea_cubby: 447 / 400, pearl_glass_wardrobe: 455 / 400, pearl_rattan_bookcase: 699 / 400, pearl_tea_trolley_shelf: 254 / 240, pearl_tea_stool: 199 / 240, pearl_cafe_chair: 555 / 240, pearl_round_tea_table: 391 / 400, pearl_scallop_sofa: 234 / 600, pearl_tea_bar: 300 / 600, pearl_bar_stool: 667 / 240, pearl_picnic_table: 170 / 400, pearl_egg_swing: 706 / 400, pearl_fan_shade_lamp: 350 / 240, pearl_tea_arc_lamp: 361 / 240, pearl_fountain_light: 209 / 400, pearl_tea_kettle_cart: 256 / 240, pearl_juice_press: 371 / 240, pearl_milk_frother_bar: 282 / 400, pearl_tea_brewer: 226 / 400, pearl_dessert_chiller: 711 / 400, pearl_herb_crate: 111 / 240, pearl_tea_bonsai: 213 / 240, pearl_ceramic_cup_stack: 368 / 240, pearl_terrarium_orb: 274 / 240, pearl_tea_tree_screen: 390 / 600, otaku_floor_futon: 264 / 400, otaku_sofa_sleeper: 503 / 400, otaku_bunk_manga: 470 / 400, otaku_gaming_pod: 564 / 400, otaku_projector_bed: 598 / 600, otaku_cat_keyboard_cave: 174 / 240, otaku_locker_wardrobe: 516 / 400, otaku_disc_tower: 741 / 240, otaku_figure_vitrine: 310 / 400, otaku_comic_wheel_cart: 180 / 240, otaku_controller_drawers: 282 / 400, otaku_modular_pixel_shelf: 518 / 600, otaku_server_display_rack: 433 / 400, otaku_beanbag: 200 / 240, otaku_kotatsu: 200 / 400, otaku_gaming_chair: 394 / 240, otaku_manga_desk: 371 / 400, otaku_snack_sidecar: 321 / 240, otaku_cocoon_lounger: 601 / 400, otaku_panel_lamp: 1331 / 240, otaku_gooseneck_stand: 461 / 240, otaku_pixel_cube_light: 696 / 240, otaku_arcade_marquee_lamp: 399 / 400, otaku_orbital_neon_floor: 768 / 240, otaku_sleep_timer_totem: 770 / 240, otaku_mini_fridge: 284 / 240, otaku_console_station: 291 / 400, otaku_arcade_cabinet: 477 / 240, otaku_projector_cart: 208 / 240, otaku_triple_monitor_station: 320 / 600, otaku_cactus_cartridge: 235 / 240, rocket_steel_platform_bed: 298 / 400, rocket_cryo_rest_pod: 434 / 400, rocket_observatory_bed: 543 / 600, rocket_landing_cat_pod: 239 / 240, rocket_steel_locker: 418 / 400, rocket_pipe_bookcase: 418 / 400, rocket_tool_chest: 247 / 400, rocket_specimen_drawer: 250 / 400, rocket_orbital_archive: 936 / 600, rocket_bolt_stool: 260 / 240, rocket_workbench: 213 / 400, rocket_drafting_chair: 386 / 240, rocket_pipe_sofa: 337 / 600, rocket_oil_drum_table: 342 / 400, rocket_captain_chair: 342 / 240, rocket_cantilever_desk: 326 / 400, rocket_orbital_ring_lamp: 479 / 240, rocket_solar_array_lamp: 372 / 400, rocket_industrial_fan: 238 / 240, rocket_vacuum_dock: 401 / 240, rocket_coffee_pressure_unit: 508 / 400, rocket_air_purifier: 632 / 240, rocket_hydroponic_unit: 241 / 400, rocket_planetarium_console: 485 / 400, rocket_concrete_succulent: 228 / 240, rocket_pipe_vase: 347 / 240 });
+Object.assign(FURN_UP, { pearl_tea_loft: 412 / 400, pearl_canopy_lounge: 615 / 600, pearl_capsule_daybed: 336 / 400, pearl_tea_cat_hammock: 132 / 240, pearl_tea_cubby: 447 / 400, pearl_glass_wardrobe: 455 / 400, pearl_rattan_bookcase: 699 / 400, pearl_tea_trolley_shelf: 254 / 240, pearl_tea_stool: 199 / 240, pearl_cafe_chair: 555 / 240, pearl_round_tea_table: 391 / 400, pearl_scallop_sofa: 234 / 600, pearl_tea_bar: 300 / 600, pearl_bar_stool: 667 / 240, pearl_picnic_table: 170 / 400, pearl_egg_swing: 706 / 400, pearl_fan_shade_lamp: 350 / 240, pearl_tea_arc_lamp: 361 / 240, pearl_fountain_light: 209 / 400, pearl_tea_kettle_cart: 256 / 240, pearl_juice_press: 371 / 240, pearl_milk_frother_bar: 282 / 400, pearl_tea_brewer: 226 / 400, pearl_dessert_chiller: 711 / 400, pearl_herb_crate: 111 / 240, pearl_tea_bonsai: 213 / 240, pearl_ceramic_cup_stack: 368 / 240, pearl_terrarium_orb: 274 / 240, pearl_tea_tree_screen: 390 / 600, otaku_floor_futon: 264 / 400, otaku_sofa_sleeper: 503 / 400, otaku_bunk_manga: 470 / 400, otaku_gaming_pod: 564 / 400, otaku_projector_bed: 598 / 600, otaku_cat_keyboard_cave: 174 / 240, otaku_locker_wardrobe: 516 / 400, otaku_disc_tower: 741 / 240, otaku_figure_vitrine: 310 / 400, otaku_comic_wheel_cart: 180 / 240, otaku_controller_drawers: 282 / 400, otaku_modular_pixel_shelf: 518 / 600, otaku_server_display_rack: 433 / 400, otaku_beanbag: 200 / 240, otaku_kotatsu: 200 / 400, otaku_gaming_chair: 394 / 240, otaku_manga_desk: 371 / 400, otaku_snack_sidecar: 321 / 240, otaku_cocoon_lounger: 601 / 400, otaku_panel_lamp: 481 / 240, otaku_gooseneck_stand: 461 / 240, otaku_pixel_cube_light: 696 / 240, otaku_arcade_marquee_lamp: 399 / 400, otaku_orbital_neon_floor: 768 / 240, otaku_sleep_timer_totem: 770 / 240, otaku_mini_fridge: 284 / 240, otaku_console_station: 291 / 400, otaku_arcade_cabinet: 477 / 240, otaku_projector_cart: 208 / 240, otaku_triple_monitor_station: 320 / 600, otaku_cactus_cartridge: 235 / 240, rocket_steel_platform_bed: 298 / 400, rocket_cryo_rest_pod: 434 / 400, rocket_observatory_bed: 543 / 600, rocket_landing_cat_pod: 239 / 240, rocket_steel_locker: 418 / 400, rocket_pipe_bookcase: 418 / 400, rocket_tool_chest: 247 / 400, rocket_specimen_drawer: 250 / 400, rocket_orbital_archive: 936 / 600, rocket_bolt_stool: 260 / 240, rocket_workbench: 213 / 400, rocket_drafting_chair: 386 / 240, rocket_pipe_sofa: 337 / 600, rocket_oil_drum_table: 342 / 400, rocket_captain_chair: 342 / 240, rocket_cantilever_desk: 326 / 400, rocket_orbital_ring_lamp: 479 / 240, rocket_solar_array_lamp: 372 / 400, rocket_industrial_fan: 238 / 240, rocket_vacuum_dock: 401 / 240, rocket_coffee_pressure_unit: 508 / 400, rocket_air_purifier: 632 / 240, rocket_hydroponic_unit: 241 / 400, rocket_planetarium_console: 485 / 400, rocket_concrete_succulent: 228 / 240, rocket_pipe_vase: 347 / 240 });
 const ROOM_WALL_ROWS = 2;  // 后墙高 2 格
 const furnTall = fid => !!(FURN_ART[furnName(fid)] && FURN_UP[furnName(fid)]);
 // 12c2：竖放（rot 1/3）用侧面图。熊大补 art/furn_<名>_side.webp（宽 = 竖放后的占地宽，1 格 240px；高随图）后，在这里登记「图高 / 图宽」就生效：
 // 竖放换侧面图、底脚贴占地底边、同样封顶到房间顶边；rot 3 水平镜像；侧面图没登记或加载失败 → 保持原来的正面图等比兜底。目前素材包里没有任何侧面图，所以表是空的
-const FURN_SIDE = {};
+// 13i：熊大 batch2（home-transfer-20261006 3fb4756，SHA256 已核）三款沙发侧面图到齐：按 alpha>8 包围盒裁边、缩到宽 240，登记「图高 / 图宽」
+const FURN_SIDE = { sofa: 472 / 240, pearl_scallop_sofa: 575 / 240, rocket_pipe_sofa: 417 / 240 };
 const furnSide = (fid, rot) => ((rot & 1) && FURN_SIDE[furnName(fid)]) || 0;
 const HOME_ICON = ['home', 'apt', 'villa'].map(n => ic(n)); // 12c1：家宅升级三档用同套 SVG（原系统 emoji）
 let homeWho = 'c77', homeSub = 'room', homeMode = 'live', homeSel = null, homeDrag = null;
@@ -1650,8 +1660,8 @@ function furnInner(fid, rot, inRoom) {
   const st = tall ? `left:0;top:auto;bottom:0;width:100%;height:${tallH(side || FURN_UP[n])};transform:none`
     : inRoom && f.wall && !odd ? `left:50%;top:0;width:100%;height:100%;transform:translateX(-50%)`
     : `width:${odd ? sz.h / sz.w * 100 : 100}%;height:${odd ? sz.w / sz.h * 100 : 100}%;transform:translate(-50%,-50%) rotate(${rot * 90}deg)`;
-  const front = `art/furn_${n}.webp?v=${ART_V}`;
-  const img = !FURN_ART[n] ? '' : side ? `<img class="side${rot === 3 ? ' mir' : ''}" src="art/furn_${n}_side.webp?v=${ART_V}" data-homefb="1" data-front="${front}" data-fronth="${tallH(FURN_UP[n])}" alt="">`
+  const front = `art/furn_${n}.webp?v=${artV('furn_' + n)}`;
+  const img = !FURN_ART[n] ? '' : side ? `<img class="side${rot === 3 ? ' mir' : ''}" src="art/furn_${n}_side.webp?v=${artV('furn_' + n + '_side')}" data-homefb="1" data-front="${front}" data-fronth="${tallH(FURN_UP[n])}" alt="">`
     : `<img src="${front}" data-homefb="1" alt="">`;
   return `<div class="fi" style="${st}"><span class="fe">${f.emoji}</span>${img}</div>`;
 }
@@ -2104,6 +2114,7 @@ $('#mute').addEventListener('click', () => {
   state.muted = !state.muted; $('#mute').classList.toggle('off', state.muted);
   if (state.muted) { if (AU.master) AU.master.gain.value = 0; audioPause(); }
   else { audioUnlock(); if (AU.master) AU.master.gain.value = 1; audioResume(); }
+  zbReply();   // 13e：小游戏开着时把静音状态同步过去
   if (!persist() && !saveBlocked && !frozen) toast('声音已切换，但保存失败：刷新后会恢复原设置', 2600);   // 12d3：声音开关是设置不是进度，照常生效（不能让玩家关不掉声音），只提示没存上
 });
 $('#dailyChip').addEventListener('click', () => toast(E.canDouble(state, now()) ? '每日双倍：今天第一次领离线收益可以免费翻倍（先封顶再翻倍）' : '今天的双倍用过啦，马来西亚时间早上 5 点重置', 2600));
@@ -2199,12 +2210,22 @@ window.__tzz = { TEST_MODE, TEST_LV, SAVE_KEY, BAK_KEY, get saveBlocked() { retu
    只和经营共用金币：价格、等级上限、进度校验都在这边按 ZBCore 算，训练扣款和结算进度都走 txn → E.transact（扣款 + 改状态 + persist 一起成功，失败整体回滚）。
    小游戏页不写任何存档，也不能加金币；iframe 加载后经营页递给它一个 MessageChannel 端口，只认这个端口发来的 hello / buy / result / close。 */
 function zbState() { return (state.zombie = ZB.norm(state.zombie)); }
-function zbCard() { return `<div class="card zb-card"><div class="ava sq">🧟</div><div class="info"><div class="name">77 打僵尸<span class="tag">小游戏</span></div><div class="desc">花金币练战斗力 · 已通关 <b>${ZB.norm(state.zombie).cleared} / ${ZB.MAX_LV}</b></div></div><button class="buy" data-act="zombie" data-arg="0">去打</button></div>`; }
+/* 13a 店铺入口 + 当前 CEO（方案 1：每家店一个小游戏，烧烤摊 = 打僵尸）：
+   谁是烧烤摊现任 CEO 谁上场（E.ceoAt(state, 0)）；四项训练、关卡、首通记录都还在 state.zombie，算店里的共享设备，不挪到任何 CEO 名下、不新增存档字段。
+   zb:'state' 带 ceo（烧烤摊现任 CEO id，没有 = null）。
+   13c（熊大 06:33 第 1 条）：真正开局时小游戏发 zb:'start'，父页确认当时在任 CEO 并登记 zbRun（内存）；结算对照 zbRun（ceo / runId 对上、只结一次），中途调岗不误伤；回菜单再开局会重新登记。 */
+function zbCeo() { return E.ceoAt(state, ZB_SHOP); }
+function zbCard() {
+  const id = zbCeo(), cleared = ZB.norm(state.zombie).cleared;
+  if (!id) return `<div class="card zb-card hl" data-zb-ceo=""><div class="ava">👔</div><div class="info"><div class="name">打僵尸<span class="tag">小游戏</span></div><div class="desc">烧烤摊没有 CEO，派一位来上场 · <span style="white-space:nowrap">已通关 <b>${cleared}/${ZB.MAX_LV}</b></span></div></div><button class="buy" data-act="zbAssign" data-arg="${ZB_SHOP}">先派 CEO</button></div>`;
+  const c = E.CEO_BY_ID[id], lv = state.ceos[id].lv;
+  return `<div class="card zb-card" data-zb-ceo="${id}">${ava(id)}<div class="info"><div class="name">打僵尸<span class="tag">小游戏</span></div><div class="desc">上场：<b class="zb-who">${c.name}</b> Lv.${lv}（烧烤摊 CEO）· <span style="white-space:nowrap">已通关 <b>${cleared}/${ZB.MAX_LV}</b></span>${id !== 'c77' ? '<br>训练 / 关卡进度是店里共用的' : ''}</div></div><button class="buy" data-act="zombie" data-arg="${ZB_SHOP}">去打</button></div>`;
+}
 function zbBlocked() { return frozen || saveBlocked || E.isBlocked(state) || !E.walletOk(state) || !!(loadInfo && (loadInfo.unsafe || loadInfo.blocked)); }
 function zbReply(why, extra) {
   if (!zbOpen || !zbPort) return;
   const ok = !zbBlocked();
-  zbPort.postMessage(Object.assign({ zb:'state', coins: ok ? E.balance(state) : 0, z: zbState(), blocked: !ok, why: why || '' }, extra));
+  zbPort.postMessage(Object.assign({ zb:'state', coins: ok ? E.balance(state) : 0, z: zbState(), blocked: !ok, why: why || '', ceo: zbCeo(), muted: !!state.muted }, extra));   // 13e：muted 让小游戏跟经营页静音开关走   // 13a：ceo = 烧烤摊现任 CEO id / null
 }
 function openZombie() {
   if (frozen || zbOpen || !ZB) return;
@@ -2214,26 +2235,48 @@ function openZombie() {
     const ch = new MessageChannel(); zbPort = ch.port1; zbPort.onmessage = e => zbMsg(e.data);
     f.contentWindow.postMessage({ zb:'port' }, location.origin, [ch.port2]); zbReply();
   };
-  f.src = 'zombie/?embed=1&v=13'; $('#zbOverlay').classList.remove('hidden'); audioPause();
+  f.src = 'zombie/?embed=1&v=14'; $('#zbOverlay').classList.remove('hidden'); audioPause();
 }
 function closeZombie() {
-  if (!zbOpen) return; zbOpen = false; if (zbPort) { zbPort.close(); zbPort = null; }
+  if (!zbOpen) return; zbOpen = false; zbRun = null; if (zbPort) { zbPort.close(); zbPort = null; }
   $('#zbOverlay').classList.add('hidden'); $('#zbFrame').src = 'about:blank'; dirty = true; audioResume();
 }
 function zbMsg(d) {
   if (!zbOpen || !d || typeof d !== 'object') return;
   if (d.zb === 'close') return closeZombie();
   if (d.zb === 'hello') return zbReply();
+  // 13c：真正开局——确认烧烤摊现任 CEO，生成本局记录（内存）；菜单打开后再调岗，下一次开局会走这里重新确认
+  if (d.zb === 'start') {
+    const ack = { ack:'start' }, ceo = zbCeo();
+    const askId = (typeof d.runId === 'string' && d.runId.length >= 6 && d.runId.length <= 80) ? d.runId : null;
+    // 13d（熊大 09:54 第 2 条）：开局登记防重——同一 runId 重发只回原登记（已结算的不翻回未结算、不看此刻在任）；用过的旧 runId 一律拒，不动当前这局
+    if (askId && zbRun && zbRun.runId === askId) return zbReply(zbRun.settled ? '这局已经结算过了' : '', Object.assign(ack, { ok: !zbRun.settled, runId: zbRun.runId, ceo: zbRun.ceoId, dup: true }));
+    if (askId && zbUsedRuns.has(askId)) return zbReply('这局编号已经用过，没法重新开局', Object.assign(ack, { ok:false, runId: askId, dup: true }));
+    if (!ceo) { zbRun = null; return zbReply('烧烤摊没有 CEO，没法开局', Object.assign(ack, { ok:false, runId: askId })); }
+    if (zbBlocked()) { zbRun = null; return zbReply(frozen ? '游戏已在别的页面打开，没法开局' : '存档异常（只读模式），没法开局', Object.assign(ack, { ok:false, runId: askId })); }
+    let runId = askId || rid(); while (zbUsedRuns.has(runId)) runId = rid();
+    zbUsedRuns.add(runId);
+    zbRun = { runId, ceoId: ceo, startedAt: now(), settled: false };   // 权威是父页此刻的在任，不看小游戏自报的 ceo
+    return zbReply('', Object.assign(ack, { ok:true, runId: zbRun.runId, ceo: zbRun.ceoId }));
+  }
   if (d.zb === 'result') {
     const ack = { ack:'result' };
+    // 13c：只认开局登记的那份 zbRun——ceo / runId 对上、同一局只结一次；不要求结算时此人仍在任（中途调岗不误伤）
+    if (!zbRun) return zbReply(zbBlocked() ? (frozen ? '游戏已在别的页面打开，这局进度没记上' : '存档异常（只读模式），这局进度没记上') : '本局未开局登记，进度没记上', ack);
+    if (zbRun.settled) return zbReply('这局已经结算过了', ack);
+    if (d.runId !== zbRun.runId || d.ceo !== zbRun.ceoId) return zbReply('本局角色对不上，进度没记上', ack);
     if (zbBlocked()) return zbReply(frozen ? '游戏已在别的页面打开，这局进度没记上' : '存档异常（只读模式），这局进度没记上', ack);
     const r = txn(st => {
       const z = st.zombie = ZB.norm(st.zombie), before = JSON.stringify(z);
       if (!ZB.applyResult(z, d)) return { ok:false, why:'invalid' };
       return JSON.stringify(z) === before ? { ok:false, why:'same' } : { ok:true };
     }, 0, '这局进度没记上');
-    if (r.ok) { dirty = true; return zbReply('', ack); }
-    if (r.stage === 'apply') return zbReply(r.why === 'invalid' ? '这局结果无效，没记上' : '', ack);
+    if (r.ok) { zbRun.settled = true; zbLastCeo = zbRun.ceoId; dirty = true; return zbReply('', ack); }
+    if (r.stage === 'apply') {
+      // why:'same' = 进度没变（比如重复通同一关）——仍算这局已处理，避免同消息再刷
+      if (r.why === 'same') { zbRun.settled = true; zbLastCeo = zbRun.ceoId; }
+      return zbReply(r.why === 'invalid' ? '这局结果无效，没记上' : '', ack);
+    }
     dirty = true;
     return zbReply('存档失败，这局进度没记上', ack);
   }
@@ -2252,5 +2295,5 @@ function zbMsg(d) {
     return zbReply(r.stage === 'pay' || r.stage === 'apply' ? r.why : '存档失败，没扣金币');
   }
 }
-Object.defineProperties(window.__tzz, { openZombie:{ value:openZombie }, closeZombie:{ value:closeZombie }, zbOpen:{ get:() => zbOpen } });
+Object.defineProperties(window.__tzz, { openZombie:{ value:openZombie }, closeZombie:{ value:closeZombie }, zbOpen:{ get:() => zbOpen }, zbCeo:{ value:zbCeo }, zbLastCeo:{ get:() => zbLastCeo }, zbRun:{ get:() => zbRun }, openAssignTo:{ value:openAssignTo }, zbReply:{ value:zbReply } });
 })();

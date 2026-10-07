@@ -9,7 +9,7 @@
 <meta name="format-detection" content="telephone=no">
 <title>77 打僵尸</title>
 <link rel="icon" href="../icon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="zombie.css?v=13">
+<link rel="stylesheet" href="zombie.css?v=14">
 </head>
 <body>
 <canvas id="cv"></canvas>
@@ -30,8 +30,9 @@
   <div class="card hero">
     <img src="../art/face_c77.webp" alt="77" width="96" height="96">
     <div>
-      <h1>77 打僵尸</h1>
-      <p>拖动屏幕走位，自动扔飞串；能量满了放<b>火圈</b>。撑到倒计时结束就过关，共 50 关，通关后开放无尽模式。</p>
+      <h1 id="heroName">77 打僵尸</h1>
+      <p id="heroDesc">拖动屏幕走位，自动扔飞串；能量满了放<b>火圈</b>。撑到倒计时结束就过关，共 50 关，通关后开放无尽模式。</p>
+      <p class="note" id="heroNote"></p>
     </div>
   </div>
   <div class="card">
@@ -51,6 +52,7 @@
   <div class="card center">
     <h2>暂停中</h2>
     <button class="buy big" id="resumeBtn" type="button">继续</button>
+    <button class="buy" id="sndBtn" type="button">声音：开</button>
     <button class="buy" id="quitBtn" type="button">退出本局</button>
   </div>
 </section>
@@ -60,12 +62,14 @@
     <h2 id="resTitle">撑住了！</h2>
     <p id="resStats"></p>
     <p class="note" id="resNote"></p>
+    <button class="buy hidden" id="retryBtn" type="button">重试保存</button>
     <button class="buy big red" id="againBtn" type="button">再来一局</button>
     <button class="buy" id="menuBtn" type="button">回训练</button>
   </div>
 </section>
 
-<script src="zbcore.js?v=13"></script>
-<script src="zombie.js?v=13"></script>
+<script src="zbcore.js?v=14"></script>
+<script src="zbsfx.js?v=14"></script>
+<script src="zombie.js?v=14"></script>
 </body>
 </html>

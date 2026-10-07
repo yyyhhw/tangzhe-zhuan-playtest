@@ -408,7 +408,7 @@ section('13. p5：买狗走预览统一钱包（12d addCoins / spendCoins；12d1
   const pg = fs.readFileSync(path.join(__dirname, 'petgame.js'), 'utf8'), app = fs.readFileSync(path.join(__dirname, '..', '..', 'app.js'), 'utf8');
   ok(!/\.coins\s*-=/.test(pg) && /E\.transact\(st, \{ price: PET\.price/.test(pg) && !/E\.spendCoins\(/.test(pg) && /E\.walletOk\(st\)/.test(pg), 'p6：petgame.js 不直接改 coins、不再自己 spendCoins：扣钱 + 写 pet + 落盘只走 12d3 统一入口 E.transact，先查 E.walletOk');
   ok(/E\.loadSave\(/.test(app) && /if \(m\.blocked\) saveBlocked = true;\n  if \(window\.PetGame\) PetGame\.norm\(m\.st, E\);/.test(app) && /E\.validState\(state\)/.test(app), 'game/app.js 基于 12d2：读档 E.loadSave（异常 / 不保存模式照旧）后才 norm 小狗，写档前 validState + 备份轮换');
-  ok(/const ART_ONE = \{\};/.test(app) && /const ART_V = '13'/.test(app) && /`art\/face_\$\{id\}\.webp\?v=\$\{artV\('face_' \+ id\)\}`/.test(app) && !/face_\$\{id\}\.webp\?v=\$\{ART_V\}/.test(app), '熊大 22:08：game/app.js 基于 12d2 带上 ART_ONE，77 头像地址 = ../../art/face_c77.webp?v=12d2（不再 ?v=11）');
+  ok(/const ART_ONE = \{\};/.test(app) && /const ART_V = '14'/.test(app) && /`art\/ceo_\$\{id\}\.webp\?v=\$\{artV\('ceo_' \+ id\)\}`/.test(app) && /const FURN_SIDE = \{ sofa: 472 \/ 240, pearl_scallop_sofa: 575 \/ 240, rocket_pipe_sofa: 417 \/ 240 \};/.test(app) && /`art\/face_\$\{id\}\.webp\?v=\$\{artV\('face_' \+ id\)\}`/.test(app) && !/face_\$\{id\}\.webp\?v=\$\{ART_V\}/.test(app), '熊大 22:08：game/app.js 基于 12d2 带上 ART_ONE，77 头像地址 = ../../art/face_c77.webp?v=12d2（不再 ?v=11）；13i 宠物页同步：77 全身 ceo_c77?v=13i、落地灯单图缓存号、沙发侧面图登记和主页面一致');
   ok(/E\.walletOk\(state\)/.test(app) && /E\.canAfford\(state, P\.price\)/.test(app), '购买弹窗：余额 / 能不能买走 E.balance / E.canAfford，钱包异常不弹购买窗');
 }
 

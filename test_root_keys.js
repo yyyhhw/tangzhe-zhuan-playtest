@@ -1,8 +1,8 @@
-// v13 正式站守门（Node）：node test_root_keys.js
+// v14 正式站守门（Node）：node test_root_keys.js
 // ① 根目录 app.js / 所有游戏代码里绝不出现预览专用键 tangzhe-preview-save* / tangzhe-preview-tab-lock
 // ② 根 app.js 的存档键就是正式键 tangzhe-save / tangzhe-save-bak / tangzhe-tab-lock，不新增、不改名
 // ③ 版本号一致：version.json = index.html 自检号 = 所有 ?v= 缓存号
-// ④ 发布核对（预览还停在 12e2 时）：根目录代码 = 预览 12e2 换键 / 换版本号后的结果，一字不差
+// ④ 发布核对（预览还停在 13i 时）：根目录代码 = 预览 13i 换键 / 换版本号后的结果，一字不差
 const fs = require('fs'), path = require('path');
 const R = __dirname;
 let pass = 0, fail = 0;
@@ -31,33 +31,33 @@ ok(!fs.existsSync(path.join(R, 'pet', 'game', 'app.js')) && !fs.existsSync(path.
 
 // 版本号
 const V = JSON.parse(rd('version.json')).v, idx = rd('index.html');
-ok(V === '13', 'version.json = 13（' + V + '）');
+ok(V === '14', 'version.json = 14（' + V + '）');
 ok(idx.includes(`var B='${V}'`), 'index.html 自检号 = version.json');
 const vs = [...idx.matchAll(/\?v=([^"'&]+)/g)].map(m => m[1]);
 ok(vs.length === 10 && vs.every(v => v === V), `index.html 10 个资源缓存号都是 ${V}（${[...new Set(vs)].join(',')}）`);
 ok(/<title>躺着也能赚<\/title>/.test(idx) && !/预览|未上线/.test(idx), 'index.html 标题是正式版（没有「预览·未上线」）');
 ok(app.includes(`const ART_V = '${V}'`) && app.includes(`f.src = 'zombie/?embed=1&v=${V}'`), 'ART_V / 打僵尸 iframe 缓存号 = ' + V);
 const zi = rd('zombie', 'index.html'), zv = [...zi.matchAll(/\?v=([^"'&]+)/g)].map(m => m[1]);
-ok(idx.includes(`zombie/zbcore.js?v=${V}`) && zv.length === 3 && zv.every(v => v === V), `打僵尸父页面 / iframe 子页面引用同一个缓存号 ${V}（子页面：${zv.join(',')}）`);
+ok(idx.includes(`zombie/zbcore.js?v=${V}`) && zv.length === 4 && zv.every(v => v === V), `打僵尸父页面 / iframe 子页面引用同一个缓存号 ${V}（子页面：${zv.join(',')}）`);
 
-// 发布核对：预览 12e2 → 根目录，只差换键 / 换版本号
+// 发布核对：预览 13i → 根目录，只差换键 / 换版本号
 let pv = null; try { pv = JSON.parse(rd('preview', 'version.json')).v; } catch (e) {}
-if (pv === '12e2') {
+if (pv === '13i') {
   const K = s => s.replace(/tangzhe-preview-tab-lock/g, 'tangzhe-tab-lock').replace(/tangzhe-preview-save/g, 'tangzhe-save');
-  const pa = K(rd('preview', 'app.js')).replace("const ART_V = '12b2',", "const ART_V = '13',").replace("const ART_ONE = { face_c77:'12d2' };", "const ART_ONE = {};   // v13：整体缓存号已换成 13，单图缓存号清空（机制保留）").replace("v=12e2'", "v=13'");
-  ok(pa === app, '根 app.js = 预览 12e2 app.js（只换键 + ART_V/ART_ONE + iframe 缓存号）');
-  const pi = rd('preview', 'index.html').replace('<title>躺着也能赚（预览·未上线）</title>', '<title>躺着也能赚</title>').replace(/12e2/g, '13');
-  ok(pi === idx, '根 index.html = 预览 12e2 index.html（只换标题 + 版本号）');
-  ok(rd('preview', 'zombie', 'index.html').replace(/\?v=z[0-9]/g, '?v=13') === zi, '根 zombie/index.html = 预览 12e2（只换缓存号）');
+  const pa = K(rd('preview', 'app.js')).replace("const ART_V = '12b2',", "const ART_V = '14',").replace("const ART_ONE = { face_c77:'12d2', ceo_c77:'13i', furn_otaku_panel_lamp:'13i' };", "const ART_ONE = {};   // v14：整体缓存号已换成 14，单图缓存号清空（机制保留）").replace("v=13i'", "v=14'");
+  ok(pa === app, '根 app.js = 预览 13i app.js（只换键 + ART_V/ART_ONE + iframe 缓存号）');
+  const pi = rd('preview', 'index.html').replace('<title>躺着也能赚（预览·未上线）</title>', '<title>躺着也能赚</title>').replace(/13i/g, '14');
+  ok(pi === idx, '根 index.html = 预览 13i index.html（只换标题 + 版本号）');
+  ok(rd('preview', 'zombie', 'index.html').replace(/\?v=z[0-9]+/g, '?v=14') === zi, '根 zombie/index.html = 预览 13i（只换缓存号）');
   const same = ['economy.js', 'style.css', 'sim.js', 'pet/art.js', 'pet/engine.js', 'pet/puppy.js', 'pet/room.js', 'pet/main.js', 'pet/pet.css', 'pet/index.html', 'pet/art/manifest.json',
-    'pet/game/petgame.js', 'pet/game/petgame.css', 'zombie/zbcore.js', 'zombie/zombie.js', 'zombie/zombie.css'];
+    'pet/game/petgame.js', 'pet/game/petgame.css', 'zombie/zbcore.js', 'zombie/zombie.js', 'zombie/zombie.css', 'zombie/zbsfx.js'];
   const diff = same.filter(f => !fs.readFileSync(path.join(R, f)).equals(fs.readFileSync(path.join(R, 'preview', f))));
-  ok(!diff.length, `其余 ${same.length} 个代码文件和预览 12e2 逐字节相同（不同：${diff.join('、') || '无'}）`);
+  ok(!diff.length, `其余 ${same.length} 个代码文件和预览 13i 逐字节相同（不同：${diff.join('、') || '无'}）`);
   const art = fs.readdirSync(path.join(R, 'preview', 'art')).filter(f => !fs.readFileSync(path.join(R, 'art', f)).equals(fs.readFileSync(path.join(R, 'preview', 'art', f))));
   ok(!art.length, '预览 art/ 每张图都已原样进根目录 art/（不同：' + (art.join('、') || '无') + '）');
   const pat = fs.readdirSync(path.join(R, 'preview', 'pet', 'art')).filter(f => !fs.existsSync(path.join(R, 'pet', 'art', f)) || !fs.readFileSync(path.join(R, 'pet', 'art', f)).equals(fs.readFileSync(path.join(R, 'preview', 'pet', 'art', f))));
   ok(!pat.length, '小狗图集 / manifest 原样进根目录 pet/art/（不同：' + (pat.join('、') || '无') + '）');
-} else console.log('  （预览已不是 12e2（' + pv + '），跳过发布核对）');
+} else console.log('  （预览已不是 13i（' + pv + '），跳过发布核对）');
 
 console.log(`root key guard: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

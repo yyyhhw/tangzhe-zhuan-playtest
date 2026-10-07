@@ -909,15 +909,30 @@ ok(E.CROSS['rocket@0'].effect === 'bigFreq' && E.CROSS['c77@3'].effect === 'offl
   const FACE_OLD = '020bcc1fba97f778e96841d71c29174ab4ee8af7075a927a3e1322d73dd81342';   // = git show 72323b4^:preview/art/face_c77.webp
   const CEO_NEW = '0233b7ed158ee38ec7c34d6dc411b29bb5685b46bab6161f535f10837212a2c4';    // = git show 72323b4:preview/art/ceo_c77.webp
   ok(sha('face_c77.webp') === FACE_OLD, '12d2 face_c77.webp 的 SHA256 = 72323b4^ 原版（' + sha('face_c77.webp').slice(0, 12) + '）');
-  ok(sha('ceo_c77.webp') === CEO_NEW, '12d2 ceo_c77.webp 的 SHA256 = 72323b4 漫画新版（' + sha('ceo_c77.webp').slice(0, 12) + '）');
+  const CEO_OLD = '9dc9125f1aefe81cff970c5f929dce7bd43ae15eb6df8a99d61028352ce60511';    // = git show 72323b4^:preview/art/ceo_c77.webp = 6a732db 版（13i 换回）
+  ok(sha('ceo_c77.webp') === CEO_OLD && sha('ceo_c77.webp') !== CEO_NEW, '13i ceo_c77.webp 的 SHA256 = 72323b4^ / 6a732db 原版全身（' + sha('ceo_c77.webp').slice(0, 12) + '），不再是 12b2 漫画新版');
   try {   // 有 git 时再对一次仓库历史（防止常量抄错）
     const cp = require('child_process'), g = r => require('crypto').createHash('sha256').update(cp.execFileSync('git', ['show', r], { cwd:__dirname, stdio:['ignore', 'pipe', 'ignore'] })).digest('hex');
     ok(g('72323b4^:preview/art/face_c77.webp') === FACE_OLD && g('72323b4:preview/art/ceo_c77.webp') === CEO_NEW, '12d2 两个 SHA 常量和 git 历史（72323b4^ / 72323b4）一致');
+    ok(g('72323b4^:preview/art/ceo_c77.webp') === CEO_OLD && g('6a732db:preview/art/ceo_c77.webp') === CEO_OLD, '13i ceo_c77 原版 SHA 常量和 git 历史（72323b4^ / 6a732db）一致');
   } catch (e) { console.log('  （没有 git 历史，跳过 SHA 常量复核）'); }
   const appSrc2 = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8'), one = appSrc2.match(/const ART_ONE = \{([^}]*)\}/), artv = (appSrc2.match(/const ART_V = '([^']+)'/) || [])[1];
   const fv = one && (one[1].match(/face_c77\s*:\s*'([^']+)'/) || [])[1], cv = one && (one[1].match(/ceo_c77\s*:\s*'([^']+)'/) || [])[1];
-  ok(!fv && !cv && artv === '13' && one && !one[1].trim(), 'v13 正式站：整体缓存号 ART_V = 13（预览 12b2 / 12d2 的图在正式站都是新 URL），单图缓存号清空（' + artv + '）');
+  ok(!fv && !cv && artv === '14' && one && !one[1].trim(), 'v14 正式站：整体缓存号 ART_V = 14（预览 12d2 / 13i 换过的图在正式站都是新 URL），单图缓存号清空（' + artv + '）');
   ok(/faceURL = id => [^\n]*artV\('face_' \+ id\)/.test(appSrc2), '12d2 faceURL 用单图缓存号');
+  ok(/bustURL = id => [^\n]*artV\('ceo_' \+ id\)/.test(appSrc2), '13i bustURL（店铺全身 / 本行形象）用单图缓存号');
+  // 13i：分镜格落地灯紧凑版 + 三款沙发侧面图（熊大 batch2）——文件尺寸和 app.js 登记的比例对得上
+  const dim = f => { const b = fs.readFileSync(path.join(__dirname, 'art', f)), t = b.toString('ascii', 12, 16);
+    if (t === 'VP8X') return [1 + b.readUIntLE(24, 3), 1 + b.readUIntLE(27, 3)];
+    if (t === 'VP8L') { const v = b.readUInt32LE(21); return [1 + (v & 0x3fff), 1 + ((v >> 14) & 0x3fff)]; }
+    return [b.readUInt16LE(26) & 0x3fff, b.readUInt16LE(28) & 0x3fff]; };
+  const num = (re) => { const m = appSrc2.match(re); return m ? +m[1] / +m[2] : NaN; };
+  const lw = dim('furn_otaku_panel_lamp.webp'), lup = num(/otaku_panel_lamp: (\d+) \/ (\d+)/);
+  ok(lw[0] === 240 && Math.abs(lw[1] / lw[0] - lup) < 0.01 && lup <= 2.5, '13i 分镜格落地灯换紧凑版 ' + lw.join('×') + '，FURN_UP ' + lup.toFixed(3) + '（≤2.5，不再是 1331/240 细长版）');
+  ok(artv === '14' && /const front = `art\/furn_\$\{n\}\.webp\?v=\$\{artV\('furn_' \+ n\)\}`/.test(appSrc2), '13i 落地灯同名换图走单图缓存号（家具正面图 URL 用 artV）');
+  const side = appSrc2.match(/const FURN_SIDE = \{([^}]*)\}/);
+  ['sofa', 'pearl_scallop_sofa', 'rocket_pipe_sofa'].forEach(n => { const d = dim('furn_' + n + '_side.webp'), m = side && side[1].match(new RegExp('(?:^|[ ,{])' + n + ': (\\d+) / (\\d+)'));
+    ok(d[0] === 240 && m && Math.abs(+m[1] / +m[2] - d[1] / d[0]) < 0.01, '13i ' + n + ' 侧面图 ' + d.join('×') + ' 已登记 FURN_SIDE ' + (m ? m[1] + '/' + m[2] : '缺')); });
 }
 
 console.log(`economy tests: ${pass} passed, ${fail} failed`);

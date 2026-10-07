@@ -258,7 +258,7 @@ with sync_playwright() as p:
             # p5 / 熊大 22:08：宠物页的 77 头像也要带 12d2 的单图缓存号（ART_ONE），不能再请求 ?v=11
             pg.evaluate("() => __tzz.setTab('ceo')"); pg.wait_for_timeout(500)
             fs5 = pg.evaluate("() => [...document.querySelectorAll('img')].map(i => i.getAttribute('src') || '').filter(s => /face_c77/.test(s))")
-            check(fs5 and all(x.endswith('face_c77.webp?v=13') and x.startswith('../../art/' if '/pet/game/' in URL else 'art/') for x in fs5), f'p5 宠物页 77 头像请求 ../../art/face_c77.webp?v=12d2（不再是 ?v=11）{fs5[:2]}')
+            check(fs5 and all(x.endswith('face_c77.webp?v=14') and x.startswith('../../art/' if '/pet/game/' in URL else 'art/') for x in fs5), f'p5 宠物页 77 头像请求 ../../art/face_c77.webp?v=12d2（不再是 ?v=11）{fs5[:2]}')
             # p5：12d1 异常钱包（主档余额 1e20）→ 买狗被拒，原档逐字节不变
             raw = pg.evaluate("() => localStorage.getItem('" + SAVE + "')"); bad = json.loads(raw); bad.pop('pet', None); bad['coins'] = 1e20; bad['coinFrac'] = 0; bad['rev'] = (bad.get('rev') or 0) + 100000; badJ = json.dumps(bad)   # rev 抬高：旧页 pagehide 存盘不会盖掉
             pg.evaluate("(v) => { localStorage.clear(); localStorage.setItem('" + SAVE + "', v); }", badJ); boot(pg)
