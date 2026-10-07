@@ -25,7 +25,7 @@ def setup(pg):
     pg.goto(URL); pg.wait_for_function('!!window.__tzz')
     pg.evaluate("""() => {
       const t=__tzz, s=Economy.newState(Date.now());
-      s.coins=5e10; s.totalEarned=1; s.cur=3; s.muted=true;
+      s.rev=t.state.rev; s.coins=5e10; s.totalEarned=1; s.cur=3; s.muted=true;
       s.shops.forEach(x=>{x.open=true;x.lv=1;x.emp=0;});
       s.zombie={sentinel:'untouched'}; s.integrationSentinel={value:42};
       t.state=s; t.closeModal(); t.persist(); t.switchShop(3); t.renderTab();
