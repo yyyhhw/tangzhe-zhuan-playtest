@@ -1,0 +1,59 @@
+{
+  "status": "LOCAL ONLY; not deployed; rebase after 13j review",
+  "repository": "yyyhhw/tangzhe-zhuan-playtest",
+  "published_base": "fff02e09d39c11063d3ea07ee51d1689e1c56325",
+  "integration_base": "13j local candidate; exact hashes below",
+  "acceptance_contract": "d201ca29bcda7b75266e7e7a99cdb585dfc59a61",
+  "changed_files": {
+    "preview/app.js": {
+      "before_sha256": "c935d367343df973919df5728135f4d9d0e11c4b74b7b1fffb7daeffe8b8cd28",
+      "after_sha256": "2569ce621ce65a40e279cdcac6dc86236c635de4a18266480d65f2fd46da6f94"
+    },
+    "preview/pet/accept2/PET2_DRAFT.md": {
+      "before_sha256": null,
+      "after_sha256": "c1618e8766b7392c4860ad45d5bb5f8b2aff44e4fa47285ef2f507daed4370fc"
+    },
+    "preview/pet/accept2/test_pets2_roster_runtime.js": {
+      "before_sha256": null,
+      "after_sha256": "dc858eeacae592df7187cf89532bbcc002d40fe46ac9c55346e29d03e02eb546"
+    },
+    "preview/pet/accept2/test_pets2_ui_vm.js": {
+      "before_sha256": null,
+      "after_sha256": "592105828242b05f84d1cb60b76f96de7498857359c2f0eb62a13c9f09b7f0ab"
+    },
+    "preview/pet/game/app.js": {
+      "before_sha256": "03bcff5908ae70cc0e8b3abd47e44fdd15545276a0f7b89e15a5481efaaf7a59",
+      "after_sha256": "c043a322b32a6d7d9fd8b7862a9f2221bbd34b50dc067fe5a6f4b86db4c1ac23"
+    },
+    "preview/pet/game/petgame.css": {
+      "before_sha256": "0c042ab28dcf0e6893c2234f35aed9c96651381eee34fbe64dbf753bee6b1449",
+      "after_sha256": "581fd41e9be7e4cf9c19efb540e24cfb6ae6f5cf665eaf969545ceff324b74b8"
+    },
+    "preview/pet/game/petgame.js": {
+      "before_sha256": "41cc7c66cfe77588668f90e08961a79f8d85d927a0a09e7ff13138709cabccc9",
+      "after_sha256": "ccc70f62e1cb2ba0b870c7fbb62b7e19d2d895cecfd781ba0c765de1011bb7c4"
+    }
+  },
+  "patch_sha256": "1f91ed9ae6a22d53f4f16026543749891ea90fafacf6bf6e0ef3a31996ebcec1",
+  "verified": {
+    "core_assertions": 48,
+    "additional_roster_runtime_cases": 11,
+    "ui_vm_cases": 38,
+    "td_parent": 31,
+    "td_child_vm": 9,
+    "td_bridge_vm": 6,
+    "coin_safety_assertions": 522,
+    "syntax": [
+      "preview/app.js",
+      "preview/pet/game/app.js",
+      "preview/pet/game/petgame.js"
+    ]
+  },
+  "not_passed": {
+    "full_economy": "blocked: missing preview/art/face_c77.webp binary art",
+    "pet_engine": "399 passed / 2 failed, identical baseline; missing puppy_atlas_v3.webp",
+    "browser": "not run: known missing WebKit and Chromium socket EPERM; not retried",
+    "cat": "art and action loop not implemented; cat-dependent acceptance pending"
+  },
+  "release_gate": "No cache/version files changed. Before deployment, rebase and advance all relevant version/cache markers in coordination, then browser+independent review."
+}
