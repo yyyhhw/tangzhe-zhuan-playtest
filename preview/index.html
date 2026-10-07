@@ -12,8 +12,8 @@
 <title>躺着也能赚（预览·未上线）</title>
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<link rel="stylesheet" href="style.css?v=13g">
-<link rel="stylesheet" href="pet/game/petgame.css?v=13g">
+<link rel="stylesheet" href="style.css?v=13h">
+<link rel="stylesheet" href="pet/game/petgame.css?v=13h">
 </head>
 <body>
 <!-- 12c 漫画 UI：统一线稿图标（同一支墨线笔 stroke 2、圆头；--ica 主色 / --icf 纸色 / --icy 黄，激活态由 CSS 换色） -->
@@ -93,15 +93,15 @@
 <div id="toast" class="hidden"></div>
 <script>
 /* 版本自检：App 内置浏览器 / 主屏图标可能缓存旧的 index.html。拿最新版本号，比本页新就带版本号重开一次（只重开一次，不会死循环） */
-(function(){var B='13g';try{fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(j){if(!j||!j.v||String(j.v)===B)return;var k='tzz-reload-'+j.v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');var q=location.search.replace(/^\?/,'').split('&').filter(function(x){return x&&x.split('=')[0]!=='v'});q.unshift('v='+j.v);location.replace(location.pathname+'?'+q.join('&')+location.hash);}).catch(function(){});}catch(e){}})();
+(function(){var B='13h';try{fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(j){if(!j||!j.v||String(j.v)===B)return;var k='tzz-reload-'+j.v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');var q=location.search.replace(/^\?/,'').split('&').filter(function(x){return x&&x.split('=')[0]!=='v'});q.unshift('v='+j.v);location.replace(location.pathname+'?'+q.join('&')+location.hash);}).catch(function(){});}catch(e){}})();
 </script>
-<script src="zombie/zbcore.js?v=13g"></script>
-<script src="economy.js?v=13g"></script>
-<script src="pet/art.js?v=13g"></script>
-<script src="pet/puppy.js?v=13g"></script>
-<script src="pet/room.js?v=13g"></script>
-<script src="pet/engine.js?v=13g"></script>
-<script src="pet/game/petgame.js?v=13g"></script>
-<script src="app.js?v=13g"></script>
+<script src="zombie/zbcore.js?v=13h"></script>
+<script src="economy.js?v=13h"></script>
+<script src="pet/art.js?v=13h"></script>
+<script src="pet/puppy.js?v=13h"></script>
+<script src="pet/room.js?v=13h"></script>
+<script src="pet/engine.js?v=13h"></script>
+<script src="pet/game/petgame.js?v=13h"></script>
+<script src="app.js?v=13h"></script>
 </body>
 </html>
