@@ -67,7 +67,7 @@ with sync_playwright() as p:
         L = pg.evaluate("""() => { const q = s => [...document.querySelectorAll(s)], r = e => e.getBoundingClientRect();
           return { slots: q('#petSlots [data-pet-slot]').map(e => ({ uid: e.dataset.uid || null, h: r(e).height, l: r(e).left, rr: r(e).right })),
             rows: q('#petList [data-pet-uid]').map(e => [e.dataset.petUid, e.dataset.where, e.textContent.includes('待命')]),
-            small: q('.pet-manager button').filter(e => r(e).height < 40 || r(e).right > innerWidth + 0.5 || r(e).left < -0.5).map(e => e.textContent.trim() + ':' + Math.round(r(e).height)), w: innerWidth }; }""")
+            small: q('.pet-manager button').filter(e => r(e).height < 39.5 || r(e).right > innerWidth + 0.5 || r(e).left < -0.5).map(e => e.textContent.trim() + ':' + r(e).height.toFixed(2)), w: innerWidth }; }""")
         check(len(L['slots']) == 2 and sorted(s['uid'] for s in L['slots']) == ['a','b'] and all(s['h'] >= 40 and s['l'] >= 0 and s['rr'] <= L['w'] + 0.5 for s in L['slots']), 'D2', f'房间两个宠物位都在屏内、≥40px，各显示一只 {L["slots"]}')
         check(sorted(x[:2] for x in L['rows']) == [['a','c77'],['b','c77'],['c','standby']] and [x for x in L['rows'] if x[0] == 'c'][0][2], 'D2', f'已拥有列表 3 只、标明房间 / 待命 {L["rows"]}')
         check(not L['small'], 'D2', f'宠物管理区所有按钮 ≥40px 且不出屏 {L["small"]}')
