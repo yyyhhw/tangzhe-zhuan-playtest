@@ -2107,6 +2107,7 @@ $('#mute').addEventListener('click', () => {
   state.muted = !state.muted; $('#mute').classList.toggle('off', state.muted);
   if (state.muted) { if (AU.master) AU.master.gain.value = 0; audioPause(); }
   else { audioUnlock(); if (AU.master) AU.master.gain.value = 1; audioResume(); }
+  zbReply();   // 13e：小游戏开着时把静音状态同步过去
   if (!persist() && !saveBlocked && !frozen) toast('声音已切换，但保存失败：刷新后会恢复原设置', 2600);   // 12d3：声音开关是设置不是进度，照常生效（不能让玩家关不掉声音），只提示没存上
 });
 $('#dailyChip').addEventListener('click', () => toast(E.canDouble(state, now()) ? '每日双倍：今天第一次领离线收益可以免费翻倍（先封顶再翻倍）' : '今天的双倍用过啦，马来西亚时间早上 5 点重置', 2600));
@@ -2217,7 +2218,7 @@ function zbBlocked() { return frozen || saveBlocked || E.isBlocked(state) || !E.
 function zbReply(why, extra) {
   if (!zbOpen || !zbPort) return;
   const ok = !zbBlocked();
-  zbPort.postMessage(Object.assign({ zb:'state', coins: ok ? E.balance(state) : 0, z: zbState(), blocked: !ok, why: why || '', ceo: zbCeo() }, extra));   // 13a：ceo = 烧烤摊现任 CEO id / null
+  zbPort.postMessage(Object.assign({ zb:'state', coins: ok ? E.balance(state) : 0, z: zbState(), blocked: !ok, why: why || '', ceo: zbCeo(), muted: !!state.muted }, extra));   // 13e：muted 让小游戏跟经营页静音开关走   // 13a：ceo = 烧烤摊现任 CEO id / null
 }
 function openZombie() {
   if (frozen || zbOpen || !ZB) return;
@@ -2227,7 +2228,7 @@ function openZombie() {
     const ch = new MessageChannel(); zbPort = ch.port1; zbPort.onmessage = e => zbMsg(e.data);
     f.contentWindow.postMessage({ zb:'port' }, location.origin, [ch.port2]); zbReply();
   };
-  f.src = 'zombie/?embed=1&v=13d'; $('#zbOverlay').classList.remove('hidden'); audioPause();
+  f.src = 'zombie/?embed=1&v=13e'; $('#zbOverlay').classList.remove('hidden'); audioPause();
 }
 function closeZombie() {
   if (!zbOpen) return; zbOpen = false; zbRun = null; if (zbPort) { zbPort.close(); zbPort = null; }

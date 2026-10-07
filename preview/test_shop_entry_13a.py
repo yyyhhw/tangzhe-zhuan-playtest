@@ -1,6 +1,7 @@
 # 预览 13a：烧烤摊店铺页「打僵尸」入口 + 当前 CEO 上场（方案 1：每家店一个小游戏，烧烤摊 = 打僵尸）
 # Playwright WebKit：iPhone SE / SE3 375x667 / iPhone 15
 # 13c 另验：父页开局登记 zbRun → 中途调岗结算仍按开局 CEO、同一 result 重发不双结
+# 13e 另验：zb:'state' 带 muted，静音切换即同步小游戏
 # 13d 另验：开局登记防重——同一 runId 重发 start 不重建 / 不翻回未结算，旧 runId 的 start / result 一律拒
 # 验：① zb:'state' 带 ceo（77 在烧烤摊 → 'c77'；别的 CEO 在烧烤摊 → 那人；没人 → null）② 没 CEO 时入口写「先派 CEO」，点了打开烧烤摊的派 CEO 选单，派完入口跟着变
 #    ③ 开局锁人：这局中途调任（经营页再发新 ceo）不换人，结算回传开局那位；下一局才换 ④ 只有烧烤摊有入口 ⑤ state.zombie 原样（不挪到 CEO 名下、不加字段）、不加存档键
@@ -85,6 +86,14 @@ with sync_playwright() as p:
         check(S(pg, "__tzz.state.cur === 1 && !document.querySelector('.zb-card') && !document.querySelector('[data-act=zombie],[data-act=zbAssign]')"), f'{dn} 奶茶店页没有打僵尸入口（其他三家以后各有自己的游戏）')
         shop0(pg); pg.locator('.zb-card [data-act=zombie]').tap(); f = zframe(pg)
         check(f is not None and S(f, "__zb.ceo") == 'c77', f'{dn} 点「去打」打开小游戏，zb:state 里 ceo = c77（{f and S(f, "__zb.ceo")}）')
+        # 13e：zb:'state' 带 muted，经营页静音开关一切换就同步给开着的小游戏
+        S(pg, "(()=>{const P=MessagePort.prototype; if(!P.__spy){const o=P.postMessage; P.__spy=1; P.postMessage=function(m,...a){ if(m&&m.zb==='state') window.__lastZb=m; return o.call(this,m,...a); };} window.__lastZb=null;})()")
+        m0 = S(pg, "!!__tzz.state.muted")
+        for i in range(2):
+            S(pg, "document.querySelector('#mute').click()"); pg.wait_for_timeout(120)
+            lz = S(pg, "window.__lastZb && {muted: window.__lastZb.muted, st: !!__tzz.state.muted}")
+            want = (not m0) if i == 0 else m0
+            check(lz and lz['muted'] is want and lz['st'] is want, f'{dn} 13e 静音开关第 {i+1} 次切换：zb:state.muted = {want}（{lz}）')
         S(f, "__zb.start('level', 1)"); pg.wait_for_timeout(200)
         g0 = S(f, "__zb.G && __zb.G.ceo"); r0 = S(pg, "(()=>{const r=__tzz.zbRun; return r && {ceoId:r.ceoId, settled:!!r.settled, runId:r.runId};})()")
         check(g0 == 'c77' and r0 and r0['ceoId'] == 'c77' and not r0['settled'] and r0['runId'] == S(f, "__zb.G.runId"),
@@ -239,5 +248,5 @@ with sync_playwright() as p:
     check(back['zombie']['cleared'] == 3 and set(back.keys()) == set(w.keys()) and back['ceos'] == w['ceos'], 'v13 代码回退后还能继续打、写档（通关 3），字段集合不变')
     check(not errs, f'回退演练无 JS 报错 {errs[:2]}'); c.close()
     b.close()
-print(f'\n13a/13c/13d shop entry: {passes[0]} passed, {len(fails)} failed')
+print(f'\n13a/13c/13d/13e shop entry: {passes[0]} passed, {len(fails)} failed')
 sys.exit(1 if fails else 0)
