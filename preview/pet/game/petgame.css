@@ -40,3 +40,6 @@
 .pet-replace-option{display:block;min-height:44px;width:100%;margin-top:10px;white-space:normal;overflow-wrap:anywhere}
 #petReplace{max-height:65vh;overflow-y:auto}
 .pet-manager summary{padding:8px 0;min-height:40px}
+
+/* Explicit display rules on small must not override the hidden state. */
+.pet-manager [hidden]{display:none!important}

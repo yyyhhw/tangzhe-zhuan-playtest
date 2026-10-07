@@ -1,0 +1,462 @@
+{
+  "status": "prototype_not_complete",
+  "atlas": "cat_prototype_atlas_2048x1024.png",
+  "atlasSize": [
+    2048,
+    1024
+  ],
+  "cellSize": [
+    128,
+    128
+  ],
+  "sourceSize": [
+    256,
+    256
+  ],
+  "sourceAnchor": [
+    128,
+    208
+  ],
+  "atlasAnchor": [
+    64,
+    104
+  ],
+  "columns": 16,
+  "rows": 8,
+  "populatedCells": 16,
+  "emptyCells": 112,
+  "frames": [
+    {
+      "index": 0,
+      "name": "idle_e_0",
+      "source": "frames256/00_idle_e_0.png",
+      "atlasRect": [
+        0,
+        0,
+        128,
+        128
+      ],
+      "rawBodyBBox": [
+        49,
+        68,
+        300,
+        306
+      ],
+      "rawGroundAnchor": [
+        182,
+        306
+      ],
+      "scale": 0.66
+    },
+    {
+      "index": 1,
+      "name": "idle_e_1",
+      "source": "frames256/01_idle_e_1.png",
+      "atlasRect": [
+        128,
+        0,
+        128,
+        128
+      ],
+      "rawBodyBBox": [
+        363,
+        68,
+        614,
+        306
+      ],
+      "rawGroundAnchor": [
+        496,
+        306
+      ],
+      "scale": 0.66
+    },
+    {
+      "index": 2,
+      "name": "idle_s_0",
+      "source": "frames256/02_idle_s_0.png",
+      "atlasRect": [
+        256,
+        0,
+        128,
+        128
+      ],
+      "rawBodyBBox": [
+        686,
+        67,
+        877,
+        307
+      ],
+      "rawGroundAnchor": [
+        809,
+        307
+      ],
+      "scale": 0.66
+    },
+    {
+      "index": 3,
+      "name": "idle_n_0",
+      "source": "frames256/03_idle_n_0.png",
+      "atlasRect": [
+        384,
+        0,
+        128,
+        128
+      ],
+      "rawBodyBBox": [
+        1027,
+        65,
+        1220,
+        306
+      ],
+      "rawGroundAnchor": [
+        1106,
+        306
+      ],
+      "scale": 0.66
+    },
+    {
+      "index": 4,
+      "name": "groom_e_0",
+      "source": "frames256/04_groom_e_0.png",
+      "atlasRect": [
+        512,
+        0,
+        128,
+        128
+      ],
+      "rawBodyBBox": [
+        40,
+        391,
+        303,
+        631
+      ],
+      "rawGroundAnchor": [
+        201,
+        631
+      ],
+      "scale": 0.66
+    },
+    {
+      "index": 5,
+      "name": "groom_e_1",
+      "source": "frames256/05_groom_e_1.png",
+      "atlasRect": [
+        640,
+        0,
+        128,
+        128
+      ],
+      "rawBodyBBox": [
+        356,
+        391,
+        594,
+        631
+      ],
+      "rawGroundAnchor": [
+        515,
+        631
+      ],
+      "scale": 0.66
+    },
+    {
+      "index": 6,
+      "name": "groom_e_2",
+      "source": "frames256/06_groom_e_2.png",
+      "atlasRect": [
+        768,
+        0,
+        128,
+        128
+      ],
+      "rawBodyBBox": [
+        672,
+        390,
+        900,
+        636
+      ],
+      "rawGroundAnchor": [
+        826,
+        636
+      ],
+      "scale": 0.66
+    },
+    {
+      "index": 7,
+      "name": "groom_e_3",
+      "source": "frames256/07_groom_e_3.png",
+      "atlasRect": [
+        896,
+        0,
+        128,
+        128
+      ],
+      "rawBodyBBox": [
+        963,
+        390,
+        1205,
+        631
+      ],
+      "rawGroundAnchor": [
+        1139,
+        631
+      ],
+      "scale": 0.66
+    },
+    {
+      "index": 8,
+      "name": "pounce_e_0",
+      "source": "frames256/08_pounce_e_0.png",
+      "atlasRect": [
+        1024,
+        0,
+        128,
+        128
+      ],
+      "rawBodyBBox": [
+        19,
+        730,
+        320,
+        892
+      ],
+      "rawGroundAnchor": [
+        180,
+        893
+      ],
+      "scale": 0.66
+    },
+    {
+      "index": 9,
+      "name": "pounce_e_1",
+      "source": "frames256/09_pounce_e_1.png",
+      "atlasRect": [
+        1152,
+        0,
+        128,
+        128
+      ],
+      "rawBodyBBox": [
+        331,
+        757,
+        638,
+        893
+      ],
+      "rawGroundAnchor": [
+        494,
+        893
+      ],
+      "scale": 0.66
+    },
+    {
+      "index": 10,
+      "name": "pounce_e_2",
+      "source": "frames256/10_pounce_e_2.png",
+      "atlasRect": [
+        1280,
+        0,
+        128,
+        128
+      ],
+      "rawBodyBBox": [
+        633,
+        702,
+        931,
+        847
+      ],
+      "rawGroundAnchor": [
+        804,
+        893
+      ],
+      "scale": 0.66
+    },
+    {
+      "index": 11,
+      "name": "pounce_e_3",
+      "source": "frames256/11_pounce_e_3.png",
+      "atlasRect": [
+        1408,
+        0,
+        128,
+        128
+      ],
+      "rawBodyBBox": [
+        943,
+        726,
+        1239,
+        893
+      ],
+      "rawGroundAnchor": [
+        1117,
+        893
+      ],
+      "scale": 0.66
+    },
+    {
+      "index": 12,
+      "name": "sleep_e_0",
+      "source": "frames256/12_sleep_e_0.png",
+      "atlasRect": [
+        1536,
+        0,
+        128,
+        128
+      ],
+      "rawBodyBBox": [
+        51,
+        1019,
+        299,
+        1185
+      ],
+      "rawGroundAnchor": [
+        183,
+        1185
+      ],
+      "scale": 0.66
+    },
+    {
+      "index": 13,
+      "name": "sleep_e_1",
+      "source": "frames256/13_sleep_e_1.png",
+      "atlasRect": [
+        1664,
+        0,
+        128,
+        128
+      ],
+      "rawBodyBBox": [
+        365,
+        1019,
+        614,
+        1185
+      ],
+      "rawGroundAnchor": [
+        497,
+        1185
+      ],
+      "scale": 0.66
+    },
+    {
+      "index": 14,
+      "name": "pet_e_0",
+      "source": "frames256/14_pet_e_0.png",
+      "atlasRect": [
+        1792,
+        0,
+        128,
+        128
+      ],
+      "rawBodyBBox": [
+        669,
+        956,
+        932,
+        1194
+      ],
+      "rawGroundAnchor": [
+        804,
+        1194
+      ],
+      "scale": 0.66
+    },
+    {
+      "index": 15,
+      "name": "pet_e_1",
+      "source": "frames256/15_pet_e_1.png",
+      "atlasRect": [
+        1920,
+        0,
+        128,
+        128
+      ],
+      "rawBodyBBox": [
+        978,
+        948,
+        1225,
+        1194
+      ],
+      "rawGroundAnchor": [
+        1118,
+        1194
+      ],
+      "scale": 0.66
+    }
+  ],
+  "animations": {
+    "idle_e": {
+      "frames": [
+        0,
+        1,
+        0
+      ],
+      "durationsMs": [
+        1000,
+        120,
+        1000
+      ]
+    },
+    "idle_s": {
+      "frames": [
+        2
+      ],
+      "durationsMs": [
+        1000
+      ]
+    },
+    "idle_n": {
+      "frames": [
+        3
+      ],
+      "durationsMs": [
+        1000
+      ]
+    },
+    "groom_e": {
+      "frames": [
+        4,
+        5,
+        6,
+        7
+      ],
+      "durationsMs": [
+        200,
+        160,
+        200,
+        200
+      ]
+    },
+    "pounce_e": {
+      "frames": [
+        8,
+        9,
+        10,
+        11
+      ],
+      "durationsMs": [
+        220,
+        160,
+        180,
+        220
+      ]
+    },
+    "sleep_e": {
+      "frames": [
+        12,
+        13
+      ],
+      "durationsMs": [
+        850,
+        850
+      ]
+    },
+    "pet_e": {
+      "frames": [
+        14,
+        15,
+        14
+      ],
+      "durationsMs": [
+        350,
+        400,
+        350
+      ]
+    }
+  }
+}

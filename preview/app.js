@@ -32,7 +32,7 @@ function loadState() {
   migratedFrom = raw && m.source !== 'broken' && !m.blocked ? (raw.v !== CFG.SAVE_VERSION ? (raw.v || 0) : null) : null;
   if (m.source === 'bak') m.st.rev = Math.max(m.st.rev || 0, m.mainRev || 0);   // 从备份恢复：rev 不低于坏主档，免得多标签锁误判
   if (m.blocked) saveBlocked = true;
-  if (window.PetGame) PetGame.norm(m.st, E);   // 宠物 p4：没有 pet 字段 = 没买，旧档原样
+  // Roster migration is committed atomically after boot; failed writes keep raw save intact.
   return m.st;
 }
 function storedRev() { if (TEST_MODE) return -1; try { const r = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); return r ? (r.rev || 0) : -1; } catch (e) { return -1; } }
@@ -1822,29 +1822,49 @@ function confirmHomeUp(id) {
 }
 // 12d3：摆放 / 移动 / 旋转 / 收回都先 atomic（改 + 落盘一起），这里只处理结果；没存上 → 已回滚、已提示
 const HOME_FAIL = '摆放没有生效，已恢复原样';
-/* Two-slot roster: only the dog has a runtime/atlas in this draft. */
+/* Two-species roster. Runtime and art readiness are tracked per species. */
 const PG = window.PetGame, PET_LIBS = !!(PG && window.PetEngine && window.PetArt && window.PetPuppy);
 let petM = null, petHiddenAt = 0, petManual = false;
+const petPrototypeMode = typeof location !== 'undefined' && ['localhost','127.0.0.1'].includes(location.hostname) && new URLSearchParams(location.search).get('petPrototype') === '1';
+const petManifest = species => species === 'dog' ? petM : PG.assetOf(species)?.manifest;
+const petAvailable = species => PG.speciesReady(species, petPrototypeMode);
 const petActors = new Map();
 const petEsc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const petRoster = () => PG ? PG.view(state, E) : { rooms:{}, standby:[], pets:{} };
 const petOwned = () => Object.keys(petRoster().pets).length > 0;
 const petToken = () => JSON.stringify(Object.values(petRoster().pets).map(p => [p.uid,p.room,p.species,p.boughtAt]));
-const petName = p => (p.species === 'dog' ? '🐶 小狗' : p.species === 'cat' ? '🐱 猫' : '宠物') + ' · ' + p.uid;
+const petName = p => (PG.knownSpecies(p.species) ? PG.SPECIES[p.species].emoji + ' ' + PG.SPECIES[p.species].name : '宠物') + ' · ' + p.uid;
 const PET_WAIT = '等待安置：屋里没有空地，请收起或挪开家具、或升级房子', PET_UNSUP = '成长存档版本不支持：已原样保留，暂停活动';
 function petState(uid) { const a = petActors.get(uid); if (!a) return ''; if (a.rt.unsupported) return 'unsupported'; const w = a.rt.w; return w ? (w.noRoom ? 'waiting' : 'live') : ''; }
 function petInit(tryN) {
   if (!PET_LIBS) return;
   fetch('pet/art/manifest.json?v=p6').then(r => { if (!r.ok) throw new Error('manifest'); return r.json(); }).then(m => {
     const v = window.PetArt.validateManifest(m); if (!v.ok) throw new Error(v.errors.join('；'));
-    petM = m; document.body.dataset.petReady = '1'; dirty = true;
+    petM = m; petLoadSpecies(); document.body.dataset.petReady = '1'; dirty = true;
   }).catch(e => { if ((tryN || 0) < 3) setTimeout(() => petInit((tryN || 0) + 1), 600); else console.warn('宠物资源未加载：' + e.message); });
+}
+async function petLoadSpecies() {
+  try {
+    const response=await fetch('pet/art/species.json'); if(!response.ok)throw Error('species catalog');
+    const entries=await response.json();
+    for(const entry of entries) {
+      if(!PG.SPECIES[entry.species] || entry.species==='dog' || !/^[a-z_]+$/.test(entry.species))continue;
+      try {
+        const base='pet/art/'+entry.species+'/', r=await fetch(base+'manifest.json');if(!r.ok)throw Error('manifest');
+        const m=await r.json(), check=window.PetArt.validateManifest(m);if(!check.ok)throw Error(check.errors.join(';'));
+        const image=new Image();image.src=base+m.atlas.image;await image.decode();
+        image.companionAtlases={};await Promise.all(Object.entries(m.atlases||{}).map(async([key,a])=>{const im=new Image();im.src=base+a.image;await im.decode();image.companionAtlases[key]=im;}));
+        const result=PG.registerSpecies(entry.species,m,image,base);if(!result.ok)throw Error(result.why);
+        dirty=true;
+      } catch(error){console.warn('宠物素材未就绪：'+entry.species+' '+error.message);}
+    }
+  } catch(error){console.warn('宠物目录未加载：'+error.message);}
 }
 function petSyncActors() {
   const v = petRoster();
-  for (const [uid,a] of petActors) if (!v.pets[uid] || v.pets[uid].species !== 'dog' || !v.pets[uid].room) { a.view.detach(); petActors.delete(uid); }
-  if (petM) for (const p of Object.values(v.pets)) if (p.species === 'dog' && p.room && !petActors.has(p.uid)) {
-    petActors.set(p.uid, { rt:PG.createRuntime({E, manifest:petM, uid:p.uid}), view:PG.createView({manifest:petM, PA:window.PetArt, PP:window.PetPuppy, atlasBase:'pet/art/', ver:'p6', uid:p.uid}) });
+  for (const [uid,a] of petActors) if (!v.pets[uid] || !petManifest(v.pets[uid].species) || !v.pets[uid].room) { a.view.detach(); petActors.delete(uid); }
+  if (petM) for (const p of Object.values(v.pets)) if (petManifest(p.species) && p.room && !petActors.has(p.uid)) {
+    petActors.set(p.uid, { rt:PG.createRuntime({E, manifest:petManifest(p.species), species:p.species, uid:p.uid}), view:PG.createView({manifest:petManifest(p.species), species:p.species, image:PG.assetOf(p.species)?.image, PA:window.PetArt, PP:window.PetPuppy, atlasBase:'pet/art/', ver:'p6', uid:p.uid}) });
   }
   return v;
 }
@@ -1879,18 +1899,22 @@ function petResume() {
 }
 function petMallCard() {
   if (!PG) return '';
-  const noFloor = !!petM && E.homeOpen(state,homeWho) && !PG.hasRoom(state,E,homeWho,petM);
-  return `<div class="card mall-card pet-card${noFloor ? ' pet-nofloor' : ''}" id="petCard"><div class="ava sq furn-ico pet-ico">🐶</div><div class="info"><div class="name">${PG.PET.name}</div><div class="desc">${PG.PET.desc}<br>每个房间最多 2 只。已有宠物可免费调配，待命保留成长。${noFloor ? `<br><b id="petNoRoom">${petEsc(PG.NO_ROOM)}</b><br>仍可选择「购买后待命」。` : ''}</div></div>${btn('homePetBuy',homeWho,'购买',PG.PET.price)}</div>`;
+  return Object.values(PG.SPECIES).map(P => {
+    const own = PG.speciesOwned(state,E,P.species);
+    const manifest=petManifest(P.species), noFloor = !!manifest && E.homeOpen(state,homeWho) && !PG.hasRoom(state,E,homeWho,manifest);
+    const buy = own ? '<button class="buy no" disabled>已拥有</button>' : !petAvailable(P.species) ? '<button class="buy no" disabled>待加入</button>' : btn('homePetBuy',homeWho+'|'+P.species,'购买',P.price);
+    return `<div class="card mall-card pet-card${noFloor ? ' pet-nofloor' : ''}" id="${P.species === 'dog' ? 'petCard' : 'petCard-'+P.species}" data-species="${P.species}"><div class="ava sq furn-ico pet-ico">${P.emoji}</div><div class="info"><div class="name">${P.name}</div><div class="desc">${P.desc}<br>每种只买一只，每个房间可住两种不同宠物。${own ? '已拥有，可在家宅免费调配。' : '已有宠物可免费调配，待命保留成长。'}${!own && noFloor ? `<br><b id="petNoRoom-${P.species}">${petEsc(PG.NO_ROOM)}</b><br>仍可选择「购买后待命」。` : ''}</div></div>${buy}</div>`;
+  }).join('');
 }
 function petRoomBar(id) {
   if (!PG || !petOwned()) return '';
   const v = petRoster(), here = v.rooms[id] || [], noFloor = !!petM && E.homeOpen(state,id) && !PG.hasRoom(state,E,id,petM);
-  const stOf = uid => { const p = v.pets[uid]; return p.species !== 'dog' ? 'opaque' : PG.engSupport(p) === 'unsupported' ? 'unsupported' : petState(uid) || (noFloor ? 'waiting' : 'live'); };
+  const stOf = uid => { const p = v.pets[uid]; return !petManifest(p.species) ? 'opaque' : PG.engSupport(p) === 'unsupported' ? 'unsupported' : petState(uid) || (noFloor ? 'waiting' : 'live'); };
   const stText = st => st === 'unsupported' ? PET_UNSUP : st === 'waiting' ? PET_WAIT : st === 'opaque' ? '专属动作待接入' : '生活中';
   const slots = [0,1].map(i => { const p = v.pets[here[i]], st = p && stOf(p.uid); return `<div class="pet-slot" data-pet-slot="${i}" ${p ? `data-uid="${petEsc(p.uid)}" data-pet-state="${st}"` : ''}><b>${p ? petEsc(petName(p)) : '空位 ' + (i+1)}</b>${p ? `<small data-pet-status="${petEsc(p.uid)}">${stText(st)}</small><small class="pet-wait" data-pet-wait="${petEsc(p.uid)}" ${st === 'waiting' || st === 'unsupported' ? '' : 'hidden'}>${stText(st)}</small><button class="buy ghost" data-act="petStandby" data-arg="${petEsc(p.uid)}">回待命</button>` : '<small>从下方选择宠物入住</small>'}</div>`; }).join('');
-  const rows = Object.values(v.pets).map(p => `<div class="pet-list-row" data-pet-uid="${petEsc(p.uid)}" data-where="${petEsc(p.room || 'standby')}"><div><b>${petEsc(petName(p))}</b><small>${p.room ? petEsc(E.CEO_BY_ID[p.room].name) + '的家' : '待命 · 成长保留'}</small></div><button class="buy alt" data-act="petPlace" data-arg="${petEsc(p.uid)}" ${p.room === id || noFloor ? 'disabled' : ''}>${p.room === id ? '已入住' : noFloor ? '没有空地' : here.length === 2 ? '选择替换' : '住进来'}</button></div>`).join('');
+  const rows = Object.values(v.pets).map(p => `<div class="pet-list-row" data-pet-uid="${petEsc(p.uid)}" data-where="${petEsc(p.room || 'standby')}"><div><b>${petEsc(petName(p))}</b><small>${p.quarantined ? '未知物种 · 原记录保留，暂停运行' : p.compatibility ? '兼容待命 · 旧同种记录，成长保留' : p.room ? petEsc(E.CEO_BY_ID[p.room].name) + '的家' : '待命 · 成长保留'}</small></div><button class="buy alt" data-act="${p.compatibility ? 'petActivate' : 'petPlace'}" data-arg="${petEsc(p.uid)}" ${p.quarantined || !p.compatibility && (p.room === id || noFloor) ? 'disabled' : ''}>${p.quarantined ? '已隔离' : p.compatibility ? '换用此只' : p.room === id ? '已入住' : noFloor ? '没有空地' : here.length === 2 ? '选择替换' : '住进来'}</button></div>`).join('');
   const off = uid => { const st = stOf(uid); return st === 'waiting' || st === 'unsupported' ? 'disabled' : ''; };
-  const controls = homeMode === 'decor' ? (here.length ? '<small id="petNote">布置中：宠物原地等着，布置完再互动</small>' : '') : here.map(uid => v.pets[uid].species === 'dog' ? `<div class="pet-bar" data-uid="${petEsc(uid)}"><span class="pet-lb">${petEsc(petName(v.pets[uid]))}</span><button class="buy alt" data-act="homePetCall" data-arg="${petEsc(uid)}" ${off(uid)}>📣 呼唤</button><button class="buy alt" data-act="homePetPat" data-arg="${petEsc(uid)}" ${off(uid)}>✋ 摸摸</button><button class="buy alt" data-act="homePetBall" data-arg="${petEsc(uid)}" ${off(uid)}>🎾 抛球</button></div>` : '').join('');
+  const controls = homeMode === 'decor' ? (here.length ? '<small id="petNote">布置中：宠物原地等着，布置完再互动</small>' : '') : here.map(uid => petManifest(v.pets[uid].species) ? `<div class="pet-bar" data-uid="${petEsc(uid)}"><span class="pet-lb">${petEsc(petName(v.pets[uid]))}</span><button class="buy alt" data-act="homePetCall" data-arg="${petEsc(uid)}" ${off(uid)}>📣 呼唤</button><button class="buy alt" data-act="homePetPat" data-arg="${petEsc(uid)}" ${off(uid)}>✋ 摸摸</button><button class="buy alt" data-act="homePetBall" data-arg="${petEsc(uid)}" ${off(uid)}>${v.pets[uid].species === 'dog' ? '🎾 抛球' : PG.PC.CONFIG[v.pets[uid].species].toyLabel}</button></div>` : '').join('');
   return `<section class="pet-manager"><b>房间宠物 · ${here.length}/2</b>${noFloor ? `<small id="petNoRoomHere">${petEsc(PG.NO_ROOM)}</small>` : ''}<div id="petSlots">${slots}</div>${controls}<details open><summary>已拥有 · ${Object.keys(v.pets).length} 只</summary><div id="petList">${rows}</div></details><small>替换下来的宠物回待命，成长保留，再次入住不收费。</small></section>`;
 }
 function petAfterResult(r) {
@@ -1914,32 +1938,39 @@ function petChooseReplacement(home, finish) {
 }
 function petPlace(uid, home = homeWho) {
   const p = petRoster().pets[uid]; if (!p || p.room === home) return;
-  if (!petM) { toast('小狗资源还没准备好'); return; }
-  if (!PG.hasRoom(state,E,home,petM)) { sfx('no'); toast(PG.NO_ROOM); dirty = true; return; }
-  const finish = replace => petAfterResult(PG.assign(state,E,uid,home,{replace,M:petM,save:petSave,blocked:saveBlocked || frozen,prepare:petPrepare}));
+  const manifest=petManifest(p.species);
+  if (!manifest) { toast('宠物资源还没准备好'); return; }
+  if (!PG.hasRoom(state,E,home,manifest)) { sfx('no'); toast(PG.NO_ROOM); dirty = true; return; }
+  const finish = replace => petAfterResult(PG.assign(state,E,uid,home,{replace,M:manifest,save:petSave,blocked:saveBlocked || frozen,prepare:petPrepare}));
   if ((petRoster().rooms[home] || []).length >= 2) petChooseReplacement(home,finish); else finish(null);
 }
 // Why the purchase confirmation is unavailable ('' = available). Shown in the dialog and re-checked on submit.
-function petBuyWhy(room) {
-  if (!PG || !petM) return '小狗资源还没准备好';
+function petBuyWhy(room, species = 'dog') {
+  const P = PG && PG.SPECIES[species];
+  if (!P || !petAvailable(species)) return '这种宠物还未开放购买';
+  if (PG.speciesOwned(state,E,species)) return '已经拥有这种宠物，每种只需购买一只';
+  if (!PG || !petManifest(species)) return '宠物资源还没准备好';
   if (!E.walletOk(state)) return '金币数据异常，暂时不能购买';
   if (saveBlocked || frozen) return '存档现在不能写入（只读或已在别的页面打开），暂时不能购买';
-  if (!E.canAfford(state,PG.PET.price)) return '金币不够';
+  if (!E.canAfford(state,P.price)) return '金币不够';
   if (room !== null && !E.homeOpen(state,room)) return '这位 CEO 还没加入';
-  if (room !== null && !PG.hasRoom(state,E,room,petM)) return PG.NO_ROOM;
+  if (room !== null && !PG.hasRoom(state,E,room,petManifest(species))) return PG.NO_ROOM;
   return '';
 }
-function confirmPetBuy(home) {
-  if (!PG || !petM) { toast('小狗资源还没准备好'); return; }
-  const v = petRoster(), full = (v.rooms[home] || []).length >= 2, noFloor = E.homeOpen(state,home) && !PG.hasRoom(state,E,home,petM);
+function confirmPetBuy(home, species = 'dog') {
+  if (!PG || !PG.SPECIES[species] || !petAvailable(species)) { toast('这种宠物还未开放购买'); return; }
+  if (PG.speciesOwned(state,E,species)) { toast('已经拥有这种宠物，每种只需购买一只'); return; }
+  const manifest=petManifest(species);
+  if (!manifest) { toast('宠物资源还没准备好'); return; }
+  const v = petRoster(), full = (v.rooms[home] || []).length >= 2, noFloor = E.homeOpen(state,home) && !PG.hasRoom(state,E,home,manifest);
   const show = (room, replace) => {
-    const expected = petToken(), P = PG.PET, why = petBuyWhy(room), can = !why;
+    const expected = petToken(), P = PG.SPECIES[species], why = petBuyWhy(room,species), can = !why;
     openModal(`<div class="mtitle">购买 ${P.name}</div><p>价格：${fmt(P.price)} 金币<br>当前余额：${fmt(E.balance(state))}<br>${room ? '住进 '+petEsc(E.CEO_BY_ID[room].name)+'的家' : '先回待命，之后免费安排入住'}${replace ? '<br>'+petEsc(petName(petRoster().pets[replace]))+' 回待命，保留成长' : ''}</p><p class="pet-buy-why" id="pbWhy" ${why ? '' : 'hidden'}>${petEsc(why)}</p><div class="mbtns two"><button class="buy ghost" id="mNo">取消</button><button class="buy red" id="pbYes" ${can ? '' : 'disabled'}>确认购买</button></div>`,false);
     $('#mNo').addEventListener('click',closeModal,{once:true});
     $('#pbYes').addEventListener('click',() => {
       closeModal(); if (petToken() !== expected) { toast('宠物位置已变化，请重新选择'); return; }
-      const again = petBuyWhy(room); if (again) { sfx('no'); toast(again + '：金币和宠物都没有改变'); dirty = true; return; }
-      const r = PG.buy(state,E,room,now(),petM,petSave,saveBlocked || frozen,{replace,prepare:petPrepare}); petAfterResult(r);
+      const again = petBuyWhy(room,species); if (again) { sfx('no'); toast(again + '：金币和宠物都没有改变'); dirty = true; return; }
+      const r = PG.buy(state,E,room,now(),petManifest(species),petSave,saveBlocked || frozen,{replace,prepare:petPrepare,species,prototype:petPrototypeMode}); petAfterResult(r);
     },{once:true});
   };
   if (!E.homeOpen(state,home)) { toast('这位 CEO 还没加入'); return; }
@@ -1973,13 +2004,14 @@ function petTap(e) {
 }
 const petsHooks = {
   view() { const v=petSyncActors(); for (const [uid,a] of petActors) { a.rt.sync(state); const eng=a.rt.snapshot(); if (eng) v.pets[uid]={...v.pets[uid],eng}; } return v; }, manual(on) { petManual = !!on; lastFrame = performance.now(); },
-  world(uid) { petSyncActors(); const a = petActors.get(uid), w = a && a.rt.sync(state); if (w) { w.pet = w.dog; w.manifest = petM; } return w || null; },
-  step(uid,sec) { const w = this.world(uid); if (w) window.PetEngine.step(w,sec); return w; },
+  world(uid) { petSyncActors(); const a = petActors.get(uid), w = a && a.rt.sync(state); if (w) { w.pet = w.dog; w.manifest = petManifest(petRoster().pets[uid].species); } return w || null; },
+  step(uid,sec) { const w = this.world(uid); if (w) petActors.get(uid).rt.step(sec); return w; },
   toy(uid,x,y) { const a = petActors.get(uid); return a ? a.rt.throwBall(state,{x,y}) : null; },
   draw() { if (dirty) renderTab(); petFrame(0); },
   state(uid) { petSyncActors(); const a = petActors.get(uid); if (a) a.rt.sync(state); return petState(uid); },
-  px(uid) { const a = petActors.get(uid), el = a && a.view.els && a.view.els.dog; if (!el) return null; const r=el.getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+r.height*0.7}; },
-  persist() { return persist(); }
+  px(uid) { const a = petActors.get(uid), el = a && a.view.els && a.view.els.dog; if (!el) return null; const cv=el.querySelector('canvas'),r=cv.getBoundingClientRect(),data=cv.getContext('2d').getImageData(0,0,cv.width,cv.height).data;let best=null,score=Infinity;for(let y=0;y<cv.height;y++)for(let x=0;x<cv.width;x++){if(data[(y*cv.width+x)*4+3]<128)continue;const q=(x-cv.width/2)**2+(y-cv.height*.65)**2;if(q<score){score=q;best={x:r.left+(x+.5)/cv.width*r.width,y:r.top+(y+.5)/cv.height*r.height};}}return best; },
+  persist() { return persist(); },
+  debug() { return [...petActors].map(([uid,a])=>({uid,species:petRoster().pets[uid]?.species,state:a.rt.debug()})); }
 };
 const petHooks = { PG, get M() { return petM; }, get rt() { return petActors.values().next().value?.rt || null; }, get w() { return this.rt && this.rt.w; }, get view() { return petActors.values().next().value?.view || null; }, get waiting() { return !!(this.rt && this.rt.waiting); }, manual:petsHooks.manual, advance(sec) { const uid=petActors.keys().next().value; const w=petsHooks.step(uid,sec); return w ? window.PetEngine.snapshot(w) : null; }, snapshot() { return this.w ? window.PetEngine.snapshot(this.w) : null; }, resume(ms) { petHiddenAt=now()-(ms||60000); petResume(); }, persist() { return persist(); } };
 function homeCommit(r, msg) {
@@ -1999,7 +2031,8 @@ function homeAct(a, arg, b) {
     case 'homeSub': if (homeSub !== arg) { homeSub = arg; homeSel = null; pageFlip(arg === 'mall' ? 'next' : 'prev'); $('#panel').scrollTop = 0; sfx('swoosh'); } dirty = true; return;
     case 'homeWho': if (homeWho !== arg) { homeWho = arg; homeSel = null; sfx('tap'); } if (!E.homeOpen(state, arg)) toast('这位 CEO 还没加入'); dirty = true; return;
     case 'homeUp': return confirmHomeUp(arg);
-    case 'homePetBuy': return confirmPetBuy(arg || homeWho);
+    case 'petActivate': { const r=PG.activateDuplicate(state,E,arg,{save:petSave,blocked:saveBlocked||frozen,prepare:petPrepare}); return petAfterResult(r); }
+    case 'homePetBuy': { const [room,species] = (arg || homeWho).split('|'); return confirmPetBuy(room,species || 'dog'); }
     case 'homePetMove': return petMoveHere(arg || homeWho);
     case 'petPlace': return petPlace(arg);
     case 'petStandby': return petAfterResult(PG.assign(state,E,arg,null,{save:petSave,blocked:saveBlocked || frozen,prepare:petPrepare}));
@@ -2257,6 +2290,7 @@ function boot() {
   requestAnimationFrame(frame);
 }
 boot();
+if (PG) { const migration=PG.migrateRoster(state,E,{save:petSave,blocked:saveBlocked||frozen}); if(!migration.ok) console.warn('宠物迁移未保存，旧记录保留'); }
 petInit();
 
 // 测试/调试钩子（不影响玩家）
@@ -2395,4 +2429,8 @@ function zbMsg(d) {
   }
 }
 Object.defineProperties(window.__tzz, { openZombie:{ value:openZombie }, closeZombie:{ value:closeZombie }, zbOpen:{ get:() => zbOpen }, zbCeo:{ value:zbCeo }, zbLastCeo:{ get:() => zbLastCeo }, zbRun:{ get:() => zbRun }, openAssignTo:{ value:openAssignTo }, zbReply:{ value:zbReply } });
+// Deterministic pet-only inspection for isolated acceptance tools.
+window.render_game_to_text = () => JSON.stringify({coordinates:'floor tiles; origin back-left, x right, y toward viewer',pets:petsHooks.debug()});
+window.advanceTime = ms => { petManual=true;petSyncActors();for(const a of petActors.values()){a.rt.sync(state);a.rt.step(Math.max(0,ms)/1000);}petsHooks.draw(); };
+
 })();

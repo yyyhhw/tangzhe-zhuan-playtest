@@ -1,0 +1,574 @@
+{
+  "formatVersion": 1,
+  "status": "testable_locomotion_candidate",
+  "images": {
+    "walk_e": {
+      "file": "cat-walk-e-8.png",
+      "size": [
+        1774,
+        887
+      ],
+      "sha256": "f87b9401f3639519a1325c3f98340eaea9e8945df61276fc54e6d74406791375",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "rawCanvasBorderOpaquePixels": 0
+    },
+    "walk_n": {
+      "file": "cat-walk-n-4-fixed.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sha256": "74367f4b42f8f2da3f25d3b29d48da63490b70b3015cbe540d292d2bb488bd9a",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "rawCanvasBorderOpaquePixels": 0
+    },
+    "walk_s_base": {
+      "file": "cat-walk-s-4.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sha256": "e93b7d9b2cf3bd151b003df8d1456ff8208df342ffe3d28d7bb14063a1e2d554",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "rawCanvasBorderOpaquePixels": 0
+    },
+    "walk_s_opposite": {
+      "file": "cat-walk-s-opposite-2.png",
+      "size": [
+        1983,
+        793
+      ],
+      "sha256": "e8b14d9af1bddea42c5e50ea960f43ee9e79a8accef2b88492355d85c6914ba6",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "rawCanvasBorderOpaquePixels": 0
+    },
+    "run_e": {
+      "file": "cat-run-e-6.png",
+      "size": [
+        1774,
+        887
+      ],
+      "sha256": "30de003f2f28fa0bf78992eb5bc749c49d26b776760f682b8b96d5670a9dc250",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "rawCanvasBorderOpaquePixels": 0
+    },
+    "groom_fix": {
+      "file": "cat-prototype-groom-tail-fixed.png",
+      "size": [
+        1254,
+        1254
+      ],
+      "sha256": "16bb1f26d18577260f5b27ba9af43ee1eadb2e9c3884f052d3e6b54cc3da1ae5",
+      "alphaRange": [
+        0,
+        255
+      ],
+      "rawCanvasBorderOpaquePixels": 0
+    }
+  },
+  "animations": {
+    "walk_e": {
+      "fps": 8,
+      "loop": true,
+      "frames": [
+        {
+          "image": "walk_e",
+          "sourceRect": [
+            45,
+            90,
+            366,
+            296
+          ],
+          "anchor": [
+            185,
+            291
+          ],
+          "groundAnchorInImage": [
+            230,
+            381
+          ],
+          "scaleTo256": 0.55,
+          "sourcePoseIndex": 0
+        },
+        {
+          "image": "walk_e",
+          "sourceRect": [
+            498,
+            90,
+            359,
+            296
+          ],
+          "anchor": [
+            177,
+            291
+          ],
+          "groundAnchorInImage": [
+            675,
+            381
+          ],
+          "scaleTo256": 0.55,
+          "sourcePoseIndex": 1
+        },
+        {
+          "image": "walk_e",
+          "sourceRect": [
+            956,
+            89,
+            353,
+            299
+          ],
+          "anchor": [
+            171,
+            294
+          ],
+          "groundAnchorInImage": [
+            1127,
+            383
+          ],
+          "scaleTo256": 0.55,
+          "sourcePoseIndex": 2
+        },
+        {
+          "image": "walk_e",
+          "sourceRect": [
+            1393,
+            90,
+            362,
+            298
+          ],
+          "anchor": [
+            179,
+            292
+          ],
+          "groundAnchorInImage": [
+            1572,
+            382
+          ],
+          "scaleTo256": 0.55,
+          "sourcePoseIndex": 3
+        },
+        {
+          "image": "walk_e",
+          "sourceRect": [
+            52,
+            524,
+            373,
+            297
+          ],
+          "anchor": [
+            190,
+            292
+          ],
+          "groundAnchorInImage": [
+            242,
+            816
+          ],
+          "scaleTo256": 0.55,
+          "sourcePoseIndex": 4
+        },
+        {
+          "image": "walk_e",
+          "sourceRect": [
+            501,
+            525,
+            366,
+            296
+          ],
+          "anchor": [
+            180,
+            291
+          ],
+          "groundAnchorInImage": [
+            681,
+            816
+          ],
+          "scaleTo256": 0.55,
+          "sourcePoseIndex": 5
+        },
+        {
+          "image": "walk_e",
+          "sourceRect": [
+            937,
+            524,
+            366,
+            299
+          ],
+          "anchor": [
+            180,
+            294
+          ],
+          "groundAnchorInImage": [
+            1117,
+            818
+          ],
+          "scaleTo256": 0.55,
+          "sourcePoseIndex": 6
+        },
+        {
+          "image": "walk_e",
+          "sourceRect": [
+            1376,
+            524,
+            379,
+            295
+          ],
+          "anchor": [
+            193,
+            290
+          ],
+          "groundAnchorInImage": [
+            1569,
+            814
+          ],
+          "scaleTo256": 0.55,
+          "sourcePoseIndex": 7
+        }
+      ]
+    },
+    "walk_n": {
+      "fps": 6,
+      "loop": true,
+      "frames": [
+        {
+          "image": "walk_n",
+          "sourceRect": [
+            209,
+            108,
+            293,
+            481
+          ],
+          "anchor": [
+            144,
+            477
+          ],
+          "groundAnchorInImage": [
+            353,
+            585
+          ],
+          "scaleTo256": 0.34,
+          "sourcePoseIndex": 0
+        },
+        {
+          "image": "walk_n",
+          "sourceRect": [
+            768,
+            111,
+            314,
+            477
+          ],
+          "anchor": [
+            146,
+            472
+          ],
+          "groundAnchorInImage": [
+            914,
+            583
+          ],
+          "scaleTo256": 0.34,
+          "sourcePoseIndex": 1
+        },
+        {
+          "image": "walk_n",
+          "sourceRect": [
+            211,
+            701,
+            302,
+            469
+          ],
+          "anchor": [
+            150,
+            464
+          ],
+          "groundAnchorInImage": [
+            361,
+            1165
+          ],
+          "scaleTo256": 0.34,
+          "sourcePoseIndex": 2
+        },
+        {
+          "image": "walk_n",
+          "sourceRect": [
+            769,
+            695,
+            312,
+            475
+          ],
+          "anchor": [
+            152,
+            470
+          ],
+          "groundAnchorInImage": [
+            921,
+            1165
+          ],
+          "scaleTo256": 0.34,
+          "sourcePoseIndex": 3
+        }
+      ]
+    },
+    "walk_s": {
+      "fps": 6,
+      "loop": true,
+      "frames": [
+        {
+          "image": "walk_s_base",
+          "sourceRect": [
+            146,
+            108,
+            406,
+            487
+          ],
+          "anchor": [
+            237,
+            482
+          ],
+          "groundAnchorInImage": [
+            383,
+            590
+          ],
+          "scaleTo256": 0.3333333333333333,
+          "sourcePoseIndex": 0
+        },
+        {
+          "image": "walk_s_base",
+          "sourceRect": [
+            695,
+            107,
+            404,
+            491
+          ],
+          "anchor": [
+            235,
+            486
+          ],
+          "groundAnchorInImage": [
+            930,
+            593
+          ],
+          "scaleTo256": 0.3333333333333333,
+          "sourcePoseIndex": 1
+        },
+        {
+          "image": "walk_s_opposite",
+          "sourceRect": [
+            197,
+            48,
+            587,
+            691
+          ],
+          "anchor": [
+            342,
+            686
+          ],
+          "groundAnchorInImage": [
+            539,
+            734
+          ],
+          "scaleTo256": 0.23494860499265785,
+          "sourcePoseIndex": 0
+        },
+        {
+          "image": "walk_s_opposite",
+          "sourceRect": [
+            1190,
+            48,
+            586,
+            691
+          ],
+          "anchor": [
+            342,
+            686
+          ],
+          "groundAnchorInImage": [
+            1532,
+            734
+          ],
+          "scaleTo256": 0.23494860499265785,
+          "sourcePoseIndex": 1
+        }
+      ]
+    },
+    "run_e": {
+      "fps": 9,
+      "loop": true,
+      "frames": [
+        {
+          "image": "run_e",
+          "sourceRect": [
+            66,
+            119,
+            510,
+            308
+          ],
+          "anchor": [
+            269,
+            307
+          ],
+          "groundAnchorInImage": [
+            335,
+            426
+          ],
+          "scaleTo256": 0.44,
+          "sourcePoseIndex": 0
+        },
+        {
+          "image": "run_e",
+          "sourceRect": [
+            618,
+            116,
+            558,
+            264
+          ],
+          "anchor": [
+            279,
+            310
+          ],
+          "groundAnchorInImage": [
+            897,
+            426
+          ],
+          "scaleTo256": 0.44,
+          "sourcePoseIndex": 1
+        },
+        {
+          "image": "run_e",
+          "sourceRect": [
+            1202,
+            123,
+            535,
+            308
+          ],
+          "anchor": [
+            316,
+            303
+          ],
+          "groundAnchorInImage": [
+            1518,
+            426
+          ],
+          "scaleTo256": 0.44,
+          "sourcePoseIndex": 2
+        },
+        {
+          "image": "run_e",
+          "sourceRect": [
+            56,
+            534,
+            532,
+            264
+          ],
+          "anchor": [
+            288,
+            259
+          ],
+          "groundAnchorInImage": [
+            344,
+            793
+          ],
+          "scaleTo256": 0.44,
+          "sourcePoseIndex": 3
+        },
+        {
+          "image": "run_e",
+          "sourceRect": [
+            626,
+            473,
+            521,
+            324
+          ],
+          "anchor": [
+            284,
+            320
+          ],
+          "groundAnchorInImage": [
+            910,
+            793
+          ],
+          "scaleTo256": 0.44,
+          "sourcePoseIndex": 4
+        },
+        {
+          "image": "run_e",
+          "sourceRect": [
+            1212,
+            494,
+            527,
+            263
+          ],
+          "anchor": [
+            307,
+            299
+          ],
+          "groundAnchorInImage": [
+            1519,
+            793
+          ],
+          "scaleTo256": 0.44,
+          "sourcePoseIndex": 5
+        }
+      ]
+    }
+  },
+  "groomPatch": {
+    "replacesPrototypePoseIndex": 6,
+    "frame": {
+      "image": "groom_fix",
+      "sourceRect": [
+        651,
+        385,
+        267,
+        252
+      ],
+      "anchor": [
+        175,
+        247
+      ],
+      "groundAnchorInImage": [
+        826,
+        632
+      ],
+      "scaleTo256": 0.66,
+      "sourcePoseIndex": 6
+    }
+  },
+  "renderGuidance": {
+    "sourceRectFormat": "[x,y,width,height] in untouched generated PNG pixels",
+    "anchorFormat": "[x,y] within sourceRect, ground projection under torso",
+    "scaleTo256": "Recommended uniform runtime scale, not an altered/resized image; align anchor to destination (128,208).",
+    "west": "mirror walk_e or run_e at render time around the destination anchor",
+    "runAirborne": "Keep the provided projected ground anchor; do not ground-align an airborne paw bbox.",
+    "sWalk": "Frames 0-1 are in base image, frames 2-3 in opposite image, with different uniform scales to match head/torso size."
+  },
+  "limitations": [
+    "No game runtime acceptance is claimed.",
+    "E walk has real leg changes but uneven stride and paw-lift timing, most visible at transitions 3->4 and 7->0.",
+    "N/S use simplified four-pose cycles; hind/front occlusion and high paw lifts can read as a slight march.",
+    "S opposite-support poses were generated separately; small face/chest redraw and a slight size/shape change may show at 1->2 and 3->0.",
+    "E run contains six distinct compressed/extended poses; the torso extension and bounce are somewhat exaggerated, not a rig-accurate trot.",
+    "Groom edit repaired the tail; use only the supplied patch sourceRect to avoid replacing the other fifteen original sprites.",
+    "Ground-anchor x coordinates are visually estimated anatomical registration points; y values use measured contact or an explicitly projected airborne baseline."
+  ],
+  "previewValidation": {
+    "rawImagesInspected": true,
+    "poseSequenceInspected": true,
+    "headlessPreviewSucceeded": false,
+    "headlessBlocker": "Cloud Chromium cannot create required socket; launch failed before opening the preview.",
+    "pixelEdits": "None: delivered PNGs are unchanged copies of image_gen output. Python performed read-only alpha measurements and wrote JSON/HTML/ZIP only."
+  }
+}

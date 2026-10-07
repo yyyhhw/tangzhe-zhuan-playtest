@@ -1,0 +1,449 @@
+{
+  "species": "robot",
+  "image": {
+    "fileName": "robot/robot_prototype_16_v2.png",
+    "libraryFileId": "libfile_0d98339d77688191b412946929033bc7",
+    "width": 1254,
+    "height": 1254,
+    "format": "PNG",
+    "colorMode": "RGBA",
+    "sha256": "5a67e3dd63615684c840adc62e954e14e8ab146535ad5fb9b4800a377ba35f2d"
+  },
+  "frames": [
+    {
+      "id": "robot_idle_E_idle",
+      "index": 0,
+      "action": "idle",
+      "direction": "E",
+      "pose": "idle",
+      "sourceRect": {
+        "x": 112,
+        "y": 65,
+        "width": 123,
+        "height": 240
+      },
+      "anchor": {
+        "x": 59.0,
+        "y": 234
+      },
+      "footAnchor": {
+        "x": 59.0,
+        "y": 234
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": true
+    },
+    {
+      "id": "robot_walk_E_stride_a",
+      "index": 1,
+      "action": "walk",
+      "direction": "E",
+      "pose": "stride_a",
+      "sourceRect": {
+        "x": 403,
+        "y": 65,
+        "width": 160,
+        "height": 240
+      },
+      "anchor": {
+        "x": 79.0,
+        "y": 233
+      },
+      "footAnchor": {
+        "x": 79.0,
+        "y": 233
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": true
+    },
+    {
+      "id": "robot_walk_E_passing",
+      "index": 2,
+      "action": "walk",
+      "direction": "E",
+      "pose": "passing",
+      "sourceRect": {
+        "x": 735,
+        "y": 65,
+        "width": 133,
+        "height": 240
+      },
+      "anchor": {
+        "x": 60.0,
+        "y": 233
+      },
+      "footAnchor": {
+        "x": 60.0,
+        "y": 233
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": true
+    },
+    {
+      "id": "robot_walk_E_stride_b",
+      "index": 3,
+      "action": "walk",
+      "direction": "E",
+      "pose": "stride_b",
+      "sourceRect": {
+        "x": 1012,
+        "y": 65,
+        "width": 148,
+        "height": 241
+      },
+      "anchor": {
+        "x": 74.0,
+        "y": 234
+      },
+      "footAnchor": {
+        "x": 74.0,
+        "y": 234
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": true
+    },
+    {
+      "id": "robot_idle_N_idle",
+      "index": 4,
+      "action": "idle",
+      "direction": "N",
+      "pose": "idle",
+      "sourceRect": {
+        "x": 93,
+        "y": 361,
+        "width": 150,
+        "height": 240
+      },
+      "anchor": {
+        "x": 77.0,
+        "y": 234
+      },
+      "footAnchor": {
+        "x": 77.0,
+        "y": 234
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": false
+    },
+    {
+      "id": "robot_walk_N_stride_a",
+      "index": 5,
+      "action": "walk",
+      "direction": "N",
+      "pose": "stride_a",
+      "sourceRect": {
+        "x": 405,
+        "y": 361,
+        "width": 153,
+        "height": 240
+      },
+      "anchor": {
+        "x": 75.5,
+        "y": 234
+      },
+      "footAnchor": {
+        "x": 75.5,
+        "y": 234
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": false
+    },
+    {
+      "id": "robot_walk_N_stride_b",
+      "index": 6,
+      "action": "walk",
+      "direction": "N",
+      "pose": "stride_b",
+      "sourceRect": {
+        "x": 719,
+        "y": 361,
+        "width": 155,
+        "height": 240
+      },
+      "anchor": {
+        "x": 78.5,
+        "y": 234
+      },
+      "footAnchor": {
+        "x": 78.5,
+        "y": 234
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": false
+    },
+    {
+      "id": "robot_idle_S_idle",
+      "index": 7,
+      "action": "idle",
+      "direction": "S",
+      "pose": "idle",
+      "sourceRect": {
+        "x": 1011,
+        "y": 361,
+        "width": 152,
+        "height": 240
+      },
+      "anchor": {
+        "x": 75.5,
+        "y": 234
+      },
+      "footAnchor": {
+        "x": 75.5,
+        "y": 234
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": false
+    },
+    {
+      "id": "robot_walk_S_stride_a",
+      "index": 8,
+      "action": "walk",
+      "direction": "S",
+      "pose": "stride_a",
+      "sourceRect": {
+        "x": 88,
+        "y": 658,
+        "width": 158,
+        "height": 242
+      },
+      "anchor": {
+        "x": 78.0,
+        "y": 235
+      },
+      "footAnchor": {
+        "x": 78.0,
+        "y": 235
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": false
+    },
+    {
+      "id": "robot_walk_S_stride_b",
+      "index": 9,
+      "action": "walk",
+      "direction": "S",
+      "pose": "stride_b",
+      "sourceRect": {
+        "x": 405,
+        "y": 658,
+        "width": 155,
+        "height": 242
+      },
+      "anchor": {
+        "x": 71.5,
+        "y": 237
+      },
+      "footAnchor": {
+        "x": 71.5,
+        "y": 237
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": false
+    },
+    {
+      "id": "robot_scan_E_head_down",
+      "index": 10,
+      "action": "scan",
+      "direction": "E",
+      "pose": "head_down",
+      "sourceRect": {
+        "x": 711,
+        "y": 687,
+        "width": 210,
+        "height": 215
+      },
+      "anchor": {
+        "x": 68.0,
+        "y": 208
+      },
+      "footAnchor": {
+        "x": 68.0,
+        "y": 208
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": true
+    },
+    {
+      "id": "robot_scan_E_head_up",
+      "index": 11,
+      "action": "scan",
+      "direction": "E",
+      "pose": "head_up",
+      "sourceRect": {
+        "x": 1018,
+        "y": 655,
+        "width": 190,
+        "height": 245
+      },
+      "anchor": {
+        "x": 75.0,
+        "y": 239
+      },
+      "footAnchor": {
+        "x": 75.0,
+        "y": 239
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": true
+    },
+    {
+      "id": "robot_interact_E_arm_extend",
+      "index": 12,
+      "action": "interact",
+      "direction": "E",
+      "pose": "arm_extend",
+      "sourceRect": {
+        "x": 86,
+        "y": 953,
+        "width": 211,
+        "height": 234
+      },
+      "anchor": {
+        "x": 75.0,
+        "y": 228
+      },
+      "footAnchor": {
+        "x": 75.0,
+        "y": 228
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": true
+    },
+    {
+      "id": "robot_interact_E_arm_retract",
+      "index": 13,
+      "action": "interact",
+      "direction": "E",
+      "pose": "arm_retract",
+      "sourceRect": {
+        "x": 399,
+        "y": 954,
+        "width": 159,
+        "height": 234
+      },
+      "anchor": {
+        "x": 75.5,
+        "y": 227
+      },
+      "footAnchor": {
+        "x": 75.5,
+        "y": 227
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": true
+    },
+    {
+      "id": "robot_charge_S_low_glow",
+      "index": 14,
+      "action": "charge",
+      "direction": "S",
+      "pose": "low_glow",
+      "sourceRect": {
+        "x": 716,
+        "y": 960,
+        "width": 163,
+        "height": 226
+      },
+      "anchor": {
+        "x": 82.0,
+        "y": 219
+      },
+      "footAnchor": {
+        "x": 82.0,
+        "y": 219
+      },
+      "groundElevationPx": 0,
+      "contact": "body_support",
+      "mirrorToW": false
+    },
+    {
+      "id": "robot_charge_S_high_glow",
+      "index": 15,
+      "action": "charge",
+      "direction": "S",
+      "pose": "high_glow",
+      "sourceRect": {
+        "x": 1018,
+        "y": 958,
+        "width": 163,
+        "height": 229
+      },
+      "anchor": {
+        "x": 79.5,
+        "y": 223
+      },
+      "footAnchor": {
+        "x": 79.5,
+        "y": 223
+      },
+      "groundElevationPx": 0,
+      "contact": "body_support",
+      "mirrorToW": false
+    }
+  ],
+  "poseGroups": {
+    "idle_E": [
+      "robot_idle_E_idle"
+    ],
+    "walk_E": [
+      "robot_walk_E_stride_a",
+      "robot_walk_E_passing",
+      "robot_walk_E_stride_b"
+    ],
+    "idle_N": [
+      "robot_idle_N_idle"
+    ],
+    "walk_N": [
+      "robot_walk_N_stride_a",
+      "robot_walk_N_stride_b"
+    ],
+    "idle_S": [
+      "robot_idle_S_idle"
+    ],
+    "walk_S": [
+      "robot_walk_S_stride_a",
+      "robot_walk_S_stride_b"
+    ],
+    "scan_E": [
+      "robot_scan_E_head_down",
+      "robot_scan_E_head_up"
+    ],
+    "interact_E": [
+      "robot_interact_E_arm_extend",
+      "robot_interact_E_arm_retract"
+    ],
+    "charge_S": [
+      "robot_charge_S_low_glow",
+      "robot_charge_S_high_glow"
+    ]
+  },
+  "groupNote": "Groups list available prototype poses only. They are not claims of complete or seamless animation loops.",
+  "limitations": [
+    "Charging poses actually face S, not E.",
+    "E-facing poses use a stylized three-quarter profile.",
+    "Two S walking poses do not establish a reliable complete alternating-foot cycle."
+  ],
+  "validation": {
+    "frameCount": 16,
+    "sourceRectsInBounds": true,
+    "pairwiseSourceRectOverlaps": [],
+    "alphaAbove4OutsideSourceRects": 0,
+    "fullyTransparentPixelCount": 1178827,
+    "faintAlpha1To4PixelCount": 42679,
+    "pixelMutation": false
+  }
+}

@@ -1,0 +1,456 @@
+{
+  "species": "rabbit",
+  "image": {
+    "fileName": "rabbit/rabbit_prototype_16_v2.png",
+    "libraryFileId": "libfile_a1bb5f05e09c8191bc3f9258139519d9",
+    "width": 1254,
+    "height": 1254,
+    "format": "PNG",
+    "colorMode": "RGBA",
+    "sha256": "0bc5f9183e5a1d20c3f18da884db2a6d5df2d498b8c11262ce5058620267d361"
+  },
+  "frames": [
+    {
+      "id": "rabbit_idle_E_idle",
+      "index": 0,
+      "action": "idle",
+      "direction": "E",
+      "pose": "idle",
+      "sourceRect": {
+        "x": 85,
+        "y": 83,
+        "width": 173,
+        "height": 240
+      },
+      "anchor": {
+        "x": 79.0,
+        "y": 233
+      },
+      "footAnchor": {
+        "x": 79.0,
+        "y": 233
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": true
+    },
+    {
+      "id": "rabbit_step_E_cautious_a",
+      "index": 1,
+      "action": "step",
+      "direction": "E",
+      "pose": "cautious_a",
+      "sourceRect": {
+        "x": 391,
+        "y": 85,
+        "width": 193,
+        "height": 237
+      },
+      "anchor": {
+        "x": 90.5,
+        "y": 229
+      },
+      "footAnchor": {
+        "x": 90.5,
+        "y": 229
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": true
+    },
+    {
+      "id": "rabbit_step_E_cautious_b",
+      "index": 2,
+      "action": "step",
+      "direction": "E",
+      "pose": "cautious_b",
+      "sourceRect": {
+        "x": 684,
+        "y": 86,
+        "width": 188,
+        "height": 235
+      },
+      "anchor": {
+        "x": 90.0,
+        "y": 228
+      },
+      "footAnchor": {
+        "x": 90.0,
+        "y": 228
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": true
+    },
+    {
+      "id": "rabbit_idle_N_idle",
+      "index": 3,
+      "action": "idle",
+      "direction": "N",
+      "pose": "idle",
+      "sourceRect": {
+        "x": 1021,
+        "y": 80,
+        "width": 126,
+        "height": 238
+      },
+      "anchor": {
+        "x": 61.5,
+        "y": 231
+      },
+      "footAnchor": {
+        "x": 61.5,
+        "y": 231
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": false
+    },
+    {
+      "id": "rabbit_hop_N_airborne",
+      "index": 4,
+      "action": "hop",
+      "direction": "N",
+      "pose": "airborne",
+      "sourceRect": {
+        "x": 104,
+        "y": 397,
+        "width": 131,
+        "height": 233
+      },
+      "anchor": {
+        "x": 56.0,
+        "y": 246
+      },
+      "footAnchor": {
+        "x": 56.0,
+        "y": 228
+      },
+      "groundElevationPx": 18,
+      "contact": "airborne",
+      "mirrorToW": false,
+      "anchorNote": "Estimated 18-source-pixel vertical hop lift; not measured from a ground shadow."
+    },
+    {
+      "id": "rabbit_idle_S_idle",
+      "index": 5,
+      "action": "idle",
+      "direction": "S",
+      "pose": "idle",
+      "sourceRect": {
+        "x": 402,
+        "y": 378,
+        "width": 150,
+        "height": 247
+      },
+      "anchor": {
+        "x": 73.5,
+        "y": 241
+      },
+      "footAnchor": {
+        "x": 73.5,
+        "y": 241
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": false
+    },
+    {
+      "id": "rabbit_hop_S_airborne",
+      "index": 6,
+      "action": "hop",
+      "direction": "S",
+      "pose": "airborne",
+      "sourceRect": {
+        "x": 708,
+        "y": 374,
+        "width": 151,
+        "height": 252
+      },
+      "anchor": {
+        "x": 76.0,
+        "y": 264
+      },
+      "footAnchor": {
+        "x": 76.0,
+        "y": 246
+      },
+      "groundElevationPx": 18,
+      "contact": "airborne",
+      "mirrorToW": false,
+      "anchorNote": "Estimated 18-source-pixel vertical hop lift; not measured from a ground shadow."
+    },
+    {
+      "id": "rabbit_alert_E_ears_up",
+      "index": 7,
+      "action": "alert",
+      "direction": "E",
+      "pose": "ears_up",
+      "sourceRect": {
+        "x": 999,
+        "y": 391,
+        "width": 180,
+        "height": 241
+      },
+      "anchor": {
+        "x": 77.0,
+        "y": 236
+      },
+      "footAnchor": {
+        "x": 77.0,
+        "y": 236
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": true
+    },
+    {
+      "id": "rabbit_hop_E_crouch",
+      "index": 8,
+      "action": "hop",
+      "direction": "E",
+      "pose": "crouch",
+      "sourceRect": {
+        "x": 76,
+        "y": 702,
+        "width": 200,
+        "height": 201
+      },
+      "anchor": {
+        "x": 97.0,
+        "y": 196
+      },
+      "footAnchor": {
+        "x": 97.0,
+        "y": 196
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": true
+    },
+    {
+      "id": "rabbit_hop_E_airborne",
+      "index": 9,
+      "action": "hop",
+      "direction": "E",
+      "pose": "airborne",
+      "sourceRect": {
+        "x": 365,
+        "y": 717,
+        "width": 253,
+        "height": 161
+      },
+      "anchor": {
+        "x": 126.5,
+        "y": 184
+      },
+      "footAnchor": {
+        "x": 126.5,
+        "y": 156
+      },
+      "groundElevationPx": 28,
+      "contact": "airborne",
+      "mirrorToW": true,
+      "anchorNote": "Virtual ground at source y=901, aligned to the adjacent E landing pose; visible foot baseline is y=873."
+    },
+    {
+      "id": "rabbit_hop_E_landing",
+      "index": 10,
+      "action": "hop",
+      "direction": "E",
+      "pose": "landing",
+      "sourceRect": {
+        "x": 689,
+        "y": 712,
+        "width": 200,
+        "height": 195
+      },
+      "anchor": {
+        "x": 103.0,
+        "y": 189
+      },
+      "footAnchor": {
+        "x": 103.0,
+        "y": 189
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": true
+    },
+    {
+      "id": "rabbit_wash_E_paws_cheeks",
+      "index": 11,
+      "action": "wash",
+      "direction": "E",
+      "pose": "paws_cheeks",
+      "sourceRect": {
+        "x": 1006,
+        "y": 682,
+        "width": 155,
+        "height": 235
+      },
+      "anchor": {
+        "x": 75.5,
+        "y": 229
+      },
+      "footAnchor": {
+        "x": 75.5,
+        "y": 229
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": true
+    },
+    {
+      "id": "rabbit_wash_E_paws_eyes",
+      "index": 12,
+      "action": "wash",
+      "direction": "E",
+      "pose": "paws_eyes",
+      "sourceRect": {
+        "x": 97,
+        "y": 946,
+        "width": 165,
+        "height": 243
+      },
+      "anchor": {
+        "x": 83.0,
+        "y": 236
+      },
+      "footAnchor": {
+        "x": 83.0,
+        "y": 236
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": true
+    },
+    {
+      "id": "rabbit_nibble_E_mouth_open",
+      "index": 13,
+      "action": "nibble",
+      "direction": "E",
+      "pose": "mouth_open",
+      "sourceRect": {
+        "x": 402,
+        "y": 950,
+        "width": 182,
+        "height": 237
+      },
+      "anchor": {
+        "x": 81.5,
+        "y": 231
+      },
+      "footAnchor": {
+        "x": 81.5,
+        "y": 231
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": true
+    },
+    {
+      "id": "rabbit_nibble_E_mouth_closed",
+      "index": 14,
+      "action": "nibble",
+      "direction": "E",
+      "pose": "mouth_closed",
+      "sourceRect": {
+        "x": 689,
+        "y": 948,
+        "width": 173,
+        "height": 240
+      },
+      "anchor": {
+        "x": 81.5,
+        "y": 233
+      },
+      "footAnchor": {
+        "x": 81.5,
+        "y": 233
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": true
+    },
+    {
+      "id": "rabbit_sleep_E_curled",
+      "index": 15,
+      "action": "sleep",
+      "direction": "E",
+      "pose": "curled",
+      "sourceRect": {
+        "x": 963,
+        "y": 1054,
+        "width": 223,
+        "height": 134
+      },
+      "anchor": {
+        "x": 113.0,
+        "y": 127
+      },
+      "footAnchor": {
+        "x": 113.0,
+        "y": 127
+      },
+      "groundElevationPx": 0,
+      "contact": "body_support",
+      "mirrorToW": true
+    }
+  ],
+  "poseGroups": {
+    "idle_E": [
+      "rabbit_idle_E_idle"
+    ],
+    "step_E": [
+      "rabbit_step_E_cautious_a",
+      "rabbit_step_E_cautious_b"
+    ],
+    "idle_N": [
+      "rabbit_idle_N_idle"
+    ],
+    "hop_N": [
+      "rabbit_hop_N_airborne"
+    ],
+    "idle_S": [
+      "rabbit_idle_S_idle"
+    ],
+    "hop_S": [
+      "rabbit_hop_S_airborne"
+    ],
+    "alert_E": [
+      "rabbit_alert_E_ears_up"
+    ],
+    "hop_E": [
+      "rabbit_hop_E_crouch",
+      "rabbit_hop_E_airborne",
+      "rabbit_hop_E_landing"
+    ],
+    "wash_E": [
+      "rabbit_wash_E_paws_cheeks",
+      "rabbit_wash_E_paws_eyes"
+    ],
+    "nibble_E": [
+      "rabbit_nibble_E_mouth_open",
+      "rabbit_nibble_E_mouth_closed"
+    ],
+    "sleep_E": [
+      "rabbit_sleep_E_curled"
+    ]
+  },
+  "groupNote": "Groups list available prototype poses only. They are not claims of complete or seamless animation loops.",
+  "limitations": [
+    "Poses cross nominal equal-grid row boundaries; use the supplied free sourceRect values only.",
+    "N and S airborne poses require explicit virtual-ground offsets; these offsets are prototype estimates.",
+    "Alert pose includes small yellow attention marks as part of the sourceRect."
+  ],
+  "validation": {
+    "frameCount": 16,
+    "sourceRectsInBounds": true,
+    "pairwiseSourceRectOverlaps": [],
+    "alphaAbove4OutsideSourceRects": 0,
+    "fullyTransparentPixelCount": 1158859,
+    "faintAlpha1To4PixelCount": 56621,
+    "pixelMutation": false
+  }
+}

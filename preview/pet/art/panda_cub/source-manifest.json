@@ -1,0 +1,552 @@
+{
+  "schema": "tangzhe-zhuan.pet-atlas-prototype.v1",
+  "species": "giant_panda_cub",
+  "status": "16-pose display prototype; not a complete animation set",
+  "image": {
+    "fileName": "giant_panda_cub_atlas_16pose_flat_prototype.png",
+    "libraryFileId": "libfile_7cce4fa328c48191bca2f85510a7b390",
+    "width": 1254,
+    "height": 1254,
+    "mode": "RGBA",
+    "sha256": "e9db2bdb2d473e548eea7185cc636fe0606ea4f9cf247433eb31b56ecd3d379d"
+  },
+  "coordinateSystem": {
+    "units": "source_image_pixels",
+    "origin": "top_left",
+    "sourceRectEnd": "exclusive",
+    "anchor": "crop-local coordinates; anchorSource is the same point in the full image"
+  },
+  "render": {
+    "method": "CanvasRenderingContext2D.drawImage",
+    "uniformScale": 0.5,
+    "virtualCell": {
+      "width": 256,
+      "height": 256,
+      "groundAnchor": {
+        "x": 128,
+        "y": 208
+      }
+    },
+    "placement": "For a target ground point (groundX, groundY) and shared scale s, draw sourceRect at destination (groundX-anchor.x*s, groundY-anchor.y*s, sourceRect.width*s, sourceRect.height*s).",
+    "scalePolicy": "Use one scale for every pose. Do not separately fit each crop to 256x256; that introduces size flicker.",
+    "sourceImagePolicy": "Keep the original PNG unchanged; crop and scale only at render time.",
+    "imageSmoothingEnabled": true
+  },
+  "qa": {
+    "visiblePoseCount": 16,
+    "independentMajorAlphaComponents": 16,
+    "sourceRectOverlapPairs": [],
+    "alphaAbove64PixelsOutsideSourceRects": 0,
+    "actualSubjectOverlap": false,
+    "allRectsFitVirtualCellAtRecommendedScale": true,
+    "sourcePixelsModified": false,
+    "measurement": "Read-only alpha-component analysis, alpha>0, minimum component area 500 pixels, 4-pixel rectangle padding. Pixel threshold is used for measurement only; no pixels were altered.",
+    "limitations": [
+      "Canvas dimensions are 1254x1254, not 1024x1024.",
+      "Layout is not a regular 4x4 equal-cell atlas. Use explicit sourceRect values.",
+      "Ground anchors are visually checked estimates and need in-game jitter testing.",
+      "Edges have colored low-alpha artifacts; runtime cropping cannot remove artifacts within a sprite.",
+      "Character scale and facial details vary slightly between poses.",
+      "Only a few movement phases exist, especially north/south. Do not claim 109 completed frames or validated seamless cycles.",
+      "The flat style is closer to the dog reference, but visual matching remains a prototype."
+    ]
+  },
+  "frames": [
+    {
+      "index": 0,
+      "id": "stand_east",
+      "action": "stand",
+      "direction": "east",
+      "sourceRect": {
+        "x": 34,
+        "y": 57,
+        "width": 295,
+        "height": 269
+      },
+      "anchor": {
+        "x": 129,
+        "y": 256
+      },
+      "anchorSource": {
+        "x": 163,
+        "y": 313
+      },
+      "anchorType": "ground_contact",
+      "anchorConfidence": "medium",
+      "anchorMethod": "Ground-line visually checked against the main opaque silhouette; horizontal point is a manual estimate of torso/support center. This is not rig-derived.",
+      "poseNotes": "Foot baseline measured; ground center visually estimated.",
+      "measuredConnectedComponentBounds": {
+        "x": 38,
+        "y": 61,
+        "width": 287,
+        "height": 261
+      },
+      "significantPixelsTouchCropEdge": false
+    },
+    {
+      "index": 1,
+      "id": "waddle_east_a",
+      "action": "waddle",
+      "direction": "east",
+      "sourceRect": {
+        "x": 346,
+        "y": 57,
+        "width": 286,
+        "height": 268
+      },
+      "anchor": {
+        "x": 122,
+        "y": 255
+      },
+      "anchorSource": {
+        "x": 468,
+        "y": 312
+      },
+      "anchorType": "ground_contact",
+      "anchorConfidence": "medium",
+      "anchorMethod": "Ground-line visually checked against the main opaque silhouette; horizontal point is a manual estimate of torso/support center. This is not rig-derived.",
+      "poseNotes": "One distinct walk pose, not a complete cycle.",
+      "measuredConnectedComponentBounds": {
+        "x": 350,
+        "y": 61,
+        "width": 278,
+        "height": 260
+      },
+      "significantPixelsTouchCropEdge": false
+    },
+    {
+      "index": 2,
+      "id": "waddle_east_b",
+      "action": "waddle",
+      "direction": "east",
+      "sourceRect": {
+        "x": 642,
+        "y": 59,
+        "width": 295,
+        "height": 267
+      },
+      "anchor": {
+        "x": 133,
+        "y": 254
+      },
+      "anchorSource": {
+        "x": 775,
+        "y": 313
+      },
+      "anchorType": "ground_contact",
+      "anchorConfidence": "medium",
+      "anchorMethod": "Ground-line visually checked against the main opaque silhouette; horizontal point is a manual estimate of torso/support center. This is not rig-derived.",
+      "poseNotes": "One distinct walk pose, not a complete cycle.",
+      "measuredConnectedComponentBounds": {
+        "x": 646,
+        "y": 63,
+        "width": 287,
+        "height": 259
+      },
+      "significantPixelsTouchCropEdge": false
+    },
+    {
+      "index": 3,
+      "id": "waddle_east_c",
+      "action": "waddle",
+      "direction": "east",
+      "sourceRect": {
+        "x": 945,
+        "y": 57,
+        "width": 298,
+        "height": 269
+      },
+      "anchor": {
+        "x": 139,
+        "y": 256
+      },
+      "anchorSource": {
+        "x": 1084,
+        "y": 313
+      },
+      "anchorType": "ground_contact",
+      "anchorConfidence": "medium",
+      "anchorMethod": "Ground-line visually checked against the main opaque silhouette; horizontal point is a manual estimate of torso/support center. This is not rig-derived.",
+      "poseNotes": "One distinct walk pose, not a complete cycle.",
+      "measuredConnectedComponentBounds": {
+        "x": 949,
+        "y": 61,
+        "width": 290,
+        "height": 261
+      },
+      "significantPixelsTouchCropEdge": false
+    },
+    {
+      "index": 4,
+      "id": "stand_north",
+      "action": "stand",
+      "direction": "north",
+      "sourceRect": {
+        "x": 72,
+        "y": 379,
+        "width": 207,
+        "height": 269
+      },
+      "anchor": {
+        "x": 103,
+        "y": 252
+      },
+      "anchorSource": {
+        "x": 175,
+        "y": 631
+      },
+      "anchorType": "ground_contact",
+      "anchorConfidence": "medium",
+      "anchorMethod": "Ground-line visually checked against the main opaque silhouette; horizontal point is a manual estimate of torso/support center. This is not rig-derived.",
+      "poseNotes": "Back-facing orientation; short white tail remains intact.",
+      "measuredConnectedComponentBounds": {
+        "x": 76,
+        "y": 383,
+        "width": 199,
+        "height": 261
+      },
+      "significantPixelsTouchCropEdge": false
+    },
+    {
+      "index": 5,
+      "id": "waddle_north_a",
+      "action": "waddle",
+      "direction": "north",
+      "sourceRect": {
+        "x": 361,
+        "y": 383,
+        "width": 226,
+        "height": 264
+      },
+      "anchor": {
+        "x": 111,
+        "y": 249
+      },
+      "anchorSource": {
+        "x": 472,
+        "y": 632
+      },
+      "anchorType": "ground_contact",
+      "anchorConfidence": "medium",
+      "anchorMethod": "Ground-line visually checked against the main opaque silhouette; horizontal point is a manual estimate of torso/support center. This is not rig-derived.",
+      "poseNotes": "Single north walk pose; missing other cycle phases.",
+      "measuredConnectedComponentBounds": {
+        "x": 365,
+        "y": 387,
+        "width": 218,
+        "height": 256
+      },
+      "significantPixelsTouchCropEdge": false
+    },
+    {
+      "index": 6,
+      "id": "stand_south",
+      "action": "stand",
+      "direction": "south",
+      "sourceRect": {
+        "x": 674,
+        "y": 383,
+        "width": 217,
+        "height": 264
+      },
+      "anchor": {
+        "x": 111,
+        "y": 249
+      },
+      "anchorSource": {
+        "x": 785,
+        "y": 632
+      },
+      "anchorType": "ground_contact",
+      "anchorConfidence": "medium",
+      "anchorMethod": "Ground-line visually checked against the main opaque silhouette; horizontal point is a manual estimate of torso/support center. This is not rig-derived.",
+      "poseNotes": "Foot baseline measured; ground center visually estimated.",
+      "measuredConnectedComponentBounds": {
+        "x": 678,
+        "y": 387,
+        "width": 209,
+        "height": 256
+      },
+      "significantPixelsTouchCropEdge": false
+    },
+    {
+      "index": 7,
+      "id": "waddle_south_a",
+      "action": "waddle",
+      "direction": "south",
+      "sourceRect": {
+        "x": 990,
+        "y": 381,
+        "width": 222,
+        "height": 268
+      },
+      "anchor": {
+        "x": 115,
+        "y": 253
+      },
+      "anchorSource": {
+        "x": 1105,
+        "y": 634
+      },
+      "anchorType": "ground_contact",
+      "anchorConfidence": "medium",
+      "anchorMethod": "Ground-line visually checked against the main opaque silhouette; horizontal point is a manual estimate of torso/support center. This is not rig-derived.",
+      "poseNotes": "Single south walk pose; missing other cycle phases.",
+      "measuredConnectedComponentBounds": {
+        "x": 994,
+        "y": 385,
+        "width": 214,
+        "height": 260
+      },
+      "significantPixelsTouchCropEdge": false
+    },
+    {
+      "index": 8,
+      "id": "hug_bamboo_a",
+      "action": "hug_bamboo",
+      "direction": "south",
+      "sourceRect": {
+        "x": 42,
+        "y": 683,
+        "width": 260,
+        "height": 273
+      },
+      "anchor": {
+        "x": 132,
+        "y": 266
+      },
+      "anchorSource": {
+        "x": 174,
+        "y": 949
+      },
+      "anchorType": "ground_contact",
+      "anchorConfidence": "medium",
+      "anchorMethod": "Ground-line visually checked against the main opaque silhouette; horizontal point is a manual estimate of torso/support center. This is not rig-derived.",
+      "poseNotes": "Seated pose with a bamboo stalk; anchor follows seated body support.",
+      "measuredConnectedComponentBounds": {
+        "x": 46,
+        "y": 687,
+        "width": 252,
+        "height": 265
+      },
+      "significantPixelsTouchCropEdge": false
+    },
+    {
+      "index": 9,
+      "id": "hug_bamboo_b",
+      "action": "hug_bamboo",
+      "direction": "south",
+      "sourceRect": {
+        "x": 349,
+        "y": 670,
+        "width": 273,
+        "height": 285
+      },
+      "anchor": {
+        "x": 135,
+        "y": 277
+      },
+      "anchorSource": {
+        "x": 484,
+        "y": 947
+      },
+      "anchorType": "ground_contact",
+      "anchorConfidence": "medium",
+      "anchorMethod": "Ground-line visually checked against the main opaque silhouette; horizontal point is a manual estimate of torso/support center. This is not rig-derived.",
+      "poseNotes": "Bamboo cuddle pose; anchor follows seated body support.",
+      "measuredConnectedComponentBounds": {
+        "x": 353,
+        "y": 674,
+        "width": 265,
+        "height": 277
+      },
+      "significantPixelsTouchCropEdge": false
+    },
+    {
+      "index": 10,
+      "id": "sit_play_a",
+      "action": "sit_play",
+      "direction": "south",
+      "sourceRect": {
+        "x": 668,
+        "y": 678,
+        "width": 240,
+        "height": 277
+      },
+      "anchor": {
+        "x": 121,
+        "y": 269
+      },
+      "anchorSource": {
+        "x": 789,
+        "y": 947
+      },
+      "anchorType": "ground_contact",
+      "anchorConfidence": "medium",
+      "anchorMethod": "Ground-line visually checked against the main opaque silhouette; horizontal point is a manual estimate of torso/support center. This is not rig-derived.",
+      "poseNotes": "Seated pose with one paw raised.",
+      "measuredConnectedComponentBounds": {
+        "x": 672,
+        "y": 682,
+        "width": 232,
+        "height": 269
+      },
+      "significantPixelsTouchCropEdge": false
+    },
+    {
+      "index": 11,
+      "id": "sit_play_b",
+      "action": "sit_play",
+      "direction": "south",
+      "sourceRect": {
+        "x": 990,
+        "y": 684,
+        "width": 238,
+        "height": 273
+      },
+      "anchor": {
+        "x": 122,
+        "y": 263
+      },
+      "anchorSource": {
+        "x": 1112,
+        "y": 947
+      },
+      "anchorType": "ground_contact",
+      "anchorConfidence": "medium",
+      "anchorMethod": "Ground-line visually checked against the main opaque silhouette; horizontal point is a manual estimate of torso/support center. This is not rig-derived.",
+      "poseNotes": "Seated pose reaching toward toes.",
+      "measuredConnectedComponentBounds": {
+        "x": 994,
+        "y": 688,
+        "width": 230,
+        "height": 265
+      },
+      "significantPixelsTouchCropEdge": false
+    },
+    {
+      "index": 12,
+      "id": "roll_side",
+      "action": "roll",
+      "direction": "south",
+      "sourceRect": {
+        "x": 37,
+        "y": 1008,
+        "width": 289,
+        "height": 204
+      },
+      "anchor": {
+        "x": 141,
+        "y": 186
+      },
+      "anchorSource": {
+        "x": 178,
+        "y": 1194
+      },
+      "anchorType": "ground_contact",
+      "anchorConfidence": "medium",
+      "anchorMethod": "Ground-line visually checked against the main opaque silhouette; horizontal point is a manual estimate of torso/support center. This is not rig-derived.",
+      "poseNotes": "Body-support anchor, not a foot anchor; only one side-roll pose.",
+      "measuredConnectedComponentBounds": {
+        "x": 41,
+        "y": 1012,
+        "width": 281,
+        "height": 196
+      },
+      "significantPixelsTouchCropEdge": false
+    },
+    {
+      "index": 13,
+      "id": "roll_back",
+      "action": "roll",
+      "direction": "south",
+      "sourceRect": {
+        "x": 347,
+        "y": 991,
+        "width": 287,
+        "height": 226
+      },
+      "anchor": {
+        "x": 146,
+        "y": 208
+      },
+      "anchorSource": {
+        "x": 493,
+        "y": 1199
+      },
+      "anchorType": "ground_contact",
+      "anchorConfidence": "medium",
+      "anchorMethod": "Ground-line visually checked against the main opaque silhouette; horizontal point is a manual estimate of torso/support center. This is not rig-derived.",
+      "poseNotes": "Body-support anchor, not a foot anchor; four paws visible.",
+      "measuredConnectedComponentBounds": {
+        "x": 351,
+        "y": 995,
+        "width": 279,
+        "height": 218
+      },
+      "significantPixelsTouchCropEdge": false
+    },
+    {
+      "index": 14,
+      "id": "side_sleep_a",
+      "action": "sleep",
+      "direction": "southeast",
+      "sourceRect": {
+        "x": 636,
+        "y": 1006,
+        "width": 317,
+        "height": 204
+      },
+      "anchor": {
+        "x": 155,
+        "y": 191
+      },
+      "anchorSource": {
+        "x": 791,
+        "y": 1197
+      },
+      "anchorType": "ground_contact",
+      "anchorConfidence": "medium",
+      "anchorMethod": "Ground-line visually checked against the main opaque silhouette; horizontal point is a manual estimate of torso/support center. This is not rig-derived.",
+      "poseNotes": "Body-support anchor replaces a foot anchor.",
+      "measuredConnectedComponentBounds": {
+        "x": 640,
+        "y": 1010,
+        "width": 309,
+        "height": 196
+      },
+      "significantPixelsTouchCropEdge": false
+    },
+    {
+      "index": 15,
+      "id": "side_sleep_b",
+      "action": "sleep",
+      "direction": "southeast",
+      "sourceRect": {
+        "x": 955,
+        "y": 1008,
+        "width": 288,
+        "height": 202
+      },
+      "anchor": {
+        "x": 145,
+        "y": 188
+      },
+      "anchorSource": {
+        "x": 1100,
+        "y": 1196
+      },
+      "anchorType": "ground_contact",
+      "anchorConfidence": "medium",
+      "anchorMethod": "Ground-line visually checked against the main opaque silhouette; horizontal point is a manual estimate of torso/support center. This is not rig-derived.",
+      "poseNotes": "Small visual variant, not a validated breathing loop.",
+      "measuredConnectedComponentBounds": {
+        "x": 959,
+        "y": 1012,
+        "width": 280,
+        "height": 194
+      },
+      "significantPixelsTouchCropEdge": false
+    }
+  ]
+}

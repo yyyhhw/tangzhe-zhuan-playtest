@@ -1,0 +1,555 @@
+{
+  "schema": "tangzhe-companion-art/1",
+  "species": "robot",
+  "placeholder": false,
+  "releaseReady": false,
+  "prototype": true,
+  "source": {
+    "frameSize": [
+      256,
+      256
+    ],
+    "origin": [
+      128,
+      208
+    ],
+    "perFrameCrop": false,
+    "shadow": "separate"
+  },
+  "runtime": {
+    "cellSize": 128,
+    "origin": [
+      64,
+      104
+    ],
+    "displayTiles": 1.65,
+    "sourceScale": 0.5
+  },
+  "atlas": {
+    "image": "robot_prototype_16_v2.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "sourceRect"
+  },
+  "directions": {
+    "drawn": [
+      "E",
+      "N",
+      "S"
+    ],
+    "mirror": {
+      "W": "E"
+    }
+  },
+  "shadow": {
+    "procedural": true
+  },
+  "clips": {
+    "idle_E": {
+      "dir": "E",
+      "inPlace": false,
+      "loop": true,
+      "frames": [
+        {
+          "sourceIndex": 0,
+          "sourceRect": [
+            112,
+            65,
+            123,
+            240
+          ],
+          "anchor": [
+            59.0,
+            234
+          ],
+          "dir": "E",
+          "ms": 240
+        }
+      ]
+    },
+    "idle_N": {
+      "dir": "N",
+      "inPlace": false,
+      "loop": true,
+      "frames": [
+        {
+          "sourceIndex": 4,
+          "sourceRect": [
+            93,
+            361,
+            150,
+            240
+          ],
+          "anchor": [
+            77.0,
+            234
+          ],
+          "dir": "N",
+          "ms": 240
+        }
+      ]
+    },
+    "idle_S": {
+      "dir": "S",
+      "inPlace": false,
+      "loop": true,
+      "frames": [
+        {
+          "sourceIndex": 7,
+          "sourceRect": [
+            1011,
+            361,
+            152,
+            240
+          ],
+          "anchor": [
+            75.5,
+            234
+          ],
+          "dir": "S",
+          "ms": 240
+        }
+      ]
+    },
+    "walk_E": {
+      "dir": "E",
+      "inPlace": false,
+      "loop": true,
+      "frames": [
+        {
+          "sourceIndex": 1,
+          "sourceRect": [
+            403,
+            65,
+            160,
+            240
+          ],
+          "anchor": [
+            79.0,
+            233
+          ],
+          "dir": "E",
+          "ms": 180
+        },
+        {
+          "sourceIndex": 2,
+          "sourceRect": [
+            735,
+            65,
+            133,
+            240
+          ],
+          "anchor": [
+            60.0,
+            233
+          ],
+          "dir": "E",
+          "ms": 180
+        },
+        {
+          "sourceIndex": 3,
+          "sourceRect": [
+            1012,
+            65,
+            148,
+            241
+          ],
+          "anchor": [
+            74.0,
+            234
+          ],
+          "dir": "E",
+          "ms": 180
+        }
+      ]
+    },
+    "walk_N": {
+      "dir": "N",
+      "inPlace": false,
+      "loop": true,
+      "frames": [
+        {
+          "sourceIndex": 5,
+          "sourceRect": [
+            405,
+            361,
+            153,
+            240
+          ],
+          "anchor": [
+            75.5,
+            234
+          ],
+          "dir": "N",
+          "ms": 180
+        },
+        {
+          "sourceIndex": 6,
+          "sourceRect": [
+            719,
+            361,
+            155,
+            240
+          ],
+          "anchor": [
+            78.5,
+            234
+          ],
+          "dir": "N",
+          "ms": 180
+        }
+      ]
+    },
+    "walk_S": {
+      "dir": "S",
+      "inPlace": false,
+      "loop": true,
+      "frames": [
+        {
+          "sourceIndex": 8,
+          "sourceRect": [
+            88,
+            658,
+            158,
+            242
+          ],
+          "anchor": [
+            78.0,
+            235
+          ],
+          "dir": "S",
+          "ms": 180
+        },
+        {
+          "sourceIndex": 9,
+          "sourceRect": [
+            405,
+            658,
+            155,
+            242
+          ],
+          "anchor": [
+            71.5,
+            237
+          ],
+          "dir": "S",
+          "ms": 180
+        }
+      ]
+    },
+    "attention": {
+      "dir": "E",
+      "inPlace": true,
+      "loop": false,
+      "frames": [
+        {
+          "sourceIndex": 10,
+          "sourceRect": [
+            711,
+            687,
+            210,
+            215
+          ],
+          "anchor": [
+            68.0,
+            208
+          ],
+          "dir": "E",
+          "ms": 240
+        },
+        {
+          "sourceIndex": 11,
+          "sourceRect": [
+            1018,
+            655,
+            190,
+            245
+          ],
+          "anchor": [
+            75.0,
+            239
+          ],
+          "dir": "E",
+          "ms": 240
+        }
+      ]
+    },
+    "groom": {
+      "dir": "E",
+      "inPlace": true,
+      "loop": true,
+      "frames": [
+        {
+          "sourceIndex": 10,
+          "sourceRect": [
+            711,
+            687,
+            210,
+            215
+          ],
+          "anchor": [
+            68.0,
+            208
+          ],
+          "dir": "E",
+          "ms": 240
+        },
+        {
+          "sourceIndex": 11,
+          "sourceRect": [
+            1018,
+            655,
+            190,
+            245
+          ],
+          "anchor": [
+            75.0,
+            239
+          ],
+          "dir": "E",
+          "ms": 240
+        }
+      ]
+    },
+    "play": {
+      "dir": "E",
+      "inPlace": true,
+      "loop": false,
+      "frames": [
+        {
+          "sourceIndex": 12,
+          "sourceRect": [
+            86,
+            953,
+            211,
+            234
+          ],
+          "anchor": [
+            75.0,
+            228
+          ],
+          "dir": "E",
+          "ms": 240
+        },
+        {
+          "sourceIndex": 13,
+          "sourceRect": [
+            399,
+            954,
+            159,
+            234
+          ],
+          "anchor": [
+            75.5,
+            227
+          ],
+          "dir": "E",
+          "ms": 240
+        }
+      ]
+    },
+    "rest": {
+      "dir": "S",
+      "inPlace": true,
+      "loop": true,
+      "frames": [
+        {
+          "sourceIndex": 14,
+          "sourceRect": [
+            716,
+            960,
+            163,
+            226
+          ],
+          "anchor": [
+            82.0,
+            219
+          ],
+          "dir": "S",
+          "ms": 700
+        },
+        {
+          "sourceIndex": 15,
+          "sourceRect": [
+            1018,
+            958,
+            163,
+            229
+          ],
+          "anchor": [
+            79.5,
+            223
+          ],
+          "dir": "S",
+          "ms": 700
+        }
+      ]
+    },
+    "petted": {
+      "dir": "E",
+      "inPlace": true,
+      "loop": false,
+      "frames": [
+        {
+          "sourceIndex": 12,
+          "sourceRect": [
+            86,
+            953,
+            211,
+            234
+          ],
+          "anchor": [
+            75.0,
+            228
+          ],
+          "dir": "E",
+          "ms": 240
+        },
+        {
+          "sourceIndex": 13,
+          "sourceRect": [
+            399,
+            954,
+            159,
+            234
+          ],
+          "anchor": [
+            75.5,
+            227
+          ],
+          "dir": "E",
+          "ms": 240
+        }
+      ]
+    }
+  },
+  "sourceManifest": "source-manifest.json",
+  "sourceImageSHA256": "5a67e3dd63615684c840adc62e954e14e8ab146535ad5fb9b4800a377ba35f2d",
+  "limitations": [
+    "脚底锚点为估计值，需在游戏内检查漂移和抖动。"
+  ],
+  "body": {
+    "E": [
+      88.5,
+      199.0
+    ],
+    "N": [
+      88.75,
+      166.75
+    ],
+    "S": [
+      87.0,
+      169.75
+    ]
+  },
+  "renderBounds": {
+    "left": -71.0,
+    "right": 71.0,
+    "top": -119.5,
+    "bottom": 3.5
+  },
+  "poseCatalog": {
+    "primary:0": {
+      "dir": "E",
+      "clips": [
+        "idle_E"
+      ]
+    },
+    "primary:4": {
+      "dir": "N",
+      "clips": [
+        "idle_N"
+      ]
+    },
+    "primary:7": {
+      "dir": "S",
+      "clips": [
+        "idle_S"
+      ]
+    },
+    "primary:1": {
+      "dir": "E",
+      "clips": [
+        "walk_E"
+      ]
+    },
+    "primary:2": {
+      "dir": "E",
+      "clips": [
+        "walk_E"
+      ]
+    },
+    "primary:3": {
+      "dir": "E",
+      "clips": [
+        "walk_E"
+      ]
+    },
+    "primary:5": {
+      "dir": "N",
+      "clips": [
+        "walk_N"
+      ]
+    },
+    "primary:6": {
+      "dir": "N",
+      "clips": [
+        "walk_N"
+      ]
+    },
+    "primary:8": {
+      "dir": "S",
+      "clips": [
+        "walk_S"
+      ]
+    },
+    "primary:9": {
+      "dir": "S",
+      "clips": [
+        "walk_S"
+      ]
+    },
+    "primary:10": {
+      "dir": "E",
+      "clips": [
+        "attention",
+        "groom"
+      ]
+    },
+    "primary:11": {
+      "dir": "E",
+      "clips": [
+        "attention",
+        "groom"
+      ]
+    },
+    "primary:12": {
+      "dir": "E",
+      "clips": [
+        "play",
+        "petted"
+      ]
+    },
+    "primary:13": {
+      "dir": "E",
+      "clips": [
+        "play",
+        "petted"
+      ]
+    },
+    "primary:14": {
+      "dir": "S",
+      "clips": [
+        "rest"
+      ]
+    },
+    "primary:15": {
+      "dir": "S",
+      "clips": [
+        "rest"
+      ]
+    }
+  }
+}

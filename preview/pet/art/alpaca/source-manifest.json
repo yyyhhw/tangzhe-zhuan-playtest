@@ -1,0 +1,452 @@
+{
+  "species": "alpaca",
+  "image": {
+    "fileName": "alpaca/alpaca_prototype_16_v2.png",
+    "libraryFileId": "libfile_e1e3908619fc81918904a1ed40ed977c",
+    "width": 1254,
+    "height": 1254,
+    "format": "PNG",
+    "colorMode": "RGBA",
+    "sha256": "9e32d2ea84c2d131f04a7bfe29546f4a8f29f2359e0ceee81b7a35575f000307"
+  },
+  "frames": [
+    {
+      "id": "alpaca_idle_E_idle",
+      "index": 0,
+      "action": "idle",
+      "direction": "E",
+      "pose": "idle",
+      "sourceRect": {
+        "x": 68,
+        "y": 72,
+        "width": 204,
+        "height": 247
+      },
+      "anchor": {
+        "x": 87.5,
+        "y": 240
+      },
+      "footAnchor": {
+        "x": 87.5,
+        "y": 240
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": true
+    },
+    {
+      "id": "alpaca_walk_E_stride_a",
+      "index": 1,
+      "action": "walk",
+      "direction": "E",
+      "pose": "stride_a",
+      "sourceRect": {
+        "x": 367,
+        "y": 72,
+        "width": 203,
+        "height": 245
+      },
+      "anchor": {
+        "x": 105.0,
+        "y": 239
+      },
+      "footAnchor": {
+        "x": 105.0,
+        "y": 239
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": true
+    },
+    {
+      "id": "alpaca_walk_E_passing",
+      "index": 2,
+      "action": "walk",
+      "direction": "E",
+      "pose": "passing",
+      "sourceRect": {
+        "x": 682,
+        "y": 73,
+        "width": 206,
+        "height": 246
+      },
+      "anchor": {
+        "x": 98.0,
+        "y": 239
+      },
+      "footAnchor": {
+        "x": 98.0,
+        "y": 239
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": true
+    },
+    {
+      "id": "alpaca_walk_E_stride_b",
+      "index": 3,
+      "action": "walk",
+      "direction": "E",
+      "pose": "stride_b",
+      "sourceRect": {
+        "x": 991,
+        "y": 72,
+        "width": 205,
+        "height": 246
+      },
+      "anchor": {
+        "x": 91.5,
+        "y": 239
+      },
+      "footAnchor": {
+        "x": 91.5,
+        "y": 239
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": true
+    },
+    {
+      "id": "alpaca_idle_N_idle",
+      "index": 4,
+      "action": "idle",
+      "direction": "N",
+      "pose": "idle",
+      "sourceRect": {
+        "x": 108,
+        "y": 368,
+        "width": 121,
+        "height": 246
+      },
+      "anchor": {
+        "x": 60.5,
+        "y": 240
+      },
+      "footAnchor": {
+        "x": 60.5,
+        "y": 240
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": false
+    },
+    {
+      "id": "alpaca_walk_N_step",
+      "index": 5,
+      "action": "walk",
+      "direction": "N",
+      "pose": "step",
+      "sourceRect": {
+        "x": 415,
+        "y": 367,
+        "width": 123,
+        "height": 247
+      },
+      "anchor": {
+        "x": 61.5,
+        "y": 241
+      },
+      "footAnchor": {
+        "x": 61.5,
+        "y": 241
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": false
+    },
+    {
+      "id": "alpaca_idle_S_idle",
+      "index": 6,
+      "action": "idle",
+      "direction": "S",
+      "pose": "idle",
+      "sourceRect": {
+        "x": 719,
+        "y": 366,
+        "width": 121,
+        "height": 248
+      },
+      "anchor": {
+        "x": 63.5,
+        "y": 242
+      },
+      "footAnchor": {
+        "x": 63.5,
+        "y": 242
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": false
+    },
+    {
+      "id": "alpaca_walk_S_step",
+      "index": 7,
+      "action": "walk",
+      "direction": "S",
+      "pose": "step",
+      "sourceRect": {
+        "x": 1028,
+        "y": 367,
+        "width": 121,
+        "height": 247
+      },
+      "anchor": {
+        "x": 63.5,
+        "y": 241
+      },
+      "footAnchor": {
+        "x": 63.5,
+        "y": 241
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": false
+    },
+    {
+      "id": "alpaca_observe_E_neck_forward",
+      "index": 8,
+      "action": "observe",
+      "direction": "E",
+      "pose": "neck_forward",
+      "sourceRect": {
+        "x": 55,
+        "y": 687,
+        "width": 255,
+        "height": 230
+      },
+      "anchor": {
+        "x": 81.0,
+        "y": 223
+      },
+      "footAnchor": {
+        "x": 81.0,
+        "y": 223
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": true
+    },
+    {
+      "id": "alpaca_observe_E_neck_up",
+      "index": 9,
+      "action": "observe",
+      "direction": "E",
+      "pose": "neck_up",
+      "sourceRect": {
+        "x": 364,
+        "y": 663,
+        "width": 230,
+        "height": 254
+      },
+      "anchor": {
+        "x": 89.5,
+        "y": 247
+      },
+      "footAnchor": {
+        "x": 89.5,
+        "y": 247
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": true
+    },
+    {
+      "id": "alpaca_trot_E_stride_a",
+      "index": 10,
+      "action": "trot",
+      "direction": "E",
+      "pose": "stride_a",
+      "sourceRect": {
+        "x": 660,
+        "y": 681,
+        "width": 246,
+        "height": 232
+      },
+      "anchor": {
+        "x": 115.5,
+        "y": 227
+      },
+      "footAnchor": {
+        "x": 115.5,
+        "y": 227
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": true
+    },
+    {
+      "id": "alpaca_trot_E_stride_b",
+      "index": 11,
+      "action": "trot",
+      "direction": "E",
+      "pose": "stride_b",
+      "sourceRect": {
+        "x": 977,
+        "y": 674,
+        "width": 244,
+        "height": 237
+      },
+      "anchor": {
+        "x": 88.5,
+        "y": 232
+      },
+      "footAnchor": {
+        "x": 88.5,
+        "y": 232
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": true
+    },
+    {
+      "id": "alpaca_chew_E_mouth_open",
+      "index": 12,
+      "action": "chew",
+      "direction": "E",
+      "pose": "mouth_open",
+      "sourceRect": {
+        "x": 62,
+        "y": 967,
+        "width": 228,
+        "height": 238
+      },
+      "anchor": {
+        "x": 90.0,
+        "y": 232
+      },
+      "footAnchor": {
+        "x": 90.0,
+        "y": 232
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": true
+    },
+    {
+      "id": "alpaca_chew_E_mouth_closed",
+      "index": 13,
+      "action": "chew",
+      "direction": "E",
+      "pose": "mouth_closed",
+      "sourceRect": {
+        "x": 370,
+        "y": 963,
+        "width": 226,
+        "height": 242
+      },
+      "anchor": {
+        "x": 90.5,
+        "y": 236
+      },
+      "footAnchor": {
+        "x": 90.5,
+        "y": 236
+      },
+      "groundElevationPx": 0,
+      "contact": "feet",
+      "mirrorToW": true
+    },
+    {
+      "id": "alpaca_lie_E_settling",
+      "index": 14,
+      "action": "lie",
+      "direction": "E",
+      "pose": "settling",
+      "sourceRect": {
+        "x": 675,
+        "y": 998,
+        "width": 211,
+        "height": 196
+      },
+      "anchor": {
+        "x": 106.5,
+        "y": 190
+      },
+      "footAnchor": {
+        "x": 106.5,
+        "y": 190
+      },
+      "groundElevationPx": 0,
+      "contact": "body_support",
+      "mirrorToW": true
+    },
+    {
+      "id": "alpaca_rest_E_eyes_closed",
+      "index": 15,
+      "action": "rest",
+      "direction": "E",
+      "pose": "eyes_closed",
+      "sourceRect": {
+        "x": 989,
+        "y": 1042,
+        "width": 214,
+        "height": 151
+      },
+      "anchor": {
+        "x": 107.0,
+        "y": 144
+      },
+      "footAnchor": {
+        "x": 107.0,
+        "y": 144
+      },
+      "groundElevationPx": 0,
+      "contact": "body_support",
+      "mirrorToW": true
+    }
+  ],
+  "poseGroups": {
+    "idle_E": [
+      "alpaca_idle_E_idle"
+    ],
+    "walk_E": [
+      "alpaca_walk_E_stride_a",
+      "alpaca_walk_E_passing",
+      "alpaca_walk_E_stride_b"
+    ],
+    "idle_N": [
+      "alpaca_idle_N_idle"
+    ],
+    "walk_N": [
+      "alpaca_walk_N_step"
+    ],
+    "idle_S": [
+      "alpaca_idle_S_idle"
+    ],
+    "walk_S": [
+      "alpaca_walk_S_step"
+    ],
+    "observe_E": [
+      "alpaca_observe_E_neck_forward",
+      "alpaca_observe_E_neck_up"
+    ],
+    "trot_E": [
+      "alpaca_trot_E_stride_a",
+      "alpaca_trot_E_stride_b"
+    ],
+    "chew_E": [
+      "alpaca_chew_E_mouth_open",
+      "alpaca_chew_E_mouth_closed"
+    ],
+    "lie_E": [
+      "alpaca_lie_E_settling"
+    ],
+    "rest_E": [
+      "alpaca_rest_E_eyes_closed"
+    ]
+  },
+  "groupNote": "Groups list available prototype poses only. They are not claims of complete or seamless animation loops.",
+  "limitations": [
+    "Only one N walking and one S walking pose exist.",
+    "Trot and neck motion have two prototype poses each, not validated seamless cycles."
+  ],
+  "validation": {
+    "frameCount": 16,
+    "sourceRectsInBounds": true,
+    "pairwiseSourceRectOverlaps": [],
+    "alphaAbove4OutsideSourceRects": 0,
+    "fullyTransparentPixelCount": 1132548,
+    "faintAlpha1To4PixelCount": 59778,
+    "pixelMutation": false
+  }
+}

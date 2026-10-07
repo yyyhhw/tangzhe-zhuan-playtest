@@ -4,11 +4,34 @@
    调配与购买通过 E.transact，保存失败整档回滚；各物种成长存档原样随实例保留。
    小狗运行时按 uid 独立恢复 / 模拟 / 持久化，待命不运行。 */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory(require('../engine.js'), require('../room.js'));
-  else root.PetGame = factory(root.PetEngine, root.PetRoom);
-})(typeof self !== 'undefined' ? self : this, function (PE, PR) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('../engine.js'), require('../room.js'), require('../companions.js'), require('../art.js'));
+  else root.PetGame = factory(root.PetEngine, root.PetRoom, root.PetCompanions, root.PetArt);
+})(typeof self !== 'undefined' ? self : this, function (PE, PR, PC, PA) {
   'use strict';
   const PET = { id: 'pet_dog', name: '暖棕白小狗', emoji: '🐶', price: 3000, desc: '会自己在家里逛、闻家具、回窝睡觉；能呼唤、摸摸、抛球。只陪玩，不加产速。' };
+  // Only species with their own shipped runtime/art are available for purchase.
+  const SPECIES = Object.freeze({
+    dog: Object.freeze({ ...PET, species: 'dog', ready: true }),
+    cat: Object.freeze({ species: 'cat', name: '猫', emoji: '🐱', ready: false, price: 3000, desc: '猫的专属动作与素材待接入。' }),
+    red_panda: Object.freeze({ species: 'red_panda', name: '小熊猫', emoji: '🐾', ready: false, price: 3000, desc: '小熊猫的专属动作与素材待接入。' }),
+    robot: Object.freeze({ species: 'robot', name: '机器人', emoji: '🤖', ready: false, price: 3000, desc: '机器人的专属动作与素材待接入。' }),
+    panda_cub: Object.freeze({ species: 'panda_cub', name: '幼年熊猫', emoji: '🐼', ready: false, price: 3000, desc: '幼年熊猫的专属动作与素材待接入。' }),
+    alpaca: Object.freeze({ species: 'alpaca', name: '羊驼', emoji: '🦙', ready: false, price: 3000, desc: '羊驼的专属动作与素材待接入。' }),
+    rabbit: Object.freeze({ species: 'rabbit', name: '兔子', emoji: '🐰', ready: false, price: 3000, desc: '兔子的专属动作与素材待接入。' })
+  });
+  const knownSpecies = s => typeof s === 'string' && Object.prototype.hasOwnProperty.call(SPECIES,s);
+  const assets = new Map();
+  function registerSpecies(species, manifest, image, base) {
+    const check=PA.validateManifest(manifest);
+    if(!knownSpecies(species) || species==='dog' || manifest.species!==species || !check.ok || !image || image.naturalWidth!==manifest.atlas.size[0] || image.naturalHeight!==manifest.atlas.size[1])
+      return {ok:false,why:'宠物图集尚未验证',errors:check.errors};
+    for(const [key,a] of Object.entries(manifest.atlases||{})){const im=image.companionAtlases?.[key];if(!im||im.naturalWidth!==a.size[0]||im.naturalHeight!==a.size[1])return {ok:false,why:'宠物动作图集尚未验证'};}
+    const pixels=PA.validateCompanionPixels(manifest,image);if(!pixels.ok)return pixels;
+    assets.set(species,{manifest,image,base});return {ok:true};
+  }
+  const assetOf = species => assets.get(species) || null;
+  const speciesReady = (species, prototype) => species==='dog' || !!(PC && PC.CONFIG[species] && assets.has(species) && (assets.get(species).manifest.releaseReady===true || prototype===true));
+  const speciesOwned = (st, E, species) => rosterOf(st, E).some(p => p.species === species);
   const PV = 2, MAX_PER_ROOM = 2;
   const BED = { w: 1.3, h: 0.9 };
   // 家宅里的互动：自己的窝 + 原型里配过站位的猫窝类家具（家具在哪由家宅决定，站位按鼻尖反推，站不下就不去）
@@ -36,6 +59,12 @@
       const p = st.pet, uid = validUid(p.uid) ? p.uid : 'pet-dog-legacy';
       if (!raw.some(q => isObj(q) && q.uid === uid)) raw.push({ uid, species: 'dog', room: p.home, boughtAt: p.boughtAt, eng: p.eng });
     }
+    const selected = Object.create(null), preference = st && st.pets && st.pets.activeSpecies || {};
+    for (const p of raw) if (isObj(p)) {
+      if(!knownSpecies(p.species))continue;
+      const species = p.species;
+      if (!(species in selected) || (validUid(preference[species]) && preference[species] === p.uid)) selected[species] = p;
+    }
     const list = [], seen = new Set(), counts = Object.create(null);
     // Reserve existing IDs first so repairs cannot collide with later valid records.
     const reserved = raw.filter(isObj).map(p => ({ uid: p.uid }));
@@ -43,12 +72,19 @@
       if (!isObj(p)) return;
       let uid = p.uid;
       if (!validUid(uid)) { uid = freshUid(reserved, 'pet-recovered-' + (index + 1)); reserved.push({ uid }); }
+      if(!knownSpecies(p.species)){
+        if(seen.has(uid))uid=freshUid(reserved,'pet-quarantined-'+(index+1));
+        seen.add(uid);reserved.push({uid});
+        const q={...p,uid,room:null,compatibility:false,quarantined:true};
+        Object.defineProperty(q,'opaqueSource',{value:p});list.push(q);return;
+      }
       if (seen.has(uid)) return;
       seen.add(uid);
-      let room = validRoom(st, E, p.room) ? p.room : null;
+      const species = p.species, compatibility = selected[species] !== p;
+      let room = !compatibility && validRoom(st, E, p.room) ? p.room : null;
       if (room !== null && (counts[room] || 0) >= MAX_PER_ROOM) room = null;
       if (room !== null) counts[room] = (counts[room] || 0) + 1;
-      list.push({ ...p, uid, species: validUid(p.species) ? p.species : 'dog', room,
+      list.push({ ...p, uid, species, room, compatibility, quarantined:false,
         boughtAt: finN(p.boughtAt) && p.boughtAt >= 0 && p.boughtAt <= 8.64e15 ? p.boughtAt : 0,
         eng: p.eng === undefined ? null : p.eng });
     });
@@ -56,10 +92,31 @@
   }
   function norm(st, E) {
     if (!isObj(st) || (!('pet' in st) && !('pets' in st))) return null;
-    const list = rosterOf(st, E);
+    const list = rosterOf(st, E).map(p=>p.quarantined?p.opaqueSource:p);
     if (list.length || 'pets' in st || legacyOwned(st)) st.pets = { ...(isObj(st.pets) ? st.pets : {}), v: PV, list };
     if ('pet' in st) delete st.pet;
     return st.pets || null;
+  }
+  function migrateRoster(st, E, opt) {
+    const next=JSON.parse(JSON.stringify(st));norm(next,E);
+    if(JSON.stringify(next)===JSON.stringify(st))return {ok:true,unchanged:true};
+    const o=opt||{};
+    return E.transact(st,{price:0,blocked:!!o.blocked,save:o.save,apply:s=>{norm(s,E);return {migrated:true};}});
+  }
+  function activateDuplicate(st,E,uid,opt) {
+    const o=opt||{}, v=view(st,E), chosen=v.pets[uid];
+    if(!chosen||chosen.quarantined||!chosen.compatibility)return {ok:false,why:'不是兼容待命宠物'};
+    const current=Object.values(v.pets).find(p=>p.species===chosen.species&&!p.compatibility);
+    if(!current)return {ok:false,why:'当前宠物不存在'};
+    const expected=placementKey(v);
+    const result=E.transact(st,{price:0,blocked:!!o.blocked,save:o.save,apply:s=>{
+      if(placementKey(view(s,E))!==expected)return {ok:false,why:'宠物位置已变化，请重新选择'};
+      norm(s,E);if(o.prepare&&o.prepare(s)===false)return {ok:false,why:'宠物状态未准备好'};
+      const a=storedList(s).find(p=>p.uid===current.uid), b=storedList(s).find(p=>p.uid===uid), room=a.room;
+      a.room=null;b.room=room;s.pets.activeSpecies={...(s.pets.activeSpecies||{}),[chosen.species]:uid};norm(s,E);
+      return {uid,room,replaced:current.uid};
+    }});
+    return result.ok ? {...result,...result.result} : result;
   }
   function view(st, E) {
     const rooms = Object.create(null), pets = Object.create(null), standby = [];
@@ -74,9 +131,10 @@
   // unknown top-level or nested version is kept byte-for-byte and its runtime stays paused.
   // Other species (cat) are opaque here: the roster never interprets or rewrites them.
   function engSupport(p) {
-    const e = p && p.eng;
+    if(!p||!knownSpecies(p.species))return 'opaque';
+    const e = p.eng;
     if (e === null || e === undefined) return 'empty';
-    if ((validUid(p.species) ? p.species : 'dog') !== 'dog') return 'opaque';
+    if (p.species !== 'dog') return PC && PC.CONFIG[p.species] ? (PC.sanitizeSave(e,p.species) ? 'ok' : 'unsupported') : 'opaque';
     if (!isObj(e) || PE.sanitizeSave(e) === null) return 'unsupported';
     // Non-object nested fields are field damage in a known version (repaired by sanitizeSave);
     // a nested object that declares its own version is a format this build does not know.
@@ -97,6 +155,8 @@
   }
   function placement(st, E, uid, room, o, purchasing) {
     const v = view(st, E), p = purchasing ? null : v.pets[uid];
+    if(p&&p.quarantined)return {ok:false,why:'未知物种记录已保留，暂停运行'};
+    if (p && p.compatibility) return {ok:false,why:'请先在兼容待命区选择换用此只'};
     if (!purchasing && !p) return { ok: false, why: '找不到这只宠物' };
     if (room !== null && !validRoom(st, E, room)) return { ok: false, why: '这位 CEO 还没加入' };
     // Same room is a true no-op, even in a full room or with replace=self.
@@ -105,6 +165,9 @@
     const occupants = room === null ? [] : v.rooms[room] || [], replacement = o.replace == null ? null : o.replace;
     if (replacement !== null && (room === null || replacement === uid || !occupants.includes(replacement)))
       return { ok: false, why: '替换对象已经不在这间房，请重新选择', stale: true };
+    // Compatibility duplicates are retained in standby; only an explicit activation swaps them.
+    if (p && room !== null && occupants.some(id => id !== replacement && v.pets[id].species === p.species))
+      return { ok: false, sameSpecies: true, why: '同一个家只能入住一只同种宠物，请选择其他家或待命' };
     if (occupants.length >= MAX_PER_ROOM && replacement === null)
       return { ok: false, why: '这个家已经有两只宠物，请选择换下哪一只', needReplace: true, occupants: occupants.slice() };
     return { ok: true, replacement, key: placementKey(v) };
@@ -145,24 +208,29 @@
     return roomCache.ok;
   }
   const NO_ROOM = '暂时无法入宅：屋里摆满了，没有小狗能站的空地（收起或挪开家具、或升级房子后再来）';
-  // Each purchase is a new dog instance. A null home purchases directly to standby.
+  // One purchase per species across every room and standby. Old duplicates remain intact.
   // Legacy parameters stay in place; the final options add replacement and snapshots.
   function buy(st, E, home, nowMs, M, save, blocked, opt) {
-    const o = opt || {}, checked = placement(st, E, null, home, o, true);
+    const o = opt || {}, species = o.species === undefined ? 'dog' : o.species, P = knownSpecies(species) ? SPECIES[species] : null;
+    if (!P || !speciesReady(species,o.prototype===true)) return { ok: false, why: '这种宠物还未开放购买' };
+    const price = species==='dog' ? PET.price : 3000;
+    if (speciesOwned(st, E, species)) return { ok: false, alreadyOwned: true, why: '已经拥有' + P.name + '，每种宠物只需购买一只' };
+    const checked = placement(st, E, null, home, o, true);
     if (!checked.ok) return checked;
     if (!M) return { ok: false, why: '小狗还没准备好，稍后再试' };
     if (home !== null && !hasRoom(st, E, home, M)) return { ok: false, why: NO_ROOM, noRoom: true };
     if (typeof E.transact !== 'function' || typeof E.walletOk !== 'function') return { ok: false, why: '金币数据异常' };
     if (!E.walletOk(st)) return { ok: false, why: '金币数据异常', badWallet: true };
-    if (!E.canAfford(st, PET.price)) return { ok: false, why: '金币不够' };
+    if (!E.canAfford(st, price)) return { ok: false, why: '金币不够' };
     const stamp = finN(nowMs) && nowMs >= 0 && nowMs <= 8.64e15 ? nowMs : 0;
-    const r = E.transact(st, { price: PET.price, blocked: !!blocked, save: typeof save === 'function' ? save : () => true,
+    const r = E.transact(st, { price, blocked: !!blocked, save: typeof save === 'function' ? save : () => true,
       apply: (s) => {
         const ready = preparePlacement(s, E, null, home, o, true, checked);
         if (!ready.ok) return ready;
+        if (speciesOwned(s, E, species)) return { ok: false, alreadyOwned: true, why: '已经拥有这种宠物' };
         if (!isObj(s.pets)) s.pets = { v: PV, list: [] };
-        const list = storedList(s), uid = freshUid(list, 'pet-dog-' + stamp.toString(36));
-        list.push({ uid, species: 'dog', room: home, boughtAt: stamp, eng: null });
+        const list = storedList(s), uid = freshUid(list, 'pet-' + species + '-' + stamp.toString(36));
+        list.push({ uid, species, room: home, boughtAt: stamp, eng: null });
         return { uid, replaced: ready.replacement };
       } });
     if (!r.ok) return Object.assign({}, r.result, { ok: false, why: r.why || '没有买成', stage: r.stage });
@@ -196,13 +264,14 @@
     return { x: 0, y: Math.max(0, w.rows - BED.h), w: BED.w, h: BED.h, blocked: true };   // 屋里摆满了：窝画在左前角，小狗原地趴着睡
   }
 
-  function mkWorld(E, M, L, seed, start) {
-    return PE.createWorld({ catalog: E.FURNITURE, room: { cols: L.cols, rows: L.rows, wallRows: 2, front: L.front, bed: { x: 0, y: L.rows - BED.h, w: BED.w, h: BED.h }, bowl: null, items: L.items },
+  function mkWorld(E, M, L, seed, start, Engine) {
+    return (Engine || PE).createWorld({ catalog: E.FURNITURE, room: { cols: L.cols, rows: L.rows, wallRows: 2, front: L.front, bed: { x: 0, y: L.rows - BED.h, w: BED.w, h: BED.h }, bowl: null, items: L.items },
       interact: INTERACT, manifest: M, seed, start });
   }
 
   /* ---------- 小狗运行时（每个 uid 一份；无 DOM，Node 可测） ---------- */
   function createRuntime(opt) {
+    const species = opt.species || 'dog', Engine = species === 'dog' ? PE : PC;
     const E = opt.E, M = opt.manifest, now = opt.now || (() => Date.now());
     let w = null, homeId = null, petUid = null, key = '', decor = false, lastEvent = '', simAt = 0, restored = null;
     let generation = '', sourceEng = '', sourceState = null, berth = 0, unsupported = false;
@@ -210,8 +279,8 @@
     const token = (v) => { try { return JSON.stringify(v); } catch (e) { return ''; } };
     function record(st) {
       const list = storedList(st);
-      if (opt.uid != null) return list.find(p => isObj(p) && p.uid === opt.uid && p.species === 'dog') || null;
-      return list.find(p => isObj(p) && p.species === 'dog') || (legacyOwned(st) ? st.pet : null);
+      if (opt.uid != null) return list.find(p => isObj(p) && p.uid === opt.uid && p.species === species) || null;
+      return list.find(p => isObj(p) && p.species === species) || (legacyOwned(st) ? st.pet : null);
     }
     const roomOf = (p) => p && ('room' in p ? p.room : p.home);
     const uidOf = (p) => p && (p.uid || 'pet-dog-legacy');
@@ -225,15 +294,15 @@
       let seed = ((p.boughtAt || 1) % 2147483647) >>> 0;
       for (let i = 0; i < uid.length; i++) seed = (Math.imul(seed, 31) + uid.charCodeAt(i)) >>> 0;
       berth = berthOf(st, uid, room);
-      const start = { x: L.front.x + (berth === 0 ? -0.8 : 0.8), y: L.rows - 1.6 };
-      w = mkWorld(E, M, L, seed, start);
+      const start = { x: L.front.x + (berth === 0 ? -1.5 : 1.5), y: L.rows - 2.2 };
+      w = mkWorld(E, M, L, seed, start, Engine);
       w.bed = canonicalBed(); w.obsVer++;
       // Runtime-specific validation stays in the dog engine. Roster migration and
       // placement must not clamp or discard another species' growth payload.
-      const eng = PE.sanitizeSave(p.eng); let res = null;
-      if (eng && eng.home === room) { res = PE.restore(w, Object.assign({}, eng, { items: [] }), now()); lastEvent = res.ok && res.elapsed > 20 ? 'slept' : 'back'; }
+      const eng = Engine.sanitizeSave(p.eng); let res = null;
+      if (eng && eng.home === room) { res = Engine.restore(w, Object.assign({}, eng, { items: [] }), now()); lastEvent = res.ok && res.elapsed > 20 ? 'slept' : 'back'; }
       else if (eng) {
-        res = PE.restore(w, Object.assign({}, eng, { items: [], savedAt: now(), dog: Object.assign({}, eng.dog, { x: start.x, y: L.front.y - 0.6, asleep: false }) }), now());
+        res = Engine.restore(w, Object.assign({}, eng, { items: [], savedAt: now(), dog: Object.assign({}, eng.dog, { x: start.x, y: L.front.y - 0.6, asleep: false }) }), now());
         if (!w.noRoom) w.dog.label = '刚搬来，东张西望'; lastEvent = 'moved';
       } else lastEvent = 'arrived';
       if (w.noRoom) lastEvent = 'waiting';
@@ -247,7 +316,7 @@
       const p = record(st), room = roomOf(p);
       if (!p || !validRoom(st, E, room)) { reset(); unsupported = false; return null; }
       // Unknown engine version: no world, no simulation, no write-back (beforePersist sees w === null).
-      if (engSupport(p) === 'unsupported') { reset(); unsupported = true; return null; }
+      if (!knownSpecies(species) || ['unsupported','opaque'].includes(engSupport(p))) { reset(); unsupported = true; return null; }
       unsupported = false;
       // The exact payload we staged is our own save, not an external update.
       // A transaction rollback instead restores sourceEng, keeping live progress.
@@ -256,7 +325,7 @@
       sourceState = st; stagedEngs.clear();
       const L = layoutOf(st, E, homeId), nextBerth = berthOf(st, petUid, homeId), berthChanged = nextBerth !== berth;
       if (L.key !== key || berthChanged) {
-        if (L.key !== key) PE.setLayout(w, { cols: L.cols, rows: L.rows, front: L.front, items: L.items });
+        if (L.key !== key) Engine.setLayout(w, { cols: L.cols, rows: L.rows, front: L.front, items: L.items });
         berth = nextBerth;
         // Membership changes can renumber the surviving resident. Reassign its
         // bed without rebuilding the world, teleporting it, or losing live growth.
@@ -269,15 +338,15 @@
     function frame(dt, st, ctx) {
       if (!sync(st)) return null;
       const dec = !!(ctx && ctx.decorHere);
-      if (dec !== decor) { decor = dec; PE.setRearrange(w, dec); }
+      if (dec !== decor) { decor = dec; Engine.setRearrange(w, dec); }
       let left = Math.min(0.1, Math.max(0, dt || 0));
-      while (left > 1e-6) { const h = Math.min(1 / 60, left); PE.update(w, h); left -= h; }
+      while (left > 1e-6) { const h = Math.min(1 / 60, left); Engine.update(w, h); left -= h; }
       simAt = now();
       return w;
     }
     function snapshot() {
       if (!w || homeId === null) return null;
-      const s = PE.serialize(w, simAt || now()); delete s.items; s.home = homeId;
+      const s = Engine.serialize(w, simAt || now()); delete s.items; s.home = homeId;
       return s;
     }
     function beforePersist(st) {
@@ -308,7 +377,8 @@
       get w() { return w; }, get uid() { return petUid || opt.uid || null; }, get homeId() { return homeId; }, get lastEvent() { return lastEvent; }, get restored() { return restored; },
       get waiting() { return !!(w && w.noRoom); }, get unsupported() { return unsupported; },
       sync, frame, snapshot, beforePersist, acknowledgePersist, resume, reset,
-      call: (st) => act(st, PE.call), pet: (st, how) => act(st, (w) => PE.pet(w, how || 'button')), throwBall: (st, t) => act(st, (w) => PE.throwBall(w, t)),
+      step: seconds => w && Engine.step(w,seconds), debug: () => w && Engine.snapshot(w),
+      call: (st) => act(st, Engine.call), pet: (st, how) => act(st, (w) => Engine.pet(w, how || 'button')), throwBall: (st, t) => act(st, (w) => Engine.throwBall(w, t)),
     };
   }
 
@@ -325,6 +395,7 @@
     return Math.max(8, Math.ceil(out + 2));
   }
   function createView(opt) {
+    if(opt.species && opt.species!=='dog') return PC.createView(opt);
     const M = opt.manifest, PA = opt.PA, PP = opt.PP;
     let atlas = null, els = null, cvW = 0, cvH = 0;
     const PAD_X = padXOf(M);
@@ -385,11 +456,10 @@
     // 点到小狗（地板坐标，格）：和原型同一个判定框
     function hit(w, floor, cx, cy) {
       if (!w || !floor || w.noRoom) return false;
-      const fr = floor.getBoundingClientRect(), tile = fr.width / w.cols, x = (cx - fr.left) / tile, y = (cy - fr.top) / tile, d = w.dog;
-      return Math.abs(x - d.x) < 0.6 && y > d.y - 1.05 - d.z && y < d.y + 0.25;
+      return PA.canvasHit(els&&els.cv,cx,cy);
     }
     return { draw, hit, detach, get artMode() { return atlas ? 'atlas' : 'placeholder'; }, get els() { return els; } };
   }
 
-  return { PET, PV, MAX_PER_ROOM, BED, INTERACT, NO_ROOM, norm, view, owned, engSupport, assign, buy, move, hasRoom, layoutOf, pickBed, bedOK, createRuntime, createView, padXOf };
+  return { PET, SPECIES, knownSpecies, speciesOwned, speciesReady, registerSpecies, assetOf, migrateRoster, activateDuplicate, PC, PV, MAX_PER_ROOM, BED, INTERACT, NO_ROOM, norm, view, owned, engSupport, assign, buy, move, hasRoom, layoutOf, pickBed, bedOK, createRuntime, createView, padXOf };
 });
