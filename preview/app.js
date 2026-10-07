@@ -2217,7 +2217,7 @@ function zbBlocked() { return frozen || saveBlocked || E.isBlocked(state) || !E.
 function zbReply(why, extra) {
   if (!zbOpen || !zbPort) return;
   const ok = !zbBlocked();
-  zbPort.postMessage(Object.assign({ zb:'state', coins: ok ? E.balance(state) : 0, z: zbState(), blocked: !ok, why: why || '', ceo: zbCeo() }, extra));   // 13a：ceo = 烧烤摊现任 CEO id / null
+  zbPort.postMessage(Object.assign({ zb:'state', coins: ok ? E.balance(state) : 0, z: zbState(), blocked: !ok, why: why || '', ceo: zbCeo(), muted: !!state.muted }, extra));   // 13a：ceo = 烧烤摊现任 CEO id / null
 }
 function openZombie() {
   if (frozen || zbOpen || !ZB) return;
