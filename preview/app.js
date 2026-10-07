@@ -574,7 +574,7 @@ function drawRushBanner(c, i, t) {
 }
 function drawDecorFront(c, i, t) {
   const l = L();
-  if (decorOn('d_balloon')) { const by = l.awnY + l.awnH * 2.4 + Math.sin(t * 1.8) * 3 * U; c.strokeStyle = INK; c.lineWidth = 1.2 * U; c.beginPath(); c.moveTo(W * 0.075, by); c.lineTo(W * 0.085, by + 30 * U); c.stroke(); emo(c, '🎈', W * 0.075, by + 2 * U, 29 * U); }
+  if (decorOn('d_balloon')) { const by = l.counterY + l.awnH * 0.55 + Math.sin(t * 1.8) * 3 * U; c.strokeStyle = INK; c.lineWidth = 1.2 * U; c.beginPath(); c.moveTo(W * 0.075, by); c.lineTo(W * 0.085, by + 30 * U); c.stroke(); emo(c, '🎈', W * 0.075, by + 2 * U, 29 * U); }
   if (decorOn('d_poster')) { c.save(); c.translate(W * 0.9, l.counterY - 4 * U); c.rotate(0.06); rr(c, -16 * U, -24 * U, 32 * U, 40 * U, 2 * U); inkFill(c, '#fff', 2 * U);
     c.fillStyle = RED; c.font = `900 ${9 * U}px sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('热血', 0, -12 * U); c.fillStyle = INK; c.fillText('连载', 0, 0); c.fillStyle = '#ffd23f'; c.fillRect(-12 * U, 8 * U, 24 * U, 4 * U); c.restore(); }
   if (decorOn('d_cat')) emo(c, '🐱', W * 0.66, l.counterY - 3 * U + (Math.sin(t * 5) > 0.9 ? -2 * U : 0), 25 * U);
@@ -753,7 +753,7 @@ function capNote() { if (capWarned) return; capWarned = true; toast('金币到�
 function popWord(w) { sfxWord.textContent = w; sfxWord.classList.remove('pop'); void sfxWord.offsetWidth; sfxWord.classList.add('pop'); }
 function bumpCoins() { coinsEl.classList.remove('bump'); void coinsEl.offsetWidth; coinsEl.classList.add('bump'); }
 let toastTimer = 0;
-function toast(msg, ms = 1900) { toastEl.textContent = msg; toastEl.classList.remove('hidden'); toastEl.style.animation = 'none'; void toastEl.offsetWidth; toastEl.style.animation = ''; clearTimeout(toastTimer); toastTimer = setTimeout(() => toastEl.classList.add('hidden'), ms); }
+function toast(msg, ms = 1900, placement = '') { toastEl.classList.toggle('toast-header', placement === 'header'); toastEl.setAttribute('role','status'); toastEl.textContent = msg; toastEl.classList.remove('hidden'); toastEl.style.animation = 'none'; void toastEl.offsetWidth; toastEl.style.animation = ''; clearTimeout(toastTimer); toastTimer = setTimeout(() => toastEl.classList.add('hidden'), ms); }
 function shakeEl(el) { if (!el) return; el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
 function sayLine(who, txt, sec = 2.6) { bubble = { who, txt, until:clock + sec }; }
 
@@ -1152,7 +1152,7 @@ function act(a, arg, btn) {
     case 'wearWho': wardrobeWho = arg; dirty = true; break;
     case 'jobView': { const [who, k] = arg.split(':'); jobView[who] = { i:+k, at:state.ceos[who].at }; dirty = true; sfx('tap'); break; }
     case 'jobBig': { const [who, k] = arg.split(':'); return showJobArt(who, +k); }
-    case 'decor': { if (E.ITEM_BY_ID[arg]?.type !== 'decor' || !state.gacha.owned.includes(arg)) return; const r = atomic(() => { const h = state.decorHidden || (state.decorHidden = []); const k = h.indexOf(arg); if (k >= 0) h.splice(k, 1); else h.push(arg); return { ok:true }; }, '装饰显示没有切换'); dirty = true; bgKey = ''; if (r.ok) toast(decorOn(arg) ? '已摆出：四家店共用，开店后可见' : '已从四家店收起'); break; }
+    case 'decor': { if (E.ITEM_BY_ID[arg]?.type !== 'decor' || !state.gacha.owned.includes(arg)) return; const r = atomic(() => { const h = state.decorHidden || (state.decorHidden = []); const k = h.indexOf(arg); if (k >= 0) h.splice(k, 1); else h.push(arg); return { ok:true }; }, '装饰显示没有切换'); dirty = true; bgKey = ''; if (r.ok) toast(decorOn(arg) ? '已摆出：四家店共用，开店后可见' : '已从四家店收起', 1900, 'header'); break; }
     case 'card': return showCard(arg);
     case 'reset': return confirmReset();
     case 'goShop': switchShop(+arg); setTab('shop'); break;
@@ -1727,9 +1727,11 @@ function renderRoom() {
   const wallItems = H.placed.filter(isWall).slice().sort((a, b) => a.y - b.y || a.x - b.x).map(p => mkFurn(p, E.WALL_ROWS)).join('');
   const floorItems = H.placed.filter(p => !isWall(p)).slice().sort((a, b) => isRug(a) - isRug(b) || footY(a) - footY(b) || a.x - b.x).map(p => mkFurn(p, T.rows)).join('');
   const artKey = `${id}_${H.lv}`, hasArt = !!HOME_ART[artKey];
+  const dockHost = homeMode === 'live' && (petRoster().rooms[id] || []).length > 0;
+  if (dockHost) h += `<div class="home-host" id="homeHost">${ava(id)}<b>${c.name}</b><span id="homeHostLine">${homeActorOf(id).line || '在家陪伴宠物'}</span></div>`;
   // 墙面禁区（和 E.canPlace / E.findFree 同一份 E.wallBlockedCells）：平时隐藏，拖挂画时斜纹标红
   const wallBlocks = E.wallBlockedCells(state, id).map(([x, y]) => `<i class="wall-block" style="left:${x / T.cols * 100}%;top:${y / E.WALL_ROWS * 100}%;width:${100 / T.cols}%;height:${100 / E.WALL_ROWS}%"></i>`).join('');
-  h += `<div class="room tier-${T.id}${hasArt ? ' has-art' : ''}" id="room" data-tier="${T.id}" style="--cols:${T.cols};--rows:${T.rows};--wall:${T.wall};--floor:${T.floor};--trim:${T.trim}">
+  h += `<div class="room tier-${T.id}${hasArt ? ' has-art' : ''}${dockHost ? ' pet-host-docked' : ''}" id="room" data-tier="${T.id}" style="--cols:${T.cols};--rows:${T.rows};--wall:${T.wall};--floor:${T.floor};--trim:${T.trim}">
     ${hasArt ? `<img class="room-art" src="art/home_${artKey}.webp?v=${ART_V}" data-homefb="1" alt="" onerror="this.closest('.room')&&this.closest('.room').classList.remove('has-art')">` : ''}
     <div class="room-wall" id="roomWall"><span class="rw-deco">${T.id === 'hut' ? ic('window') : T.id === 'apt' ? ic('window') + ic('window') : ic('spark') + ic('candle') + ic('spark')}</span><span class="rw-name">${c.name}的${T.name}</span><div class="wall-grid" id="wallGrid">${wallBlocks}${wallItems}<div class="room-hl hidden" id="wallHl"></div></div></div>
     <div class="room-floor" id="roomFloor">${floorItems}<div class="home-actor" id="homeActor" style="left:${(homeActorOf(id).x + 0.5) / T.cols * 100}%;top:${(homeActorOf(id).y + 0.5) / T.rows * 100}%"><span class="ha-ava">${ava(id)}</span>${(() => { const ac = homeActorOf(id); return ac.line && ac.until > clock ? `<b class="ha-line">${ac.line}</b>` : ''; })()}<i class="ha-act">${(() => { const ac = homeActorOf(id); return ac.act === 'rest' ? ic('zz') : ac.act === 'read' ? ic('book') : ac.act === 'dress' ? ic('shirt') : ''; })()}</i></div><div class="room-hl hidden" id="roomHl"></div></div></div>`;
@@ -1856,12 +1858,12 @@ function petInit(tryN) {
 }
 async function petLoadSpecies() {
   try {
-    const response=await fetch('pet/art/species.json?v=13k-night1'); if(!response.ok)throw Error('species catalog');
+    const response=await fetch('pet/art/species.json?v=13k-night2'); if(!response.ok)throw Error('species catalog');
     const entries=await response.json();
     for(const entry of entries) {
       if(!PG.SPECIES[entry.species] || entry.species==='dog' || !/^[a-z_]+$/.test(entry.species))continue;
       try {
-        const base='pet/art/'+entry.species+'/', r=await fetch(base+'manifest.json?v=13k-night1');if(!r.ok)throw Error('manifest');
+        const base='pet/art/'+entry.species+'/', r=await fetch(base+'manifest.json?v=13k-night2');if(!r.ok)throw Error('manifest');
         const m=await r.json(), check=window.PetArt.validateManifest(m);if(!check.ok)throw Error(check.errors.join(';'));
         const image=new Image();image.src=base+m.atlas.image;await image.decode();
         image.companionAtlases={};await Promise.all(Object.entries(m.atlases||{}).map(async([key,a])=>{const im=new Image();im.src=base+a.image;await im.decode();image.companionAtlases[key]=im;}));
@@ -1891,6 +1893,7 @@ function petSave(s) {
 }
 function petFrame(dt) {
   const v = petSyncActors(), room = tab === 'home' && homeSub === 'room' && !!$('#roomFloor');
+  const hostLine = $('#homeHostLine'); if (hostLine) { const ac = homeActorOf(homeWho), text = ac.line && ac.until > clock ? ac.line : ac.tx != null ? '正在走过去' : '在家陪伴宠物'; if (hostLine.textContent !== text) hostLine.textContent = text; }
   for (const [uid,a] of petActors) {
     const p = v.pets[uid], w = petManual ? a.rt.sync(state) : a.rt.frame(dt, state, {decorHere:room && p.room === homeWho && homeMode === 'decor'});
     const show = room && p.room === homeWho;
@@ -2407,7 +2410,7 @@ function openZombie() {
     const ch = new MessageChannel(); zbPort = ch.port1; zbPort.onmessage = e => zbMsg(e.data);
     f.contentWindow.postMessage({ zb:'port' }, location.origin, [ch.port2]); zbReply();
   };
-  f.src = 'zombie/?embed=1&v=13k-night1'; $('#zbOverlay').classList.remove('hidden'); audioPause();
+  f.src = 'zombie/?embed=1&v=13k-night2'; $('#zbOverlay').classList.remove('hidden'); audioPause();
 }
 function closeZombie() {
   if (!zbOpen) return; zbOpen = false; zbRun = null; if (zbPort) { zbPort.close(); zbPort = null; }
