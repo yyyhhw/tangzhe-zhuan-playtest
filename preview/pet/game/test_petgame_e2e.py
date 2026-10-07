@@ -202,24 +202,24 @@ with sync_playwright() as p:
         FILL = """(E, s, id, skip) => { const H = E.homeOf(s, id), T = E.homeTier(H.lv), c0 = s.coins; let n = 0;
           for (let y = 0; y < T.rows; y++) for (let x = 0; x < T.cols; x++) { if ((skip || []).some(([a, b]) => a === x && b === y)) continue; s.coins = 1e9; E.buyFurniture(s, 'furn_plant'); if (E.placeItem(s, id, 'furn_plant', x, y, 0, 'floor').ok) n++; }
           s.coins = c0; return n; }"""
-        ST = "() => { const s = __tzz.state, raw = JSON.parse(localStorage.getItem('" + SAVE + "')); return { coins: s.coins, rawCoins: raw.coins, pet: __dg(s), rawPet: __dg(raw), owned: __tzz.pet.PG.owned(s), waiting: __tzz.pet.waiting, dog: !!document.querySelector('#roomFloor .pet-dog'), wait: !!document.querySelector('#petWait'), bar: !!document.querySelector('.pet-bar'), modal: __tzz.modalOpen(), toast: (document.querySelector('#toast') || {}).textContent || '' }; }"
-        # (1) 合法满屋购买：小屋 6×4 摆满 24 个花盆 → 商城卡「暂时无法入宅」、点购买不弹窗不扣钱；公寓 / 豪宅同样
+        ST = "() => { const s = __tzz.state, raw = JSON.parse(localStorage.getItem('" + SAVE + "')); return { coins: s.coins, rawCoins: raw.coins, pet: __dg(s), rawPet: __dg(raw), owned: __tzz.pet.PG.owned(s), waiting: __tzz.pet.waiting, dog: !!document.querySelector('#roomFloor .pet-dog'), wait: !!document.querySelector('[data-pet-wait]:not([hidden])'), bar: !!document.querySelector('.pet-bar button:not([disabled])'), who: __tzz.homeWho, modal: __tzz.modalOpen(), toast: (document.querySelector('#toast') || {}).textContent || '' }; }"
+        # (1) 合法满屋购买（r4）：商城卡写明「暂时无法入宅」；点购买只给「购买后待命」，不给入住 / 替换；不扣钱；公寓 / 豪宅同样
         for lv, nm, cells in ((1, '小屋', 24), (2, '公寓', 40), (3, '豪宅', 60)):
             inject("(E) => { const s = E.newState(Date.now()); s.coins = 1e9; while (E.homeOf(s, 'c77').lv < " + str(lv) + ") E.upgradeHome(s, 'c77'); s.coins = 5000; (" + FILL + ")(E, s, 'c77'); delete s.pet; delete s.pets; return s; }")
             pg.evaluate("() => { __tzz.setTab('home'); __tzz.homeAct('homeSub', 'mall'); }"); pg.wait_for_timeout(400)
-            cd = pg.evaluate("() => { const c = document.querySelector('#petCard'); const b = document.querySelector('#petNoRoom'); return { room: c && c.dataset.room, btn: b ? b.textContent : '', dis: b ? b.disabled : null, buy: !!document.querySelector('#petCard [data-act=homePetBuy]'), n: __tzz.E.homeOf(__tzz.state, 'c77').placed.length }; }")
-            check(cd['n'] == cells and cd['room'] == 'full' and cd['btn'] == '暂时无法入宅' and cd['dis'] and not cd['buy'], f'p4b {nm}合法摆满 {cd["n"]} 个花盆：商城卡显示「暂时无法入宅」（禁用，没有购买键）')
+            cd = pg.evaluate("() => { const c = document.querySelector('#petCard'); const b = document.querySelector('#petNoRoom'); return { btn: b ? b.textContent : '', buy: !!document.querySelector('#petCard [data-act=homePetBuy]'), n: __tzz.E.homeOf(__tzz.state, 'c77').placed.length }; }")
+            check(cd['n'] == cells and '暂时无法入宅' in cd['btn'] and cd['buy'], f'r4 {nm}合法摆满 {cd["n"]} 个花盆：商城卡写明「暂时无法入宅」，购买键保留（只能买入待命）')
             if lv == 1: pg.locator('#petCard').scroll_into_view_if_needed(); pg.screenshot(path=f'{SHOTS}/{tag}_p4b_full_mall.png')
             pg.evaluate("() => __tzz.homeAct('homePetBuy', 'c77')"); pg.wait_for_timeout(300)
-            st = pg.evaluate(ST)
-            check(not st['modal'] and '暂时无法入宅' in st['toast'] and st['coins'] == 5000 and not st['owned'] and st['pet'] is None, f'p4b {nm}满屋硬点购买：不弹窗，提示「暂时无法入宅」，金币 5000 → {st["coins"]}，没有宠物')
+            st = pg.evaluate(ST); md = pg.evaluate("() => ({ t: (document.querySelector('.mtitle') || {}).textContent, rep: !!document.querySelector('#petBuyReplace'), sb: !!document.querySelector('#petBuyStandby') })"); pg.evaluate("() => __tzz.closeModal()")
+            check(st['modal'] and md['t'] == '暂时无法入宅' and not md['rep'] and md['sb'] and st['coins'] == 5000 and not st['owned'] and st['pet'] is None, f'r4 {nm}满屋点购买：弹窗写明暂时无法入宅、只给「购买后待命」，金币 5000 → {st["coins"]}，没有宠物')
             r = pg.evaluate("() => { const r = __tzz.pet.PG.buy(__tzz.state, __tzz.E, 'c77', Date.now(), __tzz.pet.M); __tzz.persist(); const raw = JSON.parse(localStorage.getItem('" + SAVE + "')); return { ok: r.ok, noRoom: !!r.noRoom, coins: __tzz.state.coins, raw: raw.coins, pet: 'pet' in raw }; }")
             check(not r['ok'] and r['noRoom'] and r['coins'] == 5000 and r['raw'] == 5000 and not r['pet'], f'p4b {nm}满屋直接调购买：拒绝（noRoom），存档金币 {r["raw"]}、无 pet')
         # (2) 已有宠物，读档时满屋 → 等待安置（不崩、所有权 / 金币不变）；收起一盆 → 自动出来
         inject("(E) => { const s = E.newState(Date.now()); s.coins = 7777; (" + FILL + ")(E, s, 'c77'); s.pet = { v: 1, owned: true, home: 'c77', boughtAt: Date.now() - 9e5, eng: { v: 1, savedAt: Date.now() - 5000, t: 120, rs: 99, home: 'c77', dog: { x: 2.5, y: 2.5, dir: 'E', energy: 55, affinity: 47, lastGain: 10, tired: false, asleep: false, lastEat: -1e9 }, ball: { x: 1, y: 1, carried: false } } }; return s; }")
         to_room(pg); pg.wait_for_timeout(300)
         st = pg.evaluate(ST)
-        check(st['owned'] and st['waiting'] and st['wait'] and not st['dog'] and not st['bar'] and st['coins'] == 7777, f'p4b 已有宠物 + 满屋读档：不崩，家宅显示「小狗等待安置」，不画小狗、不出按钮，金币 {st["coins"]}')
+        check(st['owned'] and st['waiting'] and st['wait'] and not st['dog'] and not st['bar'] and st['coins'] == 7777, f'p4b/r4 已有宠物 + 满屋读档：不崩，显示等待安置，不画小狗、互动按钮全禁用，金币 {st["coins"]}')
         pg.screenshot(path=f'{SHOTS}/{tag}_p4b_waiting.png')
         pg.evaluate("() => __tzz.persist()"); st = pg.evaluate(ST)
         check(st['rawPet'] and st['rawPet']['owned'] is True and (((st['rawPet'] or {}).get('eng') or {}).get('dog') or {}).get('affinity') == 47 and st['rawCoins'] == 7777, '等待中存档：所有权 / 亲密 47 / 金币都在')
@@ -236,13 +236,13 @@ with sync_playwright() as p:
         check(st['waiting'] and st['wait'] and not st['dog'] and st['owned'] and st['coins'] == 7777, '布置模式把最后一格摆上：等待安置（提示在，小狗不画），金币不变')
         pg.evaluate("() => { const s = __tzz.state, H = __tzz.E.homeOf(s, 'c77'); __tzz.E.storeItem(s, 'c77', H.placed.find(p => p.x === 3 && p.y === 2).uid); __tzz.homeAct('homeMode', 'live'); __tzz.persist(); __tzz.renderTab(); }"); pg.wait_for_timeout(600)
         st = pg.evaluate(ST); check(not st['waiting'] and st['dog'], '收起刚摆的：小狗出来')
-        # (4) 搬进满屋 → 等待安置；升级房子 → 自动出来；金币只扣升级费
+        # (4) r4：搬进地面满的房间 → 拒绝、不切房；升级房子腾出空地后再搬 → 成功并切到目标房间；金币只扣升级费
         pg.evaluate("() => { const s = __tzz.state, E = __tzz.E; s.ceos.pearl.unlocked = true; (" + FILL + ")(E, s, 'pearl'); __tzz.persist(); __tzz.homeAct('homePetMove', 'pearl'); }"); pg.wait_for_timeout(500)
-        to_room(pg); st = pg.evaluate(ST)
-        check((st['pet'] or {}).get('home') == 'pearl' and st['owned'] and st['waiting'] and st['wait'] and not st['dog'] and st['coins'] == 7777, f'搬进满屋（珍珠姐家摆满）：搬过去、等待安置，金币不变（提示「{st["toast"][:30]}…」）')
-        pg.evaluate("() => { const s = __tzz.state; s.coins += 80000; const r = __tzz.E.upgradeHome(s, 'pearl'); __tzz.persist(); __tzz.renderTab(); return r.ok; }"); pg.wait_for_timeout(600)
         st = pg.evaluate(ST)
-        check(not st['waiting'] and st['dog'] and st['coins'] == 7777 and st['owned'], f'升级成公寓：小狗自动出来，金币只扣升级费（{st["coins"]}），宠物还是 1 只')
+        check((st['pet'] or {}).get('home') == 'c77' and st['who'] == 'c77' and st['owned'] and not st['waiting'] and '暂时无法入宅' in st['toast'] and st['coins'] == 7777, f'r4 搬进满屋（珍珠姐家摆满）：拒绝并提示「{st["toast"][:12]}…」，小狗留在 c77、不切房，金币不变')
+        pg.evaluate("() => { const s = __tzz.state; s.coins += 80000; const r = __tzz.E.upgradeHome(s, 'pearl'); __tzz.persist(); __tzz.homeAct('homePetMove', 'pearl'); return r.ok; }"); pg.wait_for_timeout(700)
+        st = pg.evaluate(ST)
+        check((st['pet'] or {}).get('home') == 'pearl' and st['who'] == 'pearl' and not st['waiting'] and st['dog'] and st['coins'] == 7777 and st['owned'], f'r4 升级成公寓后再搬：搬进珍珠姐家并切过去，小狗出来，金币只扣升级费（{st["coins"]}），宠物还是 1 只')
         # (5) 坏档：eng 字段是字符串 / 无穷（JSON 1e400）/ 负数 / 超界 / null / 缺字段，owned / boughtAt 也坏 → 读档不报错、所有权保留、存回去没有 NaN
         inject("""(E) => { const s = E.newState(Date.now()); s.coins = 4321; s.rev = '__REV__'; s.pet = { v: 1, owned: 'true', home: 'c77', boughtAt: 'x', eng: { v: 1, savedAt: 'NaN', t: 'abc', rs: -1, home: 'c77', dog: { x: '2', y: null, dir: 'toString', energy: -5, affinity: 'big', lastGain: 1e12, tired: 'no' }, ball: [1] } };
           return JSON.stringify(s).replace('"lastGain":1000000000000', '"lastGain":1e400,"lastEat":-1e400'); }""")
@@ -264,9 +264,10 @@ with sync_playwright() as p:
             # p5：12d1 异常钱包（主档余额 1e20）→ 买狗被拒，原档逐字节不变
             raw = pg.evaluate("() => localStorage.getItem('" + SAVE + "')"); bad = json.loads(raw); bad.pop('pet', None); bad.pop('pets', None); bad['coins'] = 1e20; bad['coinFrac'] = 0; bad['rev'] = (bad.get('rev') or 0) + 100000; badJ = json.dumps(bad)   # rev 抬高：旧页 pagehide 存盘不会盖掉
             pg.evaluate("(v) => { localStorage.clear(); localStorage.setItem('" + SAVE + "', v); }", badJ); boot(pg)
-            u5 = pg.evaluate("() => { const r0 = __tzz.saveBlocked; __tzz.homeAct('homePetBuy', 'c77'); const st = __tzz.state; return { blk: r0, uns: __tzz.loadInfo && __tzz.loadInfo.unsafe, pet: !!__dg(st) || 'pet' in st, coins: st.coins, modal: __tzz.modalOpen(), toast: document.getElementById('toast').textContent, api: __tzz.pet.PG.buy(st, __tzz.E, 'c77', Date.now(), __tzz.pet.M) }; }")
+            u5 = pg.evaluate("() => { const r0 = __tzz.saveBlocked; __tzz.homeAct('homePetBuy', 'c77'); const st = __tzz.state; return { blk: r0, uns: __tzz.loadInfo && __tzz.loadInfo.unsafe, pet: !!__dg(st) || 'pet' in st, coins: st.coins, modal: __tzz.modalOpen(), why: (document.querySelector('#pbWhy:not([hidden])') || {}).textContent || '', dis: !!(document.querySelector('#pbYes') || {}).disabled, toast: document.getElementById('toast').textContent, api: __tzz.pet.PG.buy(st, __tzz.E, 'c77', Date.now(), __tzz.pet.M) }; }")
+            pg.evaluate("() => __tzz.closeModal()")
             pg.wait_for_timeout(5600); after5 = pg.evaluate("() => localStorage.getItem('" + SAVE + "')")
-            check(u5['blk'] and u5['uns'] and not u5['pet'] and u5['coins'] == 1e20 and not u5['modal'] and '金币数据异常' in u5['toast'] and not u5['api']['ok'] and after5 == badJ, f"p5 异常钱包（余额 1e20）：商城点买狗 → 提示金币数据异常、不弹购买窗；接口也拒；6 秒后原档逐字节不变 {u5['toast']}")
+            check(u5['blk'] and u5['uns'] and not u5['pet'] and u5['coins'] == 1e20 and u5['modal'] and '金币数据异常' in u5['why'] and u5['dis'] and not u5['api']['ok'] and after5 == badJ, f"p5/r4 异常钱包（余额 1e20）：购买确认不可用并写明「{u5['why']}」；接口也拒；6 秒后原档逐字节不变")
             # p6（12d3）：保存失败（setItem 抛错）时买狗 → E.transact 整体回滚：金币不扣、没有狗、主档 / 备份逐字节不变、不跳进家宅
             nf = json.loads(raw); nf.pop('pet', None); nf.pop('pets', None); nf['coins'] = 50000; nf['coinFrac'] = 0; nf['rev'] = (nf.get('rev') or 0) + 150000; nfJ = json.dumps(nf)
             pg.evaluate("(v) => { localStorage.clear(); localStorage.setItem('" + SAVE + "', v); }", nfJ); boot(pg)

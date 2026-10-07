@@ -1819,6 +1819,8 @@ const petRoster = () => PG ? PG.view(state, E) : { rooms:{}, standby:[], pets:{}
 const petOwned = () => Object.keys(petRoster().pets).length > 0;
 const petToken = () => JSON.stringify(Object.values(petRoster().pets).map(p => [p.uid,p.room,p.species,p.boughtAt]));
 const petName = p => (p.species === 'dog' ? '🐶 小狗' : p.species === 'cat' ? '🐱 猫' : '宠物') + ' · ' + p.uid;
+const PET_WAIT = '等待安置：屋里没有空地，请收起或挪开家具、或升级房子', PET_UNSUP = '成长存档版本不支持：已原样保留，暂停活动';
+function petState(uid) { const a = petActors.get(uid); if (!a) return ''; if (a.rt.unsupported) return 'unsupported'; const w = a.rt.w; return w ? (w.noRoom ? 'waiting' : 'live') : ''; }
 function petInit(tryN) {
   if (!PET_LIBS) return;
   fetch('../art/manifest.json?v=p6').then(r => { if (!r.ok) throw new Error('manifest'); return r.json(); }).then(m => {
@@ -1850,8 +1852,13 @@ function petFrame(dt) {
     const p = v.pets[uid], w = petManual ? a.rt.sync(state) : a.rt.frame(dt, state, {decorHere:room && p.room === homeWho && homeMode === 'decor'});
     const show = room && p.room === homeWho;
     a.view.draw(show ? w : null, show ? $('#roomFloor') : null);
-    const label = document.querySelector('[data-pet-status="'+CSS.escape(uid)+'"]');
-    if (label && w) label.textContent = w.noRoom ? '等待安置：请腾出空地' : w.dog.label + ' · 亲密 ' + w.dog.affinity;
+    const st = petState(uid), q = CSS.escape(uid), label = document.querySelector('[data-pet-status="'+q+'"]');
+    if (label && st) label.textContent = st === 'unsupported' ? PET_UNSUP : st === 'waiting' ? PET_WAIT : w.dog.label + ' · 亲密 ' + w.dog.affinity;
+    for (const b of document.querySelectorAll('.pet-bar[data-uid="'+q+'"] button')) b.disabled = st === 'waiting' || st === 'unsupported';
+    const hint = document.querySelector('[data-pet-wait="'+q+'"]');
+    if (hint) { hint.hidden = st !== 'waiting' && st !== 'unsupported'; hint.textContent = st === 'unsupported' ? PET_UNSUP : PET_WAIT; }
+    if (a.was === 'waiting' && st === 'live' && show) toast('小狗跑出来了：屋里有空地了');
+    if (st) a.was = st;
   }
 }
 function petResume() {
@@ -1860,20 +1867,29 @@ function petResume() {
 }
 function petMallCard() {
   if (!PG) return '';
-  return `<div class="card mall-card pet-card" id="petCard"><div class="ava sq furn-ico pet-ico">🐶</div><div class="info"><div class="name">${PG.PET.name}</div><div class="desc">${PG.PET.desc}<br>每个房间最多 2 只。已有宠物可免费调配，待命保留成长。</div></div>${btn('homePetBuy',homeWho,'购买',PG.PET.price)}</div>`;
+  const noFloor = !!petM && E.homeOpen(state,homeWho) && !PG.hasRoom(state,E,homeWho,petM);
+  return `<div class="card mall-card pet-card${noFloor ? ' pet-nofloor' : ''}" id="petCard"><div class="ava sq furn-ico pet-ico">🐶</div><div class="info"><div class="name">${PG.PET.name}</div><div class="desc">${PG.PET.desc}<br>每个房间最多 2 只。已有宠物可免费调配，待命保留成长。${noFloor ? `<br><b id="petNoRoom">${petEsc(PG.NO_ROOM)}</b><br>仍可选择「购买后待命」。` : ''}</div></div>${btn('homePetBuy',homeWho,'购买',PG.PET.price)}</div>`;
 }
 function petRoomBar(id) {
   if (!PG || !petOwned()) return '';
-  const v = petRoster(), here = v.rooms[id] || [];
-  const slots = [0,1].map(i => { const p = v.pets[here[i]]; return `<div class="pet-slot" data-pet-slot="${i}" ${p ? `data-uid="${petEsc(p.uid)}"` : ''}><b>${p ? petEsc(petName(p)) : '空位 ' + (i+1)}</b>${p ? `<small data-pet-status="${petEsc(p.uid)}">${p.species === 'dog' ? '生活中' : '专属动作待接入'}</small><button class="buy ghost" data-act="petStandby" data-arg="${petEsc(p.uid)}">回待命</button>` : '<small>从下方选择宠物入住</small>'}</div>`; }).join('');
-  const rows = Object.values(v.pets).map(p => `<div class="pet-list-row" data-pet-uid="${petEsc(p.uid)}" data-where="${petEsc(p.room || 'standby')}"><div><b>${petEsc(petName(p))}</b><small>${p.room ? petEsc(E.CEO_BY_ID[p.room].name) + '的家' : '待命 · 成长保留'}</small></div><button class="buy alt" data-act="petPlace" data-arg="${petEsc(p.uid)}" ${p.room === id ? 'disabled' : ''}>${p.room === id ? '已入住' : here.length === 2 ? '选择替换' : '住进来'}</button></div>`).join('');
-  const controls = here.map(uid => v.pets[uid].species === 'dog' ? `<div class="pet-bar"><span class="pet-lb">${petEsc(petName(v.pets[uid]))}</span><button class="buy alt" data-act="homePetCall" data-arg="${petEsc(uid)}">📣 呼唤</button><button class="buy alt" data-act="homePetPat" data-arg="${petEsc(uid)}">✋ 摸摸</button><button class="buy alt" data-act="homePetBall" data-arg="${petEsc(uid)}">🎾 抛球</button></div>` : '').join('');
-  return `<section class="pet-manager"><b>房间宠物 · ${here.length}/2</b><div id="petSlots">${slots}</div>${controls}<details open><summary>已拥有 · ${Object.keys(v.pets).length} 只</summary><div id="petList">${rows}</div></details><small>替换下来的宠物回待命，成长保留，再次入住不收费。</small></section>`;
+  const v = petRoster(), here = v.rooms[id] || [], noFloor = !!petM && E.homeOpen(state,id) && !PG.hasRoom(state,E,id,petM);
+  const stOf = uid => { const p = v.pets[uid]; return p.species !== 'dog' ? 'opaque' : PG.engSupport(p) === 'unsupported' ? 'unsupported' : petState(uid) || (noFloor ? 'waiting' : 'live'); };
+  const stText = st => st === 'unsupported' ? PET_UNSUP : st === 'waiting' ? PET_WAIT : st === 'opaque' ? '专属动作待接入' : '生活中';
+  const slots = [0,1].map(i => { const p = v.pets[here[i]], st = p && stOf(p.uid); return `<div class="pet-slot" data-pet-slot="${i}" ${p ? `data-uid="${petEsc(p.uid)}" data-pet-state="${st}"` : ''}><b>${p ? petEsc(petName(p)) : '空位 ' + (i+1)}</b>${p ? `<small data-pet-status="${petEsc(p.uid)}">${stText(st)}</small><small class="pet-wait" data-pet-wait="${petEsc(p.uid)}" ${st === 'waiting' || st === 'unsupported' ? '' : 'hidden'}>${stText(st)}</small><button class="buy ghost" data-act="petStandby" data-arg="${petEsc(p.uid)}">回待命</button>` : '<small>从下方选择宠物入住</small>'}</div>`; }).join('');
+  const rows = Object.values(v.pets).map(p => `<div class="pet-list-row" data-pet-uid="${petEsc(p.uid)}" data-where="${petEsc(p.room || 'standby')}"><div><b>${petEsc(petName(p))}</b><small>${p.room ? petEsc(E.CEO_BY_ID[p.room].name) + '的家' : '待命 · 成长保留'}</small></div><button class="buy alt" data-act="petPlace" data-arg="${petEsc(p.uid)}" ${p.room === id || noFloor ? 'disabled' : ''}>${p.room === id ? '已入住' : noFloor ? '没有空地' : here.length === 2 ? '选择替换' : '住进来'}</button></div>`).join('');
+  const off = uid => { const st = stOf(uid); return st === 'waiting' || st === 'unsupported' ? 'disabled' : ''; };
+  const controls = homeMode === 'decor' ? (here.length ? '<small id="petNote">布置中：宠物原地等着，布置完再互动</small>' : '') : here.map(uid => v.pets[uid].species === 'dog' ? `<div class="pet-bar" data-uid="${petEsc(uid)}"><span class="pet-lb">${petEsc(petName(v.pets[uid]))}</span><button class="buy alt" data-act="homePetCall" data-arg="${petEsc(uid)}" ${off(uid)}>📣 呼唤</button><button class="buy alt" data-act="homePetPat" data-arg="${petEsc(uid)}" ${off(uid)}>✋ 摸摸</button><button class="buy alt" data-act="homePetBall" data-arg="${petEsc(uid)}" ${off(uid)}>🎾 抛球</button></div>` : '').join('');
+  return `<section class="pet-manager"><b>房间宠物 · ${here.length}/2</b>${noFloor ? `<small id="petNoRoomHere">${petEsc(PG.NO_ROOM)}</small>` : ''}<div id="petSlots">${slots}</div>${controls}<details open><summary>已拥有 · ${Object.keys(v.pets).length} 只</summary><div id="petList">${rows}</div></details><small>替换下来的宠物回待命，成长保留，再次入住不收费。</small></section>`;
 }
 function petAfterResult(r) {
   if (!r.ok) { if (!r.same) { sfx('no'); toast(r.stage === 'save' || r.stage === 'blocked' ? '保存失败：宠物位置与金币均未改变' : r.why || '没有完成'); } dirty = true; return; }
   for (const a of petActors.values()) a.rt.acknowledgePersist(state);
-  petSyncActors(); sfx('tap'); toast('宠物安排已保存'); dirty = true;
+  petSyncActors(); sfx('tap');
+  if (typeof r.room === 'string') {
+    if (tab !== 'home') setTab('home');
+    if (homeWho !== r.room || homeSub !== 'room') { homeWho = r.room; homeSub = 'room'; homeSel = null; const pn = $('#panel'); if (pn) pn.scrollTop = 0; }
+  }
+  toast('宠物安排已保存'); dirty = true;
 }
 function petChooseReplacement(home, finish) {
   const v = petRoster(), ids = (v.rooms[home] || []).slice(), expected = petToken();
@@ -1886,26 +1902,39 @@ function petChooseReplacement(home, finish) {
 }
 function petPlace(uid, home = homeWho) {
   const p = petRoster().pets[uid]; if (!p || p.room === home) return;
-  const finish = replace => petAfterResult(PG.assign(state,E,uid,home,{replace,save:petSave,blocked:saveBlocked || frozen,prepare:petPrepare}));
+  if (!petM) { toast('小狗资源还没准备好'); return; }
+  if (!PG.hasRoom(state,E,home,petM)) { sfx('no'); toast(PG.NO_ROOM); dirty = true; return; }
+  const finish = replace => petAfterResult(PG.assign(state,E,uid,home,{replace,M:petM,save:petSave,blocked:saveBlocked || frozen,prepare:petPrepare}));
   if ((petRoster().rooms[home] || []).length >= 2) petChooseReplacement(home,finish); else finish(null);
+}
+// Why the purchase confirmation is unavailable ('' = available). Shown in the dialog and re-checked on submit.
+function petBuyWhy(room) {
+  if (!PG || !petM) return '小狗资源还没准备好';
+  if (!E.walletOk(state)) return '金币数据异常，暂时不能购买';
+  if (saveBlocked || frozen) return '存档现在不能写入（只读或已在别的页面打开），暂时不能购买';
+  if (!E.canAfford(state,PG.PET.price)) return '金币不够';
+  if (room !== null && !E.homeOpen(state,room)) return '这位 CEO 还没加入';
+  if (room !== null && !PG.hasRoom(state,E,room,petM)) return PG.NO_ROOM;
+  return '';
 }
 function confirmPetBuy(home) {
   if (!PG || !petM) { toast('小狗资源还没准备好'); return; }
-  const v = petRoster(), full = (v.rooms[home] || []).length >= 2;
+  const v = petRoster(), full = (v.rooms[home] || []).length >= 2, noFloor = E.homeOpen(state,home) && !PG.hasRoom(state,E,home,petM);
   const show = (room, replace) => {
-    const expected = petToken(), P = PG.PET, can = E.canAfford(state,P.price);
-    openModal(`<div class="mtitle">购买 ${P.name}</div><p>价格：${fmt(P.price)} 金币<br>当前余额：${fmt(E.balance(state))}<br>${room ? '住进 '+petEsc(E.CEO_BY_ID[room].name)+'的家' : '先回待命，之后免费安排入住'}${replace ? '<br>'+petEsc(petName(petRoster().pets[replace]))+' 回待命，保留成长' : ''}</p><div class="mbtns two"><button class="buy ghost" id="mNo">取消</button><button class="buy red" id="pbYes" ${can ? '' : 'disabled'}>确认购买</button></div>`,false);
+    const expected = petToken(), P = PG.PET, why = petBuyWhy(room), can = !why;
+    openModal(`<div class="mtitle">购买 ${P.name}</div><p>价格：${fmt(P.price)} 金币<br>当前余额：${fmt(E.balance(state))}<br>${room ? '住进 '+petEsc(E.CEO_BY_ID[room].name)+'的家' : '先回待命，之后免费安排入住'}${replace ? '<br>'+petEsc(petName(petRoster().pets[replace]))+' 回待命，保留成长' : ''}</p><p class="pet-buy-why" id="pbWhy" ${why ? '' : 'hidden'}>${petEsc(why)}</p><div class="mbtns two"><button class="buy ghost" id="mNo">取消</button><button class="buy red" id="pbYes" ${can ? '' : 'disabled'}>确认购买</button></div>`,false);
     $('#mNo').addEventListener('click',closeModal,{once:true});
     $('#pbYes').addEventListener('click',() => {
       closeModal(); if (petToken() !== expected) { toast('宠物位置已变化，请重新选择'); return; }
+      const again = petBuyWhy(room); if (again) { sfx('no'); toast(again + '：金币和宠物都没有改变'); dirty = true; return; }
       const r = PG.buy(state,E,room,now(),petM,petSave,saveBlocked || frozen,{replace,prepare:petPrepare}); petAfterResult(r);
     },{once:true});
   };
   if (!E.homeOpen(state,home)) { toast('这位 CEO 还没加入'); return; }
-  if (full) {
-    openModal(`<div class="mtitle">房间已满 · 2/2</div><p>选择一只回待命，或新宠物先待命。已有宠物都保留成长。</p><button class="buy alt pet-replace-option" id="petBuyReplace">选择替换</button><button class="buy alt pet-replace-option" id="petBuyStandby">购买后待命</button><button class="buy ghost pet-replace-option" id="mNo">取消</button>`,false);
+  if (full || noFloor) {
+    openModal(`<div class="mtitle">${noFloor ? '暂时无法入宅' : '房间已满 · 2/2'}</div><p>${noFloor ? `<span id="petBuyNoRoom">${petEsc(PG.NO_ROOM)}</span><br>可以先买下让它待命，腾出空地后再免费安排入住。` : '选择一只回待命，或新宠物先待命。已有宠物都保留成长。'}</p>${noFloor ? '' : '<button class="buy alt pet-replace-option" id="petBuyReplace">选择替换</button>'}<button class="buy alt pet-replace-option" id="petBuyStandby">购买后待命</button><button class="buy ghost pet-replace-option" id="mNo">取消</button>`,false);
     $('#mNo').addEventListener('click',closeModal,{once:true});
-    $('#petBuyReplace').addEventListener('click',()=>petChooseReplacement(home,uid=>show(home,uid)),{once:true});
+    if (!noFloor) $('#petBuyReplace').addEventListener('click',()=>petChooseReplacement(home,uid=>show(home,uid)),{once:true});
     $('#petBuyStandby').addEventListener('click',()=>show(null,null),{once:true});
   } else show(home,null);
 }
@@ -1913,7 +1942,7 @@ function petMoveHere(home) { const p = Object.values(petRoster().pets).find(p =>
 function petDo(k,uid) {
   petSyncActors(); const a = petActors.get(uid), p = petRoster().pets[uid]; if (!a || !p || p.room !== homeWho) return;
   const r = k === 'call' ? a.rt.call(state) : k === 'pet' ? a.rt.pet(state,'button') : a.rt.throwBall(state);
-  if (!r.ok) { toast(r.why === 'waiting' ? '屋里没地方站，请腾出空地' : '它现在忙着，等一会儿再试'); return; } sfx('tap');
+  if (!r.ok) { toast(r.why === 'waiting' ? PET_WAIT : r.why === 'unsupported' ? PET_UNSUP : '它现在忙着，等一会儿再试'); return; } sfx('tap');
 }
 function petTap(e) {
   const v = petRoster(), floor = $('#roomFloor'); if (!floor) return false;
@@ -1936,6 +1965,7 @@ const petsHooks = {
   step(uid,sec) { const w = this.world(uid); if (w) window.PetEngine.step(w,sec); return w; },
   toy(uid,x,y) { const a = petActors.get(uid); return a ? a.rt.throwBall(state,{x,y}) : null; },
   draw() { if (dirty) renderTab(); petFrame(0); },
+  state(uid) { petSyncActors(); const a = petActors.get(uid); if (a) a.rt.sync(state); return petState(uid); },
   px(uid) { const a = petActors.get(uid), el = a && a.view.els && a.view.els.dog; if (!el) return null; const r=el.getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+r.height*0.7}; },
   persist() { return persist(); }
 };
