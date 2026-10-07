@@ -45,5 +45,27 @@ with sync_playwright() as p:
         f = [x for x in pg.frames if '/zombie/' in x.url][0]
         em = f.evaluate("({m: ZBSfx.state.muted, src: [...document.scripts].map(s => s.src).filter(s => /zbsfx/.test(s)).length})")
         check(em['m'] == muted and em['src'] == 1, f'嵌入：经营页 muted={muted} → 小游戏静音 {em}'); c.close()
+    # 熊大 10:44：等开局回执时先暂停 / 切后台，回执晚到也不能响音乐
+    c = b.new_context(**p.devices['iPhone 15']); pg = c.new_page(); errs = []; pg.on('pageerror', lambda e: errs.append(str(e)))
+    pg.goto(MAIN); pg.wait_for_function("window.__tzz && __tzz.state")
+    pg.evaluate("__tzz.state.muted = false; __tzz.closeModal && __tzz.closeModal(); __tzz.openZombie()"); pg.wait_for_timeout(1200)
+    f = [x for x in pg.frames if '/zombie/' in x.url][0]
+    f.wait_for_function("__zb.proto.ready && __zb.canPlay()")
+    LATE = """window.__pm = window.__pm || MessagePort.prototype.postMessage; MessagePort.prototype.postMessage = function (m) { if (m && m.zb === 'start') return; return window.__pm.apply(this, arguments); }; 0"""
+    ACK = """(() => { MessagePort.prototype.postMessage = window.__pm; const pr = __zb.proto; __zb.onState({zb:'state', coins: pr.coins, z: JSON.parse(JSON.stringify(pr)), blocked:false, ceo: pr.ceo || 'c77', ack:'start', ok:true, runId: __zb.lastSent.runId}); return {pend: __zb.G.pendStart, paused: document.getElementById('pause').classList.contains('hidden') === false, on: ZBSfx.state.on, t: __zb.G.t}; })()"""
+    for how in ['pause', 'hidden']:
+        f.evaluate(LATE); f.click('#startBtn'); pg.wait_for_timeout(200)
+        w0 = f.evaluate("({pend: !!(__zb.G && __zb.G.pendStart), on: ZBSfx.state.on})")
+        if how == 'pause': f.evaluate("__zb.setPause(true)")
+        else: f.evaluate("Object.defineProperty(document, 'hidden', {configurable: true, get: () => true}); document.dispatchEvent(new Event('visibilitychange')); 0")
+        la = f.evaluate(ACK)
+        check(w0['pend'] and not w0['on'] and la['pend'] is False and la['paused'] and not la['on'], f'嵌入：等回执时{"暂停" if how == "pause" else "切后台"}，回执晚到不响音乐 {w0} {la}')
+        if how == 'hidden': f.evaluate("delete document.hidden; 0")
+        f.evaluate("__zb.setPause(false)"); pg.wait_for_timeout(100)
+        on3 = f.evaluate("ZBSfx.state.on")
+        check(on3, f'嵌入：{"继续" if how == "pause" else "回到前台点继续"}后音乐才响 {on3}')
+        f.evaluate("__zb.setPause(true); document.getElementById('quitBtn').click(); 0"); pg.wait_for_timeout(300)
+        f.evaluate("document.getElementById('menuBtn') && document.getElementById('menuBtn').click(); 0"); pg.wait_for_timeout(200)
+    check(not errs, f'嵌入暂停用例页面无报错 {errs}'); c.close()
     b.close()
 print(f'passed {ok}, failed {bad}')

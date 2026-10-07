@@ -110,7 +110,7 @@ with sync_playwright() as p:
           return { kinds: [...k], bounced, kills: G.kills, lbl: document.querySelector('#ultBtn .ult-lbl').textContent, desc: document.getElementById('heroDesc').textContent, skew: document.getElementById('skewTxt').textContent }; })()""")
         check(pk['kinds'] == ['pearl'] and pk['bounced'] > 0 and pk['kills'] > 0 and pk['lbl'] == '冰沙' and '珍珠' in pk['desc'] and '弹跳' in pk['skew'], f'{dn} 珍珠姐普攻：只出珍珠弹、打中会弹到下一只、能击倒 {pk}')
         pu = S(pg, """(()=>{ const G = __zb.G; G.ult = 100; const ok = __zb.castUlt(); __zb.step(0.05); const n = G.zs.length, fz = G.zs.filter(z => z.slow > 0).length;
-          const x0 = G.zs.filter(z => z.type !== 'boss').map(z => [z.x, z.y]); __zb.step(0.2); const mv = G.zs.filter(z => z.type !== 'boss').slice(0, x0.length).reduce((m, z, i) => Math.max(m, x0[i] ? Math.hypot(z.x - x0[i][0], z.y - x0[i][1]) : 0), 0);
+          const x0 = new Map(G.zs.filter(z => z.type !== 'boss').map(z => [z, [z.x, z.y]])); __zb.step(0.2); const mv = G.zs.reduce((m, z) => x0.has(z) ? Math.max(m, Math.hypot(z.x - x0.get(z)[0], z.y - x0.get(z)[1])) : m, 0);
           const ring = !!G.ring; for (let i = 0; i < 100; i++) __zb.step(1/30); return { ok, n, fz, mv, ring, end: G.frost === null }; })()""")
         check(pu['ok'] and pu['n'] > 0 and pu['fz'] == pu['n'] and pu['mv'] < 6 and not pu['ring'] and pu['end'], f'{dn} 珍珠姐大招冰沙风暴：全屏冻住、僵尸几乎不动、不出火圈、3 秒后结束 {pu}')
         pg.screenshot(path=f'{OUT}/{tag}_pearl.png')
