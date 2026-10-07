@@ -1158,7 +1158,7 @@ with sync_playwright() as p:
     def place12c2(pg, items):
         return S(pg, "(()=>{const s=__tzz.state,E=__tzz.E; s.coins=1e9; s.homes.c77.placed.slice().forEach(q=>E.storeItem(s,'c77',q.uid)); const items=" + json.dumps(items) + "; items.forEach(([f])=>E.buyFurniture(s,f)); const r=items.map(([f,x,y,rot])=>{const q=E.placeItem(s,'c77',f,x,y,rot); return q.ok?q.uid:q.why}); __tzz.persist(); __tzz.renderTab(); return r;})()")
     def wait_imgs(pg): pg.wait_for_function("[...document.querySelectorAll('#roomFloor .furn img')].every(i=>i.complete&&i.naturalWidth)", timeout=15000)
-    # 1) 面板灯：素材 240×1331（5.55:1），占地 1×1；房间顶边封顶 = 占地 1 + 后墙 2 = 3 格高 → 等比最宽 ≈ 0.54 格。三机型锁住：比例不变、高 = 3 格、贴底居中、不出房间顶
+    # 1) 面板灯：13i 换熊大紧凑版 240×481（≈2.0:1），占地 1×1；高 ≈2.0 格 < 封顶 3 格 → 满 1 格宽、等比、贴底居中、不出房间顶（12c2 细长版 240×1331 已替换）
     for dname in ['iPhone SE', 'iPhone SE (3rd gen)', 'iPhone 15']:
         lc = b.new_context(**p.devices[dname]); lp = lc.new_page(); hook(lp, '12c2-lamp-' + dname)
         lp.goto(URL); lp.evaluate("localStorage.clear()"); lp.reload(); lp.wait_for_timeout(800); close_modals(lp)
@@ -1168,32 +1168,51 @@ with sync_playwright() as p:
         wait_imgs(lp)
         for uid, where in [(u[0], '靠后墙'), (u[1], '前排转 90°')]:
             g = S(lp, GEO_JS + "('" + uid + "')")
-            ok = g and g['nw'] == 240 and g['nh'] == 1331 and g['fit'] == 'contain' and g['tf'] == 'none' \
-                and abs((g['dh'] / g['dw']) - 1331 / 240) < 0.06 and abs(g['dh'] - 3 * g['eh']) < 1.5 \
-                and g['dw'] / g['ew'] >= 0.53 and g['dw'] <= g['ew'] + 0.5 and abs(g['dcx'] - g['ecx']) < 1 and g['foot'] < 1.5 and g['top'] >= g['roomTop'] - 1
-            check(ok, f"12c2 {dname} 面板灯（{where}）：等比 {round(g['dh']/g['dw'],2) if g else '?'}≈5.55、高 3 格（封顶到房间顶）、宽 {round(g['dw']/g['ew']*100) if g else '?'}% 格（等比最大）、贴底居中、不越顶 {g and {k: round(v,1) if isinstance(v,float) else v for k,v in g.items() if k in ('ew','eh','dw','dh','top','roomTop','foot')}}")
+            ok = g and g['nw'] == 240 and g['nh'] == 481 and g['src'].startswith('art/furn_otaku_panel_lamp.webp?v=13i') and g['fit'] == 'contain' and g['tf'] == 'none' \
+                and abs((g['dh'] / g['dw']) - 481 / 240) < 0.03 and abs(g['dh'] - 481 / 240 * g['eh']) < 1.5 \
+                and abs(g['dw'] - g['ew']) < 1 and abs(g['dcx'] - g['ecx']) < 1 and g['foot'] < 1.5 and g['top'] >= g['roomTop'] - 1
+            check(ok, f"13i {dname} 面板灯紧凑版（{where}）：等比 {round(g['dh']/g['dw'],2) if g else '?'}≈2.0、满 1 格宽（{round(g['dw']/g['ew']*100) if g else '?'}%）、高约 2 格、贴底居中、不越顶、单图缓存号 v=13i {g and {k: round(v,1) if isinstance(v,float) else v for k,v in g.items() if k in ('ew','eh','dw','dh','top','roomTop','foot')}}")
         if dname == 'iPhone 15':
             g2 = S(lp, GEO_JS + "('" + u[2] + "')")
             check(g2 and abs(g2['dw'] - g2['ew']) < 1 and abs(g2['dh'] / g2['dw'] - 468 / 240) < 0.03, f"12c2 普通落地灯不受影响：满 1 格宽、等比 468/240 {g2 and (round(g2['dw'],1), round(g2['dh'],1))}")
         lc.close()
     # 2) 选图（纯函数，全 200 件 × 4 个方向）：rot 1/3 且 FURN_SIDE 登记了 → 侧面图；其余 → 正面图（原兜底）
+    # 3) 13i 真侧面图（熊大 batch2）：三款沙发竖放用 _side.webp、1 格宽、高 = 图高/240 格、贴底；rot 3 镜像；横放仍正面图
+    rc = b.new_context(**dev); rp = rc.new_page(); hook(rp, '13i-side-real')
+    rp.goto(URL); rp.evaluate("localStorage.clear()"); rp.reload(); rp.wait_for_timeout(800); close_modals(rp)
+    rp.locator('#bottomNav [data-tab="home"]').click(); rp.wait_for_timeout(600); close_modals(rp)
+    ur = place12c2(rp, [['furn_sofa', 0, 1, 1], ['furn_pearl_scallop_sofa', 2, 1, 1], ['furn_rocket_pipe_sofa', 4, 1, 3], ['furn_sofa', 1, 0, 0]])
+    check(len(ur) == 4 and all(isinstance(x, str) and x for x in ur), f'13i 三款沙发竖放 + 沙发横放摆好 {ur}')
+    wait_imgs(rp)
+    for uid, nm, nh, mir in [(ur[0], 'sofa', 472, False), (ur[1], 'pearl_scallop_sofa', 575, False), (ur[2], 'rocket_pipe_sofa', 417, True)]:
+        g = S(rp, GEO_JS + "('" + uid + "')")
+        check(g and g['src'].startswith('art/furn_' + nm + '_side.webp') and g['nw'] == 240 and g['nh'] == nh and (('mir' in g['cls']) == mir) and abs(g['dw'] - g['ew']) < 1 and abs(g['dh'] - g['ew'] * nh / 240) < 1.5 and g['foot'] < 1.5 and abs(g['eh'] - 3 * g['ew']) < 2 and g['top'] >= g['roomTop'] - 1,
+              f"13i {nm} 竖放（rot {3 if mir else 1}）用真侧面图 240×{nh}、1 格宽、高 {round(g['dh']/g['ew'],2) if g else '?'} 格、贴底{'、水平镜像' if mir else ''} {g and g['src']}")
+    gh = S(rp, GEO_JS + "('" + ur[3] + "')")
+    check(gh and gh['src'].startswith('art/furn_sofa.webp') and abs(gh['dw'] - gh['ew']) < 1 and abs(gh['dh'] / gh['dw'] - 225 / 600) < 0.02, f"13i 沙发横放仍用正面图 {gh and gh['src']}")
+    rp.locator('#room').screenshot(path=f'{SHOTS}/13i_side_real.png')
+    rc.close()
     sc = b.new_context(**dev); sp = sc.new_page(); hook(sp, '12c2-side')
+    # 模拟用的两条路由先挂上（13i 起真侧面图已在仓库里，不先挂会被缓存命中）：沙发侧面图换成 240×800 假图，钢管沙发侧面图故意 404
+    sp.route('**/art/furn_sofa_side.webp*', lambda r: r.fulfill(status=200, content_type='image/png', body=png_bytes(240, 800)))
+    sp.route('**/art/furn_rocket_pipe_sofa_side.webp*', lambda r: r.fulfill(status=404, body=''))
     sp.goto(URL); sp.evaluate("localStorage.clear()"); sp.reload(); sp.wait_for_timeout(800); close_modals(sp)
     sel = S(sp, """(()=>{const E=__tzz.E, A=__tzz.FURN_ART, SD=__tzz.FURN_SIDE, all=Object.values(E.FURN_BY_ID), bad=[]; let n=0;
       for (const f of all) { const nm=f.id.replace(/^furn_/,''); if(!A[nm]) continue; for (const r of [0,1,2,3]) { const h=__tzz.furnInner(f.id,r,true), side=(r&1)&&SD[nm]&&__tzz.FURN_UP[nm]; n++;
         const want=side?'art/furn_'+nm+'_side.webp':'art/furn_'+nm+'.webp'; if(!h.includes('src="'+want)) bad.push(f.id+'@'+r); } }
       const tallOdd=all.filter(f=>!f.wall&&f.layer!=='rug'&&f.w!==f.h&&__tzz.FURN_UP[f.id.replace(/^furn_/,'')]).length;
       return {n, bad, side:Object.keys(SD), tallOdd}})()""")
-    check(sel['n'] >= 700 and sel['bad'] == [], f"12c2 选图：有图家具 × 4 方向共 {sel['n']} 组，竖放登记侧面图的用侧面图、其余都用正面图（侧面图登记 {sel['side']}；非方形、往上伸的家具 {sel['tallOdd']} 件目前都没侧面图 → 正面图兜底）{sel['bad'][:5]}")
+    check(sel['n'] >= 700 and sel['bad'] == [], f"12c2 选图：有图家具 × 4 方向共 {sel['n']} 组，竖放登记侧面图的用侧面图、其余都用正面图（侧面图登记 {sel['side']}；非方形、往上伸的家具 {sel["tallOdd"]} 件里没登记侧面图的 → 正面图兜底）{sel['bad'][:5]}")
     sp.locator('#bottomNav [data-tab="home"]').click(); sp.wait_for_timeout(600); close_modals(sp)
-    # 3) 沙发竖放，没侧面图：保持原兜底（正面图、1 格宽、等比 225/600、贴底）
+    # 3b) 没登记侧面图（临时摘掉沙发登记）：保持原兜底（正面图、1 格宽、等比 225/600、贴底）
+    side0 = S(sp, "JSON.stringify(__tzz.FURN_SIDE)")
+    S(sp, "delete __tzz.FURN_SIDE.sofa; __tzz.renderTab()")
     u = place12c2(sp, [['furn_sofa', 5, 1, 1], ['furn_rocket_pipe_sofa', 4, 1, 1], ['furn_sofa', 0, 3, 0]])
     check(len(u) == 3 and all(isinstance(x, str) and x for x in u), f'12c2 沙发竖放 (5,1) / 钢管沙发竖放 (4,1) / 沙发横放 (0,3) 摆好 {u}')
     wait_imgs(sp)
     g = S(sp, GEO_JS + "('" + u[0] + "')")
-    check(g and g['src'].startswith('art/furn_sofa.webp') and abs(g['dw'] - g['ew']) < 1 and abs(g['dh'] / g['dw'] - 225 / 600) < 0.02 and g['foot'] < 1.5 and abs(g['eh'] - 3 * g['ew']) < 2, f"12c2 沙发竖放、没侧面图：保持正面图兜底（1 格宽、等比、贴底）{g and (g['src'], round(g['dw'],1), round(g['dh'],1))}")
-    # 4) 模拟熊大补了 furn_sofa_side.webp（240×800）：竖放换侧面图、1 格宽、高 800/240 格、贴底；rot 3 镜像；横放仍正面图
-    sp.route('**/art/furn_sofa_side.webp*', lambda r: r.fulfill(status=200, content_type='image/png', body=png_bytes(240, 800)))
+    check(g and g['src'].startswith('art/furn_sofa.webp') and abs(g['dw'] - g['ew']) < 1 and abs(g['dh'] / g['dw'] - 225 / 600) < 0.02 and g['foot'] < 1.5 and abs(g['eh'] - 3 * g['ew']) < 2, f"12c2 沙发竖放、没登记侧面图：保持正面图兜底（1 格宽、等比、贴底）{g and (g['src'], round(g['dw'],1), round(g['dh'],1))}")
+    # 4) 模拟侧面图 240×800：竖放换侧面图、1 格宽、高 800/240 格、贴底；rot 3 镜像；横放仍正面图
     S(sp, "__tzz.FURN_SIDE.sofa = 800/240; __tzz.FURN_SIDE.rocket_pipe_sofa = 3; __tzz.renderTab()")
     sp.wait_for_function("(()=>{const e=document.querySelector('#roomFloor .furn[data-uid=\"" + u[1] + "\"] img'); return e&&e.complete&&e.naturalWidth&&!e.dataset.front})()", timeout=15000)
     wait_imgs(sp)
@@ -1210,7 +1229,7 @@ with sync_playwright() as p:
     g = S(sp, GEO_JS + "('" + u[0] + "')")
     check(r3 and g and g['src'].startswith('art/furn_sofa_side.webp') and 'mir' in g['cls'] and g['tf'].startswith('matrix(-1'), f"12c2 rot 3：同一张侧面图水平镜像 {g and (g['cls'], g['tf'])}")
     sp.locator('#room').screenshot(path=f'{SHOTS}/12c2_side_sim.png')
-    S(sp, "delete __tzz.FURN_SIDE.sofa; delete __tzz.FURN_SIDE.rocket_pipe_sofa; __tzz.renderTab()")
+    S(sp, "Object.assign(__tzz.FURN_SIDE, " + side0 + "); __tzz.renderTab()")
     sc.close()
     errs[:] = [e for e in errs if not (e.startswith('12c2-side') and ('_side.webp' in e or '404' in e))]  # 4b 故意请求不存在的侧面图
 
@@ -1221,12 +1240,12 @@ with sync_playwright() as p:
     zp.goto(URL); zp.evaluate("localStorage.clear()"); zp.reload(); zp.wait_for_timeout(800); close_modals(zp)
     hl3 = S(zp, "Promise.all(" + json.dumps([[k, v[1], v[2]] for k, v in WB12B2.items()]) + ".map(([k,w,h])=>new Promise(r=>{ if(!__tzz.HOME_ART[k]) return r(k+' 没登记'); const im=new Image(); im.onload=()=>r(im.naturalWidth===w&&im.naturalHeight===h?null:k+' 尺寸 '+im.naturalWidth+'×'+im.naturalHeight); im.onerror=()=>r(k+' 加载失败'); im.src='art/home_'+k+'.webp';}))).then(a=>a.filter(Boolean))")
     check(hl3 == [], f'12b2 阿宅 / 火箭老板 Lv2/Lv3 底图都登记、加载成功、尺寸对（公寓 1600×1400、豪宅 2000×1600）{hl3}')
-    a77 = S(zp, "Promise.all([['ceo_c77',480],['face_c77',192]].map(([n,w])=>new Promise(r=>{const im=new Image(); im.onload=()=>r(im.naturalWidth===w&&im.naturalHeight===w?null:n+' '+im.naturalWidth+'×'+im.naturalHeight); im.onerror=()=>r(n+' 加载失败'); im.src='art/'+n+'.webp?v='+(n==='face_c77'?'12d2':'12b2');}))).then(a=>a.filter(Boolean))")
-    check(a77 == [], f'12b2 77 漫画新全身 ceo_c77 480×480、头像 face_c77 192×192（12d2 换回原版）都能加载 {a77}')
+    a77 = S(zp, "Promise.all([['ceo_c77',480],['face_c77',192]].map(([n,w])=>new Promise(r=>{const im=new Image(); im.onload=()=>r(im.naturalWidth===w&&im.naturalHeight===w?null:n+' '+im.naturalWidth+'×'+im.naturalHeight); im.onerror=()=>r(n+' 加载失败'); im.src='art/'+n+'.webp?v='+(n==='face_c77'?'12d2':'13i');}))).then(a=>a.filter(Boolean))")
+    check(a77 == [], f'13i 77 全身 ceo_c77 480×480（换回原版）、头像 face_c77 192×192（12d2 换回原版）都能加载 {a77}')
     zp.locator('#bottomNav [data-tab="ceo"]').click(); zp.wait_for_timeout(500)
     srcs = S(zp, "[...document.querySelectorAll('img')].map(i=>i.getAttribute('src')||'').filter(s=>/_c77\\.webp/.test(s))")
-    check(srcs and all(s.endswith('?v=12d2') if 'face_c77' in s else s.endswith('?v=12b2') for s in srcs) and any('face_c77' in s for s in srcs) and any('ceo_c77' in s for s in srcs), f'12b2/12d2 CEO 页 77：头像带单图缓存号 ?v=12d2（换回原版）、全身仍 ?v=12b2 {srcs[:4]}')
-    # 12d2：服务器上的头像字节 = 72323b4^ 原版，全身 = 72323b4 新版（线上跑就是核对线上文件）
+    check(srcs and all(s.endswith('?v=12d2') if 'face_c77' in s else s.endswith('?v=13i') if 'ceo_c77' in s else s.endswith('?v=12b2') for s in srcs) and any('face_c77' in s for s in srcs) and any('ceo_c77' in s for s in srcs), f'12d2/13i CEO 页 77：头像 ?v=12d2、全身 ?v=13i（都换回原版，单图缓存号），其他 77 图仍 ?v=12b2 {srcs[:4]}')
+    # 12d2/13i：服务器上的头像、全身字节都 = 72323b4^ 原版（全身 = 6a732db 版；线上跑就是核对线上文件）
     import hashlib, urllib.request
     _base = URL.split('?')[0].rsplit('/', 1)[0]
     def _sha(n, v):
@@ -1234,8 +1253,8 @@ with sync_playwright() as p:
             try: return hashlib.sha256(urllib.request.urlopen(f'{_base}/art/{n}.webp?v={v}', timeout=30).read()).hexdigest()
             except Exception as e: _err = e
         return 'ERR ' + str(_err)
-    fs_, cs_ = _sha('face_c77', '12d2'), _sha('ceo_c77', '12b2')
-    check(fs_ == '020bcc1fba97f778e96841d71c29174ab4ee8af7075a927a3e1322d73dd81342' and cs_ == '0233b7ed158ee38ec7c34d6dc411b29bb5685b46bab6161f535f10837212a2c4', f'12d2 站上 face_c77.webp = 72323b4^ 原版（{fs_[:12]}）、ceo_c77.webp = 72323b4 新版（{cs_[:12]}）')
+    fs_, cs_ = _sha('face_c77', '12d2'), _sha('ceo_c77', '13i')
+    check(fs_ == '020bcc1fba97f778e96841d71c29174ab4ee8af7075a927a3e1322d73dd81342' and cs_ == '9dc9125f1aefe81cff970c5f929dce7bd43ae15eb6df8a99d61028352ce60511', f'12d2/13i 站上 face_c77.webp = 72323b4^ 原版（{fs_[:12]}）、ceo_c77.webp = 72323b4^ / 6a732db 原版全身（{cs_[:12]}）')
     fsrc = S(zp, "(()=>{const i=[...document.querySelectorAll('img')].find(i=>/face_c77/.test(i.getAttribute('src')||'')); return i ? {ok:i.complete && i.naturalWidth===192, src:i.getAttribute('src')} : null})()")
     check(fsrc and fsrc['ok'], f'12d2 CEO 页 77 头像图片实际加载成功（192×192）{fsrc}')
     S(zp, "(()=>{const s=__tzz.state; s.ceos.otaku.unlocked=true; s.ceos.rocket.unlocked=true; s.coins=1e9; __tzz.persist();})()")
