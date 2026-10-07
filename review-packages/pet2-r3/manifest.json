@@ -1,0 +1,115 @@
+{
+  "status": "LOCAL ONLY; r3 supersedes r2; not deployed",
+  "repository": "yyyhhw/tangzhe-zhuan-playtest",
+  "baseline_commit": "932ba25db38112d5bb1f190cb53c5ea3973bccf9",
+  "legacy_pet_blob_reference": "fff02e09d39c11063d3ea07ee51d1689e1c56325",
+  "acceptance_contract": "d201ca29bcda7b75266e7e7a99cdb585dfc59a61",
+  "baseline_blobs": {
+    "preview/app.js": "3871e26c0895c3305f669c0af24de09dca9ee4a0",
+    "preview/economy.js": "7e94c74f50e2bd3c0dd5d194603e145422e5ab6b",
+    "preview/index.html": "35d315f2237b2b32363fb228fb1430ec94832062",
+    "preview/pet/art/manifest.json": "f23e78d664ecf3cbeb218aa02f846d6dc2d6b4c8",
+    "preview/pet/art/puppy_atlas_v3.json": "077cfdf3f527e53b0d47169ab216e94af6ebecc5",
+    "preview/pet/art.js": "cb04f590fcc2424cfe5b347dee9fecb4282fdc3f",
+    "preview/pet/engine.js": "9f1067129f12d0c6e4d8efac6db3a82088f9a58d",
+    "preview/pet/game/app.js": "072b4ae7a61d7e9bcf7312440b675661791fabe2",
+    "preview/pet/game/economy.js": "dbaf7778ab9f9a5be95296abaec9ad80f70e9882",
+    "preview/pet/game/index.html": "26df45a1ad0ac5be861c6980ec3ceb1eadbabe99",
+    "preview/pet/game/petgame.css": "0cd5152b95778cc6aae0ebc805c96af9e360c168",
+    "preview/pet/game/petgame.js": "6a76bba2d519d8d28f07b27272932b3d8e159e57",
+    "preview/pet/game/version.json": "7488ab7de39be4db8460f9c115b113b8350b8d1a",
+    "preview/pet/puppy.js": "469cae581360b10680b0fe88436157b2c31680b3",
+    "preview/pet/room.js": "781661d7028d35334249ab7e18276cea0433845e",
+    "preview/pet/test_engine.js": "bd4c50722106706c07ccacc4198af934e75f8799",
+    "preview/pet/tools/game/glue.js": "db5e59470605b310b947b2e971502696dd397dc3",
+    "preview/pet/tools/game/mkgame.py": "45807a389beab6a186d672def3616774d515b360",
+    "preview/td/INTEGRATION.md": "2788b302c61ae8d3e03a3dbc96c84d34b59b5b09",
+    "preview/td/index.html": "a2a8755c1369da46cbf4c50f57e0d26c36ac11f0",
+    "preview/td/td.css": "c5fb744bc614de898c818863bc67ceacaf90d173",
+    "preview/td/td.js": "6fe233fdb6facafa8ea23dcbd2214365e98ea472",
+    "preview/td/tdcore.js": "cdc9ca272281df0fc9b273ffad9d0f6f9206d81d",
+    "preview/td/tdhost.js": "695bb43b7e9b79bcfae52f19d9380187b0d30eb2",
+    "preview/td/test_td.py": "60a9d569493baadba28dbfc61f8f924cc4db4c83",
+    "preview/td/test_td_bridge.js": "527b8a5ff4627b624ac35cea26d7bc7442f07b16",
+    "preview/td/test_td_parent_e2e.py": "2e05cfe4954bc5d6023cd339d80d357d707a742d",
+    "preview/td/test_td_protocol.js": "6ef54034e8a4f71c74a7619a803025748d4a0f7c",
+    "preview/td/test_tdhost.js": "4eefa1315240bb144619975ccc5844b22ebd3b11",
+    "preview/test_coin_safety.js": "07121a68534bfbe474cd34a99ef61955e8b2abd5",
+    "preview/test_economy.js": "605b58deded00e84d61632dd1db068f8c5210784",
+    "preview/test_shop_entry_13a.py": "b8d3af7253beea335b1b90607ebbbd9c10c405a6",
+    "preview/test_shop_game_bottom_13h.py": "8033cd1ae772783c45761e170203b382dd13382f",
+    "preview/version.json": "7dcc3fd1e574e68cddcfd71fd3ea29cc8b58f214",
+    "preview/zombie/zbcore.js": "cfbea69a9aadaf286063ac6ae3cb23f8abd38ff7"
+  },
+  "changed_files": {
+    "preview/app.js": {
+      "before_git_blob_sha": "3871e26c0895c3305f669c0af24de09dca9ee4a0",
+      "before_sha256": "c935d367343df973919df5728135f4d9d0e11c4b74b7b1fffb7daeffe8b8cd28",
+      "after_sha256": "b2df229378b86baf957b12310755f51cd244a9b3145a7ba1da2f71f65e1c81ce"
+    },
+    "preview/pet/accept2/DOGS2_BROWSER_SMOKE.md": {
+      "before_git_blob_sha": null,
+      "before_sha256": null,
+      "after_sha256": "1d9755464867e5b6ef6e4c9c0f3783b476d01abb8aa9aa91f44307f3b2f448cc"
+    },
+    "preview/pet/accept2/PET2_DRAFT.md": {
+      "before_git_blob_sha": null,
+      "before_sha256": null,
+      "after_sha256": "cafdea0211271a24aa7db6d001c71ec35979c8296b2467936b2b8b4845e2aabc"
+    },
+    "preview/pet/accept2/test_dogs2_e2e.py": {
+      "before_git_blob_sha": null,
+      "before_sha256": null,
+      "after_sha256": "d01d274f1d3ee6348200f84eafa53e7310de43b11ff7332d0fd55f15184117bf"
+    },
+    "preview/pet/accept2/test_pets2_roster_runtime.js": {
+      "before_git_blob_sha": null,
+      "before_sha256": null,
+      "after_sha256": "dc858eeacae592df7187cf89532bbcc002d40fe46ac9c55346e29d03e02eb546"
+    },
+    "preview/pet/accept2/test_pets2_ui_vm.js": {
+      "before_git_blob_sha": null,
+      "before_sha256": null,
+      "after_sha256": "592105828242b05f84d1cb60b76f96de7498857359c2f0eb62a13c9f09b7f0ab"
+    },
+    "preview/pet/game/app.js": {
+      "before_git_blob_sha": "072b4ae7a61d7e9bcf7312440b675661791fabe2",
+      "before_sha256": "98b258a7dd442300cce7af4f59fcd0bb43da8df2056bd943e91ef82db066be4b",
+      "after_sha256": "a172a70be2b742147a1b027e93a12c18e81f11ed9f995edde64617d628ec77b4"
+    },
+    "preview/pet/game/petgame.css": {
+      "before_git_blob_sha": "0cd5152b95778cc6aae0ebc805c96af9e360c168",
+      "before_sha256": "382dbd9b0d811a7fba87c1962b1ecfc8c31393336649d9c423a2f43ebad0abf6",
+      "after_sha256": "581fd41e9be7e4cf9c19efb540e24cfb6ae6f5cf665eaf969545ceff324b74b8"
+    },
+    "preview/pet/game/petgame.js": {
+      "before_git_blob_sha": "6a76bba2d519d8d28f07b27272932b3d8e159e57",
+      "before_sha256": "f0d00464daae11236a55329cc3d89cd14c7a96e6ab3bef8587a1161f06630728",
+      "after_sha256": "8ff0182f18cc2ca74476e128b88eff8cfd786c73ebd01af594741395c5fc7c94"
+    },
+    "preview/pet/tools/game/mkgame.py": {
+      "before_git_blob_sha": "45807a389beab6a186d672def3616774d515b360",
+      "before_sha256": "cc9f2dd8d59375d63e41d00d224fa34660f248e9df03fbccde6870d32dfc7a23",
+      "after_sha256": "39241c49ccbf81276032f53fe75fb5ffac80442b94389e9d05bdca8da65828a7"
+    }
+  },
+  "patch_sha256": "b2e1c944f8370c54fa3460cdd7f5a71e2f5ec096a1a747867996d13349ae7de5",
+  "passed": {
+    "core": 48,
+    "roster_runtime": 11,
+    "ui_vm": 38,
+    "coin_safety": 522,
+    "td_parent": 31,
+    "td_child_vm": 9,
+    "td_bridge_vm": 6
+  },
+  "verification": "Exact remote Git blob hashes verified before generation; git apply --check without fuzz or whitespace-ignore flags; every applied file SHA256 compared.",
+  "pending": [
+    "Dog-only WebKit script not run here; syntax checked only",
+    "Original cat U7/C1-C8 not implemented",
+    "Full economy blocked by missing binary artwork",
+    "Engine 399 passed / 2 missing-atlas failures baseline-identical",
+    "Mobile visuals, audio, real-device acceptance, independent review",
+    "Coordinated version/cache bump before eventual release"
+  ]
+}
