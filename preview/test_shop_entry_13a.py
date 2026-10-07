@@ -1,6 +1,7 @@
 # 预览 13a：烧烤摊店铺页「打僵尸」入口 + 当前 CEO 上场（方案 1：每家店一个小游戏，烧烤摊 = 打僵尸）
 # Playwright WebKit：iPhone SE / SE3 375x667 / iPhone 15
 # 13c 另验：父页开局登记 zbRun → 中途调岗结算仍按开局 CEO、同一 result 重发不双结
+# 13d 另验：开局登记防重——同一 runId 重发 start 不重建 / 不翻回未结算，旧 runId 的 start / result 一律拒
 # 验：① zb:'state' 带 ceo（77 在烧烤摊 → 'c77'；别的 CEO 在烧烤摊 → 那人；没人 → null）② 没 CEO 时入口写「先派 CEO」，点了打开烧烤摊的派 CEO 选单，派完入口跟着变
 #    ③ 开局锁人：这局中途调任（经营页再发新 ceo）不换人，结算回传开局那位；下一局才换 ④ 只有烧烤摊有入口 ⑤ state.zombie 原样（不挪到 CEO 名下、不加字段）、不加存档键
 #    ⑥ v12（350eab7 真代码）老档 77 调去别家 → 13a 读档逐项一致、入口显示现任；v13（根目录 5a27148 真代码）带打僵尸进度的老档 → 13a 往返一致
@@ -112,14 +113,33 @@ with sync_playwright() as p:
         # 伪造：换 ceo / 换 runId / 不带 runId → 父页拒收（本局已 settled 时即使对得上也拒）
         S(f, "__zb.send({zb:'result', mode:'level', n:3, win:true, t:999, kills:1, ceo:'pearl', runId: __zb.G.runId})"); pg.wait_for_timeout(200)
         check(S(pg, "__tzz.state.zombie.cleared") == 2 and S(pg, "__tzz.zbLastCeo") == 'c77', f'{dn} 13c settled 后伪造下一关 result 不进档')
+        # 13d（熊大 09:54 第 2 条）：已结算的 runId 再发 start → 不重新登记、仍 settled；随后同 result 再发也不双结
+        S(f, f"__zb.send({{zb:'start', runId:{json.dumps(run['runId'])}, ceo:'c77'}})"); pg.wait_for_timeout(200)
+        rd = S(pg, "(()=>{const r=__tzz.zbRun; return r && {runId:r.runId, ceoId:r.ceoId, settled:!!r.settled};})()")
+        check(rd == run, f'{dn} 13d 已结算 runId 重发 start：zbRun 原样（仍 settled，不翻回未结算）{rd}')
+        S(f, f"__zb.send({{zb:'result', mode:'level', n:2, win:true, t:999, kills:99, ceo:'c77', runId:{json.dumps(run['runId'])}}})"); pg.wait_for_timeout(200)
+        check(S(pg, "__tzz.state.zombie.cleared") == 2 and S(pg, "__tzz.state.coins") == before['coins'], f'{dn} 13d 重发 start 后再发 result 仍不双结')
         f.locator('#againBtn').tap(); pg.wait_for_timeout(150)
         # 下一局开局：父页重新登记（现任已是 pearl）
         run2 = S(pg, "(()=>{const r=__tzz.zbRun; return r && {runId:r.runId, ceoId:r.ceoId, settled:!!r.settled};})()")
         check(S(f, "__zb.G && __zb.G.n === 3 && __zb.G.ceo") == 'pearl', f'{dn} 下一局才换人：第 3 关上场 pearl')
         check(run2 and run2['ceoId'] == 'pearl' and not run2['settled'] and run2['runId'] != run['runId'],
               f'{dn} 13c 下一局父页重新登记 pearl（新 runId）{run2}')
+        # 13d：进行中这局的 runId 重发 start → 原样回执，不重建记录（startedAt 不变）
+        t0 = S(pg, "__tzz.zbRun.startedAt")
+        S(f, f"__zb.send({{zb:'start', runId:{json.dumps(run2['runId'])}, ceo:'pearl'}})"); pg.wait_for_timeout(200)
+        check(S(pg, "__tzz.zbRun.startedAt") == t0 and S(pg, "__tzz.zbRun.runId") == run2['runId'] and not S(pg, "__tzz.zbRun.settled") and S(f, "__zb.G && !__zb.G.over && __zb.G.runId") == run2['runId'],
+              f'{dn} 13d 进行中 runId 重发 start：父页记录不重建，小游戏这局照常')
         S(f, "__zb.setPause(true)"); S(f, "document.getElementById('quitBtn').click()"); pg.wait_for_timeout(300)
         check(S(pg, "__tzz.zbLastCeo") == 'pearl', f'{dn} 珍珠姐那局结算回传 ceo=pearl')
+        # 13d：拿上一局（已消费）的 runId 来 start → 拒收，不把旧编号重新激活、不动当前记录；旧编号的 result 也不认
+        cur = S(pg, "(()=>{const r=__tzz.zbRun; return r && {runId:r.runId, ceoId:r.ceoId, settled:!!r.settled};})()")
+        c0 = S(pg, "({c: __tzz.state.zombie.cleared, coins: __tzz.state.coins})")
+        S(f, f"__zb.send({{zb:'start', runId:{json.dumps(run['runId'])}, ceo:'c77'}})"); pg.wait_for_timeout(200)
+        old = S(pg, "(()=>{const r=__tzz.zbRun; return r && {runId:r.runId, ceoId:r.ceoId, settled:!!r.settled};})()")
+        check(cur and cur['runId'] == run2['runId'] and old == cur, f'{dn} 13d 旧 runId 重发 start 被拒：zbRun 仍是珍珠姐这局 {old}')
+        S(f, f"__zb.send({{zb:'result', mode:'level', n:3, win:true, t:999, kills:99, ceo:'c77', runId:{json.dumps(run['runId'])}}})"); pg.wait_for_timeout(200)
+        check(S(pg, "({c: __tzz.state.zombie.cleared, coins: __tzz.state.coins})") == c0 and S(pg, "__tzz.zbLastCeo") == 'pearl', f'{dn} 13d 旧 runId 的 result 不进档、不改 zbLastCeo')
         # 伪造 / 缺省回传：只认真 CEO id，不影响进度校验
         for bad in ["'__proto__'", "'constructor'", "123", "null"]:
             S(f, f"__zb.send({{zb:'result',mode:'level',n:3,win:false,t:1,kills:1,ceo:{bad}}})")
@@ -219,5 +239,5 @@ with sync_playwright() as p:
     check(back['zombie']['cleared'] == 3 and set(back.keys()) == set(w.keys()) and back['ceos'] == w['ceos'], 'v13 代码回退后还能继续打、写档（通关 3），字段集合不变')
     check(not errs, f'回退演练无 JS 报错 {errs[:2]}'); c.close()
     b.close()
-print(f'\n13a/13c shop entry: {passes[0]} passed, {len(fails)} failed')
+print(f'\n13a/13c/13d shop entry: {passes[0]} passed, {len(fails)} failed')
 sys.exit(1 if fails else 0)

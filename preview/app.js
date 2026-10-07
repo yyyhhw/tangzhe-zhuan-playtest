@@ -3,7 +3,7 @@
 'use strict';
 const E = window.Economy, CFG = E.CFG;
 const ZB = window.ZBCore; var zbOpen = false, zbPort = null;
-const ZB_SHOP = 0; var zbLastCeo = null, zbRun = null;   // 13a：打僵尸 = 烧烤摊（店 0）；zbLastCeo = 最近一次成功结算的上场 CEO（只在内存）
+const ZB_SHOP = 0; var zbLastCeo = null, zbRun = null; const zbUsedRuns = new Set();   // 13d：用过的 runId（本页内存），重复 / 过期的 start 不能把旧局重新激活   // 13a：打僵尸 = 烧烤摊（店 0）；zbLastCeo = 最近一次成功结算的上场 CEO（只在内存）
 // 13c：zbRun = 父页开局登记 { runId, ceoId, startedAt, settled }——结算只认这份记录、同一局只结一次；中途调岗不要求仍在任
 const SAVE_KEY = 'tangzhe-preview-save', BAK_KEY = 'tangzhe-preview-save-bak', LOCK_KEY = 'tangzhe-preview-tab-lock';
 // 12b2 测试房间：只有网址带 ?test=homes 才进；整局放在内存里，不读、不写任何 localStorage（真存档 / 备份 / 多标签锁都不碰），刷新就重置
@@ -2227,7 +2227,7 @@ function openZombie() {
     const ch = new MessageChannel(); zbPort = ch.port1; zbPort.onmessage = e => zbMsg(e.data);
     f.contentWindow.postMessage({ zb:'port' }, location.origin, [ch.port2]); zbReply();
   };
-  f.src = 'zombie/?embed=1&v=13c'; $('#zbOverlay').classList.remove('hidden'); audioPause();
+  f.src = 'zombie/?embed=1&v=13d'; $('#zbOverlay').classList.remove('hidden'); audioPause();
 }
 function closeZombie() {
   if (!zbOpen) return; zbOpen = false; zbRun = null; if (zbPort) { zbPort.close(); zbPort = null; }
@@ -2240,9 +2240,14 @@ function zbMsg(d) {
   // 13c：真正开局——确认烧烤摊现任 CEO，生成本局记录（内存）；菜单打开后再调岗，下一次开局会走这里重新确认
   if (d.zb === 'start') {
     const ack = { ack:'start' }, ceo = zbCeo();
+    const askId = (typeof d.runId === 'string' && d.runId.length >= 6 && d.runId.length <= 80) ? d.runId : null;
+    // 13d（熊大 09:54 第 2 条）：开局登记防重——同一 runId 重发只回原登记（已结算的不翻回未结算、不看此刻在任）；用过的旧 runId 一律拒，不动当前这局
+    if (askId && zbRun && zbRun.runId === askId) return zbReply(zbRun.settled ? '这局已经结算过了' : '', Object.assign(ack, { ok: !zbRun.settled, runId: zbRun.runId, ceo: zbRun.ceoId, dup: true }));
+    if (askId && zbUsedRuns.has(askId)) return zbReply('这局编号已经用过，没法重新开局', Object.assign(ack, { ok:false, runId: askId, dup: true }));
     if (!ceo) { zbRun = null; return zbReply('烧烤摊没有 CEO，没法开局', Object.assign(ack, { ok:false })); }
     if (zbBlocked()) { zbRun = null; return zbReply(frozen ? '游戏已在别的页面打开，没法开局' : '存档异常（只读模式），没法开局', Object.assign(ack, { ok:false })); }
-    const runId = (typeof d.runId === 'string' && d.runId.length >= 6 && d.runId.length <= 80) ? d.runId : rid();
+    let runId = askId || rid(); while (zbUsedRuns.has(runId)) runId = rid();
+    zbUsedRuns.add(runId);
     zbRun = { runId, ceoId: ceo, startedAt: now(), settled: false };   // 权威是父页此刻的在任，不看小游戏自报的 ceo
     return zbReply('', Object.assign(ack, { ok:true, runId: zbRun.runId, ceo: zbRun.ceoId }));
   }
