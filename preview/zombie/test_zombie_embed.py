@@ -173,6 +173,7 @@ with sync_playwright() as p:
         lt = S(f, """(()=>{ __zb.start('level', 1); const g = __zb.G, base = {zb:'state', coins:__zb.proto.coins, z:__zb.proto, blocked:false, ceo:'c77'};
           __zb.onState(Object.assign({}, base, {ack:'start', ok:true, runId:'stale000000000000000', ceo:'rocket'}));
           __zb.onState(Object.assign({}, base, {ack:'start', ok:false, runId:'stale000000000000000', why:'旧失败'}));
+          __zb.onState(Object.assign({}, base, {ack:'start', ok:false, why:'旧失败无编号'}));
           __zb.step(0.05); return {same: __zb.G === g, pend: g.pendStart, t: g.t, ceo: g.ceo, run: g.runId}; })()""")
         pg.wait_for_timeout(300)
         la = S(f, "({pend: __zb.G && __zb.G.pendStart, ceo: __zb.G && __zb.G.ceo, run: __zb.G && __zb.G.runId})"); reg = S(pg, "__tzz.zbRun && __tzz.zbRun.runId")
@@ -194,17 +195,33 @@ with sync_playwright() as p:
         S(pg, "window.__ls = Storage.prototype.setItem; Storage.prototype.setItem = function () { throw new Error('QuotaExceededError'); }; 0")
         S(f, "__zb.G.p.hp = 1e9; __zb.G.t = __zb.G.dur - 0.01; __zb.step(0.05)"); pg.wait_for_timeout(400)
         S(pg, "Storage.prototype.setItem = window.__ls; 0")
-        r1 = S(f, "({n: document.getElementById('resNote').textContent, c: __zb.proto.cleared})"); m1 = main_st(pg)
-        S(f, "__zb.send(__zb.lastSent)"); pg.wait_for_timeout(300); m2 = main_st(pg); c2 = S(f, "__zb.proto.cleared")
+        r1 = S(f, "({n: document.getElementById('resNote').textContent, t: document.getElementById('resTitle').textContent, c: __zb.proto.cleared, rv: !document.getElementById('retryBtn').classList.contains('hidden')})"); m1 = main_st(pg)
+        S(f, "document.getElementById('retryBtn').click()"); pg.wait_for_timeout(300); m2 = main_st(pg); c2 = S(f, "__zb.proto.cleared")
+        rt = S(f, "({t: document.getElementById('resTitle').textContent, n: document.getElementById('resNote').textContent, a: document.getElementById('againBtn').textContent, rh: document.getElementById('retryBtn').classList.contains('hidden')})")
         S(f, "__zb.send(__zb.lastSent)"); pg.wait_for_timeout(300); m3 = main_st(pg); n3 = S(f, "document.getElementById('trainNote').textContent")
-        check('存档失败' in r1['n'] and r1['c'] == c0 and m1['savedZ']['cleared'] == c0, f'{dn} 结算写盘失败：提示存档失败，进度仍是 {c0} {r1} {m1["savedZ"]}')
-        check(m2['savedZ']['cleared'] == c0 + 1 and c2 == c0 + 1, f'{dn} 恢复后重发同一局结算：补存成功 {m2["savedZ"]} {c2}')
+        check('存档失败' in r1['n'] and '通关！' not in r1['t'] and r1['rv'] and r1['c'] == c0 and m1['savedZ']['cleared'] == c0, f'{dn} 结算写盘失败：提示存档失败，进度仍是 {c0} {r1} {m1["savedZ"]}')
+        check(m2['savedZ']['cleared'] == c0 + 1 and c2 == c0 + 1 and '通关！' in rt['t'] and '存档失败' not in rt['n'] and rt['a'] == '下一关' and rt['rh'], f'{dn} 恢复后点「重试保存」：补存成功，结算页从失败改成通关 {rt} {m2["savedZ"]} {c2}')
         check(m3['savedZ'] == m2['savedZ'] and '已经结算' in n3, f'{dn} 再重发同一局：不重复结算「{n3}」')
         # 已结算的 runId 再发 start：父页拒（dup），不翻回未结算；子页停在原处
         S(f, "__zb.send({zb:'start', runId: __zb.lastSent.runId, mode:'level', n: __zb.lastSent.n, ceo:'c77'})"); pg.wait_for_timeout(300)
         d2 = S(pg, "({s: __tzz.zbRun && __tzz.zbRun.settled, r: __tzz.zbRun && __tzz.zbRun.runId})"); m4 = main_st(pg); g4 = S(f, "!!__zb.G && !__zb.G.over")
         check(d2['s'] is True and m4['savedZ'] == m2['savedZ'] and not g4, f'{dn} 已结算的 runId 重复开局：父页不重新激活、不重复结算，子页不开新局 {d2} {g4}')
         S(f, "document.getElementById('menuBtn').click()")
+        # 熊大 13e：开局 4 秒没确认 → 回菜单；超时后迟到的 ok 回执不复活这一局
+        S(f, "window.__pm = MessagePort.prototype.postMessage; MessagePort.prototype.postMessage = function (m) { if (m && m.zb === 'start') return; return window.__pm.apply(this, arguments); }; __zb.start('level', 1); 0")
+        pg.wait_for_timeout(1500)
+        tw = S(f, "({g: !!__zb.G, pend: !!(__zb.G && __zb.G.pendStart), t: __zb.G ? __zb.G.t : -1})")
+        pg.wait_for_timeout(3000)
+        to = S(f, "({g: !!__zb.G, menu: !document.getElementById('menu').classList.contains('hidden'), n: document.getElementById('trainNote').textContent + '|' + document.getElementById('toast').textContent, run: __zb.lastSent.runId})")
+        S(f, "MessagePort.prototype.postMessage = window.__pm; __zb.onState({zb:'state', coins:__zb.proto.coins, z:JSON.parse(JSON.stringify(__zb.proto)), blocked:false, ceo:'c77', ack:'start', ok:true, runId: __zb.lastSent.runId}); 0")
+        pg.wait_for_timeout(300)
+        ta = S(f, "({g: !!__zb.G, menu: !document.getElementById('menu').classList.contains('hidden'), bgm: __zb.sfxOn === undefined ? null : __zb.sfxOn})")
+        check(tw['g'] and tw['pend'] and tw['t'] == 0 and not to['g'] and to['menu'] and '超时' in to['n'], f'{dn} 开局 4 秒没确认：确认前不计时，超时回菜单并提示 {tw} {to}')
+        check(not ta['g'] and ta['menu'], f'{dn} 超时后迟到的 ok 回执不复活这一局 {ta}')
+        S(f, "__zb.start('level', 1)"); W(f)
+        ts2 = S(f, "({g: !!__zb.G, pend: __zb.G && __zb.G.pendStart, run: __zb.G && __zb.G.runId})")
+        check(ts2['g'] and ts2['pend'] is False and ts2['run'] != to['run'], f'{dn} 超时后再点开打能正常开局，用新 runId {ts2}')
+        S(f, "__zb.setPause(true); document.getElementById('quitBtn').click(); 0"); pg.wait_for_timeout(200)
         # 13c 收尾 3：中途调岗——战斗中大招按钮 / 实际技能都跟本局锁定的珍珠姐；回菜单后才跟现任阿宅
         appoint('pearl'); st("'pearl'"); S(f, "__zb.start('level', 1)"); W(f)
         S(pg, "(()=>{__tzz.E.assignCeo(__tzz.state,'otaku',0); __tzz.persist(); __tzz.zbReply();})()"); pg.wait_for_timeout(200)

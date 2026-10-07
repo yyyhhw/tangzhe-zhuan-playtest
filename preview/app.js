@@ -2245,8 +2245,8 @@ function zbMsg(d) {
     // 13d（熊大 09:54 第 2 条）：开局登记防重——同一 runId 重发只回原登记（已结算的不翻回未结算、不看此刻在任）；用过的旧 runId 一律拒，不动当前这局
     if (askId && zbRun && zbRun.runId === askId) return zbReply(zbRun.settled ? '这局已经结算过了' : '', Object.assign(ack, { ok: !zbRun.settled, runId: zbRun.runId, ceo: zbRun.ceoId, dup: true }));
     if (askId && zbUsedRuns.has(askId)) return zbReply('这局编号已经用过，没法重新开局', Object.assign(ack, { ok:false, runId: askId, dup: true }));
-    if (!ceo) { zbRun = null; return zbReply('烧烤摊没有 CEO，没法开局', Object.assign(ack, { ok:false })); }
-    if (zbBlocked()) { zbRun = null; return zbReply(frozen ? '游戏已在别的页面打开，没法开局' : '存档异常（只读模式），没法开局', Object.assign(ack, { ok:false })); }
+    if (!ceo) { zbRun = null; return zbReply('烧烤摊没有 CEO，没法开局', Object.assign(ack, { ok:false, runId: askId })); }
+    if (zbBlocked()) { zbRun = null; return zbReply(frozen ? '游戏已在别的页面打开，没法开局' : '存档异常（只读模式），没法开局', Object.assign(ack, { ok:false, runId: askId })); }
     let runId = askId || rid(); while (zbUsedRuns.has(runId)) runId = rid();
     zbUsedRuns.add(runId);
     zbRun = { runId, ceoId: ceo, startedAt: now(), settled: false };   // 权威是父页此刻的在任，不看小游戏自报的 ceo
