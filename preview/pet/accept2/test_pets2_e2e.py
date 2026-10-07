@@ -1,6 +1,6 @@
 # 每房两只宠物 + 换宠界面 + 猫首样 — 端到端验收（WebKit = iPhone Safari 内核；iPhone SE / iPhone 15，模拟，不算真机）
 # 用法：仓库根目录 python3 -m http.server 49761，再 python3 preview/pet/accept2/test_pets2_e2e.py [主预览 URL]
-# 用例编号对应 ACCEPT.md 的 U1–U10、C1–C8。页面钩子 / 选择器 / 动作名都在下面 ADAPT 一处，实现方换了名字只改这里。
+# 用例编号对应 ACCEPT.md 的 U1–U11、C1–C8。页面钩子 / 选择器 / 动作名都在下面 ADAPT 一处，实现方换了名字只改这里。
 import sys, os, json
 from playwright.sync_api import sync_playwright
 URL = sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:49761/preview/index.html'
@@ -16,15 +16,20 @@ ADAPT = {
   # __tzz.pets：view() 同 Node 版；world(uid) → { pet:{ x, y, dir, anim:{ name } }, cols, rows }；step(uid, 秒)；toy(uid, x, y) 在房间格坐标放逗猫玩具；px(uid) → 屏幕坐标
   'cat_seq': ['idle', 'stalk', 'crouch', 'pounce', 'land', 'paw', 'groom', 'idle'],   # 熊大规格：待机→低身靠近玩具→蹲伏蓄力→扑抓→落地→拍打→舔爪→回待机
   'cat_touch': ['arch', 'rub'],                    # 触摸：拱背→蹭手
+  # 测试期间冻结实时引擎（不跑 rAF、不自动存档），只由 step() 推进；draw() 立刻按当前状态重画
+  'freeze': "__tzz.pets.manual(true)",
+  'draw': "__tzz.pets.draw()",
+  # 存档 / 视图只比稳定字段：uid、房间、种类、购买时间、成长（亲密度）；位置、精力这些实时值不比
+  'proj': "(L) => (L || []).map(p => [p.uid, p.room === undefined ? null : p.room, p.species, p.boughtAt, p.eng && p.eng.dog ? p.eng.dog.affinity : null]).sort((a, b) => a[0] < b[0] ? -1 : 1)",
   'mk': "s.pets = { v: 2, list: L.map(p => Object.assign({ boughtAt: 1, eng: null }, p)) }",
 }
 results = []
 def check(c, id, msg): results.append(bool(c)); print(('  ✓ ' if c else '  ✗ ') + id + ' ' + msg)
-TOTAL = 18
+PER_DEV = 21   # 每台设备的用例数（U1–U11 + C1–C8 + 结尾两项），两台共 42
 def seed(pg, L, room='c77', extra=''):
     pg.evaluate("""([L]) => { const E = __tzz.E, s = E.newState(Date.now()); for (const c of E.CEOS) { s.ceos[c.id].unlocked = true; s.ceos[c.id].lv = Math.max(1, s.ceos[c.id].lv || 1); }
       s.coins = 50000; delete s.pet; """ + ADAPT['mk'] + """; """ + extra + """ localStorage.clear(); localStorage.setItem('tangzhe-save', '{"sentinel":1}'); localStorage.setItem('""" + SAVE + """', JSON.stringify(s)); }""", [L])
-    pg.reload(); boot(pg); to_room(pg, room)
+    pg.reload(); boot(pg); pg.evaluate(ADAPT['freeze']); to_room(pg, room)
 def boot(pg):
     pg.wait_for_function("window.__tzz && document.body.dataset.petReady==='1'", timeout=20000)
     pg.evaluate("async () => { for (let i = 0; i < 12; i++) { if (__tzz.modalOpen && __tzz.modalOpen()) __tzz.closeModal(); await new Promise(r => setTimeout(r, 120)); } }")
@@ -32,7 +37,14 @@ def to_room(pg, who):
     pg.evaluate("(who) => { __tzz.setTab('home'); if (__tzz.homeWho !== who && __tzz.homeAct) __tzz.homeAct('homeWho', who); if (__tzz.homeSub !== 'room') __tzz.homeAct('homeSub', 'room'); __tzz.homeMode = 'live'; __tzz.renderTab(); }", who)
     pg.wait_for_timeout(400)
 view = lambda pg: pg.evaluate("__tzz.pets.view()")
-saved = lambda pg: pg.evaluate("() => { const s = JSON.parse(localStorage.getItem('" + SAVE + "')); return s && s.pets; }")
+def sview(pg):   # 视图的稳定部分（房间 / 待命 / 每只的成长）
+    v = view(pg); return json.dumps([{k: sorted(a) for k, a in v['rooms'].items()}, sorted(v['standby']), {u: (p.get('species'), (p.get('eng') or {}).get('dog', {}).get('affinity') if p.get('eng') else None) for u, p in v['pets'].items()}], sort_keys=True)
+saved = lambda pg: pg.evaluate("() => { const s = JSON.parse(localStorage.getItem('" + SAVE + "')); return s && s.pets && (" + ADAPT['proj'] + ")(s.pets.list); }")
+sentinel = lambda pg: pg.evaluate("localStorage.getItem('tangzhe-save')") == '{"sentinel":1}'
+def tap(pg, uid):
+    xy = pg.evaluate("(u) => __tzz.pets.px(u)", uid); pg.touchscreen.tap(xy['x'], xy['y'])
+def frame(pg):   # step 之后立刻重画再量 DOM
+    pg.evaluate(ADAPT['draw']); pg.evaluate("() => new Promise(r => requestAnimationFrame(() => r()))")
 def seq_until(pg, uid, sec, stop=None):
     return pg.evaluate("""([uid, sec, stop]) => { const P = __tzz.pets, out = [], pos = [], dirs = {}; for (let i = 0; i < sec * 60; i++) { P.step(uid, 1 / 60); const w = P.world(uid), a = w.pet.anim.name;
       if (out[out.length - 1] !== a) { out.push(a); pos.push([w.pet.x, w.pet.y]); } dirs[w.pet.dir] = 1; if (stop && out.length > 1 && a === stop && out.slice(0, -1).includes(stop)) break; } return { seq: out, pos, dirs: Object.keys(dirs) }; }""", [uid, sec, stop])
@@ -46,7 +58,7 @@ with sync_playwright() as p:
         pg.on('pageerror', lambda e: errs.append(str(e))); pg.on('console', lambda m: m.type == 'error' and errs.append(m.text))
         pg.goto(URL); boot(pg)
         if not pg.evaluate("!!(__tzz.pets && __tzz.pets.view && __tzz.pets.world)"):
-            print('  ✗ 缺接口：__tzz.pets（见 ACCEPT.md「接口约定」）'); print(f'passed 0, failed {TOTAL} (未实现)'); sys.exit(1)
+            print('  ✗ 缺接口：__tzz.pets（见 ACCEPT.md「接口约定」）'); print('passed 0, failed 0, 未跑（缺接口，每台约 %d 项没跑）' % PER_DEV); sys.exit(1)
         A = [{'uid': 'cat1', 'species': 'cat', 'room': 'c77', 'boughtAt': 1}, {'uid': 'dog1', 'species': 'dog', 'room': 'c77', 'boughtAt': 2}, {'uid': 'cat2', 'species': 'cat', 'room': None, 'boughtAt': 3}]
         seed(pg, A)
         # U1 两个宠物位，都看得见、够大
@@ -63,24 +75,27 @@ with sync_playwright() as p:
         check(sorted(opts) == ['cat1', 'dog1'] and box and box['top'] >= 0 and box['bottom'] <= box['h'] + 0.5, 'U3', f'满房：弹替换选单，两只可选，选单不出屏 {opts} {box}')
         pg.click(ADAPT['cancel']); pg.wait_for_timeout(200)
         check(saved(pg) == s0 and view(pg)['standby'] == ['cat2'], 'U4', '取消替换：存档、房间都不变')
+        # U11 满房把房里已有的那只再放进同一间房：无操作，不弹替换
+        if pg.query_selector(ADAPT['place'].format(uid='cat1')): pg.click(ADAPT['place'].format(uid='cat1')); pg.wait_for_timeout(250)
+        check(not pg.query_selector(ADAPT['replace']) and saved(pg) == s0, 'U11', '同房再放：不弹替换、存档不变')
         # U5 选替换 dog1：cat2 进房，dog1 回待命，刷新后保持，成长不变
-        g0 = pg.evaluate("JSON.stringify(__tzz.pets.view().pets)")
+        g0 = json.loads(sview(pg))[2]
         pg.click(ADAPT['place'].format(uid='cat2')); pg.wait_for_timeout(200); pg.click(ADAPT['replace'] + '[data-replace-uid="dog1"]'); pg.wait_for_timeout(300)
         v = view(pg); pg.reload(); boot(pg); to_room(pg, 'c77'); v2 = view(pg)
-        check(sorted(v['rooms'].get('c77', [])) == ['cat1', 'cat2'] and v['standby'] == ['dog1'] and v2['rooms'] == v['rooms'] and pg.evaluate("JSON.stringify(__tzz.pets.view().pets)") == g0, 'U5', f'替换成功、刷新保留、成长不变 {v["rooms"]}')
+        check(sorted(v['rooms'].get('c77', [])) == ['cat1', 'cat2'] and v['standby'] == ['dog1'] and v2['rooms'] == v['rooms'] and json.loads(sview(pg))[2] == g0 and saved(pg) != s0, 'U5', f'替换成功、刷新保留、成长不变 {v["rooms"]}')
         # U6 保存失败：整次调配回滚（内存、界面、存档）
-        s0 = saved(pg); v0 = view(pg)
+        s0 = saved(pg); v0 = sview(pg)
         pg.evaluate(f"() => {{ window.__si = Storage.prototype.setItem; Storage.prototype.setItem = function (k, v) {{ if (k.startsWith('{SAVE}')) throw new Error('QuotaExceededError'); return __si.call(this, k, v); }}; }}")
         pg.click(ADAPT['place'].format(uid='dog1')); pg.wait_for_timeout(200)
         if pg.query_selector(ADAPT['replace']): pg.click(ADAPT['replace'] + '[data-replace-uid="cat1"]'); pg.wait_for_timeout(300)
         bad = pg.evaluate(f"() => [...document.querySelectorAll('{ADAPT['slots']}')].map(e => e.dataset.uid || null).sort()")
         pg.evaluate("() => { Storage.prototype.setItem = __si; }")
-        check(view(pg) == v0 and saved(pg) == s0 and bad == ['cat1', 'cat2'], 'U6', f'写档失败：内存 / 界面 / 存档整次回滚 {bad}')
+        check(sview(pg) == v0 and saved(pg) == s0 and bad == ['cat1', 'cat2'], 'U6', f'写档失败：内存 / 界面 / 存档整次回滚 {bad}')
         # U7 两只在房里各自活动，点一只只有这一只反应
-        pg.wait_for_timeout(1500)
+        pg.evaluate("() => { for (const u of ['cat1','cat2']) __tzz.pets.step(u, 1.5); }"); frame(pg)
         n = pg.evaluate(f"() => ['cat1','cat2'].filter(u => document.querySelector('{ADAPT['sprite']}'.replace('{{uid}}', u))).length")
         a0 = pg.evaluate("() => ['cat1','cat2'].map(u => __tzz.pets.world(u).pet.anim.name)")
-        xy = pg.evaluate("__tzz.pets.px('cat1')"); pg.mouse.click(xy['x'], xy['y']); pg.wait_for_timeout(250)
+        tap(pg, 'cat1'); pg.evaluate("() => { for (const u of ['cat1','cat2']) __tzz.pets.step(u, 0.25); }")
         a1 = pg.evaluate("() => ['cat1','cat2'].map(u => __tzz.pets.world(u).pet.anim.name)")
         check(n == 2 and a1[0] in ADAPT['cat_touch'] and a1[1] not in ADAPT['cat_touch'], 'U7', f'两只都画出来；点 cat1 只有它拱背 / 蹭手 {a0} → {a1}')
         # U8 旧档一间房 4 只：2 只在房、2 只待命，列表 4 只全在
@@ -92,7 +107,7 @@ with sync_playwright() as p:
         v = view(pg); check(sum(len(x) for x in v['rooms'].values()) == 1 and list(v['rooms'].keys()) == ['pearl'], 'U9', f'v13 单只小狗：留在珍珠姐的家 {v}')
         # U10 不新增存档键、没有横向滚动、没有报错
         keys = pg.evaluate("Object.keys(localStorage).sort()"); sw = pg.evaluate("document.documentElement.scrollWidth <= innerWidth")
-        check(set(keys) <= {'tangzhe-save', SAVE, SAVE + '-bak', 'tangzhe-preview-save-bak'} and sw and not errs, 'U10', f'存档键 {keys}；不横向滚动 {sw}；报错 {errs[:3]}')
+        check(sentinel(pg) and set(keys) <= {'tangzhe-save', SAVE, SAVE + '-bak', 'tangzhe-preview-save-bak'} and sw and not errs, 'U10', f'正式站存档没被改 {sentinel(pg)}；存档键 {keys}；不横向滚动 {sw}；报错 {errs[:3]}')
         # ---------- 猫首样 ----------
         seed(pg, [{'uid': 'cat1', 'species': 'cat', 'room': 'c77', 'boughtAt': 1}])
         M = pg.evaluate("() => { const w = __tzz.pets.world('cat1'); return { clips: Object.keys((w.manifest || w.pet.anim.manifest || {}).clips || {}), atlas: ((w.manifest || {}).atlas || {}).image, dogAtlas: __tzz.pet && __tzz.pet.M && __tzz.pet.M.atlas.image, cols: w.cols }; }")
@@ -109,18 +124,21 @@ with sync_playwright() as p:
         pg.evaluate("() => { const w = __tzz.pets.world('cat1'); __tzz.pets.toy('cat1', 1, w.pet.y); }")
         pg.evaluate("() => { for (let i = 0; i < 1800 && __tzz.pets.world('cat1').pet.anim.name !== 'pounce'; i++) __tzz.pets.step('cat1', 1 / 60); }")
         for _ in range(10):
-            xy = pg.evaluate("__tzz.pets.px('cat1')"); pg.mouse.click(xy['x'], xy['y'])
+            frame(pg); tap(pg, 'cat1')
         r = seq_until(pg, 'cat1', 6)
         check(r['seq'][:2] == ['pounce', 'land'] or (r['seq'] and r['seq'][0] == 'land'), 'C6', f'扑抓中连点：先落地再响应 {r["seq"][:5]}')
         # C7 触摸：拱背 → 蹭手 → 回待机
         pg.evaluate("() => { for (let i = 0; i < 600; i++) __tzz.pets.step('cat1', 1 / 60); }")
-        xy = pg.evaluate("__tzz.pets.px('cat1')"); pg.mouse.click(xy['x'], xy['y']); r = seq_until(pg, 'cat1', 8, 'idle')
+        frame(pg); tap(pg, 'cat1'); r = seq_until(pg, 'cat1', 8, 'idle')
         check(subseq(ADAPT['cat_touch'], r['seq']), 'C7', f'摸猫：拱背 → 蹭手 {r["seq"]}')
         # C8 猫画在房间里、不被裁切（贴左右墙时也是）
-        clip = pg.evaluate(f"""() => {{ const f = document.querySelector('#roomFloor').getBoundingClientRect(), out = [];
-          for (const x of [0.3, __tzz.pets.world('cat1').cols - 0.3]) {{ const w = __tzz.pets.world('cat1'); w.pet.x = x; __tzz.pets.step('cat1', 1 / 60);
-            const e = document.querySelector('{ADAPT['sprite']}'.replace('{{uid}}', 'cat1')); if (!e) {{ out.push('无'); continue; }} const r = e.getBoundingClientRect(); out.push(r.left >= f.left - 1 && r.right <= f.right + 1 ? 'ok' : [r.left, r.right, f.left, f.right]); }} return out; }}""")
+        clip = []
+        for edge in ['l', 'r']:
+            pg.evaluate("(e) => { const w = __tzz.pets.world('cat1'); w.pet.x = e === 'l' ? 0.3 : w.cols - 0.3; __tzz.pets.step('cat1', 1 / 60); }", edge); frame(pg)
+            clip.append(pg.evaluate(f"""() => {{ const f = document.querySelector('#roomFloor').getBoundingClientRect(), e = document.querySelector('{ADAPT['sprite']}'.replace('{{uid}}', 'cat1'));
+              if (!e) return '无'; const r = e.getBoundingClientRect(); return r.left >= f.left - 1 && r.right <= f.right + 1 ? 'ok' : [r.left, r.right, f.left, f.right]; }}"""))
         check(clip == ['ok', 'ok'], 'C8', f'贴左墙 / 右墙不裁切 {clip}')
+        check(not errs, 'END', f'猫那段也没有页面报错 {errs[:3]}'); check(sentinel(pg), 'END', '正式站存档 tangzhe-save 全程没被改')
         pg.screenshot(path=f"{SHOTS}/{dev.replace(' ', '_')}_cat.png"); ctx.close()
     b.close()
 print(f'passed {sum(results)}, failed {len(results) - sum(results)}'); sys.exit(0 if all(results) else 1)
