@@ -10,6 +10,7 @@ def check(ok, msg):
     if ok: passes += 1
     else: fails.append(msg); print('FAIL', msg)
 S = lambda f, js: f.evaluate(js)
+W = lambda f: f.wait_for_function("__zb.G && !__zb.G.pendStart", timeout=3000)  # 嵌入开局要等父页 ack:'start'
 SAVE = 'tangzhe-preview-save'
 def zframe(pg):
     for _ in range(50):
@@ -46,7 +47,7 @@ with sync_playwright() as p:
         check(m['proto'] is None and m['formal'] == 'SENTINEL', f'{dn} 嵌入模式不写原型键、不碰正式档 tangzhe-save')
         pg.screenshot(path=f'{OUT}/{tag}_menu.png')
         # 正常打完第 1 关 → 解锁
-        S(f, "__zb.start('level', 1); __zb.G.p.hp = 1e9; __zb.G.t = __zb.G.dur - 0.01; __zb.step(0.05)"); pg.wait_for_timeout(300)
+        S(f, "__zb.start('level', 1)"); W(f); S(f, "__zb.G.p.hp = 1e9; __zb.G.t = __zb.G.dur - 0.01; __zb.step(0.05)"); pg.wait_for_timeout(300)
         m = main_st(pg); check(m['z']['cleared'] == 1 and m['savedZ']['cleared'] == 1, f'{dn} 打满第 1 关：经营档记已通关 1 {m["z"]}')
         # 伪造：跳关、没打满时长、未通 50 关的无尽、主页面自己发、坏 id
         bad = ["__zb.send({zb:'result',mode:'level',n:10,win:true,t:999})",
@@ -91,7 +92,7 @@ with sync_playwright() as p:
         S(pg, "__tzz.state.zombie = {lv:{atk:30,rate:30,hp:30,ult:30},cleared:49,best:0,endBest:{t:0,kills:0}}; __tzz.state.coins = 5e10; __tzz.persist(); __tzz.closeModal && __tzz.closeModal(); __tzz.openZombie()")
         f = zframe(pg); raw49 = S(pg, f"localStorage.getItem('{SAVE}')"); bak49 = S(pg, f"localStorage.getItem('{SAVE}-bak')")
         S(pg, "window.__ls = Storage.prototype.setItem; Storage.prototype.setItem = function () { throw new Error('QuotaExceededError'); }; 0")
-        S(f, "__zb.start('level', 50); __zb.G.p.hp = 1e9; __zb.G.t = __zb.G.dur - 0.01; __zb.step(0.05)"); pg.wait_for_timeout(400)
+        S(f, "__zb.start('level', 50)"); W(f); S(f, "__zb.G.p.hp = 1e9; __zb.G.t = __zb.G.dur - 0.01; __zb.step(0.05)"); pg.wait_for_timeout(400)
         S(pg, "Storage.prototype.setItem = window.__ls; 0")
         r50 = S(f, "({t: document.getElementById('resTitle').textContent, n: document.getElementById('resNote').textContent, a: document.getElementById('againBtn').textContent, dis: document.getElementById('againBtn').disabled, vis: !document.getElementById('result').classList.contains('hidden'), c: __zb.proto.cleared, eb: document.getElementById('endlessBtn').disabled})")
         m50 = main_st(pg)
@@ -106,7 +107,7 @@ with sync_playwright() as p:
         t50 = S(f, "document.getElementById('resTitle').textContent"); m51 = main_st(pg)
         check('无尽模式开放' in t50 and m51['z']['cleared'] == 50 and m51['savedZ']['cleared'] == 50, f'{dn} 存档正常后第 50 关通关：经营确认后才显示「{t50}」')
         # 无尽：写盘失败不显示新纪录，最好成绩不变
-        S(f, "__zb.start('endless'); __zb.G.p.hp = 1e9; __zb.G.t = 120"); S(pg, "Storage.prototype.setItem = function () { throw new Error('QuotaExceededError'); }; 0")
+        S(f, "__zb.start('endless')"); W(f); S(f, "__zb.G.p.hp = 1e9; __zb.G.t = 120"); S(pg, "Storage.prototype.setItem = function () { throw new Error('QuotaExceededError'); }; 0")
         f.locator('#pauseBtn').tap(); f.locator('#quitBtn').tap(); pg.wait_for_timeout(400); S(pg, "Storage.prototype.setItem = window.__ls; 0")
         te = S(f, "({t: document.getElementById('resTitle').textContent, n: document.getElementById('resNote').textContent})"); me = main_st(pg)
         check('新纪录' not in te['t'] and '存档失败' in te['n'] and me['z']['endBest']['t'] == 0 and me['savedZ']['endBest']['t'] == 0, f'{dn} 无尽写盘失败：不报新纪录，最好成绩不变 {te}')
@@ -121,12 +122,12 @@ with sync_playwright() as p:
         S(pg, "__tzz.closeModal && __tzz.closeModal(); __tzz.openZombie()"); f = zframe(pg)
         sb = S(pg, "__tzz.saveBlocked"); mb0 = main_st(pg); zb0 = S(f, "({c: __zb.proto.cleared, b: __zb.proto.blocked, dis: [...document.querySelectorAll('#train [data-tr]')].every(x => x.disabled)})")
         S(f, "__zb.send({zb:'buy',id:'atk'})"); pg.wait_for_timeout(300)
-        S(f, "__zb.start('level', __zb.proto.cleared + 1); __zb.G.p.hp = 1e9; __zb.G.t = __zb.G.dur - 0.01; __zb.step(0.05)"); pg.wait_for_timeout(400)
-        rb = S(f, "({t: document.getElementById('resTitle').textContent, n: document.getElementById('resNote').textContent, lv: __zb.proto.lv.atk, c: __zb.proto.cleared})"); mb = main_st(pg)
+        S(f, "__zb.start('level', __zb.proto.cleared + 1)"); pg.wait_for_timeout(400); S(f, "__zb.send({zb:'result', mode:'level', n:__zb.proto.cleared + 1, win:true, t:999, kills:1, ceo:'c77', runId:'forged00000000000000'})"); pg.wait_for_timeout(300)
+        rb = S(f, "({g: !!__zb.G, menu: !document.getElementById('menu').classList.contains('hidden'), n: document.getElementById('trainNote').textContent, lv: __zb.proto.lv.atk, c: __zb.proto.cleared})"); mb = main_st(pg)
         check(sb and zb0['b'] and zb0['dis'], f'{dn} 只读坏档：经营 saveBlocked={sb}，小游戏也标只读、训练按钮全灰 {zb0}')
         rawb_same = S(pg, f"localStorage.getItem('{SAVE}')") == rawb
-        check(rb['lv'] == 0 and rb['c'] == zb0['c'] and mb['z']['lv']['atk'] == 0 and mb['z']['cleared'] == zb0['c'] and mb['coins'] == mb0['coins'] and mb['z'] == mb0['z'] and '通关' not in rb['t'] and '只读' in rb['n'] and rawb_same,
-              f'{dn} 只读坏档：硬发训练不扣不升，打满下一关不报通关、提示只读，原档不变 {rb} {mb["coins"]} {mb0["coins"]} {rawb_same}')
+        check(rb['lv'] == 0 and rb['c'] == zb0['c'] and mb['z']['lv']['atk'] == 0 and mb['z']['cleared'] == zb0['c'] and mb['coins'] == mb0['coins'] and mb['z'] == mb0['z'] and not rb['g'] and rb['menu'] and '只读' in rb['n'] and rawb_same,
+              f'{dn} 只读坏档：硬发训练不扣不升，父页拒绝开局、停在菜单提示只读，硬发结算也不记，原档不变 {rb} {mb["coins"]} {mb0["coins"]} {rawb_same}')
         S(f, "__zb.send({zb:'close'})"); pg.wait_for_timeout(200)
         # 异常档（余额 1e20）：小游戏标记不可花，硬发购买原文一个字节不改
         raw = S(pg, f"localStorage.getItem('{SAVE}')"); d = json.loads(raw); d['coins'] = 1e20
@@ -167,6 +168,62 @@ with sync_playwright() as p:
         S(f, "__zb.setPause(true); document.getElementById('quitBtn').click()"); pg.wait_for_timeout(300); lo = S(f, "__zb.lastSent"); S(f, "document.getElementById('menuBtn').click()"); appoint(None); st('null'); hn2 = hv()
         check(ho['h'] == '77 打僵尸' and not ho['s'] and ho['g'] and lo and lo.get('ceo') == 'c77', f'{dn} 老经营页不带 ceo 字段：按 77 上场，可以开局，结算回传 c77 {ho} {lo}')
         check(hn2['s'] and hn2['st'] is False, f'{dn} 之后再收到显式 ceo=null：仍按没人在任，开不了局 {hn2}')
+        # 13c 收尾 1：只认本局请求的开局回执——旧 runId 的 ok / 失败回执不启动也不清局；对应回执到了才计时；开局后迟到回执不改本局
+        appoint('c77'); st("'c77'")
+        lt = S(f, """(()=>{ __zb.start('level', 1); const g = __zb.G, base = {zb:'state', coins:__zb.proto.coins, z:__zb.proto, blocked:false, ceo:'c77'};
+          __zb.onState(Object.assign({}, base, {ack:'start', ok:true, runId:'stale000000000000000', ceo:'rocket'}));
+          __zb.onState(Object.assign({}, base, {ack:'start', ok:false, runId:'stale000000000000000', why:'旧失败'}));
+          __zb.step(0.05); return {same: __zb.G === g, pend: g.pendStart, t: g.t, ceo: g.ceo, run: g.runId}; })()""")
+        pg.wait_for_timeout(300)
+        la = S(f, "({pend: __zb.G && __zb.G.pendStart, ceo: __zb.G && __zb.G.ceo, run: __zb.G && __zb.G.runId})"); reg = S(pg, "__tzz.zbRun && __tzz.zbRun.runId")
+        check(lt['same'] and lt['pend'] and lt['t'] == 0 and lt['ceo'] == 'c77', f'{dn} 旧请求的开局回执（ok / 失败）都被忽略，确认前不计时 {lt}')
+        check(la['pend'] is False and la['ceo'] == 'c77' and la['run'] == lt['run'] == reg, f'{dn} 本局 runId 的回执到了才开打，和父页登记一致 {la} reg={reg}')
+        S(f, """(()=>{ const g = __zb.G, base = {zb:'state', coins:__zb.proto.coins, z:__zb.proto, blocked:false, ceo:'c77'};
+          __zb.onState(Object.assign({}, base, {ack:'start', ok:false, runId:g.runId, why:'迟到失败'}));
+          __zb.onState(Object.assign({}, base, {ack:'start', ok:true, runId:'other00000000000000000', ceo:'pearl'})); __zb.step(0.05); })(); 0""")
+        l2 = S(f, "({g: !!__zb.G, ceo: __zb.G && __zb.G.ceo, t: __zb.G && __zb.G.t, run: __zb.G && __zb.G.runId, menu: document.getElementById('menu').classList.contains('hidden')})")
+        check(l2['g'] and l2['ceo'] == 'c77' and l2['t'] > 0 and l2['run'] == lt['run'] and l2['menu'], f'{dn} 开局后迟到的回执不清局、不换人 {l2}')
+        # 重复开局（13d 父页防重）：进行中同一 runId 再发 start，父页回原登记（dup），子页不重开、不清局、不换人
+        rg0 = S(pg, "JSON.stringify(__tzz.zbRun)"); t0 = S(f, "__zb.G.t")
+        S(f, "__zb.send({zb:'start', runId: __zb.G.runId, mode: __zb.G.mode, n: __zb.G.n, ceo: 'pearl'})"); pg.wait_for_timeout(300); S(f, "__zb.step(0.05)")
+        d1 = S(f, "({g: !!__zb.G, run: __zb.G && __zb.G.runId, ceo: __zb.G && __zb.G.ceo, t: __zb.G && __zb.G.t, pend: __zb.G && __zb.G.pendStart})"); rg1 = S(pg, "JSON.stringify(__tzz.zbRun)")
+        check(d1['g'] and d1['run'] == lt['run'] and d1['ceo'] == 'c77' and d1['t'] > t0 and not d1['pend'] and rg1 == rg0, f'{dn} 进行中同一 runId 重复开局：子页这局照打，父页登记不变 {d1}')
+        S(f, "__zb.setPause(true); document.getElementById('quitBtn').click()"); pg.wait_for_timeout(300); S(f, "document.getElementById('menuBtn').click()")
+        # 保存失败重试：写盘失败这局没记上；恢复后重发同一局结算能补存；再重发不重复结算
+        c0 = S(f, "__zb.proto.cleared"); S(f, "__zb.start('level', __zb.proto.cleared + 1)"); W(f)
+        S(pg, "window.__ls = Storage.prototype.setItem; Storage.prototype.setItem = function () { throw new Error('QuotaExceededError'); }; 0")
+        S(f, "__zb.G.p.hp = 1e9; __zb.G.t = __zb.G.dur - 0.01; __zb.step(0.05)"); pg.wait_for_timeout(400)
+        S(pg, "Storage.prototype.setItem = window.__ls; 0")
+        r1 = S(f, "({n: document.getElementById('resNote').textContent, c: __zb.proto.cleared})"); m1 = main_st(pg)
+        S(f, "__zb.send(__zb.lastSent)"); pg.wait_for_timeout(300); m2 = main_st(pg); c2 = S(f, "__zb.proto.cleared")
+        S(f, "__zb.send(__zb.lastSent)"); pg.wait_for_timeout(300); m3 = main_st(pg); n3 = S(f, "document.getElementById('trainNote').textContent")
+        check('存档失败' in r1['n'] and r1['c'] == c0 and m1['savedZ']['cleared'] == c0, f'{dn} 结算写盘失败：提示存档失败，进度仍是 {c0} {r1} {m1["savedZ"]}')
+        check(m2['savedZ']['cleared'] == c0 + 1 and c2 == c0 + 1, f'{dn} 恢复后重发同一局结算：补存成功 {m2["savedZ"]} {c2}')
+        check(m3['savedZ'] == m2['savedZ'] and '已经结算' in n3, f'{dn} 再重发同一局：不重复结算「{n3}」')
+        # 已结算的 runId 再发 start：父页拒（dup），不翻回未结算；子页停在原处
+        S(f, "__zb.send({zb:'start', runId: __zb.lastSent.runId, mode:'level', n: __zb.lastSent.n, ceo:'c77'})"); pg.wait_for_timeout(300)
+        d2 = S(pg, "({s: __tzz.zbRun && __tzz.zbRun.settled, r: __tzz.zbRun && __tzz.zbRun.runId})"); m4 = main_st(pg); g4 = S(f, "!!__zb.G && !__zb.G.over")
+        check(d2['s'] is True and m4['savedZ'] == m2['savedZ'] and not g4, f'{dn} 已结算的 runId 重复开局：父页不重新激活、不重复结算，子页不开新局 {d2} {g4}')
+        S(f, "document.getElementById('menuBtn').click()")
+        # 13c 收尾 3：中途调岗——战斗中大招按钮 / 实际技能都跟本局锁定的珍珠姐；回菜单后才跟现任阿宅
+        appoint('pearl'); st("'pearl'"); S(f, "__zb.start('level', 1)"); W(f)
+        S(pg, "(()=>{__tzz.E.assignCeo(__tzz.state,'otaku',0); __tzz.persist(); __tzz.zbReply();})()"); pg.wait_for_timeout(200)
+        mh = S(f, """(()=>{ const g = __zb.G; g.ult = 100; const lbl = document.querySelector('#ultBtn .ult-lbl').textContent, aria = document.getElementById('ultBtn').getAttribute('aria-label');
+          const ok = __zb.castUlt(); return {menu: __zb.proto.ceo, g: g.ceo, lbl, aria, ok, frost: !!g.frost, ring: !!g.ring, panels: !!g.panels}; })()""")
+        check(mh['menu'] == 'otaku' and mh['g'] == 'pearl' and mh['lbl'] == '冰沙' and '冰沙风暴' in mh['aria'] and mh['ok'] and mh['frost'] and not mh['ring'] and not mh['panels'],
+              f'{dn} 中途调岗成阿宅：战斗 HUD 仍显示冰沙，放出的也是冰沙风暴 {mh}')
+        S(f, "__zb.setPause(true); document.getElementById('quitBtn').click()"); pg.wait_for_timeout(300); S(f, "document.getElementById('menuBtn').click()")
+        bk = S(f, "document.querySelector('#ultBtn .ult-lbl').textContent")
+        check(bk == '分镜', f'{dn} 回菜单后大招文字跟现任阿宅「{bk}」')
+        # 菜单滚到底：四项训练和开打按钮都看得全、点得到，开打不压升级区
+        ms = S(f, """(()=>{ const m = document.getElementById('menu'), sbt = document.getElementById('startBtn');
+          const hit = el => { const r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2, e = document.elementFromPoint(x, y); return r.top >= 0 && r.bottom <= innerHeight && !!e && (e === el || el.contains(e)); };
+          let ov = false; for (let y = 0; y <= m.scrollHeight; y += 40) { m.scrollTop = y; const sb = sbt.getBoundingClientRect(); for (const r of document.querySelectorAll('#train .tr')) { const b = r.getBoundingClientRect(); if (b.bottom > sb.top + 1 && b.top < sb.bottom - 1) ov = true; } }
+          m.scrollTop = m.scrollHeight; const btns = [...document.querySelectorAll('#train [data-tr]')].map(hit); return {n: btns.length, btns, start: hit(sbt), ov}; })()""")
+        check(ms['n'] == 4 and all(ms['btns']) and ms['start'] and not ms['ov'], f'{dn} 菜单滚到底：四项升级和开打都完整可点，任何滚动位置开打都不压升级区 {ms}')
+        u0 = S(f, "__zb.proto.lv.ult"); f.locator('[data-tr="ult"]').tap(); pg.wait_for_timeout(300); u1 = S(f, "__zb.proto.lv.ult")
+        check(u1 == u0 + 1, f'{dn} 滚到底点最后一项「大招」升级生效 {u0}→{u1}')
+        pg.screenshot(path=f'{OUT}/{tag}_menu_bottom.png')
         S(f, "__zb.send({zb:'close'})"); pg.wait_for_timeout(200)
         check(not errs, f'{dn} 无 JS 报错 {errs[:3]}')
         c.close()

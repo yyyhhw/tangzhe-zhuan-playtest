@@ -56,14 +56,10 @@ function onState(d) {
   $('#trainNote').textContent = d.why || (proto.blocked ? '存档异常或已在别的页面打开，暂时不能花金币。' : '和经营共用金币：训练只花钱，打僵尸本身不产金币。');
   renderTrain();
   // 13c：父页开局回执——ok 时锁定权威 ceo / runId；失败则回到菜单（父页没登记成功）
-  if (d.ack === 'start' && G && !G.over) {
-    if (d.ok === false) {
-      cancelAnimationFrame(raf); G = null; paused = false;
-      $('#trainNote').textContent = d.why || '开局登记失败';
-      renderTrain(); show('#menu'); draw(); return;
-    }
-    if (typeof d.runId === 'string' && d.runId) G.runId = d.runId;
-    if (ZB.CEO_IDS.includes(d.ceo)) G.ceo = d.ceo;
+  // 只认本局请求的回执：开局后、或 runId 对不上的迟到回执一律忽略（失败回执没带 runId 时只在等待中认）
+  if (d.ack === 'start' && G && G.pendStart && (d.runId === G.runId || (d.ok === false && d.runId === undefined))) {
+    if (d.ok !== true || !ZB.CEO_IDS.includes(d.ceo)) return abortStart(d.why || '开局登记失败');
+    clearTimeout(G.pendTimer); G.pendStart = false; G.ceo = d.ceo; renderHero(); last = performance.now(); return;
   }
   if (d.ack === 'result' && G && G.over && G.wait) { G.wait = false; G.why = d.why || ''; renderResult(); }
 }
@@ -208,7 +204,7 @@ function fire77() {
   return true;
 }
 function castUlt() {
-  if (!G || G.over || paused || G.ult < 100 || ultOn()) return false;
+  if (!G || G.over || G.pendStart || paused || G.ult < 100 || ultOn()) return false;
   if (G.ceo === 'otaku') { G.ult = 0; G.panels = { t: 0, waves: 0, next: 0, hits: [] }; G.p.inv = Math.max(G.p.inv, 2.2); toast('分镜轰炸！'); return true; }
   if (G.ceo === 'rocket') { G.ult = 0; G.wave = { t: 0, dur: 1.1, hit: new Set() }; G.shake = 0.45; G.p.inv = Math.max(G.p.inv, 1.2); toast('星舰冲击波！'); return true; }
   if (G.ceo === 'pearl') { G.ult = 0; G.frost = { t: 0, dur: 3, tick: 0 }; G.shake = 0.25; G.p.inv = Math.max(G.p.inv, 0.6); toast('冰沙风暴！'); return true; }
@@ -229,7 +225,7 @@ function killZ(i) {
   if (z.type === 'boss') toast('僵尸王倒了！');
 }
 function step(dt) {
-  if (!G || G.over) return;
+  if (!G || G.over || G.pendStart) return;
   dt = Math.min(Math.max(fin(dt, 0), 0), 0.05);
   const p = G.p; G.t += dt;
   // 移动
@@ -573,8 +569,9 @@ function renderHero() {
   const img = $('.hero img'), src = `../art/face_${id || 'c77'}.webp`; if (img.getAttribute('src') !== src) { img.setAttribute('src', src); img.alt = name; }
   $('#heroNote').textContent = !proto.ready ? '' : !id ? '烧烤摊还没派 CEO：回经营页派一位再来打。' : skilled(id) ? `本局由 ${name} 上场，开打后不换人。` : `${name} 上场：专属技能还在做，这局先用 77 的飞串和火圈。`;
   const sb = $('#startBtn'); sb.disabled = !canPlay(); sb.textContent = proto.ready && !id ? '烧烤摊没有 CEO，先回经营页派一位' : '开打！';
-  const sk = skilled(id) ? id : 'c77';
-  $('#ultBtn .ult-lbl').textContent = ZB.HEROES[sk].btn || ZB.HEROES[sk].ult; $('#ultBtn').setAttribute('aria-label', `大招：${ZB.HEROES[sk].ult}`);
+  // 战斗中 HUD 跟本局锁定的 G.ceo（中途调岗只改菜单），回菜单后才跟现任
+  const sk = skilled(id) ? id : 'c77', run = G ? G.ceo : id, rk = skilled(run) ? run : 'c77';
+  $('#ultBtn .ult-lbl').textContent = ZB.HEROES[rk].btn || ZB.HEROES[rk].ult; $('#ultBtn').setAttribute('aria-label', `大招：${ZB.HEROES[rk].ult}`);
   $('#heroDesc').innerHTML = HERO_DESC[sk];
 }
 function renderTrain() {
@@ -596,7 +593,7 @@ $('#train').addEventListener('click', e => {
 });
 function show(id) { for (const s of ['#menu', '#pause', '#result']) $(s).classList.toggle('hidden', s !== id); $('#hud').classList.toggle('hidden', id === '#menu'); }
 function newRunId() {
-  try { if (crypto && crypto.getRandomValues) return Array.from(crypto.getRandomValues(new Uint32Array(3))).map(x => x.toString(36)).join(''); } catch (e) {}
+  try { if (crypto && crypto.getRandomValues) return Array.from(crypto.getRandomValues(new Uint32Array(3))).map(x => x.toString(36).padStart(7, '0')).join(''); } catch (e) {}
   return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 function start(mode, n) {
@@ -604,10 +601,22 @@ function start(mode, n) {
   if (mode === 'endless' && proto.cleared < MAX_LV) return false;
   if (mode !== 'endless') { mode = 'level'; n = Math.min(Math.max(1, Math.floor(fin(n, selLv))), Math.min(MAX_LV, proto.cleared + 1)); selLv = n; }
   resize(); G = newRun(mode, n); G.runId = newRunId();
-  // 13c：嵌入模式先向父页登记本局（父页确认现任 CEO）；回执在 onState(ack:'start') 里写入权威 ceo / runId
-  if (EMBED) host({ zb: 'start', runId: G.runId, mode: G.mode, n: G.n, ceo: G.ceo });
-  paused = false; joy.on = false; show(null); hud(); last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop); return true; }
+  paused = false; joy.on = false; show(null); renderHero(); hud(); last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
+  // 嵌入模式先向父页登记本局，等到对应 runId 的 ok 回执才开始计时（onState ack:'start'），超时回菜单
+  if (EMBED) {
+    const g = G; g.pendStart = true; toast('开局登记中…');
+    g.pendTimer = setTimeout(() => { if (G === g && g.pendStart) abortStart('开局登记超时，请再点一次开打'); }, 4000);
+    host({ zb: 'start', runId: g.runId, mode: g.mode, n: g.n, ceo: g.ceo });
+  }
+  return true; }
+function abortStart(why) {
+  if (G) clearTimeout(G.pendTimer);
+  cancelAnimationFrame(raf); G = null; paused = false;
+  if (why) $('#trainNote').textContent = why;
+  renderTrain(); show('#menu'); draw();
+}
 function end(win) {
+  if (G.pendStart) return abortStart('');
   G.over = true; G.win = win; joy.on = false; G.prevBest = proto.endBest.t; G.why = '';
   if (EMBED) {
     // 经营页是唯一写档方：等它回执（ack:'result'）后再按权威进度显示通关 / 解锁，存档失败不报喜；带上开局 runId 供父页对照
