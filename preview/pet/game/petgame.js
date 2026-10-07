@@ -202,27 +202,75 @@
   function assign(st, E, uid, room, opt) {
     const o = opt || {}, checked = placement(st, E, uid, room, o, false);
     if (!checked.ok) return checked;
-    if (room !== null && o.M !== undefined && !hasRoom(st, E, room, o.M)) return { ok: false, why: NO_ROOM, noRoom: true };
+    if (room !== null && o.M !== undefined && !hasRoom(st, E, room, o.M, { ...o, uid })) return { ok: false, why: NO_ROOM, noRoom: true };
     if (typeof E.transact !== 'function') return { ok: false, why: '存档交易不可用' };
     const r = E.transact(st, { price: 0, blocked: !!o.blocked, save: o.save,
       apply: (s) => {
         const ready = preparePlacement(s, E, uid, room, o, false, checked);
         if (!ready.ok) return ready;
+        if (room !== null && o.M !== undefined && !hasRoom(s,E,room,o.M,{...o,uid})) return {ok:false,why:NO_ROOM,noRoom:true};
         storedList(s).find(p => p.uid === uid).room = room;
         return { uid, room, replaced: ready.replacement };
       } });
     if (!r.ok) return Object.assign({}, r.result, { ok: false, why: r.why || '没有调配成功', stage: r.stage });
     return { ok: true, cost: 0, uid, room, home: room, replaced: r.result.replaced };
   }
-  // This probes furniture space, separately from the two-pet roster capacity.
-  let roomCache = { key: null, M: null, ok: true };
-  function hasRoom(st, E, home, M) {
-    if (!M || !validRoom(st, E, home)) return false;
-    const L = layoutOf(st, E, home);
-    if (roomCache.key !== L.key || roomCache.M !== M) roomCache = { key: L.key, M, ok: !mkWorld(E, M, L, 1).noRoom };
-    return roomCache.ok;
+  // Admission checks the resulting roster, not one world reused for every pet.
+  // Floor-space candidates use the same body/circle geometry as the runtime.
+  // Two legal standing boxes must be disjoint; ongoing walking is still independent.
+  let dogManifest = null;
+  const roomCache = new Map();
+  function standingSpots(E, M, L) {
+    const w = mkWorld(E,M,L,1), cls = 'V', body = w.body[cls], D = w.body.D;
+    if(w.noRoom)return [];
+    const left=Math.max(body.l,PE.CFG.R), right=Math.max(body.r,PE.CFG.R);
+    const xs=new Set([left,L.cols-right,w.dog.x]), ys=new Set([D,L.rows-D,w.dog.y]);
+    for(const obstacle of PE.obstacles(w)) {
+      xs.add(obstacle.x-right);xs.add(obstacle.x+obstacle.w+left);
+      ys.add(obstacle.y-D);ys.add(obstacle.y+obstacle.h+D);
+    }
+    // Include the engine's navigation nodes as well as exact boundary contacts.
+    for(let x=PE.CFG.RES/2;x<L.cols;x+=PE.CFG.RES)xs.add(x);
+    for(let y=PE.CFG.RES/2;y<L.rows;y+=PE.CFG.RES)ys.add(y);
+    const out=[];
+    for(const x of xs)for(const y of ys)if(PE.bodyFree(w,x,y,cls,1e-7))
+      out.push({x,y,box:{x:x-left,y:y-D,w:left+right,h:2*D}});
+    return out;
   }
-  const NO_ROOM = '暂时无法入宅：屋里摆满了，没有宠物能站的空地（收起或挪开家具、或升级房子后再来）';
+  function roomCapacity(st,E,home,M,opt) {
+    const o=opt||{};
+    if(!M||!validRoom(st,E,home))return null;
+    if(M.schema==='tangzhe-pet-art/1')dogManifest=M;
+    const residents=rosterOf(st,E).filter(p=>p.room===home&&!p.compatibility&&!p.quarantined&&p.uid!==o.uid&&p.uid!==o.replace);
+    if(residents.length>=MAX_PER_ROOM)return null;
+    const manifests=residents.map(p=>typeof o.manifestOf==='function'?o.manifestOf(p.species):p.species==='dog'?dogManifest:assetOf(p.species)?.manifest);
+    manifests.push(M);if(manifests.some(m=>!m))return null;
+    const L=layoutOf(st,E,home), key=JSON.stringify([home,L.key,residents.map(p=>[p.uid,p.species]),o.uid||null,o.replace||null]);
+    const cached=roomCache.get(key);
+    if(cached&&cached.E===E&&cached.manifests.every((m,i)=>m===manifests[i])&&cached.manifests.length===manifests.length)return cached.plan;
+    const spots=manifests.map(m=>standingSpots(E,m,L));let plan=null;
+    if(spots[0].length&&spots.length===1)plan=[spots[0][0]];
+    else if(spots.every(a=>a.length)) {
+      // Separation on any one axis is sufficient. Extremes avoid a quadratic
+      // cross-product of all legal spots in a large, empty upgraded room.
+      const extremes=spots.map(a=>({left:a.reduce((x,y)=>x.box.x+x.box.w<y.box.x+y.box.w?x:y),right:a.reduce((x,y)=>x.box.x>y.box.x?x:y),top:a.reduce((x,y)=>x.box.y+x.box.h<y.box.y+y.box.h?x:y),bottom:a.reduce((x,y)=>x.box.y>y.box.y?x:y)}));
+      const [a,b]=extremes;
+      for(const pair of [[a.left,b.right],[a.right,b.left],[a.top,b.bottom],[a.bottom,b.top]]) {
+        const [x,y]=pair.map(p=>p.box),e=1e-7;
+        if(x.x+x.w<=y.x+e||y.x+y.w<=x.x+e||x.y+x.h<=y.y+e||y.y+y.h<=x.y+e){plan=pair;break;}
+      }
+    }
+    if(roomCache.size>=32)roomCache.clear();roomCache.set(key,{E,manifests,plan});return plan;
+  }
+  function hasRoom(st,E,home,M,opt) {
+    const o=opt||{};
+    if(o.allowReplace&&!o.replace) {
+      const residents=rosterOf(st,E).filter(p=>p.room===home&&p.uid!==o.uid);
+      if(residents.length>=MAX_PER_ROOM)return residents.some(p=>!!roomCapacity(st,E,home,M,{...o,replace:p.uid}));
+    }
+    return !!roomCapacity(st,E,home,M,o);
+  }
+  const NO_ROOM = '暂时无法入宅：屋里没有足够空间让入住的宠物分别站下（收起或挪开家具、或升级房子后再来）';
   // One purchase per species across every room and standby. Old duplicates remain intact.
   // Legacy parameters stay in place; the final options add replacement and snapshots.
   function buy(st, E, home, nowMs, M, save, blocked, opt) {
@@ -233,7 +281,7 @@
     const checked = placement(st, E, null, home, o, true);
     if (!checked.ok) return checked;
     if (!M) return { ok: false, why: '小狗还没准备好，稍后再试' };
-    if (home !== null && !hasRoom(st, E, home, M)) return { ok: false, why: NO_ROOM, noRoom: true };
+    if (home !== null && !hasRoom(st, E, home, M, o)) return { ok: false, why: NO_ROOM, noRoom: true };
     if (typeof E.transact !== 'function' || typeof E.walletOk !== 'function') return { ok: false, why: '金币数据异常' };
     if (!E.walletOk(st)) return { ok: false, why: '金币数据异常', badWallet: true };
     if (!E.canAfford(st, price)) return { ok: false, why: '金币不够' };
@@ -242,6 +290,7 @@
       apply: (s) => {
         const ready = preparePlacement(s, E, null, home, o, true, checked);
         if (!ready.ok) return ready;
+        if (home !== null && !hasRoom(s,E,home,M,o)) return {ok:false,why:NO_ROOM,noRoom:true};
         if (speciesOwned(s, E, species)) return { ok: false, alreadyOwned: true, why: '已经拥有这种宠物' };
         if (!isObj(s.pets)) s.pets = { v: PV, list: [] };
         const list = storedList(s), uid = freshUid(list, 'pet-' + species + '-' + stamp.toString(36));
@@ -476,5 +525,5 @@
     return { draw, hit, detach, get artMode() { return atlas ? 'atlas' : 'placeholder'; }, get els() { return els; } };
   }
 
-  return { PET, SPECIES, knownSpecies, speciesOwned, speciesReady, registerSpecies, assetOf, migrateRoster, activateDuplicate, PC, PV, MAX_PER_ROOM, BED, INTERACT, NO_ROOM, norm, view, owned, engSupport, assign, buy, move, hasRoom, layoutOf, pickBed, bedOK, createRuntime, createView, padXOf };
+  return { PET, SPECIES, knownSpecies, speciesOwned, speciesReady, registerSpecies, assetOf, migrateRoster, activateDuplicate, PC, PV, MAX_PER_ROOM, BED, INTERACT, NO_ROOM, norm, view, owned, engSupport, assign, buy, move, hasRoom, roomCapacity, layoutOf, pickBed, bedOK, createRuntime, createView, padXOf };
 });

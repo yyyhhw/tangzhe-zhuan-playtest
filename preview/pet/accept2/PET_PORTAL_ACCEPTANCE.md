@@ -81,3 +81,17 @@ the three affected Node suites, six normal-host portal browser
 cases, two legacy/two-tab cases, syntax/diff/root-scope checks and the web-game
 skill smoke. Browser runs used Chromium 145 phone emulation, not physical phones
 or a new WebKit acceptance run. Earlier WebKit18 baseline/log limitations remain.
+
+## Floor-capacity follow-up (local `13k-pets-floor1`)
+
+The published UI candidate `e869fc696d3af74fbe6bdeeabc0d2005cb8168cc` remains the exact tree of local `8fafd626`. This follow-up is separate and is not authorization to deploy it.
+
+Admission now evaluates the post-operation roster with each species' real manifest. It finds two legal, disjoint standing footprints using the engine's body/circle geometry, excluding the moved record and explicitly displaced resident. Cache identity includes room, layout, roster and manifests. Replacement previews consider each possible displaced resident; final transactions check the chosen replacement again after runtime snapshots. Missing resident manifests fail closed. Both entries use the generic recovery message “宠物跑出来了” and matching `13k-pets-floor1` cache versions.
+
+Targeted evidence:
+- `test_room_capacity.js`: 8 cases covering one-body versus two-body geometry, resident changes without furniture changes, move/growth preservation, replacement, real furniture removal, upgrade, preparation/save rollback, and missing manifests. Replaying the first case against the original `8fafd626` source fails because the second purchase returns success; the new source passes.
+- The one-body fixture is a deliberately synthetic 1×0.65 room using real manifests and engine geometry, not a player-selectable house. An ordinary empty 1×1 tile can fit two current vertical standing footprints (depth 0.44 each); the real furniture test intentionally preserves that behavior.
+- `test_room_capacity_e2e.mjs`: both normal-host entries at 375×667, no prototype flag. Full floor blocks placement; blocked purchase offers standby; cancel leaves state unchanged; furniture removal enables the second resident; full-room replacement targets the selected pet; coins and formal save remain intact; no page errors.
+- Existing portal/migration/storage regression (4 groups, including 24 failure combinations), species policy (9), and UI VM contracts (16) pass. JS syntax and `git diff --check` pass; root files and source artwork are unchanged.
+
+This is admission validation, not a new pet-to-pet movement/collision system. Accepted interaction layout and source art are unchanged. No new physical-device or WebKit claim; prior visual and historical-baseline limitations remain.
