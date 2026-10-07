@@ -427,3 +427,4 @@ with sync_playwright() as p:
     check(not errs, f'12d 没有页面报错 {errs[:3]}')
     b.close()
 print(f"coin e2e: {sum(1 for r in results if r[0])} passed, {sum(1 for r in results if not r[0])} failed")
+sys.exit(1 if any(not r[0] for r in results) else 0)
