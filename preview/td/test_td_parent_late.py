@@ -16,13 +16,19 @@ INIT = """if (window === window.top) {
   const op = MessagePort.prototype.postMessage;
   window.__hold = { kind: null, q: [] }; window.__acks = [];
   MessagePort.prototype.postMessage = function (d, ...r) {
-    if (d && d.ack) window.__acks.push(JSON.parse(JSON.stringify(d)));
+    if (d && d.ack) { window.__port = this; window.__acks.push(JSON.parse(JSON.stringify(d))); }
     if (d && d.ack && d.ack === window.__hold.kind) { window.__hold.q.push([this, d]); return; }
     return op.call(this, d, ...r);
   };
+  window.__releaseAt = i => { const [x] = window.__hold.q.splice(i, 1); op.call(x[0], x[1]); return x[1]; };
+  window.__inject = d => op.call(window.__port, d);
   window.__release = () => { const q = window.__hold.q; window.__hold = { kind: null, q: [] }; q.forEach(([p, d]) => op.call(p, d)); return q.length; };
   window.__w = 0; const os = Storage.prototype.setItem;
   Storage.prototype.setItem = function (k, v) { if (k === window.__failKey) throw Error('test write failure'); if (k === '%s') window.__w++; return os.call(this, k, v); };
+} else {
+  window.__rx = []; const od = Object.getOwnPropertyDescriptor(MessagePort.prototype, 'onmessage');
+  Object.defineProperty(MessagePort.prototype, 'onmessage', { configurable: true, get() { return od.get.call(this); },
+    set(fn) { od.set.call(this, typeof fn === 'function' ? ev => { window.__rx.push(ev.data && ev.data.ack || null); return fn(ev); } : fn); } });
 }""" % KEY
 def child(pg):
     pg.wait_for_function("__tzz.tdOpen")
@@ -49,6 +55,11 @@ def cleared(x): return (x.get('td') or {}).get('cleared', 0)
 def acks(pg, kind): return pg.evaluate("(k) => __acks.filter(a => a.ack === k)", kind)
 def open_td(pg):
     pg.evaluate('__tzz.closeModal(); __tzz.openTD()'); return child(pg)
+def wait_q(pg, f, n):
+    try: pg.wait_for_function("__hold.q.length === %d" % n, polling=50, timeout=3000)   # 父页 rAF 被桩掉，必须定时轮询
+    except Exception:
+        print('DIAG', pg.evaluate("JSON.stringify({q: __hold.q.length, kind: __hold.kind, acks: __acks.slice(-3).map(a => ({ack: a.ack, ok: a.ok, dup: a.dup, why: a.why})), run: __tzz.tdRun, blocked: __tzz.saveBlocked})"),
+              f.evaluate("JSON.stringify({sent: __td.lastSent, G: !!__td.G, pend: __td.pend, ready: __td.proto.ready, blocked: __td.proto.blocked, rx: __rx.slice(-3)})")); raise
 def win_wave(f):
     f.evaluate('__td.G.wave=10;__td.G.q=[];__td.G.es=[];__td.step(.01)')
 
@@ -92,9 +103,13 @@ with sync_playwright() as p:
         check(f.evaluate("__td.proto.lv.tea") == 1 and not f.locator('#buyRetryBtn').is_visible() and mem(pg)['coins'] == c1 - price2,
               D + '② 迟到的匹配回执仍能确认：tea Lv1，只扣一次 %d' % price2)
         coins_child = f.evaluate('__td.proto.coins')
-        f.evaluate("(m) => __td.onState(Object.assign({}, m, { coins: 1, z: Object.assign({}, m.z, { lv: Object.assign({}, m.z.lv, { tea: 9 }) }) }))", late[0])
+        rx0 = f.evaluate('__rx.length')
+        pg.evaluate("(m) => __inject(Object.assign({}, m, { coins: 1, z: Object.assign({}, m.z, { lv: Object.assign({}, m.z.lv, { tea: 9 }) }) }))", late[0])
+        pg.wait_for_timeout(300)
+        check(f.evaluate('__td.proto.coins') == coins_child and f.evaluate('__td.proto.lv.tea') == 1 and f.evaluate('__rx.length') == rx0 + 1 and f.evaluate('__rx[__rx.length - 1]') == 'buy',
+              D + '② 旧购买回执（带假余额和假等级）经父页真实 MessagePort 送达子页 port.onmessage，子页不理')
         check(f.evaluate('__td.proto.coins') == coins_child and f.evaluate('__td.proto.lv.tea') == 1 and not f.evaluate('__td.pend'),
-              D + '② 同一张旧回执再来一次（带假余额和假等级）：子页不理，状态不变')
+              D + '② 同一张旧回执再来一次（真实通道，带假余额和假等级）：子页不理，状态不变')
         # 开局回执迟到：超时回菜单，晚到的 ok 不能把这局复活；再开用新 runId
         pg.evaluate("__hold.kind='start'"); f.evaluate("__td.cmdSel='rocket';__td.start(1)"); r_old = f.evaluate('__td.G.runId')
         pg.wait_for_timeout(4400)
@@ -108,19 +123,24 @@ with sync_playwright() as p:
 
         # ③ 等回执期间刷新：父页提交要么整体生效要么整体没发生
         f = open_td(pg); c2 = mem(pg)['coins']; lv2 = lv(mem(pg), 'book'); price3 = pg.evaluate("TDCore.price('book', 0)")
-        pg.evaluate("__hold.kind='buy'"); f.evaluate("__td.buyUp('book')"); pg.wait_for_timeout(200)
+        pg.evaluate("__hold.kind='buy'"); f.evaluate("__td.buyUp('book')"); wait_q(pg, f, 1)
+        pre = disk(pg)
+        check(pre['coins'] == c2 - price3 and lv(pre, 'book') == lv2 + 1, D + '③ 刷新前已确认：父页处理完（回执已生成并扣住），磁盘已有扣款和升级')
         pg.reload(); pg.wait_for_function('!!window.__tzz')
         m, d = mem(pg), disk(pg)
         check(m['coins'] == c2 - price3 and lv(m, 'book') == lv2 + 1 and d['coins'] == m['coins'] and lv(d, 'book') == lv(m, 'book'),
               D + '③ 父页已提交、回执没送到就刷新：刷新后扣款和升级都在，只算一次')
         f = open_td(pg); c3 = mem(pg)['coins']
-        pg.evaluate("window.__failKey='%s'; __hold.kind='buy'" % KEY); f.evaluate("__td.buyUp('book')"); pg.wait_for_timeout(200)
+        pg.evaluate("window.__failKey='%s'; __hold.kind='buy'" % KEY); f.evaluate("__td.buyUp('book')"); wait_q(pg, f, 1)
+        check(pg.evaluate("__hold.q[0][1].ok") is not True, D + '③ 刷新前已确认：父页处理完，写档失败的回执不是 ok')
         pg.evaluate("window.__failKey=null")
         before = disk(pg); pg.reload(); pg.wait_for_function('!!window.__tzz'); m = mem(pg)
         check(m['coins'] == c3 and lv(m, 'book') == lv2 + 1 and before['coins'] == c3,
               D + '③ 写档失败、回执扣住时刷新：刷新后没扣款也没升级')
         f = open_td(pg); cl0 = cleared(mem(pg))
-        pg.evaluate("__hold.kind='start'"); f.evaluate("__td.cmdSel='pearl';__td.start(1)"); pg.wait_for_timeout(200)
+        pg.evaluate("__hold.kind='start'"); f.evaluate("__td.cmdSel='pearl';__td.start(1)")
+        wait_q(pg, f, 1)
+        check(pg.evaluate('!!__tzz.tdRun'), D + '③ 刷新前已确认：父页已处理开局（登记了这局，回执扣住）')
         pg.reload(); pg.wait_for_function('!!window.__tzz')
         check(pg.evaluate('__tzz.tdRun') is None and cleared(mem(pg)) == cl0, D + '③ 开局回执没到就刷新：父页没有残留的登记，进度不变')
 
@@ -137,13 +157,26 @@ with sync_playwright() as p:
         f.locator('#retryBtn').click(); pg.wait_for_timeout(300)
         check(f.evaluate('__td.lastSent.runId') == run and pg.evaluate('__w') == w0 and disk(pg) == d0,
               D + '④ 重试用同一个 runId，父页没再写档（写入次数和磁盘都不变）')
-        n = pg.evaluate('__release()'); f.wait_for_function('__td.G.saveOk', timeout=3000)
-        racks = [a for a in acks(pg, 'result') if a.get('runId') == run]
-        check(n == 2 and any(a.get('ok') and a.get('dup') for a in racks) and cleared(mem(pg)) == cl1 + 1 and cleared(disk(pg)) == cl1 + 1 and pg.evaluate('__w') == w0,
-              D + '④ 两张回执（原回执 + 重试 dup）先后到：子页确认守住，cleared 仍是 %d，没有重复记' % (cl1 + 1))
+        wait_q(pg, f, 2)
+        first = pg.evaluate("__releaseAt(1)"); f.wait_for_function('__td.G.saveOk', timeout=3000)
+        check(first.get('ok') is True and first.get('dup') is True and first.get('runId') == run and cleared(mem(pg)) == cl1 + 1 and cleared(disk(pg)) == cl1 + 1 and pg.evaluate('__w') == w0,
+              D + '④ 重试的 dup 回执先到：子页确认守住，cleared 仍是 %d，没有重复记' % (cl1 + 1))
+        n = pg.evaluate('__release()'); pg.wait_for_timeout(300)
+        check(n == 1 and f.evaluate('__td.G.saveOk') and cleared(mem(pg)) == cl1 + 1 and cleared(disk(pg)) == cl1 + 1 and pg.evaluate('__w') == w0,
+              D + '④ 原回执后到：子页结果不变，cleared 仍是 %d，父页没再写档' % (cl1 + 1))
         check(f.evaluate("document.querySelector('#resTitle').textContent") == '守住了！', D + '④ 结算页显示「守住了！」')
         check(pg.evaluate('__tzz.state.integrationSentinel.value') == 42 and pg.evaluate("localStorage.getItem('tangzhe-td-proto')") is None,
               D + '无关字段不变，嵌入时不建原型存档')
+        # ⑤ 购买重试的 dup 回执先到、原回执后到：只扣一次、只升一级，后到的原回执不改状态
+        pg.evaluate('__tzz.closeTD()'); f = open_td(pg); c5 = mem(pg)['coins']; price5 = pg.evaluate("TDCore.price('tech', 0)")
+        pg.evaluate("__hold.kind='buy'"); f.evaluate("__td.buyUp('tech')"); rid5 = f.evaluate('__td.lastSent.requestId')
+        pg.wait_for_timeout(4400); f.locator('#buyRetryBtn').click(); wait_q(pg, f, 2)
+        first = pg.evaluate("__releaseAt(1)"); f.wait_for_function('!__td.pend', timeout=3000)
+        check(first.get('dup') is True and first.get('requestId') == rid5 and f.evaluate('__td.proto.lv.tech') == 1 and mem(pg)['coins'] == c5 - price5 and disk(pg)['coins'] == c5 - price5 and lv(disk(pg), 'tech') == 1,
+              D + '⑤ 购买重试的 dup 回执先到：子页确认 tech Lv1，只扣一次 %d（内存 + 磁盘）' % price5)
+        coins5 = f.evaluate('__td.proto.coins'); n = pg.evaluate('__release()'); pg.wait_for_timeout(300)
+        check(n == 1 and f.evaluate('__td.proto.lv.tech') == 1 and f.evaluate('__td.proto.coins') == coins5 and not f.evaluate('__td.pend') and mem(pg)['coins'] == c5 - price5 and lv(disk(pg), 'tech') == 1,
+              D + '⑤ 原回执后到：子页不理，等级和余额不变')
         check(not errors, D + 'no page errors: ' + str(errors))
         c.close()
     browser.close()
