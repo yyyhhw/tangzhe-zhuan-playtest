@@ -25,3 +25,18 @@
 .pet-card .name .tag{white-space:nowrap}
 .pet-card #petNoRoom{max-width:96px;white-space:normal;line-height:1.25;padding:6px 8px}
 .pet-wait{border-color:#e07a3f;background:#fff4e6;line-height:1.5}
+
+
+/* Two-slot responsive management. */
+.pet-manager{margin:10px 0;padding:10px;border:2px solid #c38655;border-radius:12px;background:#fff6e8;min-width:0}
+#petSlots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:8px 0}
+.pet-slot{min-height:84px;padding:8px;border:1px dashed #ae795a;border-radius:8px;min-width:0;overflow-wrap:anywhere}
+.pet-slot small,.pet-list-row small{display:block;font-size:11px;line-height:1.5}
+.pet-slot b,.pet-list-row b{font-size:12px}
+.pet-slot .buy{min-height:40px;margin-top:5px;font-size:12px;width:100%}
+.pet-list-row{display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #dbbea3}
+.pet-list-row>div{flex:1;min-width:0;overflow-wrap:anywhere}
+.pet-list-row .buy{min-height:40px;flex-shrink:0;font-size:12px}
+.pet-replace-option{display:block;min-height:44px;width:100%;margin-top:10px;white-space:normal;overflow-wrap:anywhere}
+#petReplace{max-height:65vh;overflow-y:auto}
+.pet-manager summary{padding:8px 0;min-height:40px}
