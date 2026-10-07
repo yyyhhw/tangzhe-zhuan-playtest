@@ -64,7 +64,7 @@ section('3. pet 字段往返 / 坏字段');
   ok(!(has(bad('x'))) && !(has(bad([]))) && !(has(bad(null))) && !(has(bad({ owned: false }))), '坏 pet（字符串 / 数组 / null / 没 owned）：删掉 = 没买');
   const b2 = bad({ owned: true, home: 'rocket', eng: { v: 1, dog: {} } }); ok(D(b2).home === null && JSON.stringify(D(b2).eng) === JSON.stringify({ v: 1, dog: {} }), '13k：家没开放 → 进待命（不再搬回第一个开放的家）；eng 原样保留，由引擎读档时校验');
   { const s = clone(b2); D(s).home = 'c77'; const r1 = rt(); const w = r1.sync(s); ok(w && w.dog.energy === PE.CFG.ENERGY0 && w.dog.affinity === PE.CFG.AFF0, 'eng 缺字段：放回房间后引擎按默认补'); }
-  const b3 = bad({ owned: true, home: 'c77', eng: { v: 99, dog: {} } }); { const r1 = rt(); const w = r1.sync(b3); ok(D(b3).home === 'c77' && w && w.dog.affinity === PE.CFG.AFF0, '13k：eng 版本不对 → 存档里原样留着，引擎当新狗起步（小狗还在）'); }
+  const b3 = bad({ owned: true, home: 'c77', eng: { v: 99, dog: {} } }); { const before = JSON.stringify(D(b3).eng), r1 = rt(); const w = r1.sync(b3); ok(D(b3).home === 'c77' && !w && r1.unsupported && !r1.beforePersist(b3) && JSON.stringify(D(b3).eng) === before && PG.engSupport(D(b3)) === 'unsupported', 'r4：eng 版本不对 → 原样保留、暂停运行、不写回、不当新狗（小狗还在原房间）'); }
   const b4 = bad({ owned: true, home: 'c77', boughtAt: 'zz' }); ok(D(b4).boughtAt === 0 && D(b4).eng === null, 'boughtAt / eng 缺失：补默认');
   ok(Object.keys(E.migrate(clone(st), T0).st).filter(k => k === 'pets').length === 1, 'E.migrate 本身就保留 pet（主线预览读到这份档也不会丢小狗）');
 }
@@ -258,6 +258,8 @@ section('10. p4b：满屋（合法摆满）= 正常状态，不崩、不扣了�
     const st = fresh(); st.ceos.pearl.unlocked = true; st.coins = 9000; PG.buy(st, E, 'c77', T0, M);
     const r = rt(); r.sync(st); PE.pet(r.w, 'button'); tick(r, st, 6); const aff = r.w.dog.affinity; r.beforePersist(st);
     fill(st, 'pearl'); const coins = st.coins;
+    { const b0 = JSON.stringify(st), no = PG.assign(st, E, D(st).uid, 'pearl', { M, save: () => true }); ok(!no.ok && no.noRoom && JSON.stringify(st) === b0 && D(st).home === 'c77', 'r4：带地面检查搬进满屋 → 拒绝（NO_ROOM），存档 / 房间 / 金币不变'); }
+    // 下面模拟 r4 之前已经搬进满屋的旧存档（兼容 move 不带 manifest，不做地面检查）
     const mv = PG.move(st, E, 'pearl'); const a = tryDo(() => { r.sync(st); tick(r, st, 3); return true; });
     ok(mv.ok && !a.err && r.homeId === 'pearl' && r.waiting && r.lastEvent === 'waiting', `搬进满屋（珍珠姐家 6×4 摆满）：不崩，等待安置（${a.err || r.lastEvent}）`);
     ok(D(st).home === 'pearl' && petCount(st) === 1 && st.coins === coins && r.w.dog.affinity === aff, '搬家：所有权 / 亲密保留，不花钱');
@@ -312,12 +314,15 @@ section('11. p4b：坏档逐字段容错（NaN / 无穷 / 字符串 / 负数 / �
   ok(nanSave === 0, `保存 → 读档往返：存档里没有 NaN / Infinity / null 时间戳（${nanSave}）` + (nanSave ? ' ' + why.filter(x => /存档/.test(x)).slice(0, 4).join('；') : ''));
   ok(lost === 0 && coinBad === 0, `所有权 / 金币一个都没丢（${lost} / ${coinBad}）`);
   // 外层字段坏了也不清所有权
-  const outer = (p) => tryDo(() => { const s = E.migrate(clone(base), T0).st; p(D(s)); PG.norm(s, E); const r1 = rt(); r1.sync(s); tick(r1, s, 1); r1.beforePersist(s); return s; });
+  let outerUnsup = false, outerEng0 = null;
+  const outer = (p) => tryDo(() => { const s = E.migrate(clone(base), T0).st; p(D(s)); PG.norm(s, E); outerEng0 = D(s).eng; const r1 = rt(); r1.sync(s); tick(r1, s, 1); r1.beforePersist(s); outerUnsup = r1.unsupported; return s; });
   for (const [nm, fn] of [['eng = NaN', p => { p.eng = NaN; }], ['eng = 字符串', p => { p.eng = 'x'; }], ['eng = null', p => { p.eng = null; }], ['eng 缺 dog', p => { delete p.eng.dog; }], ['eng.dog = null', p => { p.eng.dog = null; }], ['eng.ball = 数组', p => { p.eng.ball = [1, 2]; }],
                           ['boughtAt = NaN', p => { p.boughtAt = NaN; }], ['boughtAt = -1', p => { p.boughtAt = -1; }], ['boughtAt = "x"', p => { p.boughtAt = 'x'; }], ['home = 123', p => { p.home = 123; }], ['home = null', p => { delete p.home; }],
                           ['owned = "true"', p => { p.owned = 'true'; }], ['owned 缺', p => { delete p.owned; }], ['v = 99', p => { p.v = 99; }]]) {
     const r = outer(fn);
-    ok(!r.err && PG.owned(r.v) && r.v.coins === coins && finAll(D(r.v)) && (typeof D(r.v).home === 'string' || D(r.v).home === null) && Number.isFinite(D(r.v).boughtAt), `pet.${nm}：不报错、所有权保留、无 NaN（${r.err || ''}）`);
+    // r4: a non-empty payload this build cannot read (NaN / string) is kept as-is and paused, never re-initialized.
+    const engOK = outerUnsup ? Object.is(D(r.v).eng, outerEng0) && finAll({ ...D(r.v), eng: null }) : finAll(D(r.v));
+    ok(!r.err && PG.owned(r.v) && r.v.coins === coins && engOK && (typeof D(r.v).home === 'string' || D(r.v).home === null) && Number.isFinite(D(r.v).boughtAt), `pet.${nm}：不报错、所有权保留、无 NaN（${r.err || ''}）`);
   }
   // 合法的 0 保留 / 范围夹紧 / 默认值
   const one = (path, v, now) => { clock = now || T0 + 2000; const s = corrupt(path, v); const r1 = rt(); r1.sync(s); return { s, w: r1.w, r: r1 }; };
@@ -415,8 +420,10 @@ section('13. p5：买狗走预览统一钱包（12d addCoins / spendCoins；12d1
   ok(!/\.coins\s*-=/.test(pg) && /E\.transact\(st, \{ price: PET\.price/.test(fs.readFileSync(path.join(__dirname, 'petgame.js'), 'utf8')) && !/E\.spendCoins\(/.test(pg) && /E\.walletOk\(st\)/.test(pg), 'p6：petgame.js 不直接改 coins、不再自己 spendCoins：扣钱 + 写 pet + 落盘只走 12d3 统一入口 E.transact，先查 E.walletOk');
   ok(/E\.loadSave\(/.test(app) && /if \(m\.blocked\) saveBlocked = true;\n  if \(window\.PetGame\) PetGame\.norm\(m\.st, E\);/.test(app) && /E\.validState\(state\)/.test(app), 'game/app.js 基于 12d2：读档 E.loadSave（异常 / 不保存模式照旧）后才 norm 小狗，写档前 validState + 备份轮换');
   ok(/const ART_ONE = \{ face_c77:'12d2', ceo_c77:'13i', furn_otaku_panel_lamp:'13i' \};/.test(app) && /`\.\.\/\.\.\/art\/ceo_\$\{id\}\.webp\?v=\$\{artV\('ceo_' \+ id\)\}`/.test(app) && /const FURN_SIDE = \{ sofa: 472 \/ 240, pearl_scallop_sofa: 575 \/ 240, rocket_pipe_sofa: 417 \/ 240 \};/.test(app) && /`\.\.\/\.\.\/art\/face_\$\{id\}\.webp\?v=\$\{artV\('face_' \+ id\)\}`/.test(app) && !/face_\$\{id\}\.webp\?v=\$\{ART_V\}/.test(app), '熊大 22:08：game/app.js 基于 12d2 带上 ART_ONE，77 头像地址 = ../../art/face_c77.webp?v=12d2（不再 ?v=11）；13i 宠物页同步：77 全身 ceo_c77?v=13i、落地灯单图缓存号、沙发侧面图登记和主页面一致');
-  ok(/E\.canAfford\(state, ?P\.price\)/.test(app) && /E\.balance\(state\)/.test(app), '购买弹窗：余额 / 能不能买走 E.balance / E.canAfford');
-  { const f = (app.match(/function confirmPetBuy[\s\S]*?\n}\n/) || [''])[0]; ok(/E\.walletOk\(state\)/.test(f), '【13k r3 待决】钱包异常不弹购买窗（r3 confirmPetBuy 未先查 E.walletOk，会弹窗但确认键禁用；PG.buy 仍拒买不扣钱）'); }
+  ok(/E\.canAfford\(state, ?(P|PG\.PET)\.price\)/.test(app) && /E\.balance\(state\)/.test(app), '购买弹窗：余额 / 能不能买走 E.balance / E.canAfford');
+  { const f = (app.match(/function confirmPetBuy[\s\S]*?\n}\n/) || [''])[0], w = (app.match(/function petBuyWhy[\s\S]*?\n}\n/) || [''])[0];
+    ok(/E\.walletOk\(state\)/.test(w) && /saveBlocked \|\| frozen/.test(w) && /E\.canAfford\(/.test(w) && (f.match(/petBuyWhy\(room\)/g) || []).length === 2 && /id="pbWhy"/.test(f),
+      'r4：钱包异常 / 存档不可写 / 余额不足 → 购买确认不可用并写明原因（petBuyWhy），提交时再查一次'); }
 }
 
 section('14. p6：买狗走 12d3 统一交易入口 E.transact（保存失败整体回滚 / 异常钱包拒买）；宠物 persist 守 12d3 规则');

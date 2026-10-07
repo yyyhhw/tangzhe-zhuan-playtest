@@ -137,7 +137,7 @@ function harness(options = {}) {
     window: { PetGame: PG, PetEngine: PE, PetArt: PA, PetPuppy: PP, Node: { DOCUMENT_POSITION_PRECEDING: 2, DOCUMENT_POSITION_FOLLOWING: 4 } },
     Node: { DOCUMENT_POSITION_PRECEDING: 2, DOCUMENT_POSITION_FOLLOWING: 4 },
     saveBlocked: false, frozen: false, TEST_MODE: false, SAVE_KEY: MAIN, BAK_KEY: BAK,
-    lastGood: storage.data.get(MAIN), dirty: false, homeWho: HOMES[0], tab: 'home', homeSub: 'room', homeMode: 'live', lastFrame: 0,
+    lastGood: storage.data.get(MAIN), dirty: false, homeWho: HOMES[0], tab: 'home', homeSub: 'room', homeMode: 'live', homeSel: null, lastFrame: 0,
     $: selector => document.querySelector(selector),
     openModal: html => document.open(html), closeModal: () => document.close(),
     toast: text => toasts.push(text), sfx: sound => sounds.push(sound),
@@ -148,6 +148,8 @@ function harness(options = {}) {
     renderTab: () => {},
   });
   vm.runInContext("'use strict';\n" + PET_SOURCE + ACT_SOURCE + HOME_ACT_SOURCE + '\nthis.petUI = { act, petPlace, petRoomBar, petDo, petTap, petChooseReplacement, petSyncActors, petSave, petsHooks, petActors, setManifest(m) { petM = m; } };', ctx, { filename: path.join(ROOT, 'app.js:pet-section-and-dispatch') });
+  // r4: placement probes floor space with the art manifest, so the harness starts with it loaded (as the page does after petInit).
+  ctx.petUI.setManifest(MANIFEST);
   return { ctx, ui: ctx.petUI, document, storage, commits, toasts, sounds, state };
 }
 function choices(h) { return h.document.querySelectorAll('#petReplace [data-replace-uid]'); }
@@ -238,6 +240,7 @@ test('VM-dispatch: actual act() and homeAct() route place, cancel, and standby a
 });
 test('VM-manual: actual hide/show/blur/frame lifecycle code cannot tick or autosave in manual mode', () => {
   const h = harness(), before = snapshot(h.state), stored = h.storage.snap();
+  h.ui.setManifest(null);   // lifecycle-only check: no art/view, as before r4 loaded the manifest by default
   const calls = [], events = {};
   Object.assign(h.ctx, {
     tick: () => calls.push('tick'), audioPause: () => calls.push('audioPause'), audioResume: () => calls.push('audioResume'),

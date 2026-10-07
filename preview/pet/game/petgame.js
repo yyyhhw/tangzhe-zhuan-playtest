@@ -70,6 +70,19 @@
     }
     return { rooms, standby, pets };
   }
+  // Growth payload support. Only empty growth may start a fresh dog. A dog payload with an
+  // unknown top-level or nested version is kept byte-for-byte and its runtime stays paused.
+  // Other species (cat) are opaque here: the roster never interprets or rewrites them.
+  function engSupport(p) {
+    const e = p && p.eng;
+    if (e === null || e === undefined) return 'empty';
+    if ((validUid(p.species) ? p.species : 'dog') !== 'dog') return 'opaque';
+    if (!isObj(e) || PE.sanitizeSave(e) === null) return 'unsupported';
+    // Non-object nested fields are field damage in a known version (repaired by sanitizeSave);
+    // a nested object that declares its own version is a format this build does not know.
+    for (const k of ['dog', 'ball']) if (isObj(e[k]) && 'v' in e[k]) return 'unsupported';
+    return 'ok';
+  }
   const owned = (st, uid) => storedList(st).some(p => isObj(p) && (uid == null || p.uid === uid)) || (uid == null && legacyOwned(st));
   // A replacement picker captures PG.view(). Only identity/placement is compared:
   // elapsed time, animation and live engine snapshots do not make a picker stale.
@@ -107,9 +120,11 @@
     if (after.replacement !== null) storedList(st).find(p => p.uid === after.replacement).room = null;
     return after;
   }
+  // opt.M (manifest) enables the floor-space probe; the roster cap (two) is checked separately.
   function assign(st, E, uid, room, opt) {
     const o = opt || {}, checked = placement(st, E, uid, room, o, false);
     if (!checked.ok) return checked;
+    if (room !== null && o.M !== undefined && !hasRoom(st, E, room, o.M)) return { ok: false, why: NO_ROOM, noRoom: true };
     if (typeof E.transact !== 'function') return { ok: false, why: '存档交易不可用' };
     const r = E.transact(st, { price: 0, blocked: !!o.blocked, save: o.save,
       apply: (s) => {
@@ -190,7 +205,7 @@
   function createRuntime(opt) {
     const E = opt.E, M = opt.manifest, now = opt.now || (() => Date.now());
     let w = null, homeId = null, petUid = null, key = '', decor = false, lastEvent = '', simAt = 0, restored = null;
-    let generation = '', sourceEng = '', sourceState = null, berth = 0;
+    let generation = '', sourceEng = '', sourceState = null, berth = 0, unsupported = false;
     const stagedEngs = new Set();
     const token = (v) => { try { return JSON.stringify(v); } catch (e) { return ''; } };
     function record(st) {
@@ -230,7 +245,10 @@
     }
     function sync(st) {
       const p = record(st), room = roomOf(p);
-      if (!p || !validRoom(st, E, room)) { reset(); return null; }
+      if (!p || !validRoom(st, E, room)) { reset(); unsupported = false; return null; }
+      // Unknown engine version: no world, no simulation, no write-back (beforePersist sees w === null).
+      if (engSupport(p) === 'unsupported') { reset(); unsupported = true; return null; }
+      unsupported = false;
       // The exact payload we staged is our own save, not an external update.
       // A transaction rollback instead restores sourceEng, keeping live progress.
       acknowledgePersist(st);
@@ -285,10 +303,10 @@
       return true;
     }
     function resume(st) { if (!w) return sync(st); beforePersist(st); w = null; sync(st); return lastEvent; }
-    const act = (st, fn) => { if (!sync(st)) return { ok: false, why: 'none' }; if (w.noRoom) return { ok: false, why: 'waiting' }; return fn(w); };
+    const act = (st, fn) => { if (!sync(st)) return { ok: false, why: unsupported ? 'unsupported' : 'none' }; if (w.noRoom) return { ok: false, why: 'waiting' }; return fn(w); };
     return {
       get w() { return w; }, get uid() { return petUid || opt.uid || null; }, get homeId() { return homeId; }, get lastEvent() { return lastEvent; }, get restored() { return restored; },
-      get waiting() { return !!(w && w.noRoom); },
+      get waiting() { return !!(w && w.noRoom); }, get unsupported() { return unsupported; },
       sync, frame, snapshot, beforePersist, acknowledgePersist, resume, reset,
       call: (st) => act(st, PE.call), pet: (st, how) => act(st, (w) => PE.pet(w, how || 'button')), throwBall: (st, t) => act(st, (w) => PE.throwBall(w, t)),
     };
@@ -373,5 +391,5 @@
     return { draw, hit, detach, get artMode() { return atlas ? 'atlas' : 'placeholder'; }, get els() { return els; } };
   }
 
-  return { PET, PV, MAX_PER_ROOM, BED, INTERACT, NO_ROOM, norm, view, owned, assign, buy, move, hasRoom, layoutOf, pickBed, bedOK, createRuntime, createView, padXOf };
+  return { PET, PV, MAX_PER_ROOM, BED, INTERACT, NO_ROOM, norm, view, owned, engSupport, assign, buy, move, hasRoom, layoutOf, pickBed, bedOK, createRuntime, createView, padXOf };
 });
