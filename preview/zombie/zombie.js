@@ -51,7 +51,10 @@ if (EMBED) window.addEventListener('message', e => {
 });
 const SFX = window.ZBSfx;
 let hostMute = false, userMute = false;   // hostMute = 经营页静音开关；userMute = 暂停页的声音开关（只在内存）
-function applyMute() { SFX.setMuted(hostMute || userMute); if (!hostMute && !userMute && G && !G.over && !G.pendStart && !paused) SFX.startBgm(diff()); $('#sndBtn').textContent = userMute ? '声音：关' : '声音：开'; }
+// 背景乐只在真正开打、没暂停、页面在前台、没静音时响
+function bgmOk() { return !hostMute && !userMute && !!G && !G.over && !G.pendStart && !paused && !document.hidden; }
+function bgmTry() { if (bgmOk()) SFX.startBgm(diff()); }
+function applyMute() { SFX.setMuted(hostMute || userMute); bgmTry(); $('#sndBtn').textContent = userMute ? '声音：关' : '声音：开'; }
 function onState(d) {
   if (!d || d.zb !== 'state') return;
   pend = false; proto.coins = Math.max(0, fin(d.coins, 0)); proto.blocked = !!d.blocked; Object.assign(proto, ZB.norm(d.z)); proto.ceo = ZB.heroOf('ceo' in d ? d.ceo : undefined); proto.ready = true;
@@ -63,7 +66,7 @@ function onState(d) {
   // 只认本局请求的回执：开局后、或 runId 对不上的迟到回执一律忽略（失败回执没带 runId 时只在等待中认）
   if (d.ack === 'start' && G && G.pendStart && d.runId === G.runId) {
     if (d.ok !== true || !ZB.CEO_IDS.includes(d.ceo)) return abortStart(d.why || '开局登记失败');
-    clearTimeout(G.pendTimer); G.pendStart = false; G.ceo = d.ceo; renderHero(); last = performance.now(); SFX.startBgm(diff()); return;
+    clearTimeout(G.pendTimer); G.pendStart = false; G.ceo = d.ceo; renderHero(); last = performance.now(); bgmTry(); return;
   }
   if (d.ack === 'result' && G && G.over && G.wait) { G.wait = false; G.why = d.why || ''; renderResult(); }
 }
@@ -608,7 +611,7 @@ function start(mode, n) {
   if (mode !== 'endless') { mode = 'level'; n = Math.min(Math.max(1, Math.floor(fin(n, selLv))), Math.min(MAX_LV, proto.cleared + 1)); selLv = n; }
   resize(); G = newRun(mode, n); G.runId = newRunId();
   paused = false; joy.on = false; show(null); renderHero(); hud(); last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
-  if (!EMBED) SFX.startBgm(diff());
+  if (!EMBED) bgmTry();
   // 嵌入模式先向父页登记本局，等到对应 runId 的 ok 回执才开始计时（onState ack:'start'），超时回菜单
   if (EMBED) {
     const g = G; g.pendStart = true; toast('开局登记中…');
@@ -653,7 +656,7 @@ function renderResult() {
   $('#resStats').textContent = G.mode === 'endless' ? `坚持 ${Math.floor(G.t)} 秒 · 击倒 ${G.kills} · 最好 ${Math.floor(proto.endBest.t)} 秒`
     : `坚持 ${Math.floor(G.t)} / ${G.dur} 秒 · 击倒 ${G.kills}`;
 }
-function setPause(on) { if (!G || G.over) return; paused = on; if (on) SFX.stopBgm(); else if (!G.pendStart) SFX.startBgm(diff()); joy.on = false; show(on ? '#pause' : null); if (!on) last = performance.now(); }
+function setPause(on) { if (!G || G.over) return; paused = on; if (on) SFX.stopBgm(); else bgmTry(); joy.on = false; show(on ? '#pause' : null); if (!on) last = performance.now(); }
 function loop(now) {
   const dt = (now - last) / 1000; last = now;
   if (G && !G.over && !paused) { step(dt); if (G) hud(); }
