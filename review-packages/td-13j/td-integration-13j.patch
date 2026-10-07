@@ -1,0 +1,1317 @@
+--- a/preview/app.js
++++ b/preview/app.js
+@@ -2,6 +2,7 @@
+ (() => {
+ 'use strict';
+ const E = window.Economy, CFG = E.CFG;
++const TD = window.TDCore; let tdOpen = false, tdPort = null, tdGeneration = 0;
+ const ZB = window.ZBCore; var zbOpen = false, zbPort = null;
+ const ZB_SHOP = 0; var zbLastCeo = null, zbRun = null; const zbUsedRuns = new Set();   // 13d：用过的 runId（本页内存），重复 / 过期的 start 不能把旧局重新激活   // 13a：打僵尸 = 烧烤摊（店 0）；zbLastCeo = 最近一次成功结算的上场 CEO（只在内存）
+ // 13c：zbRun = 父页开局登记 { runId, ceoId, startedAt, settled }——结算只认这份记录、同一局只结一次；中途调岗不要求仍在任
+@@ -101,7 +102,7 @@
+ function claimLock() { if (TEST_MODE) return; try { localStorage.setItem(LOCK_KEY, JSON.stringify({ tab:TAB, t:now() })); } catch (e) {} }
+ function lockMine() { if (TEST_MODE) return true; try { const v = JSON.parse(localStorage.getItem(LOCK_KEY) || 'null'); return !v || v.tab === TAB; } catch (e) { return true; } }
+ function freeze() {
+-  if (frozen) return; frozen = true; if (zbOpen) closeZombie();
++  if (frozen) return; frozen = true; if (zbOpen) closeZombie(); if (tdOpen) closeTD();
+   $('#lockOverlay').classList.remove('hidden'); audioPause();
+ }
+ window.addEventListener('storage', e => {
+@@ -146,7 +147,7 @@
+   if (!AU.started) { AU.started = true; startBgm(); }
+ }
+ function audioPause() { if (AU.ctx && AU.ctx.state === 'running') AU.ctx.suspend().catch(() => {}); stopBgm(); }
+-function audioResume() { if (!AU.ctx || state.muted || document.hidden || frozen) return; AU.ctx.resume().catch(() => {}); if (AU.started) startBgm(); }
++function audioResume() { if (!AU.ctx || state.muted || document.hidden || frozen || tdOpen) return; AU.ctx.resume().catch(() => {}); if (AU.started) startBgm(); }
+ function tone(f, t, dur, type = 'sine', vol = 0.3, dest = AU.sfx, f2) {
+   const c = AU.ctx, o = c.createOscillator(), g = c.createGain();
+   o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
+@@ -1134,6 +1135,7 @@
+ function act(a, arg, btn) {
+   const i = state.cur;
+   switch (a) {
++    case 'td': openTD(); return;
+     case 'zombie': if (!zbCeo()) return openAssignTo(ZB_SHOP); openZombie(); return;   // 12e 打僵尸入口（板砖 b640f25）；13a：烧烤摊没 CEO → 打开派 CEO 选单
+     case 'zbAssign': return openAssignTo(ZB_SHOP);   // 13a「先派 CEO」
+     case 'open': { const r = atomic(() => E.openShop(state, +arg), '开张没有生效，金币已退回'); if (!buyOk(r, btn)) return; afterBuy(btn, E.SHOPS[+arg].name + ' 开张啦！'); signAnim = { shop:+arg, from:'招租中', t0:clock }; handleUnlocks(r.unlocked); break; }
+@@ -1256,7 +1258,7 @@
+ }
+ // 13h：每家店自己的小游戏入口（只在店铺页最底部）；烧烤摊 = 打僵尸，其余三家以后各有自己的游戏，加在这里
+ function shopGameCard(i) {
+-  const card = i === ZB_SHOP ? zbCard() : '';
++  const card = i === ZB_SHOP ? zbCard() : i === 3 ? tdCard() : '';
+   return card ? `<div class="sec-title shop-game-title">小游戏</div>${card}` : '';
+ }
+ function ceoPost(id) { const s = state.ceos[id]; return s.at >= 0 ? E.signOf(state, s.at).name : '休息中（空着）'; }
+@@ -2114,6 +2116,7 @@
+   state.muted = !state.muted; $('#mute').classList.toggle('off', state.muted);
+   if (state.muted) { if (AU.master) AU.master.gain.value = 0; audioPause(); }
+   else { audioUnlock(); if (AU.master) AU.master.gain.value = 1; audioResume(); }
++  tdController.reply();
+   zbReply();   // 13e：小游戏开着时把静音状态同步过去
+   if (!persist() && !saveBlocked && !frozen) toast('声音已切换，但保存失败：刷新后会恢复原设置', 2600);   // 12d3：声音开关是设置不是进度，照常生效（不能让玩家关不掉声音），只提示没存上
+ });
+@@ -2206,6 +2209,44 @@
+   hitBig, modalOpen, closeModal, get frozen() { return frozen; },
+   audioState() { return AU.ctx ? AU.ctx.state : 'none'; }, showPreview, openAssign, JOB_ART, jobShown, jobURL, showJobArt,
+   HOME_ART, FURN_ART, FURN_UP, homeAct, get homeWho() { return homeWho; }, get homeSub() { return homeSub; }, get homeMode() { return homeMode; }, set homeMode(v) { homeMode = v === 'decor' ? 'decor' : 'live'; }, get homeSel() { return homeSel; }, get homeDrag() { return homeDrag; }, homeActor, LIVE_LINES, homeUndo, resize, get canvasSize() { return { W, H }; }, pet: petHooks, lookOf, drawPerson, drawHead, LOOKS, get bubble() { return bubble; } };
++/* ================= 科技公司塔防：与主钱包同一存档、同一原子交易 ================= */
++function tdCard() {
++  const z = TD.norm(state.td);
++  return `<div class="card td-card"><div class="ava">♜</div><div class="info"><div class="name">机房塔防<span class="tag">样品</span></div><div class="desc">8 种防御塔 · 4 位统帅 · ${TD.WAVES} 波<br>最佳 ${z.best}/${TD.WAVES} 波 · 升级共用经营金币</div></div><button class="buy" data-act="td">去守</button></div>`;
++}
++const tdController = window.TDHost.create({
++  state:() => state, blocked:() => zbBlocked(), balance:() => E.balance(state),
++  transact:(apply, price) => txn(apply, price, '塔防升级或进度没有生效'),
++  changed:() => { dirty = true; }, close:() => closeTD(),
++  send:d => { if (tdOpen && tdPort) tdPort.postMessage(d); }
++});
++function openTD() {
++  if (frozen || tdOpen || zbOpen || !state.shops[3].open) return;
++  tdOpen = true; const f = $('#tdFrame'), generation = ++tdGeneration;
++  const target = new URL('td/index.html?embed=1&v=13j', location.href);
++  f.onload = () => {
++    if (!tdOpen || generation !== tdGeneration) return;
++    // Verify the actual loaded document, not merely an iframe src attribute.
++    let loaded; try { loaded = new URL(f.contentWindow.location.href); } catch (e) { return; }
++    if (loaded.origin !== location.origin || loaded.pathname !== target.pathname) return;
++    if (tdPort) tdPort.close(); tdController.reset();
++    const ch = new MessageChannel(); tdPort = ch.port1;
++    const port = tdPort;
++    port.onmessage = e => { if (tdOpen && generation === tdGeneration && tdPort === port) tdController.msg(e.data); };
++    f.contentWindow.postMessage({td:'port'}, location.origin, [ch.port2]);
++    tdController.reply();
++  };
++  f.src = target.href; $('#tdOverlay').classList.remove('hidden'); audioPause();
++}
++function closeTD() {
++  if (!tdOpen) return;
++  tdOpen = false; tdGeneration++; tdController.reset();
++  if (tdPort) { tdPort.close(); tdPort = null; }
++  const f = $('#tdFrame'); f.onload = null; f.src = 'about:blank';
++  $('#tdOverlay').classList.add('hidden'); dirty = true; audioResume();
++}
++Object.defineProperties(window.__tzz, {openTD:{value:openTD}, closeTD:{value:closeTD}, tdOpen:{get:() => tdOpen}, tdRun:{get:() => tdController.run}, tdReply:{value:() => tdController.reply()}});
++
+ /* ================= 打僵尸（zombie/?embed=1，全屏 iframe）=================
+    只和经营共用金币：价格、等级上限、进度校验都在这边按 ZBCore 算，训练扣款和结算进度都走 txn → E.transact（扣款 + 改状态 + persist 一起成功，失败整体回滚）。
+    小游戏页不写任何存档，也不能加金币；iframe 加载后经营页递给它一个 MessageChannel 端口，只认这个端口发来的 hello / buy / result / close。 */
+@@ -2235,7 +2276,7 @@
+     const ch = new MessageChannel(); zbPort = ch.port1; zbPort.onmessage = e => zbMsg(e.data);
+     f.contentWindow.postMessage({ zb:'port' }, location.origin, [ch.port2]); zbReply();
+   };
+-  f.src = 'zombie/?embed=1&v=13i'; $('#zbOverlay').classList.remove('hidden'); audioPause();
++  f.src = 'zombie/?embed=1&v=13j'; $('#zbOverlay').classList.remove('hidden'); audioPause();
+ }
+ function closeZombie() {
+   if (!zbOpen) return; zbOpen = false; zbRun = null; if (zbPort) { zbPort.close(); zbPort = null; }
+--- a/preview/economy.js
++++ b/preview/economy.js
+@@ -1231,6 +1231,12 @@
+   function checkSave(raw) {
+     if (!isObj(raw)) return ['save'];
+     const bad = [], has = k => raw[k] !== undefined;
++    // Optional for old saves. Reject damaged TD data instead of silently
++    // resetting purchased levels, while leaving all unrelated fields untouched.
++    if (has('td')) {
++      const t = raw.td, ids = ['bbq','tea','book','tech','t77','tpearl','totaku','trocket','cmd_c77','cmd_pearl','cmd_otaku','cmd_rocket'];
++      if (!isObj(t) || !isObj(t.lv) || !ids.every(k => Number.isInteger(t.lv[k]) && t.lv[k] >= 0 && t.lv[k] <= 30) || !Number.isInteger(t.cleared) || t.cleared < 0 || t.cleared > 1 || !Number.isInteger(t.best) || t.best < 0 || t.best > 10 || !['c77','pearl','otaku','rocket'].includes(t.cmd)) bad.push('td');
++    }
+     if (has('v') && !(Number.isInteger(raw.v) && raw.v >= 0)) bad.push('v');
+     if (!isAmt(raw.coins)) bad.push('coins');
+     else if (raw.coins > SAFE) bad.push('coins>安全整数');   // 12d1：超过 MAX_SAFE_INTEGER 的余额不能当钱包用
+--- a/preview/index.html
++++ b/preview/index.html
+@@ -12,8 +12,8 @@
+ <title>躺着也能赚（预览·未上线）</title>
+ <link rel="icon" href="icon.svg" type="image/svg+xml">
+ <link rel="apple-touch-icon" href="apple-touch-icon.png">
+-<link rel="stylesheet" href="style.css?v=13i">
+-<link rel="stylesheet" href="pet/game/petgame.css?v=13i">
++<link rel="stylesheet" href="style.css?v=13j">
++<link rel="stylesheet" href="pet/game/petgame.css?v=13j">
+ </head>
+ <body>
+ <!-- 12c 漫画 UI：统一线稿图标（同一支墨线笔 stroke 2、圆头；--ica 主色 / --icf 纸色 / --icy 黄，激活态由 CSS 换色） -->
+@@ -89,19 +89,22 @@
+     <button id="lockResume" class="buy big">在这里继续玩</button>
+   </div>
+ </div>
++<div id="tdOverlay" class="zb-ov hidden"><iframe id="tdFrame" title="机房塔防" src="about:blank"></iframe></div>
+ <div id="zbOverlay" class="zb-ov hidden"><iframe id="zbFrame" title="77 打僵尸" src="about:blank"></iframe></div>
+ <div id="toast" class="hidden"></div>
+ <script>
+ /* 版本自检：App 内置浏览器 / 主屏图标可能缓存旧的 index.html。拿最新版本号，比本页新就带版本号重开一次（只重开一次，不会死循环） */
+-(function(){var B='13i';try{fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(j){if(!j||!j.v||String(j.v)===B)return;var k='tzz-reload-'+j.v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');var q=location.search.replace(/^\?/,'').split('&').filter(function(x){return x&&x.split('=')[0]!=='v'});q.unshift('v='+j.v);location.replace(location.pathname+'?'+q.join('&')+location.hash);}).catch(function(){});}catch(e){}})();
++(function(){var B='13j';try{fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(j){if(!j||!j.v||String(j.v)===B)return;var k='tzz-reload-'+j.v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');var q=location.search.replace(/^\?/,'').split('&').filter(function(x){return x&&x.split('=')[0]!=='v'});q.unshift('v='+j.v);location.replace(location.pathname+'?'+q.join('&')+location.hash);}).catch(function(){});}catch(e){}})();
+ </script>
+-<script src="zombie/zbcore.js?v=13i"></script>
+-<script src="economy.js?v=13i"></script>
+-<script src="pet/art.js?v=13i"></script>
+-<script src="pet/puppy.js?v=13i"></script>
+-<script src="pet/room.js?v=13i"></script>
+-<script src="pet/engine.js?v=13i"></script>
+-<script src="pet/game/petgame.js?v=13i"></script>
+-<script src="app.js?v=13i"></script>
++<script src="zombie/zbcore.js?v=13j"></script>
++<script src="td/tdcore.js?v=13j"></script>
++<script src="td/tdhost.js?v=13j"></script>
++<script src="economy.js?v=13j"></script>
++<script src="pet/art.js?v=13j"></script>
++<script src="pet/puppy.js?v=13j"></script>
++<script src="pet/room.js?v=13j"></script>
++<script src="pet/engine.js?v=13j"></script>
++<script src="pet/game/petgame.js?v=13j"></script>
++<script src="app.js?v=13j"></script>
+ </body>
+ </html>
+--- a/preview/version.json
++++ b/preview/version.json
+@@ -1 +1 @@
+-{"v":"13i"}
++{"v":"13j"}
+--- a/preview/pet/game/index.html
++++ b/preview/pet/game/index.html
+@@ -13,8 +13,8 @@
+ <title>躺着也能赚（宠物 p6 预览·未上线）</title>
+ <link rel="icon" href="../../icon.svg" type="image/svg+xml">
+ <link rel="apple-touch-icon" href="../../apple-touch-icon.png">
+-<link rel="stylesheet" href="style.css?v=p6a">
+-<link rel="stylesheet" href="petgame.css?v=p6a">
++<link rel="stylesheet" href="style.css?v=p6b">
++<link rel="stylesheet" href="petgame.css?v=p6b">
+ </head>
+ <body>
+ <!-- 12c 漫画 UI：统一线稿图标（同一支墨线笔 stroke 2、圆头；--ica 主色 / --icf 纸色 / --icy 黄，激活态由 CSS 换色） -->
+@@ -93,14 +93,14 @@
+ <div id="toast" class="hidden"></div>
+ <script>
+ /* 版本自检：App 内置浏览器 / 主屏图标可能缓存旧的 index.html。拿最新版本号，比本页新就带版本号重开一次（只重开一次，不会死循环） */
+-(function(){var B='p6a';try{fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(j){if(!j||!j.v||String(j.v)===B)return;var k='tzz-reload-'+j.v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');var q=location.search.replace(/^\?/,'').split('&').filter(function(x){return x&&x.split('=')[0]!=='v'});q.unshift('v='+j.v);location.replace(location.pathname+'?'+q.join('&')+location.hash);}).catch(function(){});}catch(e){}})();
++(function(){var B='p6b';try{fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(j){if(!j||!j.v||String(j.v)===B)return;var k='tzz-reload-'+j.v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');var q=location.search.replace(/^\?/,'').split('&').filter(function(x){return x&&x.split('=')[0]!=='v'});q.unshift('v='+j.v);location.replace(location.pathname+'?'+q.join('&')+location.hash);}).catch(function(){});}catch(e){}})();
+ </script>
+-<script src="economy.js?v=p6a"></script>
+-<script src="../art.js?v=p6a"></script>
+-<script src="../puppy.js?v=p6a"></script>
+-<script src="../room.js?v=p6a"></script>
+-<script src="../engine.js?v=p6a"></script>
+-<script src="petgame.js?v=p6a"></script>
+-<script src="app.js?v=p6a"></script>
++<script src="economy.js?v=p6b"></script>
++<script src="../art.js?v=p6b"></script>
++<script src="../puppy.js?v=p6b"></script>
++<script src="../room.js?v=p6b"></script>
++<script src="../engine.js?v=p6b"></script>
++<script src="petgame.js?v=p6b"></script>
++<script src="app.js?v=p6b"></script>
+ </body>
+ </html>
+--- a/preview/pet/game/version.json
++++ b/preview/pet/game/version.json
+@@ -1 +1 @@
+-{"v":"p6a"}
++{"v":"p6b"}
+--- /dev/null
++++ b/preview/td/INTEGRATION.md
+@@ -0,0 +1,47 @@
++# Tower-defense parent integration candidate
++
++Base: 13i main at `fff02e09d39c11063d3ea07ee51d1689e1c56325`. Includes the complete TD sample directory from `devin/td-sample` at `04e717b09a5c5c496e1ab7b7487202ae20df73d2`, plus the reviewed integration changes. Candidate preview version is **13j, not published**.
++This is an isolated local candidate rebased onto the verified Bear2 13i handoff. No remote write, push, merge, or deployment has occurred. Apply `td-integration-13j.patch` from the repository root at the exact base above; TD sample import is already included, so do not separately overlay its old child files. 13i artwork/furniture source changes and existing tests are preserved.
++
++## Scope
++- Preview only. Tech-company shop (index 3) gets the bottom card, after its CEO controls. Other shop entries remain unchanged.
++- `state.td = {lv, cleared, best, cmd}` is an optional field in the existing main preview save. Old saves have no TD field until a successful TD mutation. No separate production/prototype wallet is used by the embedded child.
++- All permanent upgrades and results go through parent `txn` → real `E.transact` → existing `app.js persist`. Prices come from `TDCore.price`, never the child. Debit, level/progress and main save succeed together or roll back.
++- Save validation rejects malformed TD data instead of silently resetting purchased levels. Migration preserves the optional field and unrelated fields.
++- Parent sends a MessageChannel only to the actual same-origin TD frame path. Child validates parent window and exact origin. Old/reloaded/closed ports cannot mutate the parent.
++- Four commanders are explicitly selectable in this sample. Parent locks the selected valid commander and stage when a run starts; changing menu selection later cannot change that run.
++- Run/buy deduplication is **page-local memory only**. It is not a durable cross-refresh transaction log. Reloading the parent discards live iframe requests, ports and run registration. Persisted TD levels/progress remain in the main save.
++
++## Protocol
++Child sends:
++- `hello`, `close`
++- `buy {id, requestId}`; requestId is a nonempty unique request token; never send price/balance as authority.
++- `start {runId,n,cmd}`
++- `result {runId,n,cmd,win,waves,kills}`
++
++Parent sends `td:'state'`, authoritative `coins,z,blocked,muted`, plus:
++- Purchase ACK: `ack:'buy', requestId, id, ok, why?`
++- Start ACK: `ack:'start', runId, ok, n?, cmd?, why?`
++- Result ACK: `ack:'result', runId, ok, why?`
++Errors echo the original request/run ID too. Child ignores mismatched ACKs, including their state snapshots. Ordinary state pushes do not clear a pending purchase.
++
++Successful duplicate purchases replay success without charging; changed item under the same token is rejected. Start replays cannot replace or revive an old run. Successful duplicate results replay success without writing again. Failed saves may retry the same transaction token/run. Result data is locked for save retries. Per-page token history is capped at 4096 entries without evicting used IDs; refresh is required after that bound.
++
++A purchase ACK timeout keeps purchases/start disabled and shows retry-confirmation using the same token. Result timeout enables same-run retry. Both are 4 seconds; they do not claim failure proves nothing was committed. A late matching result ACK can still confirm success. Standalone sample remains exclusively on `tangzhe-td-proto`.
++
++## Verification actually performed
++- `node preview/td/test_tdhost.js`: 31 grouped checks passed. Uses real `Economy.transact` and `Economy.commitSave` against a fake storage adapter; **not** app.js persist or a browser.
++- `node preview/td/test_td_protocol.js`: 9 grouped checks passed. Actual child script executed in Node VM with fake DOM/timers; **not** rendering/browser E2E.
++- `node preview/td/test_td_bridge.js`: 6 grouped checks passed. Extracted actual parent bridge in Node VM; origin/path, stale ports, close, shop entry and pet cache-marker consistency. **Not** full app boot/browser E2E.
++- `node preview/test_coin_safety.js`: 522 passed, 0 failed.
++- `node --check` for app.js, economy.js, td.js, tdcore.js, tdhost.js: passed.
++- Python syntax compilation for both TD browser test files: passed.
++
++## Required validation still pending
++- `python3 preview/td/test_td.py <local preview td/index.html URL>`: updated fake-host contract and assertions; NOT run successfully. WebKit executable absent here.
++- `python3 preview/td/test_td_parent_e2e.py <local preview/index.html URL>`: new **real parent** app.js/persist tests; syntax checked only. Covers actual main/backup write-failure rollback, purchase recovery, result retry, refresh, saved commander, unrelated fields, formal-key preservation, SE/15 entry. Must be run with installed WebKit after applying candidate.
++- Full `node preview/test_economy.js`: attempted but blocked by missing binary art files (12 missing home files, then ENOENT face_c77.webp), not a pass.
++- Chromium fallback attempted using installed binary; sandbox blocked process socket creation. No browser/security settings changed and no software installed.
++- Visual screenshots, SE/15 interaction, sound/lifecycle behavior, whole-app regression, Bear2 independent review are pending. The local 13i rebase is complete.
++
++Candidate follows HANDOFF_13i cache rules: all parent index `?v=` references, preview/version.json and zombie iframe cache marker are 13j. TD scripts use 13j; the unchanged zombie child stays z10. ART_V and all 13i ART_ONE/FURN_SIDE entries remain untouched. The 13i pet/game cache omission is repaired separately: preview/pet/game/index.html references and its inline version-check B marker advance together from p6a to p6b, as does preview/pet/game/version.json. Its app.js and artwork/furniture behavior are untouched. Root/formal files are not part of this candidate. Version 13j is a local proposed version only.
+--- /dev/null
++++ b/preview/td/index.html
+@@ -0,0 +1,87 @@
++<!doctype html>
++<html lang="zh-CN">
++<head>
++<!-- 塔防 t1（科技公司小游戏样品）：单独打开 = 原型（模拟余额，只存 tangzhe-td-proto）；经营页用 ?embed=1 嵌入 = 共用经营金币，由经营页扣款写档（td:* 消息）。音效复用 ../zombie/zbsfx.js，头像复用 ../art。 -->
++<meta charset="utf-8">
++<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
++<meta name="apple-mobile-web-app-capable" content="yes">
++<meta name="theme-color" content="#f7f1e3">
++<meta name="format-detection" content="telephone=no">
++<title>科技公司塔防</title>
++<link rel="icon" href="../icon.svg" type="image/svg+xml">
++<link rel="stylesheet" href="td.css?v=t1">
++</head>
++<body>
++<canvas id="cv"></canvas>
++
++<div id="hud" class="hidden">
++  <div class="hud-top">
++    <div class="pill" id="lifeTxt">❤ 20</div>
++    <div class="pill" id="cashTxt">建设点 160</div>
++    <div class="pill" id="waveTxt">波 0/10</div>
++    <button class="icon-btn" id="pauseBtn" type="button" aria-label="暂停">II</button>
++  </div>
++  <div id="toast" class="toast"></div>
++  <div id="bar">
++    <div id="barMain">
++      <div class="bar-tip" id="barTip">点空地造塔 · 点路面让统帅走位</div>
++      <button class="buy" id="waveBtn" type="button">开波</button>
++      <button id="ultBtn" type="button" aria-label="大招" disabled><span class="ult-fill" id="ultFill"></span><span class="ult-lbl" id="ultLbl">星舰</span></button>
++    </div>
++    <div id="barBuild" class="hidden"><div class="tw-grid" id="twGrid"></div><button class="buy" id="buildX" type="button">取消</button></div>
++    <div id="barTower" class="hidden"><div class="bar-tip" id="twInfo"></div><button class="buy" id="twUp" type="button">升级</button><button class="buy" id="twSell" type="button">拆除</button><button class="buy" id="twX" type="button">取消</button></div>
++  </div>
++</div>
++
++<section id="menu" class="screen">
++  <button class="buy hidden" id="exitBtn" type="button">‹ 返回经营</button>
++  <div class="card hero">
++    <img id="heroImg" src="../art/face_rocket.webp" alt="" width="88" height="88">
++    <div>
++      <h1 id="heroName">科技公司塔防</h1>
++      <p id="heroDesc"></p>
++    </div>
++  </div>
++  <div class="card">
++    <div class="row"><h2>选统帅</h2><span class="note">统帅不占塔位，同名 CEO 塔有额外效果</span></div>
++    <div class="cmd-pick" id="cmdPick"></div>
++  </div>
++  <div class="card">
++    <div class="row"><h2>地图</h2><span class="wallet" id="lvProg"></span></div>
++    <div class="lvsel"><button class="buy" id="lvPrev" type="button" aria-label="上一关">‹</button><div><b id="lvTxt">第 1 关</b><small id="lvInfo"></small></div><button class="buy" id="lvNext" type="button" aria-label="下一关">›</button></div>
++  </div>
++  <div class="card">
++    <div class="row"><h2>永久升级</h2><span class="wallet"><span id="walletLbl">模拟余额</span> <b id="walletTxt">0</b></span></div>
++    <p class="note" id="upNote">单独打开是原型模式：用模拟金币，不碰经营存档。</p>
++    <button class="buy hidden" id="buyRetryBtn" type="button">重试升级确认</button>
++    <h3>防御塔</h3><div id="upTowers"></div>
++    <h3>统帅</h3><div id="upCmds"></div>
++  </div>
++  <button class="buy big red" id="startBtn" type="button">开守！</button>
++</section>
++
++<section id="pause" class="screen dim hidden">
++  <div class="card center">
++    <h2>暂停中</h2>
++    <button class="buy big" id="resumeBtn" type="button">继续</button>
++    <button class="buy" id="sndBtn" type="button">声音：开</button>
++    <button class="buy" id="quitBtn" type="button">退出本局</button>
++  </div>
++</section>
++
++<section id="result" class="screen dim hidden">
++  <div class="card center">
++    <h2 id="resTitle">守住了！</h2>
++    <p id="resStats"></p>
++    <p class="note" id="resNote"></p>
++    <button class="buy hidden" id="retryBtn" type="button">重试保存</button>
++    <button class="buy big red" id="againBtn" type="button">再来一局</button>
++    <button class="buy" id="menuBtn" type="button">回升级</button>
++  </div>
++</section>
++
++<script src="tdcore.js?v=13j"></script>
++<script src="../zombie/zbsfx.js?v=z10"></script>
++<script src="td.js?v=13j"></script>
++</body>
++</html>
+--- /dev/null
++++ b/preview/td/td.css
+@@ -0,0 +1,60 @@
++:root{--ink:#141414;--paper:#f7f1e3;--panel:#fffaf0;--yellow:#ffd23f;--red:#e63946;--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px)}
++*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
++html,body{margin:0;height:100%;overflow:hidden;background:var(--paper);color:var(--ink);font-family:-apple-system,"PingFang SC","Hiragino Sans GB",sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
++#cv{position:fixed;inset:0;width:100vw;height:100dvh;touch-action:none;display:block}
++.hidden{display:none!important}
++button{font:inherit;color:var(--ink);cursor:pointer}
++.buy{min-height:44px;padding:8px 14px;border:2px solid var(--ink);border-radius:10px;background:var(--yellow);box-shadow:3px 3px 0 var(--ink);font-weight:800}
++.buy:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--ink)}
++.buy[disabled]{background:#e8e2d4;color:#8a8478;box-shadow:none}
++.buy.big{font-size:20px;padding:10px 28px}
++.buy.red{background:var(--red);color:#fff}
++.card{background:var(--panel);border:3px solid var(--ink);border-radius:14px;box-shadow:5px 5px 0 var(--ink);padding:14px}
++.screen{position:fixed;inset:0;display:flex;flex-direction:column;gap:14px;padding:calc(16px + var(--sat)) 16px calc(16px + var(--sab));overflow-y:auto;z-index:5}
++.screen>*{flex:none}
++#menu{background:var(--paper)}
++.screen.dim{background:rgba(20,20,20,.45);justify-content:center}
++.center{text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center}
++.hero{display:flex;gap:12px;align-items:center}
++.hero img{border:3px solid var(--ink);border-radius:50%;background:#fff;flex:none}
++h1{margin:0 0 4px;font-size:24px}h2{margin:0;font-size:19px}h3{margin:10px 0 0;font-size:15px}
++p{margin:0;font-size:14px;line-height:1.5}
++.note{font-size:12px;color:#6b6457;margin:4px 0 8px}
++.row{display:flex;justify-content:space-between;align-items:center;gap:8px}
++.wallet{font-size:13px}.wallet b{font-size:15px}
++.tr{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:2px dashed #d9cfb8}
++.tr .t{flex:1;min-width:0}.tr .t b{display:block;font-size:15px}.tr .t small{font-size:12px;color:#6b6457}
++.tr .buy{min-width:112px;font-size:14px;padding:6px 10px}
++.cmd-pick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}
++.cmd-pick button{display:flex;flex-direction:column;align-items:center;gap:4px;padding:6px 2px;border:2px solid var(--ink);border-radius:12px;background:#fff;font-size:12px;font-weight:800}
++.cmd-pick button img{width:48px;height:48px;border-radius:50%;border:2px solid var(--ink)}
++.cmd-pick button.on{background:var(--yellow);box-shadow:3px 3px 0 var(--ink)}
++.lvsel{display:flex;align-items:center;gap:10px;margin:10px 0 0}
++.lvsel>div{flex:1;text-align:center}.lvsel b{display:block;font-size:20px}.lvsel small{display:block;font-size:12px;color:#6b6457}
++.lvsel .buy{width:52px;font-size:22px;padding:0}
++#startBtn{align-self:center}
++#exitBtn{align-self:flex-start;background:#fff}
++#hud{position:fixed;inset:0;pointer-events:none;z-index:3}
++.hud-top{position:absolute;top:calc(8px + var(--sat));left:8px;right:8px;display:flex;align-items:center;gap:6px}
++.pill{flex:1;font-weight:900;font-size:14px;text-align:center;background:var(--panel);border:3px solid var(--ink);border-radius:10px;padding:4px 2px;white-space:nowrap}
++.icon-btn{pointer-events:auto;flex:none;width:44px;height:44px;border:3px solid var(--ink);border-radius:50%;background:#fff;font-weight:900;box-shadow:2px 2px 0 var(--ink)}
++.toast{position:absolute;left:50%;top:calc(62px + var(--sat));transform:translateX(-50%);white-space:nowrap;font-weight:900;font-size:17px;color:var(--red);-webkit-text-stroke:1px var(--ink);opacity:0;transition:opacity .2s}
++.toast.on{opacity:1}
++#bar{pointer-events:auto;position:absolute;left:0;right:0;bottom:0;padding:8px 10px calc(8px + var(--sab));background:var(--panel);border-top:3px solid var(--ink)}
++#barMain,#barTower{display:flex;align-items:center;gap:8px;min-height:84px}
++.bar-tip{flex:1;font-size:13px;font-weight:700;line-height:1.4}
++#barBuild{display:flex;flex-direction:column;gap:6px}
++#barBuild #buildX{align-self:stretch;min-height:36px;padding:4px}
++.tw-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
++.tw-grid button{min-height:52px;padding:4px 2px;border:2px solid var(--ink);border-radius:10px;background:#fff;font-size:12px;font-weight:800;line-height:1.25}
++.tw-grid button small{display:block;font-weight:700;color:#6b6457}
++.tw-grid button.syn{background:#fff3c4}
++.tw-grid button[disabled]{opacity:.45}
++#ultBtn{flex:none;position:relative;width:72px;height:72px;border-radius:50%;border:3px solid var(--ink);background:#fff;overflow:hidden;box-shadow:3px 3px 0 var(--ink);display:flex;align-items:center;justify-content:center;padding:0}
++#ultBtn .ult-fill{position:absolute;left:0;right:0;bottom:0;height:0;background:#ffb347}
++#ultBtn .ult-lbl{position:relative;font-weight:900;font-size:16px}
++#ultBtn.ready{background:var(--red);animation:pulse .8s infinite alternate}
++#ultBtn.ready .ult-fill{background:var(--red)}#ultBtn.ready .ult-lbl{color:#fff}
++@keyframes pulse{to{box-shadow:4px 4px 0 var(--ink),0 0 0 7px rgba(230,57,70,.25)}}
++.row h2{white-space:nowrap;flex:none}
++@media (max-width:380px){.hero img{width:64px;height:64px}h1{font-size:20px}#heroDesc{font-size:13px;line-height:1.5}.cmd-pick button{font-size:12px}}
+--- /dev/null
++++ b/preview/td/td.js
+@@ -0,0 +1,443 @@
++'use strict';
++// 科技公司塔防（样品）：一张地图、8 种塔（4 通用 + 4 CEO 塔）、4 位统帅可选。
++// 单独打开 = 原型模式（模拟余额，只存 PROTO_KEY）；?embed=1 嵌在经营页里 = 金币、升级、进度都由经营页管（td:* postMessage），本页不写任何存档。
++(() => {
++const T = window.TDCore, SFX = window.ZBSfx;
++const EMBED = /[?&]embed=1(&|$)/.test(location.search) && window.parent !== window;
++const PROTO_KEY = 'tangzhe-td-proto';
++const $ = s => document.querySelector(s);
++const fin = (v, d) => (typeof v === 'number' && isFinite(v) ? v : d);
++const INK = '#141414', PAPER = '#f7f1e3', RED = '#e63946', YEL = '#ffd23f';
++
++// ---- 地图：7×11 格，一条 S 形路（格坐标；-1 / 11 = 场外入口 / 出口）----
++const COLS = 7, ROWS = 11;
++const WAY = [[-1, 1], [5, 1], [5, 4], [1, 4], [1, 7], [5, 7], [5, 11]];
++const PATH = new Set(), SEG = [];
++let PLEN = 0;
++for (let i = 0; i < WAY.length - 1; i++) {
++  const [x0, y0] = WAY[i], [x1, y1] = WAY[i + 1], dx = Math.sign(x1 - x0), dy = Math.sign(y1 - y0);
++  for (let x = x0, y = y0; ; x += dx, y += dy) { if (x >= 0 && x < COLS && y >= 0 && y < ROWS) PATH.add(x + ',' + y); if (x === x1 && y === y1) break; }
++  const l = Math.abs(x1 - x0) + Math.abs(y1 - y0); SEG.push(l); PLEN += l;
++}
++function posAt(d) {
++  for (let i = 0; i < SEG.length; i++) {
++    if (d <= SEG[i] || i === SEG.length - 1) { const a = WAY[i], b = WAY[i + 1], t = Math.max(0, Math.min(1, d / SEG[i])); return [a[0] + (b[0] - a[0]) * t + 0.5, a[1] + (b[1] - a[1]) * t + 0.5]; }
++    d -= SEG[i];
++  }
++}
++const isPath = (x, y) => PATH.has(x + ',' + y);
++
++// ---- 可调参数（距离单位 = 格，rate = 出手间隔秒）----
++// 防连锁：燃烧跳伤不再触发燃烧 / 暴击；弹跳、链电、穿透都有次数上限；击杀不触发任何额外攻击
++const P = {
++  bbq:     { k: '烤', range: 1.9, rate: 0.9, dmg: 10, col: '#e8590c', kind: 'cone', arc: 70, burn: 0.25, burnT: 2, desc: '扇形火攻，带轻微灼烧' },
++  tea:     { k: '茶', range: 1.7, rate: 0.9, dmg: 3,  col: '#7fd1e8', kind: 'aura', slow: 0.45, slowT: 1.2, desc: '范围减速' },
++  book:    { k: '书', range: 2.8, rate: 1.0, dmg: 14, col: '#2e7d32', kind: 'pierce', pierce: 4, width: 0.4, desc: '书页直线穿透（最多 4 只）' },
++  tech:    { k: '电', range: 2.4, rate: 0.8, dmg: 13, col: '#c13ce0', kind: 'chain', chain: 3, jump: 1.6, fall: 0.75, desc: '链电，最多跳 3 只' },
++  t77:     { k: '串', range: 2.5, rate: 0.8, dmg: 12, col: RED,       kind: 'burn', burn: 0.6, burnT: 3, synBurn: 2, synBurnT: 4, desc: '飞串命中持续燃烧', syn: '统帅 77：燃烧伤害 ×2、烧 4 秒' },
++  tpearl:  { k: '珠', range: 2.4, rate: 0.7, dmg: 12, col: '#6d4c41', kind: 'bounce', bounce: 2, synBounce: 1, jump: 1.8, fall: 0.85, desc: '珍珠弹跳 2 次', syn: '统帅珍珠姐：多弹 1 次' },
++  totaku:  { k: '漫', range: 2.4, rate: 1.1, dmg: 14, col: '#3949ab', kind: 'boomerang', back: 0.6, width: 0.45, synBack: 1, synWidth: 0.7, desc: '回旋漫画：去程回程都打', syn: '统帅阿宅：回程满伤、更宽' },
++  trocket: { k: '箭', range: 3.2, rate: 1.5, dmg: 26, col: '#ff7043', kind: 'splash', rad: 0.9, synRad: 1.35, desc: '火箭范围爆炸', syn: '统帅火箭老板：爆炸范围 ×1.5' },
++};
++const TW = P;
++// 统帅：自己的普攻 / 大招 + 一项对全场塔生效的全局技能
++const CMD = {
++  c77:    { range: 2.6, rate: 0.55, dmg: 12, n: 2, col: RED,       g: { dmg: 1.15, burn: 0.12, burnT: 2 }, gDesc: '全场塔伤害 +15%，命中附带燃烧', desc: '普攻飞串穿 2 只；大招火圈烧身边一圈' },
++  pearl:  { range: 2.5, rate: 0.5,  dmg: 10, n: 2, col: '#6d4c41', g: { rate: 0.82 }, gDesc: '全场塔攻速 +22%', desc: '普攻珍珠弹跳 2 下；大招冰沙风暴冻住全场' },
++  otaku:  { range: 2.2, rate: 0.7,  dmg: 11, n: 3, col: '#3949ab', g: { range: 0.45 }, gDesc: '全场塔射程 +0.45 格', desc: '普攻回旋漫画打 3 只；大招分镜轰炸乱砸全场' },
++  rocket: { range: 3.0, rate: 0.75, dmg: 16, n: 1, col: '#ff7043', g: { crit: 0.18, critX: 2.2 }, gDesc: '全场塔 18% 暴击（×2.2 爆发）', desc: '普攻迷你火箭带溅射；大招星舰冲击波全场重击并击退' },
++};
++const TIDS = T.TOWER_IDS;
++const MAX_TLV = 3;
++const upCost = tw => Math.round(T.TOWERS[tw.id].cost * 0.8 * tw.lv);
++const sellBack = tw => Math.round(tw.spent * 0.6);
++const EN = { walk: { hp: 30, sp: 1.0, r: 0.28, cash: 5, col: '#7cb342' }, fast: { hp: 18, sp: 1.8, r: 0.22, cash: 4, col: '#fdd835' }, tank: { hp: 110, sp: 0.6, r: 0.36, cash: 12, col: '#6d4c41' },
++  mini: { hp: 600, sp: 0.5, r: 0.42, cash: 50, col: '#ad1457', lives: 3 }, boss: { hp: 2200, sp: 0.42, r: 0.5, cash: 100, col: '#8e24aa', lives: 10 } };
++const hpMul = w => 1.17 ** w;
++const LIVES = 20, START_PTS = 160, ULT_E = 100;
++function waveList(w) {
++  const q = [], cnt = 7 + 2 * w;
++  for (let i = 0; i < cnt; i++) q.push(w >= 1 && i % 3 === 2 ? 'fast' : 'walk');
++  for (let i = 0; i < Math.floor(w / 2); i++) q.push('tank');
++  if (w === 4) q.push('mini');
++  if (w === T.WAVES - 1) q.push('boss');
++  return q;
++}
++
++// ---- 金币 / 存档（原型）----
++function loadProto() {
++  if (EMBED) return Object.assign({ coins: 0, ready: false, blocked: false }, T.norm(null));
++  let raw = null; try { raw = JSON.parse(localStorage.getItem(PROTO_KEY) || 'null'); } catch (e) { raw = null; }
++  const p = Object.assign({ coins: 5e10, ready: true, blocked: false }, T.norm(raw));
++  if (raw && typeof raw === 'object') p.coins = Math.max(0, Math.min(1e15, fin(raw.coins, 5e10)));
++  return p;
++}
++const proto = loadProto();
++const saveProto = () => { if (EMBED) return; try { localStorage.setItem(PROTO_KEY, JSON.stringify(proto)); } catch (e) {} };
++let cmdSel = proto.cmd, lvSel = 1;
++let pend = false, port = null, lastSent = null, buyRequest = null, buyTimer = null, buyTimedOut = false, cmdRestored = false;
++const host = m => { lastSent = m; if (port) port.postMessage(m); };
++const canSpend = n => proto.ready && !pend && !proto.blocked && isFinite(n) && n > 0 && proto.coins >= n;
++if (EMBED) window.addEventListener('message', e => {
++  if (port || e.source !== window.parent || e.origin !== location.origin || !e.data || e.data.td !== 'port' || !e.ports[0]) return;
++  port = e.ports[0]; port.onmessage = ev => onState(ev.data); host({ td: 'hello' });
++});
++let hostMute = false, userMute = false;
++function bgmOk() { return !hostMute && !userMute && !!G && !G.over && !G.pendStart && !paused && !document.hidden; }
++function bgmTry() { if (bgmOk()) SFX.startBgm(G.n * 5); }
++function applyMute() { SFX.setMuted(hostMute || userMute); bgmTry(); $('#sndBtn').textContent = userMute ? '声音：关' : '声音：开'; }
++function onState(d) {
++  if (!d || d.td !== 'state') return;
++  if (d.ack === 'buy' && (!buyRequest || d.requestId !== buyRequest.requestId || d.id !== buyRequest.id)) return;
++  if (d.ack === 'start' && (!G || !G.pendStart || d.runId !== G.runId)) return;
++  if (d.ack === 'result' && (!G || !G.over || !G.resMsg || d.runId !== G.runId || (G.saveOk && d.ok !== true))) return;
++  if (d.ack === 'buy' && buyRequest && d.requestId === buyRequest.requestId && d.id === buyRequest.id) {
++    clearTimeout(buyTimer); pend = false; buyRequest = null; buyTimedOut = false;
++    if (!d.ok) toast(d.why || '升级没有生效');
++  }
++  if (EMBED && !cmdRestored && d.z) { cmdSel = T.norm(d.z).cmd; cmdRestored = true; }
++  proto.coins = Math.max(0, fin(d.coins, 0)); proto.blocked = !!d.blocked; Object.assign(proto, T.norm(d.z)); proto.ready = true;
++  if ('muted' in d) { hostMute = !!d.muted; applyMute(); }
++  if (d.ack === 'start' && G && G.pendStart && d.runId === G.runId) {
++    clearTimeout(G.startTO);
++    if (d.ok === true) { G.pendStart = false; bgmTry(); } else abortStart(d.why || '开局没登记上');
++  }
++  if (d.ack === 'result' && G && G.over && G.resMsg && d.runId === G.runId) { clearTimeout(G.resultTO); G.wait = false; G.saveOk = d.ok === true; G.why = d.why || ''; renderResult(); }
++  lvSel = Math.max(1, Math.min(lvSel, proto.cleared + 1, T.MAX_LV));
++  if (!G) renderMenu();
++}
++
++// ---- 菜单 ----
++const fmt = n => n >= 1e8 ? (n / 1e8).toFixed(2).replace(/\.?0+$/, '') + '亿' : n >= 1e4 ? (n / 1e4).toFixed(1).replace(/\.0$/, '') + '万' : String(Math.floor(n));
++const upName = id => id.startsWith('cmd_') ? T.HEROES[id.slice(4)].name : T.TOWERS[id].name;
++const upDesc = (id, lv) => id.startsWith('cmd_') ? `普攻 ×${(1.15 ** lv).toFixed(2)} · 大招 ×${(1.2 ** lv).toFixed(2)}` : `伤害 ×${(1.15 ** lv).toFixed(2)} · ${TW[id].desc}`;
++function upRow(id) {
++  const lv = proto.lv[id], max = lv >= T.MAX_UP, p = T.price(id, lv);
++  return `<div class="tr"><div class="t"><b>${upName(id)} Lv${lv}</b><small>${upDesc(id, lv)}${!id.startsWith('cmd_') && TW[id].syn ? '<br>★ ' + TW[id].syn : ''}</small></div><button class="buy" data-up="${id}" type="button" ${max || !canSpend(p) ? 'disabled' : ''}>${max ? '满级' : fmt(p) + ' 金币'}</button></div>`;
++}
++function renderMenu() {
++  const h = T.HEROES[cmdSel];
++  $('#heroImg').src = `../art/face_${cmdSel}.webp`; $('#heroImg').alt = h.name;
++  $('#heroName').textContent = `统帅：${h.name}`;
++  $('#heroDesc').innerHTML = `${CMD[cmdSel].desc}。<br><b>全局技能</b>：${CMD[cmdSel].gDesc}；同名塔「${T.TOWERS[h.tower].name}」${TW[h.tower].syn.split('：')[1]}。<br>点空地造塔，点路面让统帅走位，守满 ${T.WAVES} 波过关。`;
++  $('#cmdPick').innerHTML = T.CEO_IDS.map(id => `<button type="button" data-cmd="${id}" class="${id === cmdSel ? 'on' : ''}"><img src="../art/face_${id}.webp" alt="">${T.HEROES[id].name}</button>`).join('');
++  $('#lvTxt').textContent = `第 ${lvSel} 关`;
++  $('#lvTxt').textContent = T.MAX_LV > 1 ? `第 ${lvSel} 关` : '科技园区';
++  $('#lvInfo').textContent = `${T.WAVES} 波 · 第 5 波小 Boss · 第 10 波 Boss`;
++  $('#lvProg').textContent = proto.cleared ? '已通关 ✓' : `最佳 ${proto.best}/${T.WAVES} 波`;
++  $('#lvPrev').classList.toggle('hidden', T.MAX_LV <= 1); $('#lvNext').classList.toggle('hidden', T.MAX_LV <= 1);
++  $('#lvPrev').disabled = lvSel <= 1; $('#lvNext').disabled = lvSel >= Math.min(T.MAX_LV, proto.cleared + 1);
++  $('#walletLbl').textContent = EMBED ? '经营金币' : '模拟余额';
++  $('#walletTxt').textContent = proto.ready ? fmt(proto.coins) : '…';
++  $('#upNote').textContent = !EMBED ? '单独打开是原型模式：用模拟金币，不碰经营存档。局内造塔用建设点，每局重置。' : proto.blocked ? '存档异常（只读），现在不能升级' : '花的是经营金币；塔防本身不产金币。';
++  $('#upTowers').innerHTML = TIDS.map(upRow).join('');
++  $('#upCmds').innerHTML = T.CEO_IDS.map(id => upRow('cmd_' + id)).join('');
++  $('#exitBtn').classList.toggle('hidden', !EMBED);
++  $('#startBtn').disabled = !proto.ready || proto.blocked || pend;
++  $('#buyRetryBtn').classList.toggle('hidden', !buyTimedOut);
++}
++function buyUp(id) {
++  if (!T.IDS.includes(id)) return false;
++  const lv = proto.lv[id]; if (lv >= T.MAX_UP) return false;
++  const p = T.price(id, lv); if (!canSpend(p)) return false;
++  if (EMBED) { pend = true; buyRequest = { td:'buy', id, requestId:'b-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2) }; sendBuy(); renderMenu(); return true; }
++  proto.coins -= p; proto.lv[id] = lv + 1; saveProto(); renderMenu(); return true;
++}
++function sendBuy() {
++  if (!buyRequest) return;
++  buyTimedOut = false; host(buyRequest); clearTimeout(buyTimer);
++  buyTimer = setTimeout(() => { if (!buyRequest) return; buyTimedOut = true; renderMenu(); toast('升级确认超时，可重试确认；不会重复扣款'); }, 4000);
++}
++$('#buyRetryBtn').onclick = () => { sendBuy(); renderMenu(); };
++$('#menu').addEventListener('click', e => {
++  SFX.unlock();
++  const u = e.target.closest('[data-up]'); if (u) return buyUp(u.dataset.up);
++  const c = e.target.closest('[data-cmd]'); if (c) { cmdSel = c.dataset.cmd; if (!EMBED) { proto.cmd = cmdSel; saveProto(); } renderMenu(); }
++});
++$('#lvPrev').onclick = () => { lvSel = Math.max(1, lvSel - 1); renderMenu(); };
++$('#lvNext').onclick = () => { lvSel = Math.min(T.MAX_LV, proto.cleared + 1, lvSel + 1); renderMenu(); };
++$('#exitBtn').onclick = () => host({ td: 'close' });
++
++// ---- 一局 ----
++let G = null, paused = false, raf = 0, last = 0, sel = null;
++const tDmg = id => 1.15 ** proto.lv[id];
++const gl = () => CMD[G.cmd].g;
++function start(n) {
++  if (EMBED && (proto.blocked || pend)) return false;
++  n = Math.max(1, Math.min(T.MAX_LV, proto.cleared + 1, Math.floor(fin(n, lvSel))));
++  if (!proto.ready) return false;
++  SFX.unlock();
++  const c = posAt(2);
++  G = { n, cmd: cmdSel, W: T.WAVES, wave: 0, q: [], spawnT: 0, breakT: 6, es: [], tw: new Map(), fx: [], lives: LIVES, cash: START_PTS, kills: 0, t: 0, energy: 0,
++    c: { x: c[0], y: c[1], tx: c[0], ty: c[1], cd: 0 }, over: false, win: false, runId: Date.now().toString(36) + Math.random().toString(36).slice(2, 7), pendStart: EMBED };
++  if (EMBED) { const game = G; host({ td: 'start', runId: G.runId, n, cmd: G.cmd }); G.startTO = setTimeout(() => { if (G === game && G.pendStart) abortStart('开局登记超时'); }, 4000); }
++  paused = false; sel = null; show(null); bar(); resize(); hud(); last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop); bgmTry();
++  return true;
++}
++function abortStart(why) { SFX.stopBgm(); G = null; show('#menu'); renderMenu(); toast(why); }
++function nextWave() {
++  if (!G || G.over || G.pendStart || G.wave >= G.W || G.q.length) return;
++  G.q = waveList(G.wave); G.wave++; G.breakT = 0; G.spawnT = 0; toast(`第 ${G.wave} 波`); bar();
++}
++function spawn(type) {
++  const b = EN[type], hp = b.hp * hpMul(G.wave - 1);
++  G.es.push({ type, d: 0, hp, max: hp, sp: b.sp, r: b.r, slowT: 0, slowK: 1, stunT: 0, burnT: 0, burnD: 0, x: -0.5, y: 1.5 });
++}
++const alive = () => G.es.filter(e => e.hp > 0);
++const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
++function inRange(p, r) { return alive().filter(e => Math.hypot(e.x - p.x, e.y - p.y) <= r).sort((a, b) => b.d - a.d); }
++function hit(e, dmg, o) {
++  if (!e || e.hp <= 0) return;
++  e.hp -= dmg; SFX.hit();
++  if (o && o.slow) { e.slowT = Math.max(e.slowT, o.slowT || 1); e.slowK = Math.min(e.slowK === 1 ? 1 : e.slowK, 1 - o.slow); }
++  if (o && o.stun && e.type !== 'boss' && e.type !== 'mini') e.stunT = Math.max(e.stunT, o.stun);
++  if (o && o.burn) { e.burnT = Math.max(e.burnT, o.burnT || 3); e.burnD = Math.max(e.burnD, o.burn); }
++  if (e.hp <= 0) { G.kills++; G.cash += EN[e.type].cash; G.energy = Math.min(ULT_E, G.energy + 4); SFX.kill(e.type === 'boss'); G.fx.push({ k: 'pop', x: e.x, y: e.y, t: 0.3, c: '#fff' }); }
++}
++const line = (a, b, c, t = 0.12) => G.fx.push({ k: 'line', x: a.x, y: a.y, x2: b.x, y2: b.y, c, t, t0: t });
++const ring = (p, r, c, t = 0.3) => G.fx.push({ k: 'ring', x: p.x, y: p.y, r, c, t, t0: t });
++// 线段上的敌人：从 p 朝 dir 方向 len 格、半宽 w
++function onLine(p, dir, len, w) { return alive().filter(e => { const vx = e.x - p.x, vy = e.y - p.y, t = vx * dir.x + vy * dir.y; return t >= 0 && t <= len && Math.abs(vx * dir.y - vy * dir.x) <= w + e.r; }).sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y)); }
++const towerRange = tw => TW[tw.id].range + 0.2 * (tw.lv - 1) + (gl().range || 0);
++function towerFire(tw) {
++  const s = TW[tw.id], syn = T.TOWERS[tw.id].ceo === G.cmd, g = gl(), lvK = 1 + 0.5 * (tw.lv - 1);
++  const range = towerRange(tw), p = { x: tw.x + 0.5, y: tw.y + 0.5 };
++  const tg = inRange(p, range); if (!tg.length) return false;
++  const crit = g.crit && Math.random() < g.crit;
++  const dmg = s.dmg * tDmg(tw.id) * lvK * (g.dmg || 1) * (crit ? g.critX : 1);
++  const gb = g.burn ? { burn: dmg * g.burn, burnT: g.burnT } : null;   // 77 全局燃烧
++  const e0 = tg[0], dir = (() => { const dx = e0.x - p.x, dy = e0.y - p.y, l = Math.hypot(dx, dy) || 1; return { x: dx / l, y: dy / l }; })();
++  if (crit) G.fx.push({ k: 'txt', x: e0.x, y: e0.y - 0.4, s: '暴击', t: 0.4, t0: 0.4 });
++  switch (s.kind) {
++    case 'cone': {
++      const a0 = Math.atan2(dir.y, dir.x), half = s.arc / 2 * Math.PI / 180;
++      G.fx.push({ k: 'cone', x: p.x, y: p.y, a: a0, h: half, r: range, c: s.col, t: 0.25, t0: 0.25 });
++      tg.filter(e => { let d = Math.atan2(e.y - p.y, e.x - p.x) - a0; d = Math.atan2(Math.sin(d), Math.cos(d)); return Math.abs(d) <= half; })
++        .forEach(e => hit(e, dmg, { burn: Math.max(dmg * s.burn, gb ? gb.burn : 0), burnT: s.burnT }));
++      break;
++    }
++    case 'aura': ring(p, range, s.col, 0.25); tg.forEach(e => hit(e, dmg, Object.assign({ slow: Math.min(0.75, s.slow + 0.01 * proto.lv.tea), slowT: s.slowT }, gb))); break;
++    case 'pierce': { const hs = onLine(p, dir, range + 0.5, s.width).slice(0, s.pierce); line(p, { x: p.x + dir.x * (range + 0.5), y: p.y + dir.y * (range + 0.5) }, s.col, 0.15); hs.forEach(e => hit(e, dmg, gb)); break; }
++    case 'chain': { let cur = e0, k = dmg; const hs = new Set([e0]); line(p, e0, s.col); hit(e0, k, gb);
++      for (let i = 0; i < s.chain; i++) { const nx = inRange(cur, s.jump).find(x => !hs.has(x)); if (!nx) break; k *= s.fall; line(cur, nx, s.col); hit(nx, k, gb); hs.add(nx); cur = nx; } break; }
++    case 'burn': line(p, e0, s.col); hit(e0, dmg, { burn: dmg * s.burn * (syn ? s.synBurn : 1) + (gb ? gb.burn : 0), burnT: syn ? s.synBurnT : s.burnT }); break;
++    case 'bounce': { let cur = e0, prev = p, k = dmg; const hs = new Set(), n = s.bounce + (syn ? s.synBounce : 0);
++      for (let i = 0; i <= n && cur; i++) { line(prev, cur, s.col); hit(cur, k, gb); hs.add(cur); prev = cur; k *= s.fall; cur = inRange(cur, s.jump).find(x => !hs.has(x)); } break; }
++    case 'boomerang': { const w = syn ? s.synWidth : s.width, hs = onLine(p, dir, range, w);
++      G.fx.push({ k: 'boom', x: p.x, y: p.y, x2: p.x + dir.x * range, y2: p.y + dir.y * range, c: s.col, t: 0.4, t0: 0.4 });
++      hs.forEach(e => hit(e, dmg, gb)); hs.forEach(e => hit(e, dmg * (syn ? s.synBack : s.back))); break; }
++    case 'splash': { const r = syn ? s.synRad : s.rad; line(p, e0, s.col, 0.2); ring(e0, r, s.col); inRange(e0, r).forEach(x => hit(x, dmg, gb)); break; }
++  }
++  return true;
++}
++function cmdFire() {
++  const s = CMD[G.cmd], dmg = s.dmg * 1.15 ** proto.lv['cmd_' + G.cmd] * 1.1 ** Math.max(0, G.wave - 1), c = G.c;
++  const tg = inRange(c, s.range); if (!tg.length) return false;
++  SFX.shot(G.cmd);
++  if (G.cmd === 'rocket') { line(c, tg[0], s.col, 0.2); ring(tg[0], 0.7, s.col); inRange(tg[0], 0.7).forEach(e => hit(e, dmg)); }
++  else if (G.cmd === 'pearl') { let cur = tg[0], prev = c, hs = new Set(); for (let i = 0; i <= s.n && cur; i++) { line(prev, cur, s.col); hit(cur, dmg); hs.add(cur); prev = cur; cur = inRange(cur, 1.8).find(x => !hs.has(x)); } }
++  else tg.slice(0, s.n).forEach(e => { line(c, e, s.col); hit(e, dmg); });
++  return true;
++}
++function castUlt() {
++  if (!G || G.over || G.pendStart || paused || G.energy < ULT_E) return false;
++  G.energy = 0; SFX.ult(G.cmd);
++  const m = 1.2 ** proto.lv['cmd_' + G.cmd] * 1.17 ** Math.max(0, G.wave - 1), c = G.c, all = alive();
++  if (G.cmd === 'c77') { ring(c, 2.4, RED, 0.6); inRange(c, 2.4).forEach(e => hit(e, 70 * m, { burn: 10 * m })); toast('火圈！'); }
++  else if (G.cmd === 'pearl') { all.forEach(e => { hit(e, 10 * m); if (e.type === 'boss' || e.type === 'mini') { e.slowT = 3; e.slowK = 0.5; } else e.stunT = Math.max(e.stunT, 3); }); G.fx.push({ k: 'frost', t: 3, t0: 3 }); toast('冰沙风暴！'); }
++  else if (G.cmd === 'otaku') { for (let i = 0; i < 20; i++) { const e = all[Math.floor(Math.random() * all.length)]; if (e) { ring(e, 0.6, '#3949ab', 0.5); hit(e, 30 * m); } } toast('分镜轰炸！'); }
++  else { all.forEach(e => { hit(e, 45 * m); e.d = Math.max(0, e.d - 1.5); }); G.fx.push({ k: 'wave', x: c.x, y: c.y, t: 0.7, t0: 0.7 }); toast('星舰冲击波！'); }
++  bar(); return true;
++}
++function build(id, x, y) {
++  if (!G || G.over || !TW[id] || x < 0 || y < 0 || x >= COLS || y >= ROWS || isPath(x, y) || G.tw.has(x + ',' + y)) return false;
++  const cost = T.TOWERS[id].cost; if (G.cash < cost) return false;
++  G.cash -= cost; G.tw.set(x + ',' + y, { id, x, y, lv: 1, cd: 0, spent: cost }); sel = null; bar(); return true;
++}
++function upTower(x, y) {
++  const tw = G && G.tw.get(x + ',' + y); if (!tw || tw.lv >= MAX_TLV) return false;
++  const c = upCost(tw); if (G.cash < c) return false;
++  G.cash -= c; tw.spent += c; tw.lv++; bar(); return true;
++}
++function sell(x, y) { const tw = G && G.tw.get(x + ',' + y); if (!tw) return false; G.cash += sellBack(tw); G.tw.delete(x + ',' + y); sel = null; bar(); return true; }
++function moveCmd(x, y) { if (!G || !isPath(x, y)) return false; G.c.tx = x + 0.5; G.c.ty = y + 0.5; return true; }
++
++function step(dt) {
++  if (!G || G.over || G.pendStart) return;
++  G.t += dt;
++  G.energy = Math.min(ULT_E, G.energy + 1.5 * dt);
++  if (!G.q.length && G.wave < G.W && !alive().length) { if (G.breakT <= 0 && G.wave > 0) { G.breakT = 5; G.cash += 20 + 5 * G.wave; } G.breakT -= dt; if (G.breakT <= 0) nextWave(); }
++  if (G.q.length) { G.spawnT -= dt; if (G.spawnT <= 0) { const ty = G.q.shift(); spawn(ty); G.spawnT = ty === 'fast' ? 0.5 : ty === 'boss' ? 2 : 0.8; } }
++  for (const e of G.es) {
++    if (e.hp <= 0) continue;
++    if (e.burnT > 0) { e.burnT -= dt; hit(e, e.burnD * dt); if (e.hp <= 0) continue; }
++    if (e.slowT > 0) { e.slowT -= dt; if (e.slowT <= 0) e.slowK = 1; }
++    if (e.stunT > 0) { e.stunT -= dt; } else e.d += e.sp * e.slowK * dt;
++    const [x, y] = posAt(e.d); e.x = x; e.y = y;
++    if (e.d >= PLEN) { e.hp = 0; G.lives -= EN[e.type].lives || 1; SFX.hurt(); toast('机房被闯了！'); if (G.lives <= 0) { G.lives = 0; return end(false); } }
++  }
++  G.es = G.es.filter(e => e.hp > 0);
++  for (const tw of G.tw.values()) { tw.cd -= dt; if (tw.cd <= 0 && towerFire(tw)) tw.cd = TW[tw.id].rate * (gl().rate || 1); }
++  const c = G.c, dx = c.tx - c.x, dy = c.ty - c.y, dd = Math.hypot(dx, dy);
++  if (dd > 0.01) { const mv = Math.min(dd, 3 * dt); c.x += dx / dd * mv; c.y += dy / dd * mv; }
++  c.cd -= dt; if (c.cd <= 0 && cmdFire()) c.cd = CMD[G.cmd].rate;
++  for (const f of G.fx) f.t -= dt;
++  G.fx = G.fx.filter(f => f.t > 0);
++  if (G.wave >= G.W && !G.q.length && !G.es.length) end(true);
++}
++function end(win) {
++  if (!G || G.over) return;
++  G.over = true; G.win = win; SFX.stopBgm(); win ? SFX.win() : SFX.lose();
++  const res = { td: 'result', runId: G.runId, n: G.n, win, waves: win ? G.wave : Math.max(0, G.wave - 1), cmd: G.cmd, kills: G.kills };
++  if (EMBED) { G.resMsg = res; sendResult(); }
++  else { T.applyResult(proto, res); saveProto(); G.saveOk = true; }
++  renderResult(); show('#result');
++}
++function sendResult() {
++  if (!G || !G.resMsg) return;
++  const game = G; G.wait = true; host(G.resMsg); clearTimeout(G.resultTO);
++  G.resultTO = setTimeout(() => { if (G !== game || !G.wait) return; G.wait = false; G.saveOk = false; G.why = '结算确认超时，可重试保存'; renderResult(); }, 4000);
++}
++function renderResult() {
++  if (!G) return;
++  const saved = !EMBED || G.saveOk;
++  $('#resTitle').textContent = G.wait ? '结算中…' : G.win && saved ? '守住了！' : G.win ? '存档失败' : '机房失守';
++  $('#resStats').textContent = `守了 ${G.win ? G.W : Math.max(0, G.wave - 1)}/${G.W} 波 · 击倒 ${G.kills} · 剩余生命 ${G.lives}`;
++  $('#resNote').textContent = G.wait ? '' : !saved ? `这局进度没记上${G.why ? '（' + G.why + '）' : ''}` : G.win ? `${T.WAVES} 波全部守住！` : `最佳 ${proto.best}/${T.WAVES} 波 · 去升级防御塔或统帅再来`;
++  $('#retryBtn').classList.toggle('hidden', !(EMBED && !G.wait && !G.saveOk));
++  $('#againBtn').textContent = G.win && saved && G.n < T.MAX_LV ? '下一关' : '再来一局';
++  $('#againBtn').disabled = !!G.wait;
++}
++$('#retryBtn').onclick = () => { if (G && G.over && !G.wait && G.resMsg) { sendResult(); renderResult(); } };
++$('#againBtn').onclick = () => { if (!G || G.wait) return; const n = G.win && (!EMBED || G.saveOk) ? G.n + 1 : G.n; G = null; lvSel = Math.min(T.MAX_LV, proto.cleared + 1, n); start(lvSel); };
++$('#menuBtn').onclick = () => { if (G && G.wait) return; G = null; SFX.stopBgm(); show('#menu'); renderMenu(); };
++function setPause(on) { if (!G || G.over) return; paused = on; if (on) SFX.stopBgm(); else bgmTry(); show(on ? '#pause' : null); if (!on) last = performance.now(); }
++$('#pauseBtn').onclick = () => setPause(true);
++$('#resumeBtn').onclick = () => setPause(false);
++$('#sndBtn').onclick = () => { userMute = !userMute; applyMute(); };
++$('#quitBtn').onclick = () => { if (!G) return; paused = false; G.pendStart ? abortStart('已退出') : end(false); };
++document.addEventListener('visibilitychange', () => { if (document.hidden) setPause(true); });
++$('#startBtn').onclick = () => start(lvSel);
++$('#waveBtn').onclick = () => nextWave();
++$('#ultBtn').onclick = () => castUlt();
++
++// ---- HUD / 底栏 ----
++let toastT = 0;
++function toast(s) { const t = $('#toast'); t.textContent = s; t.classList.add('on'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('on'), 1200); }
++function show(id) { for (const s of ['#menu', '#pause', '#result']) $(s).classList.toggle('hidden', s !== id); $('#hud').classList.toggle('hidden', id === '#menu'); }
++function hud() {
++  if (!G) return;
++  $('#lifeTxt').textContent = `❤ ${G.lives}`; $('#cashTxt').textContent = `建设点 ${Math.floor(G.cash)}`; $('#waveTxt').textContent = `波 ${G.wave}/${G.W}`;
++  const h = T.HEROES[G.cmd]; $('#ultLbl').textContent = h.btn || h.ult; $('#ultBtn').setAttribute('aria-label', '大招：' + h.ult);
++  $('#ultFill').style.height = (G.energy / ULT_E * 100) + '%';
++  const rdy = G.energy >= ULT_E && !G.over && !G.pendStart; $('#ultBtn').disabled = !rdy; $('#ultBtn').classList.toggle('ready', rdy);
++  const canWave = !G.q.length && G.wave < G.W && !alive().length && !G.pendStart;
++  $('#waveBtn').disabled = !canWave; $('#waveBtn').textContent = canWave && G.wave > 0 ? `开波 ${Math.max(0, Math.ceil(G.breakT))}` : canWave ? `开波 ${Math.max(0, Math.ceil(G.breakT))}` : '进攻中';
++  if (sel && sel.k === 'build') document.querySelectorAll('#twGrid button').forEach(b => { b.disabled = G.cash < T.TOWERS[b.dataset.tw].cost; });
++  if (sel && sel.k === 'tower') { const tw = G.tw.get(sel.x + ',' + sel.y); if (tw) $('#twUp').disabled = tw.lv >= MAX_TLV || G.cash < upCost(tw); }
++}
++function bar() {
++  $('#barMain').classList.toggle('hidden', !!sel); $('#barBuild').classList.toggle('hidden', !sel || sel.k !== 'build'); $('#barTower').classList.toggle('hidden', !sel || sel.k !== 'tower');
++  if (!G) return;
++  if (sel && sel.k === 'build') $('#twGrid').innerHTML = TIDS.map(id => `<button type="button" data-tw="${id}" class="${T.TOWERS[id].ceo === G.cmd ? 'syn' : ''}">${T.TOWERS[id].ceo === G.cmd ? '★' : ''}${T.TOWERS[id].name}<small>${T.TOWERS[id].cost}</small></button>`).join('');
++  if (sel && sel.k === 'tower') {
++    const tw = G.tw.get(sel.x + ',' + sel.y); if (!tw) { sel = null; return bar(); }
++    const syn = T.TOWERS[tw.id].ceo === G.cmd;
++    $('#twInfo').innerHTML = `<b>${T.TOWERS[tw.id].name} Lv${tw.lv}</b><br>${TW[tw.id].desc}${syn ? '<br>★ ' + TW[tw.id].syn.split('：')[1] : ''}`;
++    $('#twUp').textContent = tw.lv >= MAX_TLV ? '已满级' : `升级 ${upCost(tw)}`; $('#twSell').textContent = `拆除 +${sellBack(tw)}`;
++  }
++  hud();
++}
++$('#twGrid').addEventListener('click', e => { const b = e.target.closest('[data-tw]'); if (b && sel) build(b.dataset.tw, sel.x, sel.y); });
++$('#buildX').onclick = $('#twX').onclick = () => { sel = null; bar(); };
++$('#twUp').onclick = () => { if (sel) upTower(sel.x, sel.y); };
++$('#twSell').onclick = () => { if (sel) sell(sel.x, sel.y); };
++
++// ---- 画面 ----
++const cv = $('#cv'), cx = cv.getContext('2d');
++let W = 0, H = 0, S = 40, OX = 0, OY = 0;
++function resize() {
++  const dpr = Math.min(2, window.devicePixelRatio || 1); W = innerWidth; H = innerHeight;
++  cv.width = W * dpr; cv.height = H * dpr; cx.setTransform(dpr, 0, 0, dpr, 0, 0);
++  const top = 64 + parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sat') || 0), bot = (barMaxH() || 110) + 6;
++  S = Math.floor(Math.min((W - 12) / COLS, (H - top - bot) / ROWS)); OX = Math.round((W - S * COLS) / 2); OY = Math.round(top + Math.max(0, (H - top - bot - S * ROWS) / 2));
++}
++addEventListener('resize', resize);
++// 底栏三种状态（提示 / 造塔 / 选中塔）取最高的那个固定住，弹出造塔栏时地图不被挡、也不跳
++function barMaxH() {
++  const b = $('#bar'), ids = ['#barMain', '#barBuild', '#barTower'], was = ids.map(i => $(i).classList.contains('hidden')), g = $('#twGrid'), had = g.innerHTML;
++  if (!b.offsetParent) return 0;
++  if (!had) g.innerHTML = TIDS.map(id => `<button type="button">${T.TOWERS[id].name}<small>0</small></button>`).join('');
++  b.style.minHeight = ''; let m = 0;
++  for (const i of ids) { ids.forEach(x => $(x).classList.toggle('hidden', x !== i)); m = Math.max(m, b.offsetHeight); }
++  ids.forEach((x, k) => $(x).classList.toggle('hidden', was[k])); if (!had) g.innerHTML = '';
++  b.style.minHeight = m + 'px'; return m;
++}
++const IMG = {}; T.CEO_IDS.forEach(id => { const i = new Image(); i.src = `../art/face_${id}.webp`; IMG[id] = i; });
++const px = x => OX + x * S, py = y => OY + y * S;
++function draw() {
++  cx.fillStyle = PAPER; cx.fillRect(0, 0, W, H);
++  if (!G) return;
++  for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
++    const p = isPath(x, y);
++    cx.fillStyle = p ? '#e9d3a8' : '#fffaf0'; cx.fillRect(px(x) + 1, py(y) + 1, S - 2, S - 2);
++    if (!p) { cx.strokeStyle = '#d9cfb8'; cx.setLineDash([3, 3]); cx.strokeRect(px(x) + 2.5, py(y) + 2.5, S - 5, S - 5); cx.setLineDash([]); }
++  }
++  cx.fillStyle = INK; cx.font = `900 ${Math.round(S * 0.3)}px sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle';
++  cx.fillText('入口', px(0.5), py(0.5)); cx.fillText('机房', px(5.5), py(ROWS - 0.15));
++  if (sel) { cx.strokeStyle = RED; cx.lineWidth = 3; cx.strokeRect(px(sel.x) + 1.5, py(sel.y) + 1.5, S - 3, S - 3); cx.lineWidth = 1;
++    const tw = G.tw.get(sel.x + ',' + sel.y); if (tw) { cx.strokeStyle = 'rgba(230,57,70,.5)'; cx.beginPath(); cx.arc(px(tw.x + 0.5), py(tw.y + 0.5), towerRange(tw) * S, 0, 7); cx.stroke(); } }
++  for (const tw of G.tw.values()) {
++    const s = TW[tw.id], x = px(tw.x), y = py(tw.y), syn = T.TOWERS[tw.id].ceo === G.cmd;
++    cx.fillStyle = s.col; cx.strokeStyle = INK; cx.lineWidth = 2.5; cx.beginPath(); cx.roundRect ? cx.roundRect(x + 4, y + 4, S - 8, S - 8, 8) : cx.rect(x + 4, y + 4, S - 8, S - 8); cx.fill(); cx.stroke(); cx.lineWidth = 1;
++    cx.fillStyle = '#fff'; cx.font = `900 ${Math.round(S * 0.42)}px sans-serif`; cx.fillText(s.k, x + S / 2, y + S / 2 + 1);
++    for (let i = 0; i < tw.lv; i++) { cx.fillStyle = YEL; cx.fillRect(x + 7 + i * 7, y + S - 11, 5, 5); }
++    if (syn) { cx.fillStyle = YEL; cx.font = `900 ${Math.round(S * 0.3)}px sans-serif`; cx.fillText('★', x + S - 9, y + 11); }
++  }
++  for (const e of G.es) {
++    const b = EN[e.type], x = px(e.x), y = py(e.y), r = e.r * S;
++    cx.fillStyle = e.stunT > 0 ? '#b3e5fc' : b.col; cx.strokeStyle = INK; cx.lineWidth = 2; cx.beginPath(); cx.arc(x, y, r, 0, 7); cx.fill(); cx.stroke(); cx.lineWidth = 1;
++    cx.fillStyle = INK; cx.fillRect(x - r * 0.45, y - r * 0.2, r * 0.25, r * 0.25); cx.fillRect(x + r * 0.2, y - r * 0.2, r * 0.25, r * 0.25);
++    if (e.burnT > 0) { cx.fillStyle = '#ff9800'; cx.beginPath(); cx.arc(x, y - r, r * 0.3, 0, 7); cx.fill(); }
++    cx.fillStyle = '#fff'; cx.fillRect(x - r, y - r - 7, r * 2, 4); cx.fillStyle = RED; cx.fillRect(x - r, y - r - 7, r * 2 * Math.max(0, e.hp / e.max), 4);
++    if (e.type === 'boss' || e.type === 'mini') { cx.fillStyle = YEL; cx.font = `900 ${Math.round(S * 0.4)}px sans-serif`; cx.fillText('♛', x, y - r - 16); }
++  }
++  const c = G.c, cr = S * 0.42;
++  cx.strokeStyle = 'rgba(20,20,20,.15)'; cx.beginPath(); cx.arc(px(c.x), py(c.y), CMD[G.cmd].range * S, 0, 7); cx.stroke();
++  cx.save(); cx.beginPath(); cx.arc(px(c.x), py(c.y), cr, 0, 7); cx.clip();
++  if (IMG[G.cmd].complete && IMG[G.cmd].naturalWidth) cx.drawImage(IMG[G.cmd], px(c.x) - cr, py(c.y) - cr, cr * 2, cr * 2); else { cx.fillStyle = CMD[G.cmd].col; cx.fill(); }
++  cx.restore(); cx.strokeStyle = YEL; cx.lineWidth = 4; cx.beginPath(); cx.arc(px(c.x), py(c.y), cr, 0, 7); cx.stroke(); cx.strokeStyle = INK; cx.lineWidth = 2; cx.stroke(); cx.lineWidth = 1;
++  for (const f of G.fx) {
++    const a = Math.max(0, f.t / (f.t0 || 0.3));
++    cx.globalAlpha = a;
++    if (f.k === 'line') { cx.strokeStyle = f.c; cx.lineWidth = 3; cx.beginPath(); cx.moveTo(px(f.x), py(f.y)); cx.lineTo(px(f.x2), py(f.y2)); cx.stroke(); cx.lineWidth = 1; }
++    else if (f.k === 'ring') { cx.strokeStyle = f.c; cx.lineWidth = 3; cx.beginPath(); cx.arc(px(f.x), py(f.y), f.r * S * (1.1 - a * 0.3), 0, 7); cx.stroke(); cx.lineWidth = 1; }
++    else if (f.k === 'pop') { cx.fillStyle = YEL; cx.beginPath(); cx.arc(px(f.x), py(f.y), S * 0.3 * (1.5 - a), 0, 7); cx.fill(); }
++    else if (f.k === 'frost') { cx.globalAlpha = 0.18 * a + 0.05; cx.fillStyle = '#7fd1e8'; cx.fillRect(OX, OY, S * COLS, S * ROWS); }
++    else if (f.k === 'cone') { cx.fillStyle = f.c; cx.globalAlpha = 0.35 * a; cx.beginPath(); cx.moveTo(px(f.x), py(f.y)); cx.arc(px(f.x), py(f.y), f.r * S, f.a - f.h, f.a + f.h); cx.closePath(); cx.fill(); }
++    else if (f.k === 'boom') { const u = 1 - a, k = u < 0.5 ? u * 2 : 2 - u * 2; cx.fillStyle = f.c; cx.fillRect(px(f.x + (f.x2 - f.x) * k) - S * 0.18, py(f.y + (f.y2 - f.y) * k) - S * 0.22, S * 0.36, S * 0.44); }
++    else if (f.k === 'txt') { cx.fillStyle = RED; cx.font = `900 ${Math.round(S * 0.32)}px sans-serif`; cx.fillText(f.s, px(f.x), py(f.y)); }
++    else if (f.k === 'wave') { cx.strokeStyle = '#ff7043'; cx.lineWidth = 6; cx.beginPath(); cx.arc(px(f.x), py(f.y), (1 - a) * S * 12, 0, 7); cx.stroke(); cx.lineWidth = 1; }
++    cx.globalAlpha = 1;
++  }
++}
++cv.addEventListener('pointerdown', e => {
++  SFX.unlock();
++  if (!G || G.over || paused) return;
++  const x = Math.floor((e.clientX - OX) / S), y = Math.floor((e.clientY - OY) / S);
++  if (x < 0 || y < 0 || x >= COLS || y >= ROWS) { sel = null; return bar(); }
++  if (G.tw.has(x + ',' + y)) sel = { k: 'tower', x, y };
++  else if (isPath(x, y)) { moveCmd(x, y); sel = null; }
++  else sel = { k: 'build', x, y };
++  bar();
++});
++function loop(now) {
++  const dt = Math.min(0.05, (now - last) / 1000); last = now;
++  if (G && !paused && !G.over) step(dt);
++  draw(); hud();
++  raf = requestAnimationFrame(loop);
++}
++resize(); renderMenu(); show('#menu'); raf = requestAnimationFrame(loop);
++window.__td = { EMBED, proto, P, towerRange, start, step, build, upTower, sell, moveCmd, castUlt, nextWave, buyUp, onState, setPause, renderMenu, isPath, waveList, PLEN, TW, CMD,
++  get G() { return G; }, get geo() { return { S, OX, OY, COLS, ROWS }; }, get lastSent() { return lastSent; }, get pend() { return pend; }, get paused() { return paused; }, get cmdSel() { return cmdSel; }, set cmdSel(v) { if (T.CEO_IDS.includes(v)) { cmdSel = v; renderMenu(); } } };
++})();
+--- /dev/null
++++ b/preview/td/tdcore.js
+@@ -0,0 +1,44 @@
++// 塔防共享规则：升级价格 / 上限 / 波数 / 进度清洗。经营页（真正扣金币、写存档的一方）和小游戏页共用这一份；经营页不信任小游戏页传来的价格或进度。
++(function (root, factory) { if (typeof module === 'object' && module.exports) module.exports = factory(); else root.TDCore = factory(); })(this, function () {
++  'use strict';
++  // 样品：一张图 10 波（第 5 波小 Boss、第 10 波 Boss）。MAX_LV 留着以后加图
++  const MAX_LV = 1, WAVES = 10, MAX_UP = 30, GROWTH = 1.9;
++  // 8 种塔：4 座店铺塔 + 4 座 CEO 塔（统帅和同名 CEO 塔同场时塔有额外效果）；cost = 局内建设点
++  const TOWERS = {
++    bbq:     { name: '烧烤火炉', cost: 60,  ceo: null },
++    tea:     { name: '奶茶冷饮', cost: 60,  ceo: null },
++    book:    { name: '书页发射', cost: 80,  ceo: null },
++    tech:    { name: '科技电塔', cost: 90,  ceo: null },
++    t77:     { name: '77 烤串塔', cost: 110, ceo: 'c77' },
++    tpearl:  { name: '珍珠塔',   cost: 110, ceo: 'pearl' },
++    totaku:  { name: '阿宅漫画塔', cost: 110, ceo: 'otaku' },
++    trocket: { name: '火箭塔',   cost: 120, ceo: 'rocket' },
++  };
++  const TOWER_IDS = Object.keys(TOWERS);
++  const HEROES = { c77: { name: '77', atk: '飞串', ult: '火圈', tower: 't77' }, pearl: { name: '珍珠姐', atk: '珍珠弹', ult: '冰沙风暴', btn: '冰沙', tower: 'tpearl' }, otaku: { name: '阿宅店长', atk: '回旋漫画', ult: '分镜轰炸', btn: '分镜', tower: 'totaku' }, rocket: { name: '火箭老板', atk: '迷你火箭', ult: '星舰冲击波', btn: '星舰', tower: 'trocket' } };
++  const CEO_IDS = Object.keys(HEROES);
++  // 主金币只用来做永久升级：每种塔一项 + 每位统帅一项
++  const BASE = {};
++  TOWER_IDS.forEach(k => { BASE[k] = TOWERS[k].ceo ? 1.5e6 : 1e6; });
++  CEO_IDS.forEach(k => { BASE['cmd_' + k] = 2e6; });
++  const IDS = Object.keys(BASE);
++  const fin = (v, d) => (typeof v === 'number' && isFinite(v) ? v : d);
++  const price = (id, lv) => Math.round(BASE[id] * GROWTH ** lv);
++  const waveCount = () => WAVES;
++  const cmdOf = v => (CEO_IDS.includes(v) ? v : 'rocket');
++  function norm(raw) {
++    const r = raw && typeof raw === 'object' ? raw : {}, lv = {};
++    IDS.forEach(k => { lv[k] = Math.max(0, Math.min(MAX_UP, Math.floor(fin(r.lv && r.lv[k], 0)))); });
++    return { lv, cleared: Math.max(0, Math.min(MAX_LV, Math.floor(fin(r.cleared, 0)))), best: Math.max(0, Math.min(WAVES, Math.floor(fin(r.best, 0)))), cmd: cmdOf(r.cmd) };
++  }
++  // 一局结果并进进度：只认已解锁图（n ≤ cleared+1）；best = 守住的最多波数，守满 10 波才算通关
++  function applyResult(z, res) {
++    if (!res || typeof res !== 'object') return false;
++    const n = Math.floor(fin(res.n, 0)), w = Math.max(0, Math.min(WAVES, Math.floor(fin(res.waves, 0))));
++    if (n < 1 || n > Math.min(MAX_LV, z.cleared + 1)) return false;
++    z.best = Math.max(z.best, w);
++    if (res.win === true && w >= WAVES) z.cleared = Math.max(z.cleared, n);
++    return true;
++  }
++  return { MAX_LV, WAVES, MAX_UP, GROWTH, TOWERS, TOWER_IDS, HEROES, CEO_IDS, BASE, IDS, price, waveCount, cmdOf, norm, applyResult };
++});
+--- /dev/null
++++ b/preview/td/tdhost.js
+@@ -0,0 +1,69 @@
++// Parent-only controller. No storage or wallet of its own: every mutation uses
++// the host's E.transact + main-save persist callback, including failed retries.
++(function (root, factory) {
++  if (typeof module === 'object' && module.exports) module.exports = factory(require('./tdcore.js'));
++  else root.TDHost = factory(root.TDCore);
++})(this, function (T) {
++  'use strict';
++  const validId = x => typeof x === 'string' && /^[A-Za-z0-9_-]{1,96}$/.test(x);
++  function create(o) {
++    const runs = new Map(), buys = new Map(); let current = null;
++    const snapshot = () => T.norm(o.state().td);
++    const blocked = () => !!o.blocked() || !o.state().shops[3].open;
++    const reply = (extra = {}) => o.send(Object.assign({td:'state', coins:blocked() ? 0 : o.balance(), z:snapshot(), blocked:blocked(), muted:!!o.state().muted}, extra));
++    function msg(d) {
++      if (!d || typeof d !== 'object' || Array.isArray(d)) return;
++      if (d.td === 'hello') return reply();
++      if (d.td === 'close') return o.close();
++      if (!['buy','start','result'].includes(d.td)) return;
++      const ack = {ack:d.td, ok:false};
++      if (d.td === 'buy') { ack.requestId = typeof d.requestId === 'string' ? d.requestId : null; ack.id = d.id; }
++      else ack.runId = typeof d.runId === 'string' ? d.runId : null;
++      const fail = why => reply(Object.assign(ack, {why}));
++      if (d.td === 'start') {
++        if (!validId(d.runId)) return fail('开局编号无效');
++        const old = runs.get(d.runId);
++        if (old) {
++          if (old !== current || old.n !== d.n || old.cmd !== d.cmd || old.settled) return fail('这局编号已用过');
++          return reply(Object.assign(ack, {ok:!blocked(), cmd:old.cmd, n:old.n, dup:true, why:blocked() ? '只读模式，不能开局' : ''}));
++        }
++        if (blocked()) return fail('只读模式或科技公司未开张，不能开局');
++        if (!T.CEO_IDS.includes(d.cmd) || !Number.isInteger(d.n) || d.n < 1 || d.n > Math.min(T.MAX_LV, snapshot().cleared + 1)) return fail('统帅或关卡无效');
++        if (runs.size >= 4096) return fail('本页开局次数已满，请刷新后再试');
++        current = {runId:d.runId, n:d.n, cmd:d.cmd, settled:false}; runs.set(d.runId, current);
++        return reply(Object.assign(ack, {ok:true, cmd:current.cmd, n:current.n}));
++      }
++      if (d.td === 'buy') {
++        if (!validId(d.requestId) || !T.IDS.includes(d.id)) return fail('升级请求无效');
++        let rec = buys.get(d.requestId);
++        if (rec && rec.id !== d.id) return fail('升级编号不匹配');
++        if (rec && rec.done) return reply(Object.assign(ack, {ok:true, dup:true}));
++        if (blocked()) return fail('只读模式或科技公司未开张，不能升级');
++        if (!rec) {
++          if (buys.size >= 4096) return fail('本页升级次数已满，请刷新后再试');
++          rec = {id:d.id, done:false}; buys.set(d.requestId, rec);
++        }
++        const lv = snapshot().lv[d.id];
++        if (lv >= T.MAX_UP) return fail('已满级');
++        const price = T.price(d.id, lv); // Never accept child prices or balances.
++        const r = o.transact(st => { const z = T.norm(st.td); if (z.lv[d.id] !== lv) return {ok:false, why:'等级已变化'}; z.lv[d.id]++; st.td = z; return {ok:true}; }, price);
++        if (!r.ok) return fail(r.stage === 'pay' ? '金币不够或金额无效' : '保存失败，没有扣金币或升级');
++        rec.done = true; o.changed(); return reply(Object.assign(ack, {ok:true}));
++      }
++      if (!validId(d.runId)) return fail('结算编号无效');
++      const run = runs.get(d.runId);
++      if (!run || run !== current || d.cmd !== run.cmd || d.n !== run.n) return fail('本局登记不匹配');
++      if (typeof d.win !== 'boolean' || !Number.isInteger(d.waves) || d.waves < 0 || d.waves > T.WAVES || (d.win && d.waves !== T.WAVES) || !Number.isSafeInteger(d.kills) || d.kills < 0) return fail('本局结果无效');
++      const signature = JSON.stringify([d.n,d.cmd,d.win,d.waves,d.kills]);
++      if (run.result && run.result !== signature) return fail('结算内容已锁定');
++      if (run.settled) return reply(Object.assign(ack, {ok:true, dup:true}));
++      if (blocked()) return fail('只读模式，进度未保存');
++      run.result = signature;
++      const r = o.transact(st => { const z = T.norm(st.td); if (!T.applyResult(z,d)) return {ok:false,why:'结果无效'}; z.cmd = run.cmd; st.td = z; return {ok:true}; }, 0);
++      if (!r.ok) return fail('保存失败，请重试保存');
++      run.settled = true; o.changed(); return reply(Object.assign(ack, {ok:true}));
++    }
++    return {msg, reply, reset:() => { current = null; }, get run() { return current; }};
++  }
++  return {create};
++});
+--- /dev/null
++++ b/preview/td/test_td.py
+@@ -0,0 +1,164 @@
++# 塔防样品验收：Playwright WebKit 模拟 iPhone SE / iPhone 15（不是真机）
++# 验：8 种塔各自打法 + 同名塔加成、4 位统帅全局技能、局内建设点每局重置、主金币永久升级（原型 / 嵌入两种）、存档键、开局回执、结算回执与重试、10 波过关
++# 用法：python3 preview/td/test_td.py [塔防页 URL]
++import sys, json
++from playwright.sync_api import sync_playwright
++URL = sys.argv[1] if len(sys.argv) > 1 else 'http://localhost:8765/preview/td/index.html'
++HOST_URL = URL.rsplit('/', 1)[0] + '/__host_test.html'
++ok = bad = 0
++def check(c, msg):
++    global ok, bad
++    if c: ok += 1; print('  ✓', msg)
++    else: bad += 1; print('  ✗ FAIL', msg)
++# 假经营页：只为测子页协议；真正的扣款 / 写档由熊二在 app.js 用 E.transact 接
++HOST = """<!doctype html><meta charset=utf-8><body style=margin:0><iframe id=f src="index.html?embed=1" style="border:0;width:100vw;height:100vh"></iframe><script>
++window.log=[]; window.W={coins:5e9, z:{lv:{},cleared:0,best:0}, blocked:false, ackStart:true, failResult:false};
++function send(x){ pt.postMessage(Object.assign({td:'state', coins:W.coins, z:W.z, blocked:W.blocked, muted:true}, x||{})); }
++f.onload=()=>{ const ch=new MessageChannel(); window.pt=ch.port1; const T=f.contentWindow.TDCore;
++  pt.onmessage=e=>{ const m=e.data; log.push(m);
++    if(m.td==='hello') send();
++    if(m.td==='buy'){ const z=T.norm(W.z), p=T.price(m.id, z.lv[m.id]), ok=!W.blocked && W.coins>=p && z.lv[m.id]<T.MAX_UP; if(ok){ W.coins-=p; z.lv[m.id]++; W.z=z; } send({ack:'buy', requestId:m.requestId, id:m.id, ok}); }
++    if(m.td==='start' && W.ackStart) send({ack:'start', ok:true, runId:m.runId});
++    if(m.td==='result'){ if(W.failResult) send({ack:'result', ok:false, runId:m.runId, why:'写盘失败'}); else { const z=T.norm(W.z); T.applyResult(z, m); W.z=z; send({ack:'result', ok:true, runId:m.runId}); } } };
++  f.contentWindow.postMessage({td:'port'}, location.origin, [ch.port2]); };
++</script>"""
++MK = """window.__mk = (d, hp) => ({ type: 'walk', d, hp: hp || 1e6, max: hp || 1e6, sp: 0, r: 0.28, slowT: 0, slowK: 1, stunT: 0, burnT: 0, burnD: 0, x: 0, y: 0 });
++window.__fresh = (cmd) => { const G0 = __td.G; if (G0) G0.over = true; __td.cmdSel = cmd; __td.start(1); const G = __td.G; G.breakT = 1e9; G.c.x = G.c.tx = 100; G.c.y = G.c.ty = 100; G.energy = 0; return G; };
++window.__fire = (id, cmd, ds, x, y) => { const G = __fresh(cmd); G.cash = 1e5; G.es = ds.map(d => __mk(d)); __td.step(0.0001); __td.build(id, x, y); const tw = G.tw.get(x + ',' + y); tw.cd = 0; __td.step(0.001);
++  return { hits: G.es.filter(e => e.hp < 1e6).length, dmg: G.es.map(e => 1e6 - e.hp), burn: G.es.map(e => [e.burnT, e.burnD]), slow: G.es.map(e => e.slowK), cd: tw.cd, rng: __td.towerRange(tw), stun: G.es.map(e => e.stunT) }; };
++0;"""
++with sync_playwright() as p:
++    b = p.webkit.launch(); print('webkit', b.version)
++    # ---------- 原型模式：规则 ----------
++    c = b.new_context(**p.devices['iPhone 15']); pg = c.new_page(); errs = []
++    pg.on('pageerror', lambda e: errs.append(str(e)))
++    pg.goto(URL); pg.evaluate("localStorage.clear()"); pg.reload(); pg.wait_for_function("window.__td && __td.proto.ready"); pg.evaluate(MK)
++    E = lambda js, *a: pg.evaluate(js, *a)
++    keys = E("Object.keys(TDCore.TOWERS)"); check(len(keys) == 8 and len(E("TDCore.CEO_IDS")) == 4, f'8 种塔 {keys}、4 位统帅')
++    # 路：第 1 行 x=0..5（d = x+1），(4,2) 紧挨路
++    # 不触发同名加成、也没有全局技能干扰的基线：用火箭老板但把暴击关掉（Math.random=1）
++    E("() => { window.__r = Math.random; Math.random = () => 0.999; }")
++    def fire(tid, cmd, ds): return E("([i, c, ds]) => __fire(i, c, ds, 4, 2)", [tid, cmd, ds])
++    base = 'rocket'
++    r = fire('bbq', base, [5, 5.3, 4.7]); check(r['hits'] >= 2 and all(bt > 0 for bt, _ in r['burn'][:1]), f'烧烤火炉：扇形一次烧多只 + 灼烧 {r["hits"]} {r["burn"]}')
++    r = fire('tea', base, [5, 5.3, 4.7]); check(r['hits'] == 3 and all(s < 1 for s in r['slow']), f'奶茶冷饮：范围减速 {r["slow"]}')
++    r = fire('book', base, [5, 4.4, 3.6, 2.8, 2.2, 1.6]); check(2 <= r['hits'] <= 4, f'书页发射：直线穿透，最多 4 只 hits={r["hits"]}')
++    r = fire('tech', base, [5, 4.2, 3.4, 2.6, 1.8, 1.0]); d = sorted([x for x in r['dmg'] if x > 0], reverse=True)
++    check(r['hits'] == 4 and d[-1] < d[0], f'科技电塔：链电 1+3 只、逐跳衰减 {[round(x,1) for x in d]}')
++    r0 = fire('t77', base, [5]); r1 = fire('t77', 'c77', [5])
++    check(r0['burn'][0][0] == 3 and r0['burn'][0][1] > 0, f'77 烤串塔：命中持续燃烧 {r0["burn"]}')
++    check(r1['burn'][0][0] == 4 and r1['burn'][0][1] > r0['burn'][0][1] * 2, f'★ 统帅 77 + 77 塔：燃烧 ×2、4 秒 {r0["burn"]} → {r1["burn"]}')
++    r0 = fire('tpearl', base, [5, 4, 3, 2, 1, 0.2]); r1 = fire('tpearl', 'pearl', [5, 4, 3, 2, 1, 0.2])
++    check(r0['hits'] == 3 and r1['hits'] == 4, f'珍珠塔：弹 2 次；★ 统帅珍珠姐多弹 1 次 {r0["hits"]} → {r1["hits"]}')
++    r0 = fire('totaku', base, [5]); r1 = fire('totaku', 'otaku', [5]); one = E("__td.P.totaku.dmg")
++    check(abs(r0['dmg'][0] - one * 1.6) < 0.01, f'阿宅漫画塔：去程 + 回程（0.6）都打 {r0["dmg"][0]:.2f}')
++    check(r1['dmg'][0] > r0['dmg'][0] * 1.2, f'★ 统帅阿宅 + 漫画塔：回程满伤（再叠阿宅全局射程）{r0["dmg"][0]:.2f} → {r1["dmg"][0]:.2f}')
++    r0 = fire('trocket', 'c77', [5, 6.2]); r1 = fire('trocket', 'rocket', [5, 6.2])
++    check(r0['hits'] == 1 and r1['hits'] == 2, f'火箭塔：范围爆炸；★ 统帅火箭老板爆炸范围 ×1.5（1.2 格外的也炸到）{r0["hits"]} → {r1["hits"]}')
++    # 统帅全局技能（用通用塔 book 测）
++    rb = fire('book', 'otaku', [5]); r77 = fire('book', 'c77', [5])
++    check(abs(r77['dmg'][0] / rb['dmg'][0] - 1.15) < 0.01 and r77['burn'][0][0] > 0 and rb['burn'][0][0] == 0, f'统帅 77 全局：全场塔伤害 +15%、命中带燃烧 {rb["dmg"][0]:.1f} → {r77["dmg"][0]:.1f}')
++    rp = fire('book', 'pearl', [5]); check(abs(rp['cd'] - E("__td.P.book.rate") * 0.82) < 0.01 and abs(rb['cd'] - E("__td.P.book.rate")) < 0.01, f'统帅珍珠姐全局：塔出手间隔 ×0.82 {rb["cd"]:.3f} → {rp["cd"]:.3f}')
++    rr = fire('book', 'rocket', [5]); check(abs(rb['rng'] - rr['rng'] - 0.45) < 0.001, f'统帅阿宅全局：塔射程 +0.45 格 {rr["rng"]:.2f} → {rb["rng"]:.2f}')
++    E("() => { Math.random = () => 0; }"); rc = fire('book', 'rocket', [5]); E("() => { Math.random = () => 0.999; }")
++    check(abs(rc['dmg'][0] / rr['dmg'][0] - 2.2) < 0.01, f'统帅火箭老板全局：暴击 ×2.2 {rr["dmg"][0]:.1f} → {rc["dmg"][0]:.1f}')
++    # 防连锁：燃烧跳伤不再续燃烧；击杀不触发额外攻击
++    lp = E("() => { const G = __fresh('c77'); G.es = [__mk(5)]; const e = G.es[0]; e.burnT = 2; e.burnD = 10; for (let i = 0; i < 30; i++) __td.step(0.05); return [e.burnT, e.hp]; }")
++    check(lp[0] <= 0.5 + 1e-6 and lp[1] < 1e6, f'燃烧会烧完自己结束，不会自我续烧 {lp}')
++    E("() => { Math.random = window.__r; }")
++    # 统帅大招
++    for cmd in ['c77', 'pearl', 'otaku', 'rocket']:
++        u = E("(c) => { const G = __fresh(c); G.es = [__mk(5), __mk(8), __mk(12)]; __td.step(0.0001); G.c.x = G.c.tx = 4.5; G.c.y = G.c.ty = 2.5; G.energy = 100; const s0 = ZBSfx.state.count.ult || 0; const ok = __td.castUlt(); return { ok, e: G.energy, hit: G.es.filter(e => e.hp < 1e6).length, stun: G.es.filter(e => e.stunT > 0).length, lbl: document.getElementById('ultLbl').textContent }; }", cmd)
++        check(u['ok'] and u['e'] == 0 and u['hit'] >= 1, f'统帅 {cmd} 大招能放、清能量、打到僵尸 {u}')
++    # 统帅不占塔位：站的格子能造塔；只走路面
++    nb = E("() => { const G = __fresh('pearl'); const ok1 = __td.moveCmd(4, 2), ok2 = __td.moveCmd(2, 1); G.cash = 1e4; const b = __td.build('bbq', 2, 2); return [ok1, ok2, b, __td.build('bbq', 2, 1)]; }")
++    check(nb == [False, True, True, False], f'统帅只能走路面、不占塔位；路面不能造塔 {nb}')
++    # 局内建设点：每局重置成 160，剩余不兑换主金币；塔可局内升级 / 拆除
++    bp = E("() => { const c0 = __td.proto.coins; let G = __fresh('rocket'); const a = G.cash; __td.build('bbq', 4, 2); const b = G.cash; const up = __td.upTower(4, 2); const sl = __td.sell(4, 2); const c = G.cash; G = __fresh('rocket'); return [a, b, up, sl, c, G.cash, __td.proto.coins === c0]; }")
++    check(bp[0] == 160 and bp[1] == 100 and bp[2] and bp[3] and bp[5] == 160 and bp[6], f'建设点每局 160，造塔扣点、可升级 / 拆除，下局重置，主金币不变 {bp}')
++    # 统帅开局锁定
++    lk = E("() => { const G = __fresh('pearl'); __td.cmdSel = 'c77'; return [G.cmd, document.getElementById('ultLbl').textContent]; }")
++    check(lk == ['pearl', '冰沙'], f'统帅开局锁定，菜单换人不影响本局 {lk}')
++    # 原型：主金币永久升级只写 tangzhe-td-proto
++    up = E("() => { if (__td.G) __td.G.over = true; const c0 = __td.proto.coins, p = TDCore.price('bbq', 0); const a = __td.buyUp('bbq'); const c1 = __td.proto.coins; const s = JSON.parse(localStorage.getItem('tangzhe-td-proto')); return { a, spent: c0 - c1, p, lv: __td.proto.lv.bbq, saved: s.lv.bbq, keys: Object.keys(localStorage) }; }")
++    check(up['a'] and up['spent'] == up['p'] and up['lv'] == 1 and up['saved'] == 1 and up['keys'] == ['tangzhe-td-proto'], f'原型：永久升级扣模拟金币、只写 tangzhe-td-proto {up}')
++    nf = E("() => { const c = __td.proto.coins; __td.proto.coins = 10; const a = __td.buyUp('tea'); __td.proto.lv.book = 30; const b = __td.buyUp('book'); __td.proto.coins = c; return [a, b, __td.proto.lv.tea]; }")
++    check(nf == [False, False, 0], f'金币不够 / 满级 30 不能升级 {nf}')
++    # 10 波打完 → 过关；进度 best=10、cleared=1
++    w = E("() => { const G = __fresh('rocket'); G.wave = 10; G.q = []; G.es = []; __td.step(0.05); return { over: G.over, win: G.win, best: __td.proto.best, cl: __td.proto.cleared, title: document.getElementById('resTitle').textContent }; }")
++    check(w['over'] and w['win'] and w['best'] == 10 and w['cl'] == 1 and w['title'] == '守住了！', f'守满 10 波过关，进度记上 {w}')
++    l = E("() => { const G = __fresh('rocket'); G.wave = 3; G.lives = 1; G.es = [__mk(26.99, 50)]; G.es[0].sp = 1; __td.step(0.05); return { over: G.over, win: G.win, title: document.getElementById('resTitle').textContent }; }")
++    check(l['over'] and not l['win'] and l['title'] == '机房失守', f'生命归零失败 {l}')
++    wl = E("() => [__td.waveList(4).includes('mini'), __td.waveList(9).includes('boss'), __td.waveList(3).some(t => t === 'boss' || t === 'mini')]")
++    check(wl == [True, True, False], f'第 5 波小 Boss、第 10 波 Boss {wl}')
++    check(not errs, f'原型页无报错 {errs[:3]}')
++    c.close()
++    # ---------- 嵌入：协议（假经营页） ----------
++    c = b.new_context(**p.devices['iPhone 15']); pg = c.new_page(); errs = []
++    pg.on('pageerror', lambda e: errs.append(str(e)))
++    pg.route('**/__host_test.html', lambda r: r.fulfill(body=HOST, content_type='text/html; charset=utf-8'))
++    pg.goto(URL); pg.evaluate("localStorage.clear()"); pg.goto(HOST_URL)
++    for _ in range(50):
++        f = next((x for x in pg.frames if 'embed=1' in x.url), None)
++        if f and f.evaluate("!!(window.__td && __td.proto.ready)"): break
++        pg.wait_for_timeout(100)
++    F = lambda js, *a: f.evaluate(js, *a)
++    check(F("__td.EMBED && __td.proto.coins") == 5e9 and F("!document.getElementById('exitBtn').classList.contains('hidden')"), '嵌入：拿到经营页金币，显示「返回经营」')
++    F("__td.buyUp('tea')"); pg.wait_for_timeout(200)
++    bu = pg.evaluate("({ last: log.filter(m => m.td === 'buy').pop(), coins: W.coins, lv: W.z.lv.tea })"); fs = F("({ c: __td.proto.coins, lv: __td.proto.lv.tea, keys: Object.keys(localStorage) })")
++    check(bu['last']['td'] == 'buy' and bu['last']['id'] == 'tea' and isinstance(bu['last'].get('requestId'), str) and bool(bu['last']['requestId']) and 'price' not in bu['last'] and bu['coins'] == 5e9 - 1e6 and fs['c'] == 5e9 - 1e6 and fs['lv'] == 1 and fs['keys'] == [], f'嵌入：升级只发 td:buy（不带价格），经营页扣款后回推，本页不写存档 {bu} {fs}')
++    pg.evaluate("W.blocked = true; send()"); pg.wait_for_timeout(100)
++    bl = F("[__td.buyUp('bbq'), [...document.querySelectorAll('[data-up]')].every(b => b.disabled)]")
++    check(bl == [False, True], f'嵌入：只读坏档时升级全灰、硬调也不发 {bl}')
++    pg.evaluate("W.blocked = false; send(); W.ackStart = false"); pg.wait_for_timeout(100)
++    F("__td.cmdSel = 'pearl'; __td.start(1)"); pg.wait_for_timeout(100)
++    st = F("({ pend: __td.G.pendStart, t0: __td.G.t, run: __td.G.runId })"); pg.wait_for_timeout(300)
++    st2 = F("__td.G.t"); sent = pg.evaluate("log.filter(m => m.td === 'start').pop()")
++    check(st['pend'] and st2 == 0 and sent['cmd'] == 'pearl' and sent['runId'] == st['run'], f'嵌入：开局先发 td:start（带 runId / 统帅），回执前不计时 {sent}')
++    pg.evaluate("send({ack:'start', ok:true, runId:'old-run'})"); pg.wait_for_timeout(100)
++    check(F("__td.G.pendStart"), '嵌入：别的 runId 的回执不理')
++    pg.evaluate(f"send({{ack:'start', ok:true, runId:'{st['run']}'}})"); pg.wait_for_timeout(300)
++    check(not F("__td.G.pendStart") and F("__td.G.t") > 0, '嵌入：本局 runId 的 ok 回执到了才开打')
++    pg.evaluate("W.failResult = true")
++    F("(() => { const G = __td.G; G.wave = 10; G.q = []; G.es = []; __td.step(0.05); })()"); pg.wait_for_timeout(300)
++    rs = pg.evaluate("log.filter(m => m.td === 'result').pop()")
++    ui = F("({ t: document.getElementById('resTitle').textContent, retry: !document.getElementById('retryBtn').classList.contains('hidden'), n: document.getElementById('resNote').textContent })")
++    check(rs['win'] and rs['waves'] == 10 and rs['cmd'] == 'pearl' and rs['runId'] == st['run'] and ui['t'] == '存档失败' and ui['retry'] and '写盘失败' in ui['n'], f'嵌入：结算带 runId / 统帅；存档失败不显示过关、给「重试保存」 {ui}')
++    pg.evaluate("W.failResult = false"); F("document.getElementById('retryBtn').click()"); pg.wait_for_timeout(300)
++    ui = F("({ t: document.getElementById('resTitle').textContent, retry: !document.getElementById('retryBtn').classList.contains('hidden') })"); hz = pg.evaluate("W.z")
++    check(ui['t'] == '守住了！' and not ui['retry'] and hz['cleared'] == 1 and hz['best'] == 10, f'嵌入：重试保存成功后界面更新为守住了，经营页进度记上 {ui} {hz}')
++    pg.evaluate("W.ackStart = false"); F("document.getElementById('menuBtn').click(); __td.start(1)"); pg.wait_for_timeout(4400)
++    to = F("({ g: !!__td.G, menu: !document.getElementById('menu').classList.contains('hidden'), toast: document.getElementById('toast').textContent })")
++    check(not to['g'] and to['menu'] and '超时' in to['toast'], f'嵌入：4 秒没回执回菜单 {to}')
++    pg.evaluate(f"W.ackStart = true"); F("__td.start(1)"); pg.wait_for_timeout(200)
++    F("document.dispatchEvent(new Event('visibilitychange'))")
++    F("Object.defineProperty(document, 'hidden', {configurable: true, get: () => true}); document.dispatchEvent(new Event('visibilitychange'))")
++    hv = F("[__td.paused, ZBSfx.state.on]"); F("delete document.hidden")
++    check(hv == [True, False], f'嵌入：切后台自动暂停、音乐停 {hv}')
++    check(not errs, f'嵌入页无报错 {errs[:3]}')
++    c.close()
++    # ---------- 画面：SE / 15 ----------
++    for dn in ['iPhone SE', 'iPhone 15']:
++        c = b.new_context(**p.devices[dn]); pg = c.new_page(); errs = []
++        pg.on('pageerror', lambda e: errs.append(str(e)))
++        pg.goto(URL); pg.evaluate("localStorage.clear()"); pg.reload(); pg.wait_for_function("window.__td && __td.proto.ready"); pg.evaluate(MK)
++        tag = dn.replace(' ', '_')
++        pg.screenshot(path=f'/tmp/td/{tag}_menu.png')
++        mb = pg.evaluate("(() => { const m = document.getElementById('menu'); m.scrollTop = m.scrollHeight; const r = document.getElementById('startBtn').getBoundingClientRect(); return r.bottom <= innerHeight + 1 && r.height > 0; })()")
++        check(mb, f'{dn} 菜单拉到底「开守」可点')
++        pg.locator('#cmdPick [data-cmd=c77]').tap(); pg.locator('#startBtn').tap(); pg.wait_for_timeout(300)
++        pg.evaluate("(() => { const G = __td.G; G.cash = 2000; G.wave = 4; [['bbq',4,2],['t77',2,3],['tech',3,5],['book',4,6],['tea',2,5],['tpearl',6,8],['totaku',4,8],['trocket',0,5]].forEach(a => __td.build(...a)); __td.nextWave(); for (let i = 0; i < 260; i++) __td.step(0.03); })()")
++        g = pg.evaluate("__td.geo")
++        pg.mouse.click(g['OX'] + g['S'] * 0.5, g['OY'] + g['S'] * 2.5); pg.wait_for_timeout(200)
++        lay = pg.evaluate("(() => { const g = __td.geo, bar = document.getElementById('bar').getBoundingClientRect(), top = document.querySelector('.hud-top').getBoundingClientRect(); return { gridTop: g.OY, gridBot: g.OY + g.S * g.ROWS, barTop: bar.top, hudBot: top.bottom, build: !document.getElementById('barBuild').classList.contains('hidden'), n: document.querySelectorAll('#twGrid button').length, star: document.querySelector('#twGrid .syn') && document.querySelector('#twGrid .syn').textContent }; })()")
++        check(lay['build'] and lay['n'] == 8 and lay['star'] and '77' in lay['star'], f'{dn} 点空地弹出 8 种塔，同名塔标★ {lay["star"]}')
++        check(lay['gridBot'] <= lay['barTop'] + 1 and lay['gridTop'] >= lay['hudBot'] - 1, f'{dn} 地图不被顶栏 / 造塔栏挡住 {lay}')
++        pg.screenshot(path=f'/tmp/td/{tag}_build.png')
++        pg.locator('#buildX').tap(); pg.evaluate("__td.G.energy = 100"); pg.wait_for_timeout(100); pg.locator('#ultBtn').tap(); pg.wait_for_timeout(120)
++        pg.screenshot(path=f'/tmp/td/{tag}_ult.png')
++        check(pg.evaluate("__td.G.energy") < 100, f'{dn} 点大招按钮能放')
++        check(not errs, f'{dn} 无报错 {errs[:3]}')
++        c.close()
++    b.close()
++print(f'passed {ok}, failed {bad}')
++sys.exit(1 if bad else 0)
+--- /dev/null
++++ b/preview/td/test_td_bridge.js
+@@ -0,0 +1,23 @@
++'use strict';
++const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
++const E=require('../economy.js'),T=require('./tdcore.js'),Host=require('./tdhost.js');
++const src=fs.readFileSync(__dirname+'/../app.js','utf8');
++const block=src.slice(src.indexOf('/* ================= 科技公司塔防：'),src.indexOf('/* ================= 打僵尸（zombie/'));
++let checks=0;
++function check(fn){fn();checks++;}
++function fixture(){
++  const state=E.newState(1);state.shops[3]={open:true,lv:1,emp:0};state.coins=5e10;
++  const ports=[],transfers=[];const classes=new Set(['hidden']);
++  const frame={src:'about:blank',contentWindow:{location:{href:'about:blank'},postMessage:(...a)=>transfers.push(a)}};
++  const overlay={classList:{add:x=>classes.add(x),remove:x=>classes.delete(x)}};
++  const ctx={URL,state,E,TD:T,tdOpen:false,tdPort:null,tdGeneration:0,zbOpen:false,frozen:false,dirty:false,location:{href:'https://game.test/preview/index.html',origin:'https://game.test'},window:{TDHost:Host,__tzz:{}},$:(s)=>s==='#tdFrame'?frame:overlay,zbBlocked:()=>false,audioPause:()=>{},audioResume:()=>{},txn:(apply,price)=>E.transact(state,{apply,price,save:()=>true}),MessageChannel:function(){this.port1={onmessage:null,closed:false,messages:[],close(){this.closed=true;},postMessage(d){this.messages.push(d);}};this.port2={};ports.push(this.port1);}};
++  vm.createContext(ctx);vm.runInContext(block,ctx);return {ctx,api:ctx.window.__tzz,frame,ports,transfers,classes};
++}
++check(()=>{const f=fixture();f.api.openTD();assert(f.api.tdOpen);assert(!f.classes.has('hidden'));assert(f.frame.src.includes('/preview/td/index.html?embed=1'));f.frame.contentWindow.location.href='https://evil.test/preview/td/index.html';f.frame.onload();assert.equal(f.ports.length,0);f.frame.contentWindow.location.href='https://game.test/preview/zombie/index.html';f.frame.onload();assert.equal(f.ports.length,0);f.frame.contentWindow.location.href=f.frame.src;f.frame.onload();assert.equal(f.transfers.length,1);assert.equal(f.transfers[0][1],'https://game.test');assert.equal(f.ports[0].messages[0].td,'state');});
++check(()=>{const f=fixture();f.api.openTD();f.frame.contentWindow.location.href=f.frame.src;f.frame.onload();const p=f.ports[0];p.onmessage({data:{td:'buy',id:'bbq',requestId:'b1'}});assert.equal(f.ctx.state.td.lv.bbq,1);f.api.closeTD();assert(p.closed);const coins=f.ctx.state.coins;p.onmessage({data:{td:'buy',id:'bbq',requestId:'b2'}});assert.equal(f.ctx.state.coins,coins);assert(!f.api.tdOpen);assert(f.classes.has('hidden'));f.api.closeTD();});
++check(()=>{const f=fixture();f.api.openTD();f.frame.contentWindow.location.href=f.frame.src;f.frame.onload();const old=f.ports[0];f.frame.onload();assert(old.closed);const before=f.ctx.state.coins;old.onmessage({data:{td:'buy',id:'tea',requestId:'b1'}});assert.equal(f.ctx.state.coins,before);});
++check(()=>{const f=fixture();f.ctx.state.shops[3].open=false;f.api.openTD();assert(!f.api.tdOpen);f.ctx.state.shops[3].open=true;f.ctx.frozen=true;f.api.openTD();assert(!f.api.tdOpen);});
++check(()=>{const f=fixture();vm.runInContext("const ZB_SHOP=0; function zbCard(){return 'zombie-card';}\n"+src.slice(src.indexOf('function shopGameCard(i)'),src.indexOf('function ceoPost(id)')),f.ctx);assert(f.ctx.shopGameCard(3).includes('data-act="td"'));assert.equal(f.ctx.shopGameCard(1),'');assert.equal(f.ctx.shopGameCard(2),'');assert(f.ctx.shopGameCard(0).includes('zombie-card'));assert(src.indexOf('h += shopGameCard(i)')>src.indexOf('function shopHTML') || src.includes('h += shopGameCard(i);'));});
++check(()=>{for(const [dir,expected] of [['../','13j'],['../pet/game/','p6b']]){const html=fs.readFileSync(__dirname+'/'+dir+'index.html','utf8'),v=JSON.parse(fs.readFileSync(__dirname+'/'+dir+'version.json','utf8')).v;assert.equal(v,expected);assert(html.includes("var B='"+v+"'"));for(const m of html.matchAll(/\?v=([^"']+)/g))assert.equal(m[1],v);assert(html.includes("fetch('version.json?t='+Date.now(),{cache:'no-store'})"));}});
++
++console.log('TD parent bridge:',checks,'checks passed (isolated Node VM, not visual E2E)');
+--- /dev/null
++++ b/preview/td/test_td_parent_e2e.py
+@@ -0,0 +1,74 @@
++# Real parent app.js / persist integration; must run with installed WebKit.
++# Use an isolated local preview URL, never a player's browser/profile.
++# python3 preview/td/test_td_parent_e2e.py http://127.0.0.1:8765/preview/index.html
++import sys, json
++from playwright.sync_api import sync_playwright
++URL = sys.argv[1] if len(sys.argv) > 1 else 'http://127.0.0.1:8765/preview/index.html'
++assert '/preview/' in URL, 'This integration test is preview-only'
++passed = 0
++def check(ok, message):
++    global passed
++    assert ok, message
++    passed += 1
++    print('PASS', message)
++def child(pg):
++    pg.wait_for_function("__tzz.tdOpen")
++    for _ in range(100):
++        for f in pg.frames:
++            if '/td/index.html' in f.url:
++                try:
++                    if f.evaluate('!!(window.__td && __td.proto.ready)'): return f
++                except Exception: pass
++        pg.wait_for_timeout(50)
++    raise AssertionError('TD child did not initialize')
++def setup(pg):
++    pg.goto(URL); pg.wait_for_function('!!window.__tzz')
++    pg.evaluate("""() => {
++      const t=__tzz, s=Economy.newState(Date.now());
++      s.coins=5e10; s.totalEarned=1; s.cur=3; s.muted=true;
++      s.shops.forEach(x=>{x.open=true;x.lv=1;x.emp=0;});
++      s.zombie={sentinel:'untouched'}; s.integrationSentinel={value:42};
++      t.state=s; t.closeModal(); t.persist(); t.switchShop(3); t.renderTab();
++      localStorage.setItem('tangzhe-save','FORMAL-SENTINEL');
++      localStorage.setItem('tangzhe-save-bak','FORMAL-BAK-SENTINEL');
++      window.__origSet=Storage.prototype.setItem; window.__failKey=null;
++      Storage.prototype.setItem=function(k,v){if(k===window.__failKey)throw Error('test write failure');return __origSet.call(this,k,v);};
++    }""")
++with sync_playwright() as p:
++    browser=p.webkit.launch()
++    for device in ['iPhone SE','iPhone 15']:
++        c=browser.new_context(**p.devices[device]); errors=[]
++        # Disable only root automatic ticking/saving, so assertions have no
++        # unrelated income/autosave race. Real persist and iframe timers run.
++        c.add_init_script('if(window===window.top) window.requestAnimationFrame=()=>0;')
++        pg=c.new_page();pg.on('pageerror',lambda e:errors.append(str(e)));setup(pg)
++        check(pg.locator('[data-act=td]').count()==1,device+' tech entry exists')
++        check(pg.evaluate("document.querySelector('.td-card')===document.querySelector('.td-card').parentElement.lastElementChild"),device+' entry is bottom card')
++        pg.locator('[data-act=td]').click(); f=child(pg)
++        for key in ['tangzhe-preview-save','tangzhe-preview-save-bak']:
++            before=pg.evaluate('JSON.stringify(__tzz.state)');disk=pg.evaluate("localStorage.getItem('tangzhe-preview-save')")
++            pg.evaluate('(k)=>window.__failKey=k',key)
++            f.evaluate("__td.buyUp('bbq')");f.wait_for_function('!__td.pend')
++            check(pg.evaluate('JSON.stringify(__tzz.state)')==before,device+' actual persist '+key+' failure rolls back full state')
++            check(pg.evaluate("localStorage.getItem('tangzhe-preview-save')")==disk,device+' failure preserves main bytes')
++            pg.evaluate('window.__failKey=null')
++        coins=pg.evaluate('__tzz.state.coins')
++        f.evaluate("__td.buyUp('bbq')");f.wait_for_function('!__td.pend')
++        check(pg.evaluate('__tzz.state.coins')==coins-1e6 and pg.evaluate('__tzz.state.td.lv.bbq')==1,device+' debit and upgrade commit together')
++        check(pg.evaluate('__tzz.state.integrationSentinel.value')==42 and pg.evaluate('__tzz.state.zombie.sentinel')=='untouched',device+' unrelated state preserved')
++        f.evaluate("__td.cmdSel='pearl';__td.start(1)");f.wait_for_function('__td.G && !__td.G.pendStart')
++        run=f.evaluate('__td.G.runId');check(pg.evaluate('__tzz.tdRun.cmd')=='pearl',device+' parent locks commander')
++        pg.evaluate("window.__failKey='tangzhe-preview-save'")
++        f.evaluate('__td.G.wave=10;__td.G.q=[];__td.G.es=[];__td.step(.01)');f.wait_for_function('__td.G.over && !__td.G.wait')
++        check(not f.evaluate('__td.G.saveOk') and pg.evaluate('__tzz.state.td.cleared')==0,device+' real result save failure does not claim completion')
++        pg.evaluate('window.__failKey=null');f.locator('#retryBtn').click();f.wait_for_function('__td.G.saveOk')
++        check(pg.evaluate('__tzz.state.td.cleared')==1 and f.evaluate('__td.G.runId')==run,device+' same-run retry persists completion')
++        check(pg.evaluate("localStorage.getItem('tangzhe-save')")=='FORMAL-SENTINEL' and pg.evaluate("localStorage.getItem('tangzhe-save-bak')")=='FORMAL-BAK-SENTINEL',device+' formal saves untouched')
++        check(pg.evaluate("localStorage.getItem('tangzhe-td-proto')")==None,device+' embedded creates no prototype wallet')
++        pg.evaluate('__tzz.closeTD()');pg.reload();pg.wait_for_function('!!window.__tzz')
++        check(pg.evaluate('__tzz.state.td.lv.bbq')==1 and pg.evaluate('__tzz.state.td.cleared')==1,device+' refresh restores main-save TD progress')
++        pg.evaluate('__tzz.closeModal();__tzz.openTD()');f=child(pg)
++        check(f.evaluate('__td.cmdSel')=='pearl',device+' reopened menu restores saved commander')
++        check(not errors,device+' no page errors: '+str(errors));c.close()
++    browser.close()
++print('Real parent WebKit E2E:',passed,'checks passed')
+--- /dev/null
++++ b/preview/td/test_td_protocol.js
+@@ -0,0 +1,29 @@
++'use strict';
++// Executes the actual child script in Node VM with minimal DOM/timer fakes.
++// This tests protocol/state logic, not browser rendering or WebKit behavior.
++const vm=require('node:vm'), fs=require('node:fs'), assert=require('node:assert/strict'), T=require('./tdcore.js');
++let checks=0;
++function check(fn){fn();checks++;}
++function child(embed=true){
++  const nodes=new Map(), timers=new Map(), listeners={}, sent=[], writes=[];let serial=0;
++  const noop=()=>{};
++  function node(id){if(!nodes.has(id)){const cls=new Set();nodes.set(id,{style:{},setAttribute:noop,innerHTML:'',textContent:'',disabled:false,classList:{toggle:(x,on)=>on?cls.add(x):cls.delete(x),add:x=>cls.add(x),remove:x=>cls.delete(x),contains:x=>cls.has(x)},addEventListener:noop,getContext:()=>new Proxy({},{get:()=>noop})});}return nodes.get(id);}
++  const w={TDCore:T,ZBSfx:new Proxy({},{get:()=>noop}),addEventListener:(k,fn)=>listeners[k]=fn};w.parent=embed?{}:w;
++  const ctx={window:w,location:{search:embed?'?embed=1':'',origin:'https://local.test'},document:{hidden:false,documentElement:{},querySelector:node,querySelectorAll:()=>[],addEventListener:noop},Image:function(){},innerWidth:390,innerHeight:844,getComputedStyle:()=>({getPropertyValue:()=>0}),addEventListener:noop,performance:{now:()=>0},requestAnimationFrame:()=>1,cancelAnimationFrame:noop,setTimeout:(fn,ms)=>{timers.set(++serial,{fn,ms});return serial;},clearTimeout:id=>timers.delete(id),localStorage:{getItem:k=>{writes.push(['read',k]);return null;},setItem:(k,v)=>writes.push(['write',k,v])}};
++  vm.createContext(ctx);vm.runInContext(fs.readFileSync(__dirname+'/td.js','utf8'),ctx);
++  const f={api:w.__td, node, timers, sent, writes, ctx, listeners};
++  f.connect=(source=w.parent,origin=ctx.location.origin)=>listeners.message({source,origin,data:{td:'port'},ports:[{postMessage:d=>sent.push(d)}]});
++  f.state=(extra={})=>f.api.onState(Object.assign({td:'state',coins:5e10,z:T.norm(),blocked:false,muted:true},extra));
++  f.expire=ms=>{for(const [id,t]of [...timers])if(t.ms===ms){timers.delete(id);t.fn();}};
++  return f;
++}
++check(()=>{const f=child();f.connect({},'https://evil.test');assert.equal(f.sent.length,0);f.connect();assert.equal(f.sent[0].td,'hello');assert.equal(f.writes.length,0);});
++check(()=>{const f=child();f.state({z:{...T.norm(),cmd:'pearl'}});assert.equal(f.api.cmdSel,'pearl');f.api.cmdSel='otaku';f.state({z:{...T.norm(),cmd:'rocket'}});assert.equal(f.api.cmdSel,'otaku');});
++check(()=>{const f=child();f.state();assert(f.api.buyUp('bbq'));const req=f.api.lastSent;assert(req.requestId);assert(f.api.pend);f.state();assert(f.api.pend);f.state({ack:'buy',requestId:'old',id:'bbq',ok:true,coins:1});assert(f.api.pend);assert.equal(f.api.proto.coins,5e10);f.expire(4000);assert(!f.node('#buyRetryBtn').classList.contains('hidden'));f.node('#buyRetryBtn').onclick();assert.equal(f.api.lastSent.requestId,req.requestId);f.state({ack:'buy',requestId:req.requestId,id:'bbq',ok:true,z:{...T.norm(),lv:{...T.norm().lv,bbq:1}},coins:5e10-1e6});assert(!f.api.pend);assert.equal(f.api.proto.lv.bbq,1);assert.equal(f.writes.length,0);});
++check(()=>{const f=child();f.state();f.api.buyUp('tea');const req=f.api.lastSent;f.state({ack:'buy',requestId:req.requestId,id:'tea',ok:false,why:'disk'});assert(!f.api.pend);assert.equal(f.api.proto.lv.tea,0);});
++check(()=>{const f=child();f.state();f.api.cmdSel='c77';f.api.start(1);const g=f.api.G;f.state({ack:'start',runId:'old',ok:false});assert(g.pendStart);f.state({ack:'start',runId:g.runId,ok:true});assert(!g.pendStart);f.api.cmdSel='rocket';assert.equal(g.cmd,'c77');f.node('#quitBtn').onclick();assert(g.over && g.wait);f.expire(4000);assert(!g.wait);assert(!f.node('#retryBtn').classList.contains('hidden'));const result=f.api.lastSent;f.node('#retryBtn').onclick();assert(g.wait);assert.equal(f.api.lastSent,result);f.state({ack:'result',runId:'old',ok:true,coins:1});assert(g.wait);f.state({ack:'result',runId:g.runId,ok:false,why:'disk'});assert(!g.wait && !g.saveOk);f.node('#retryBtn').onclick();f.state({ack:'result',runId:g.runId,ok:true});assert(g.saveOk);f.state({ack:'result',runId:g.runId,ok:false,why:'late error'});assert(g.saveOk);assert.equal(f.writes.length,0);});
++check(()=>{const f=child();f.state({blocked:true});assert.equal(f.api.start(1),false);assert.equal(f.api.buyUp('bbq'),false);});
++check(()=>{const f=child();f.state();f.api.start(1);const id=f.api.G.runId;f.expire(4000);assert.equal(f.api.G,null);f.state({ack:'start',runId:id,ok:true});assert.equal(f.api.G,null);});
++check(()=>{const f=child(false);assert.equal(f.api.EMBED,false);f.api.buyUp('bbq');assert(f.writes.length>0);assert(f.writes.every(x=>x[1]==='tangzhe-td-proto'));});
++check(()=>{const f=child();f.state();f.api.start(1);const old=[...f.timers.values()].find(t=>t.ms===4000);f.api.start(1);const current=f.api.G;old.fn();assert.equal(f.api.G,current);});
++console.log('TD child protocol:',checks,'checks passed (Node VM, not browser E2E)');
+--- /dev/null
++++ b/preview/td/test_tdhost.js
+@@ -0,0 +1,31 @@
++'use strict';
++const assert = require('node:assert/strict'), E = require('../economy.js'), T = require('./tdcore.js'), Host = require('./tdhost.js');
++let count = 0;
++function check(fn) {fn(); count++;}
++function fixture() {
++  const s = E.newState(1000); s.coins = 5e10; s.shops[3] = {open:true,lv:1,emp:0};
++  s.pet = {sentinel:'pet untouched'}; s.zombie = {sentinel:'zombie untouched'}; s.otherFutureField = {x:42};
++  const data = new Map([['tangzhe-preview-save',JSON.stringify(s)]]);
++  const f = {s,blocked:false,fail:null,sends:[],writes:[],changed:0};
++  const storage = {getItem:k => data.get(k) ?? null, setItem:(k,v) => { if(f.fail === k) throw Error('disk'); f.writes.push(k); data.set(k,v); }};
++  f.host = Host.create({state:()=>s, blocked:()=>f.blocked || E.isBlocked(s) || !E.walletOk(s), balance:()=>E.balance(s), send:d=>f.sends.push(d), close:()=>{}, changed:()=>f.changed++, transact:(apply,price)=>E.transact(s,{apply,price,save:st=>E.commitSave(storage,'tangzhe-preview-save','tangzhe-preview-save-bak',st)})});
++  f.msg=d=>{ f.host.msg(d); return f.sends.at(-1); }; f.data=data;
++  return f;
++}
++const buy=(id='bbq',requestId='b1')=>({td:'buy',id,requestId,price:0,coins:1e15});
++const start=(runId='r1',cmd='pearl')=>({td:'start',runId,cmd,n:1});
++const result=(runId='r1',cmd='pearl')=>({td:'result',runId,cmd,n:1,win:true,waves:10,kills:100});
++for(const id of T.IDS) check(()=>{const f=fixture(),before=f.s.coins,r=f.msg(buy(id));assert.equal(r.ok,true);assert.equal(before-f.s.coins,T.price(id,0));assert.equal(f.s.td.lv[id],1);assert.equal(JSON.parse(f.data.get('tangzhe-preview-save')).td.lv[id],1);assert.equal(f.s.pet.sentinel,'pet untouched');assert.equal(f.s.otherFutureField.x,42);assert(f.writes.every(k=>k.startsWith('tangzhe-preview-save')));});
++check(()=>{const f=fixture();assert(!('td'in f.s));f.msg({td:'hello'});assert(!('td'in f.s));assert.equal(f.writes.length,0);});
++check(()=>{const f=fixture();f.msg(buy());const before=JSON.stringify(f.s),writes=f.writes.length;assert.equal(f.msg(buy()).dup,true);assert.equal(JSON.stringify(f.s),before);assert.equal(f.writes.length,writes);assert.equal(f.msg(buy('tea')).ok,false);});
++for(const fail of ['tangzhe-preview-save','tangzhe-preview-save-bak']) check(()=>{const f=fixture(),before=JSON.stringify(f.s),disk=f.data.get('tangzhe-preview-save');f.fail=fail;const r=f.msg(buy());assert.equal(r.ok,false);assert.equal(r.requestId,'b1');assert.equal(JSON.stringify(f.s),before);assert.equal(f.data.get('tangzhe-preview-save'),disk);f.fail=null;assert.equal(f.msg(buy()).ok,true);assert.equal(f.s.td.lv.bbq,1);});
++check(()=>{const f=fixture();f.blocked=true;const before=JSON.stringify(f.s);for(const d of [buy(),start(),result()]){const r=f.msg(d);assert.equal(r.ok,false);assert.equal(r[d.td==='buy'?'requestId':'runId'],d[d.td==='buy'?'requestId':'runId']);}assert.equal(JSON.stringify(f.s),before);assert.equal(f.writes.length,0);});
++check(()=>{const f=fixture();f.s.coins=1;assert.equal(f.msg(buy()).ok,false);assert(!f.s.td);});
++check(()=>{const f=fixture();f.s.td=T.norm();f.s.td.lv.bbq=30;const before=f.s.coins;assert.equal(f.msg(buy()).ok,false);assert.equal(f.s.coins,before);});
++check(()=>{const f=fixture();assert.equal(f.msg(start()).ok,true);const run=f.host.run;assert.equal(f.msg(start()).dup,true);assert.equal(f.host.run,run);assert.equal(f.msg(start('r1','rocket')).ok,false);assert.equal(f.host.run,run);assert.equal(f.msg(result('r1','rocket')).ok,false);assert.equal(f.msg(result()).ok,true);const before=JSON.stringify(f.s),writes=f.writes.length;assert.equal(f.msg(result()).dup,true);assert.equal(JSON.stringify(f.s),before);assert.equal(f.writes.length,writes);assert.equal(f.msg(start()).ok,false);assert.equal(f.s.td.cmd,'pearl');});
++check(()=>{const f=fixture();f.msg(start());f.msg(start('r2'));assert.equal(f.msg(start()).ok,false);assert.equal(f.host.run.runId,'r2');assert.equal(f.msg(result()).ok,false);assert.equal(f.msg(result('r2')).ok,true);});
++check(()=>{const f=fixture();f.msg(start());f.host.reset();assert.equal(f.msg(start()).ok,false);assert.equal(f.msg(result()).ok,false);});
++for(const fail of ['tangzhe-preview-save','tangzhe-preview-save-bak']) check(()=>{const f=fixture();f.msg(start());const before=JSON.stringify(f.s);f.fail=fail;assert.equal(f.msg(result()).ok,false);assert.equal(JSON.stringify(f.s),before);assert.equal(f.host.run.settled,false);f.fail=null;assert.equal(f.msg(result()).ok,true);assert.equal(f.s.td.cleared,1);assert.equal(f.s.coins,5e10);assert.equal(f.msg({...result(),kills:101}).ok,false);});
++for(const mutation of [{waves:9},{waves:NaN},{n:1.2},{cmd:'bad'},{kills:-1},{win:1}]) check(()=>{const f=fixture();f.msg(start());assert.equal(f.msg({...result(),...mutation}).ok,false);assert(!f.s.td);});
++check(()=>{const f=fixture();f.msg(buy());const loaded=E.loadSave(f.data.get('tangzhe-preview-save'),null,1000);assert.equal(loaded.st.td.lv.bbq,1);assert.equal(loaded.st.otherFutureField.x,42);assert.equal(E.checkSave(f.s).length,0);f.s.td.lv.bbq=-1;assert(E.checkSave(f.s).includes('td'));});
++console.log('TD parent integration:',count,'checks passed');
