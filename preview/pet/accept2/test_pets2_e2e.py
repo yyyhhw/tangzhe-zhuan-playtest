@@ -31,7 +31,7 @@ def check(c, id, msg): results.append(bool(c)); print(('  ✓ ' if c else '  ✗
 PER_DEV = 21   # 每台设备的用例数（U1–U11 + C1–C8 + 结尾两项），两台共 42
 def seed(pg, L, room='c77', extra=''):
     pg.evaluate("""([L]) => { const E = __tzz.E, s = E.newState(Date.now()); for (const c of E.CEOS) { s.ceos[c.id].unlocked = true; s.ceos[c.id].lv = Math.max(1, s.ceos[c.id].lv || 1); }
-      s.coins = 50000; delete s.pet; """ + ADAPT['mk'] + """; """ + extra + """ localStorage.clear(); localStorage.setItem('tangzhe-save', '{"sentinel":1}'); localStorage.setItem('""" + SAVE + """', JSON.stringify(s)); }""", [L])
+      s.rev = __tzz.state.rev; s.coins = 50000; delete s.pet; """ + ADAPT['mk'] + """; """ + extra + """ localStorage.clear(); localStorage.setItem('tangzhe-save', '{"sentinel":1}'); localStorage.setItem('""" + SAVE + """', JSON.stringify(s)); }""", [L])
     reload_frozen(pg, room)
 def reload_frozen(pg, room='c77'):   # 每次刷新后都重新冻结实时引擎
     pg.reload(); boot(pg); pg.evaluate(ADAPT['freeze']); to_room(pg, room)
