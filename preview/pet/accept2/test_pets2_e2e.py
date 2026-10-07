@@ -20,15 +20,20 @@ ADAPT = {
   'freeze': "__tzz.pets.manual(true)",
   'draw': "__tzz.pets.draw()",
   # 存档 / 视图只比稳定字段：uid、房间、种类、购买时间、成长（亲密度）；位置、精力这些实时值不比
-  'proj': "(L) => (L || []).map(p => [p.uid, p.room === undefined ? null : p.room, p.species, p.boughtAt, p.eng && p.eng.dog ? p.eng.dog.affinity : null]).sort((a, b) => a[0] < b[0] ? -1 : 1)",
+  # 成长值（同 Node 版 ADAPT.growth）：入参是存档里或 view() 里的一只宠物，拿不到返回 null
+  'growth': "(p) => (p && p.eng && p.eng.dog && typeof p.eng.dog.affinity === 'number') ? p.eng.dog.affinity : null",
+  'proj': "(L) => (L || []).map(p => [p.uid, p.room === undefined ? null : p.room, p.species, p.boughtAt, (GROWTH)(p)]).sort((a, b) => a[0] < b[0] ? -1 : 1)",
   'mk': "s.pets = { v: 2, list: L.map(p => Object.assign({ boughtAt: 1, eng: null }, p)) }",
 }
+ADAPT['proj'] = ADAPT['proj'].replace('GROWTH', ADAPT['growth'])
 results = []
 def check(c, id, msg): results.append(bool(c)); print(('  ✓ ' if c else '  ✗ ') + id + ' ' + msg)
 PER_DEV = 21   # 每台设备的用例数（U1–U11 + C1–C8 + 结尾两项），两台共 42
 def seed(pg, L, room='c77', extra=''):
     pg.evaluate("""([L]) => { const E = __tzz.E, s = E.newState(Date.now()); for (const c of E.CEOS) { s.ceos[c.id].unlocked = true; s.ceos[c.id].lv = Math.max(1, s.ceos[c.id].lv || 1); }
       s.coins = 50000; delete s.pet; """ + ADAPT['mk'] + """; """ + extra + """ localStorage.clear(); localStorage.setItem('tangzhe-save', '{"sentinel":1}'); localStorage.setItem('""" + SAVE + """', JSON.stringify(s)); }""", [L])
+    reload_frozen(pg, room)
+def reload_frozen(pg, room='c77'):   # 每次刷新后都重新冻结实时引擎
     pg.reload(); boot(pg); pg.evaluate(ADAPT['freeze']); to_room(pg, room)
 def boot(pg):
     pg.wait_for_function("window.__tzz && document.body.dataset.petReady==='1'", timeout=20000)
@@ -38,7 +43,8 @@ def to_room(pg, who):
     pg.wait_for_timeout(400)
 view = lambda pg: pg.evaluate("__tzz.pets.view()")
 def sview(pg):   # 视图的稳定部分（房间 / 待命 / 每只的成长）
-    v = view(pg); return json.dumps([{k: sorted(a) for k, a in v['rooms'].items()}, sorted(v['standby']), {u: (p.get('species'), (p.get('eng') or {}).get('dog', {}).get('affinity') if p.get('eng') else None) for u, p in v['pets'].items()}], sort_keys=True)
+    v = pg.evaluate("(g) => { const v = __tzz.pets.view(), G = eval(g); return { rooms: v.rooms, standby: v.standby, pets: Object.fromEntries(Object.entries(v.pets).map(([u, p]) => [u, [p.species, G(p)]])) }; }", ADAPT['growth'])
+    return json.dumps([{k: sorted(a) for k, a in v['rooms'].items()}, sorted(v['standby']), v['pets']], sort_keys=True)
 saved = lambda pg: pg.evaluate("() => { const s = JSON.parse(localStorage.getItem('" + SAVE + "')); return s && s.pets && (" + ADAPT['proj'] + ")(s.pets.list); }")
 sentinel = lambda pg: pg.evaluate("localStorage.getItem('tangzhe-save')") == '{"sentinel":1}'
 def tap(pg, uid):
@@ -81,7 +87,7 @@ with sync_playwright() as p:
         # U5 选替换 dog1：cat2 进房，dog1 回待命，刷新后保持，成长不变
         g0 = json.loads(sview(pg))[2]
         pg.click(ADAPT['place'].format(uid='cat2')); pg.wait_for_timeout(200); pg.click(ADAPT['replace'] + '[data-replace-uid="dog1"]'); pg.wait_for_timeout(300)
-        v = view(pg); pg.reload(); boot(pg); to_room(pg, 'c77'); v2 = view(pg)
+        v = view(pg); reload_frozen(pg); v2 = view(pg)
         check(sorted(v['rooms'].get('c77', [])) == ['cat1', 'cat2'] and v['standby'] == ['dog1'] and v2['rooms'] == v['rooms'] and json.loads(sview(pg))[2] == g0 and saved(pg) != s0, 'U5', f'替换成功、刷新保留、成长不变 {v["rooms"]}')
         # U6 保存失败：整次调配回滚（内存、界面、存档）
         s0 = saved(pg); v0 = sview(pg)
