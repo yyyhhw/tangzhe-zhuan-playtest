@@ -23,7 +23,7 @@ for(const species of ids.filter(x=>x!=='dog')){
 console.log('PASS six species: rollback retains live growth; unknown engine versions stay opaque');
 // Regression for a cat prototype with its walk cycles unavailable: it must play in place and still reward play once.
 {
- const m=clone(require('../art/cat/manifest.json')),s=fresh();for(const key of Object.keys(m.clips))if(key.startsWith('walk_')||key.startsWith('run_'))delete m.clips[key];assert(PA.validateManifest(m).ok);assert(!m.clips.walk_E);
+ const m=clone(require('../art/cat/manifest.json')),s=fresh();m.releaseReady=false;for(const key of Object.keys(m.clips))if(key.startsWith('walk_')||key.startsWith('run_'))delete m.clips[key];assert(PA.validateManifest(m).ok);assert(!m.clips.walk_E);
  assert(PG.registerSpecies('cat',m,{naturalWidth:m.atlas.size[0],naturalHeight:m.atlas.size[1],companionAtlases:Object.fromEntries(Object.entries(m.atlases||{}).map(([key,a])=>[key,{naturalWidth:a.size[0],naturalHeight:a.size[1]}]))},'local-real-prototype').ok);
  const r=PG.buy(s,E,'c77',stamp,m,()=>true,false,{species:'cat',prototype:true});assert(r.ok);
  const rt=PG.createRuntime({E,manifest:m,species:'cat',uid:r.uid,now:()=>stamp});rt.sync(s);

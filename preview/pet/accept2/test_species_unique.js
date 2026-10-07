@@ -36,12 +36,14 @@ test('failed first purchase rolls back; retry succeeds once',()=>{
  const s=fresh(),before=copy(s);assert(!PG.buy(s,E,'c77',1,M,()=>false).ok);assert.equal(copy(s),before);
  assert(PG.buy(s,E,'c77',2,M,save).ok);assert.equal(s.coins,97000);assert(PG.buy(s,E,'c77',3,M,save).alreadyOwned);
 });
-test('both real mall renderers show owned and unavailable cards without a duplicate-buy action',()=>{
+test('both renderers collapse to one pet entry and reveal management without interaction controls',()=>{
  for(const file of ['preview/app.js','preview/pet/game/app.js']) {
-  const source=fs.readFileSync(file,'utf8');const start=source.indexOf('function petMallCard() {'),end=source.indexOf('function petRoomBar(',start);
+  const source=fs.readFileSync(file,'utf8'),start=source.indexOf('function petMallCard() {'),end=source.indexOf('function petPanelFocus(',start);
   const state=fresh();assert(PG.buy(state,E,'c77',1,M,save).ok);
-  const context={PG,E,state,petM:M,petManifest:()=>M,petAvailable:s=>PG.speciesReady(s),homeWho:'c77',petEsc:String,btn:()=>'<button>BUY_ACTION</button>'};vm.createContext(context);vm.runInContext(source.slice(start,end),context);
-  const html=context.petMallCard();assert(html.includes('已拥有'));assert(!html.includes('BUY_ACTION'));for(const species of ['dog','cat','red_panda','robot','panda_cub','alpaca','rabbit'])assert(html.includes('data-species="'+species+'"'));assert.equal((html.match(/>待加入</g)||[]).length,6);
+  const context={PG,E,state,petManifest:()=>M,petAvailable:s=>PG.speciesReady(s),petRoster:()=>PG.view(state,E),petState:()=> 'live',homeWho:'c77',homeMode:'live',petEsc:String,fmt:String,petPanelOpen:false,petSelection:'dog',petSelectedUid:null};vm.createContext(context);vm.runInContext(source.slice(start,end),context);
+  let html=context.petMallCard();assert(html.includes('data-act="petOpen"'));assert(!html.includes('pet-choices'));assert(!html.includes('homePetBuy'));assert(!html.includes('homePetPat'));
+  context.petPanelOpen=true;html=context.petMallCard();assert.equal((html.match(/data-act="petSelect"/g)||[]).length,7);assert.equal((html.match(/data-act="homePetPat"/g)||[]).length,0);assert(!html.includes('homePetBuy'));assert.equal((html.match(/class="pet-selected"/g)||[]).length,1);
+  context.petSelection='cat';html=context.petMallCard();assert(html.includes('待加入'));assert(!html.includes('homePetPat'));assert(html.includes('data-species="cat"'));
  }
 });
 test('migration and compatibility swap use verified main/backup writes and roll back failures',()=>{
@@ -74,6 +76,21 @@ test('unknown, missing and malformed species stay opaque and quarantined, never 
  for(const species of values){assert(!PG.buy(s,E,'c77',100,M,save,false,{species,prototype:true}).ok);assert.equal(s.coins,coins);}
  const dog=PG.buy(s,E,'c77',101,M,save);assert(dog.ok);assert.equal(copy(s.pets.list.slice(0,-1)),raw);assert.equal(s.coins,coins-3000);
  for(const species of values){const rt=PG.createRuntime({E,manifest:M,species,uid:'opaque-'+values.indexOf(species)});assert.equal(rt.sync(s),null);assert(!rt.beforePersist(s));}
+});
+
+test('conflicting unknown/known IDs keep every record and never lose paid dog ownership',()=>{
+ for(const reverse of [false,true])for(const success of [false,true]){
+  const s=fresh(),unknown={uid:'x',species:'ferret',eng:{opaque:1},custom:{keep:true}},dog={uid:'x',species:'dog',room:'c77',eng:{v:1,dog:{affinity:73}},boughtAt:77};
+  s.pets={v:2,list:reverse?[dog,unknown]:[unknown,dog]};const original=copy(s),opaque=copy(unknown);
+  assert(PG.speciesOwned(s,E,'dog'));assert.equal(Object.keys(PG.view(s,E).pets).length,2);assert(PG.buy(s,E,'pearl',1,M,save).alreadyOwned);assert.equal(copy(s),original);
+  const result=PG.migrateRoster(s,E,{save:()=>success});assert.equal(result.ok,success);
+  if(!success){assert.equal(copy(s),original);continue;}
+  assert.equal(s.pets.list.length,2);assert.equal(copy(s.pets.list.find(p=>p.species==='ferret')),opaque);assert.deepEqual(s.pets.list.find(p=>p.species==='dog').eng,dog.eng);
+  const first=copy(s),view=copy(PG.view(s,E));PG.norm(s,E);assert.equal(copy(s),first);assert.equal(copy(PG.view(s,E)),view);assert(PG.buy(s,E,null,2,M,save).alreadyOwned);
+ }
+ for(const species of ['ferret','cat']){const s=fresh();s.pet={uid:'x',owned:true,home:'c77',boughtAt:77,eng:{v:1,dog:{affinity:73}}};s.pets={v:2,list:[{uid:'x',species,room:'c77',eng:{opaque:1}}]};PG.norm(s,E);assert.equal(s.pets.list.length,2);assert(PG.speciesOwned(s,E,'dog'));const stable=copy(s);PG.norm(s,E);assert.equal(copy(s),stable);assert.equal(s.pet.eng.dog.affinity,73);}
+ const s=fresh();s.pets={v:2,list:[{uid:'x',species:'dog',room:'c77',eng:{old:51}},{uid:'x',species:'dog',room:'c77',eng:{old:73}},{uid:'x',species:'cat',room:'c77',eng:{old:62}}]};PG.norm(s,E);
+ assert.equal(s.pets.list.length,3);assert.equal(new Set(s.pets.list.map(p=>p.uid)).size,3);assert.deepEqual(s.pets.list.map(p=>p.eng.old),[51,73,62]);assert.equal(s.pets.list[1].uidRepair.originalUid,'x');assert.equal(s.pets.list[2].uidRepair.originalUid,'x');assert(s.pets.list[1].compatibility);const stable=copy(s);PG.norm(s,E);assert.equal(copy(s),stable);
 });
 
 console.log(count+' species policy cases passed; no browser/device claims');

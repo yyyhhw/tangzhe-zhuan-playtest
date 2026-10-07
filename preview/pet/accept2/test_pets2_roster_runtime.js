@@ -5,6 +5,7 @@ const assert = require('assert');
 const E = require('../../economy.js');
 const PG = require('../game/petgame.js');
 const M = require('../art/manifest.json');
+const {manifests,buySpecies,runtimeSpecies}=require('./species_test_fixtures.js');
 const clone = value => JSON.parse(JSON.stringify(value));
 const fresh = () => {
   const st = E.newState(1790000000000);
@@ -16,35 +17,36 @@ const uid = (st, index = 0) => st.pets.list[index].uid;
 let passed = 0;
 const test = (name, run) => { run(); passed++; console.log('PASS ' + name); };
 
-test('independent dog purchases, explicit replacement, and standby ownership', () => {
+test('one dog only, different-species purchase, replacement and standby ownership', () => {
   const st = fresh(), startCoins = st.coins;
   let saves = 0;
   const save = () => { saves++; return true; };
   const a = PG.buy(st, E, 'c77', 100, M, save);
-  const b = PG.buy(st, E, 'c77', 100, M, save);
+  const duplicate=PG.buy(st,E,'c77',100,M,save);assert(!duplicate.ok&&duplicate.alreadyOwned);assert.equal(st.coins,startCoins-3000);assert.equal(saves,1);
+  const b = buySpecies(st,E,'cat','c77',100,save);
   assert(a.ok && b.ok && a.uid !== b.uid, 'same-timestamp purchases need unique IDs');
   assert.equal(st.coins, startCoins - 6000);
   assert.equal(saves, 2);
   const full = JSON.stringify(st);
-  const rejected = PG.buy(st, E, 'c77', 100, M, save);
+  const rejected = buySpecies(st,E,'rabbit','c77',100,save);
   assert(rejected.needReplace && !rejected.ok);
   assert.equal(JSON.stringify(st), full);
   assert.equal(saves, 2, 'full-room rejection must not save');
-  const standby = PG.buy(st, E, null, 100, M, save);
+  const standby = buySpecies(st,E,'rabbit',null,100,save);
   assert(standby.ok);
   assert.equal(PG.view(st, E).standby[0], standby.uid);
 
   const aRt = PG.createRuntime({ E, manifest: M, uid: a.uid, now: () => 100 });
-  const bRt = PG.createRuntime({ E, manifest: M, uid: b.uid, now: () => 100 });
+  const bRt = runtimeSpecies(st,E,b.uid,()=>100);
   aRt.sync(st); bRt.sync(st);
   assert(Math.hypot(aRt.w.dog.x - bRt.w.dog.x, aRt.w.dog.y - bRt.w.dog.y) > 1.2, 'two dogs need distinct initial touch targets');
   assert.notEqual(aRt.w.bed.x, bRt.w.bed.x, 'empty room has space for separate beds');
   const beforeB = bRt.w.dog.affinity;
   aRt.pet(st);
   assert.equal(bRt.w.dog.affinity, beforeB, 'touching a must not change b');
-  const standbyRt = PG.createRuntime({ E, manifest: M, uid: standby.uid });
+  const standbyRt = runtimeSpecies(st,E,standby.uid);
   assert.equal(standbyRt.sync(st), null, 'standby must not simulate');
-  const replacement = PG.buy(st, E, 'c77', 100, M, save, false, { replace: a.uid });
+  const replacement = buySpecies(st,E,'robot','c77',100,save,false,{replace:a.uid});
   assert(replacement.ok);
   assert(PG.view(st, E).standby.includes(a.uid), 'replaced pet remains owned');
 });
@@ -53,9 +55,9 @@ test('failed purchase rolls back wallet, revision, placement, and prepared growt
   for (const save of [() => false, () => { throw new Error('quota'); }]) {
     const st = fresh();
     PG.buy(st, E, 'c77', 100, M, () => true);
-    PG.buy(st, E, 'c77', 100, M, () => true);
+    buySpecies(st,E,'cat','c77',100,()=>true);
     const before = JSON.stringify(st);
-    const result = PG.buy(st, E, 'c77', 100, M, save, false, {
+    const result = buySpecies(st,E,'rabbit','c77',100,save,false,{
       replace: uid(st),
       prepare: next => { next.pets.list[0].eng = { affinity: 123 }; next.rev += 4; },
     });
@@ -75,7 +77,7 @@ test('roster operations preserve opaque growth across every species', () => {
   const expectedGrowth = st.pets.list.map(p => JSON.stringify(p.eng));
   PG.norm(st, E);
   assert.equal(st.pets.list[0].uid, '__proto__');
-  assert(PG.assign(st, E, '__proto__', 'pearl', { save: () => true }).ok);
+  assert(!PG.assign(st, E, '__proto__', 'pearl', { save: () => true }).ok);assert(PG.view(st,E).pets['__proto__'].quarantined);
   assert.deepEqual(st.pets.list.map(p => JSON.stringify(p.eng)), expectedGrowth);
   const before = JSON.stringify(st);
   Object.freeze(st);
@@ -112,7 +114,7 @@ test('runtime snapshots are applied inside assignment rollback boundary', () => 
 
 test('stale replacement picker cannot apply after room occupants change', () => {
   const st = fresh();
-  for (let i = 0; i < 3; i++) PG.buy(st, E, i < 2 ? 'c77' : null, 100 + i, M, () => true);
+  for (let i = 0; i < 3; i++) assert(buySpecies(st,E,['dog','cat','rabbit'][i],i<2?'c77':null,100+i,()=>true).ok);
   const expected = PG.view(st, E);
   assert(PG.assign(st, E, uid(st, 0), 'pearl', { save: () => true }).ok);
   const before = JSON.stringify(st);
@@ -160,10 +162,10 @@ test('ID repair and normalization preserve roster metadata and omit empty rooms'
   ] };
   PG.norm(st, E);
   assert.deepEqual(st.pets.futureRosterMetadata, { unlockedSpecies: ['cat', 'dog'], hintSeen: true });
-  assert.equal(st.pets.list.length, 3);
-  assert.equal(new Set(st.pets.list.map(p => p.uid)).size, 3);
+  assert.equal(st.pets.list.length, 4);
+  assert.equal(new Set(st.pets.list.map(p => p.uid)).size, 4);
   assert.deepEqual(Object.keys(PG.view(st, E).rooms), ['pearl']);
-  assert.equal(PG.view(st, E).standby.length, 1);
+  assert.equal(PG.view(st, E).standby.length, 3);
   const before = JSON.stringify(st);
   PG.norm(st, E);
   assert.equal(JSON.stringify(st), before);
@@ -172,8 +174,8 @@ test('ID repair and normalization preserve roster metadata and omit empty rooms'
 test('failed replacement and retry preserve every active runtime, including other rooms', () => {
   for (const save of [() => false, () => { throw new Error('quota'); }]) {
     const st = fresh();
-    const purchases = ['c77', 'c77', 'pearl', null].map((room, i) => PG.buy(st, E, room, 100 + i, M, () => true));
-    const active = purchases.slice(0, 3).map(p => PG.createRuntime({ E, manifest: M, uid: p.uid, now: () => 100 }));
+    const purchases = ['c77', 'c77', 'pearl', null].map((room, i) => buySpecies(st,E,['dog','cat','rabbit','robot'][i],room,100+i,()=>true));
+    const active = purchases.slice(0, 3).map(p => runtimeSpecies(st,E,p.uid,()=>100));
     const worlds = active.map((rt, i) => {
       const world = rt.sync(st);
       world.dog.affinity = 65 + i;
@@ -255,9 +257,9 @@ test('default persistence and consecutive staged saves preserve live progress af
 test('resident departure renumbers beds without resetting live world or growth', () => {
   const st = fresh();
   const a = PG.buy(st, E, 'c77', 100, M, () => true);
-  const b = PG.buy(st, E, 'c77', 101, M, () => true);
+  const b = buySpecies(st,E,'cat','c77',101,()=>true);
   const ar = PG.createRuntime({ E, manifest: M, uid: a.uid, now: () => 100 });
-  const br = PG.createRuntime({ E, manifest: M, uid: b.uid, now: () => 100 });
+  const br = runtimeSpecies(st,E,b.uid,()=>100);
   ar.sync(st); br.sync(st);
   const worldB = br.w, position = [worldB.dog.x, worldB.dog.y];
   worldB.dog.affinity = 72; worldB.dog.energy = 38;
@@ -266,16 +268,16 @@ test('resident departure renumbers beds without resetting live world or growth',
   assert.deepEqual([worldB.dog.x, worldB.dog.y], position);
   assert.equal(worldB.dog.affinity, 72);
   assert.equal(worldB.dog.energy, 38);
-  const c = PG.buy(st, E, 'c77', 102, M, () => true);
-  const cr = PG.createRuntime({ E, manifest: M, uid: c.uid, now: () => 100 });
+  const c = buySpecies(st,E,'rabbit','c77',102,()=>true);
+  const cr = runtimeSpecies(st,E,c.uid,()=>100);
   cr.sync(st); br.sync(st);
   assert.notDeepEqual(br.w.bed, cr.w.bed, 'survivor and new resident need separate beds immediately');
   const beds = [clone(br.w.bed), clone(cr.w.bed)];
   br.beforePersist(st); cr.beforePersist(st);
   const reloaded = E.migrate(clone(st), 100).st;
   PG.norm(reloaded, E);
-  const br2 = PG.createRuntime({ E, manifest: M, uid: b.uid, now: () => 100 });
-  const cr2 = PG.createRuntime({ E, manifest: M, uid: c.uid, now: () => 100 });
+  const br2 = runtimeSpecies(reloaded,E,b.uid,()=>100);
+  const cr2 = runtimeSpecies(reloaded,E,c.uid,()=>100);
   br2.sync(reloaded); cr2.sync(reloaded);
   assert.deepEqual([br2.w.bed, cr2.w.bed], beds, 'refresh retains the same distinct bed assignment');
   assert.equal(br2.w.dog.affinity, 72);

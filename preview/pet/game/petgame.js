@@ -22,6 +22,11 @@
   const knownSpecies = s => typeof s === 'string' && Object.prototype.hasOwnProperty.call(SPECIES,s);
   const assets = new Map();
   function registerSpecies(species, manifest, image, base) {
+    const required=['idle_E','idle_N','idle_S','attention','groom','play','rest','petted'];
+    if(!knownSpecies(species)||species==='dog'||!manifest||manifest.species!==species||
+       manifest.schema!=='tangzhe-companion-art/1'||!PC.CONFIG[species]||
+       !required.every(key=>manifest.clips&&manifest.clips[key]&&Array.isArray(manifest.clips[key].frames)&&manifest.clips[key].frames.length))
+      return {ok:false,why:'宠物物种、图集格式或专属动作不匹配'};
     const check=PA.validateManifest(manifest);
     if(!knownSpecies(species) || species==='dog' || manifest.species!==species || !check.ok || !image || image.naturalWidth!==manifest.atlas.size[0] || image.naturalHeight!==manifest.atlas.size[1])
       return {ok:false,why:'宠物图集尚未验证',errors:check.errors};
@@ -57,7 +62,7 @@
     const raw = storedList(st).slice();
     if (legacyOwned(st)) {
       const p = st.pet, uid = validUid(p.uid) ? p.uid : 'pet-dog-legacy';
-      if (!raw.some(q => isObj(q) && q.uid === uid)) raw.push({ uid, species: 'dog', room: p.home, boughtAt: p.boughtAt, eng: p.eng });
+      if (!raw.some(q => isObj(q) && q.species === 'dog' && (q.uid === uid || q.uidRepair?.originalUid === uid))) raw.push({ uid, species: 'dog', room: p.home, boughtAt: p.boughtAt, eng: p.eng===undefined?null:JSON.parse(JSON.stringify(p.eng)) });
     }
     const selected = Object.create(null), preference = st && st.pets && st.pets.activeSpecies || {};
     for (const p of raw) if (isObj(p)) {
@@ -68,23 +73,30 @@
     const list = [], seen = new Set(), counts = Object.create(null);
     // Reserve existing IDs first so repairs cannot collide with later valid records.
     const reserved = raw.filter(isObj).map(p => ({ uid: p.uid }));
+    // Quarantined records must never consume the runtime identity of a known
+    // species, regardless of input order. Their original storage stays opaque.
+    const knownIds = new Set(raw.filter(p=>isObj(p)&&knownSpecies(p.species)&&validUid(p.uid)).map(p=>p.uid));
     raw.forEach((p, index) => {
       if (!isObj(p)) return;
       let uid = p.uid;
       if (!validUid(uid)) { uid = freshUid(reserved, 'pet-recovered-' + (index + 1)); reserved.push({ uid }); }
       if(!knownSpecies(p.species)){
-        if(seen.has(uid))uid=freshUid(reserved,'pet-quarantined-'+(index+1));
+        if(seen.has(uid)||knownIds.has(uid))uid=freshUid(reserved,'pet-quarantined-'+(index+1));
         seen.add(uid);reserved.push({uid});
         const q={...p,uid,room:null,compatibility:false,quarantined:true};
         Object.defineProperty(q,'opaqueSource',{value:p});list.push(q);return;
       }
-      if (seen.has(uid)) return;
+      let repair = null;
+      if (seen.has(uid)) {
+        repair={originalUid:p.uid};if('uidRepair' in p)repair.previous=p.uidRepair;
+        uid=freshUid(reserved,'pet-recovered-'+(index+1));reserved.push({uid});
+      }
       seen.add(uid);
       const species = p.species, compatibility = selected[species] !== p;
       let room = !compatibility && validRoom(st, E, p.room) ? p.room : null;
       if (room !== null && (counts[room] || 0) >= MAX_PER_ROOM) room = null;
       if (room !== null) counts[room] = (counts[room] || 0) + 1;
-      list.push({ ...p, uid, species, room, compatibility, quarantined:false,
+      list.push({ ...p, ...(repair?{uidRepair:repair}:{}), uid, species, room, compatibility, quarantined:false,
         boughtAt: finN(p.boughtAt) && p.boughtAt >= 0 && p.boughtAt <= 8.64e15 ? p.boughtAt : 0,
         eng: p.eng === undefined ? null : p.eng });
     });
@@ -94,7 +106,10 @@
     if (!isObj(st) || (!('pet' in st) && !('pets' in st))) return null;
     const list = rosterOf(st, E).map(p=>p.quarantined?p.opaqueSource:p);
     if (list.length || 'pets' in st || legacyOwned(st)) st.pets = { ...(isObj(st.pets) ? st.pets : {}), v: PV, list };
-    if ('pet' in st) delete st.pet;
+    // Preserve the original v14 dog as a rollback shadow. The roster UID wins in
+    // rosterOf(); only state.pets runs/changes in this version. Repeated main/backup
+    // saves therefore retain the original dog for a return to the old version.
+    // Do not update or discard the user's original legacy payload here.
     return st.pets || null;
   }
   function migrateRoster(st, E, opt) {
@@ -207,7 +222,7 @@
     if (roomCache.key !== L.key || roomCache.M !== M) roomCache = { key: L.key, M, ok: !mkWorld(E, M, L, 1).noRoom };
     return roomCache.ok;
   }
-  const NO_ROOM = '暂时无法入宅：屋里摆满了，没有小狗能站的空地（收起或挪开家具、或升级房子后再来）';
+  const NO_ROOM = '暂时无法入宅：屋里摆满了，没有宠物能站的空地（收起或挪开家具、或升级房子后再来）';
   // One purchase per species across every room and standby. Old duplicates remain intact.
   // Legacy parameters stay in place; the final options add replacement and snapshots.
   function buy(st, E, home, nowMs, M, save, blocked, opt) {

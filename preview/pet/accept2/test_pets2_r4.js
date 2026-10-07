@@ -6,6 +6,7 @@ const assert = require('assert');
 const E = require('../../economy.js');
 const PG = require('../game/petgame.js');
 const M = require('../art/manifest.json');
+const {manifests,buySpecies,runtimeSpecies}=require('./species_test_fixtures.js');
 const T0 = 1790000000000;
 const J = v => JSON.stringify(v);
 const ok = () => true, fail = () => false;
@@ -27,22 +28,22 @@ test('R4-1 bad wallet / insufficient / save blocked / save failure: purchase ref
     ['insufficient', s => { s.coins = 10; }, false, ok], ['save blocked', () => {}, true, ok], ['save fails', () => {}, false, fail]]) {
     const s = JSON.parse(J(st)); mut(s); const before = J(s);
     for (const room of ['pearl', null]) {
-      const r = PG.buy(s, E, room, 200, M, save, blocked);
+      const r = buySpecies(s,E,'cat',room,200,save,blocked);
       assert(!r.ok, name + ' ' + room); assert.equal(J(s), before, name + ' changed state');
     }
   }
 });
 
 test('R4-2 two-pet roster cap and floor space are separate; explicit standby is never redirected', () => {
-  const st = fresh(), a = PG.buy(st, E, 'c77', 1, M, ok), b = PG.buy(st, E, 'c77', 2, M, ok); assert(a.ok && b.ok);
-  let before = J(st); const r = PG.buy(st, E, 'c77', 3, M, ok);
+  const st = fresh(), a = PG.buy(st, E, 'c77', 1, M, ok), b = buySpecies(st,E,'cat','c77',2,ok); assert(a.ok && b.ok);
+  let before = J(st); const r = buySpecies(st,E,'rabbit','c77',3,ok);
   assert(!r.ok && r.needReplace && !r.noRoom); assert.equal(J(st), before);
-  const rep = PG.buy(st, E, 'c77', 4, M, ok, false, { replace: a.uid });
+  const rep = buySpecies(st,E,'rabbit','c77',4,ok,false,{replace:a.uid});
   assert(rep.ok && rep.room === 'c77' && rec(st, a.uid).room === null && rec(st, rep.uid).room === 'c77');
   fill(st, 'pearl'); assert(!PG.hasRoom(st, E, 'pearl', M) && PG.hasRoom(st, E, 'c77', M));
-  before = J(st); const nr = PG.buy(st, E, 'pearl', 5, M, ok);
+  before = J(st); const nr = buySpecies(st,E,'robot','pearl',5,ok);
   assert(!nr.ok && nr.noRoom && !nr.needReplace); assert.equal(J(st), before, 'no-floor purchase changed state');
-  const coins = st.coins, sb = PG.buy(st, E, null, 6, M, ok);
+  const coins = st.coins, sb = buySpecies(st,E,'robot',null,6,ok);
   assert(sb.ok && sb.room === null && rec(st, sb.uid).room === null && st.coins === coins - PG.PET.price, 'explicit standby purchase must succeed and stay standby');
   before = J(st); const mv = PG.assign(st, E, sb.uid, 'pearl', { M, save: ok });
   assert(!mv.ok && mv.noRoom); assert.equal(J(st), before, 'move into a no-floor room changed state');
@@ -84,14 +85,14 @@ for (const [name, eng] of UNSUP) test('R4-6 ' + name + ': kept byte-for-byte and
   assert.equal(J(rec(st, a.uid).eng), raw, 'runtime touched unsupported growth');
   const s2 = reload(st); assert.equal(J(rec(s2, a.uid).eng), raw); assert.equal(rec(s2, a.uid).room, 'c77', 'refresh moved the pet');
   const rt2 = PG.createRuntime({ E, manifest: M, uid: a.uid, now: () => T0 }); assert.equal(rt2.sync(s2), null);
-  const b = PG.buy(s2, E, 'c77', 2, M, ok); assert(b.ok);
-  const brt = PG.createRuntime({ E, manifest: M, uid: b.uid, now: () => T0 }); brt.sync(s2); brt.frame(0.05, s2);
+  const b = buySpecies(s2,E,'cat','c77',2,ok); assert(b.ok);
+  const brt = runtimeSpecies(s2,E,b.uid,()=>T0); brt.sync(s2); brt.frame(0.05, s2);
   const prepare = x => { rt2.beforePersist(x); brt.beforePersist(x); };
   let before = J(s2);
-  assert(!PG.buy(s2, E, 'c77', 3, M, fail, false, { replace: a.uid, prepare }).ok); assert.equal(J(s2), before, 'failed purchase-replacement changed state');
+  assert(!buySpecies(s2,E,'rabbit','c77',3,fail,false,{replace:a.uid,prepare}).ok); assert.equal(J(s2), before, 'failed purchase-replacement changed state');
   assert(!PG.assign(s2, E, a.uid, null, { save: fail, prepare }).ok); assert.equal(J(s2), before, 'failed standby changed state');
   let saved = null; const save = s => { saved = J(s); return true; };
-  const okr = PG.buy(s2, E, 'c77', 4, M, save, false, { replace: a.uid, prepare });
+  const okr = buySpecies(s2,E,'rabbit','c77',4,save,false,{replace:a.uid,prepare});
   assert(okr.ok && rec(s2, a.uid).room === null && J(rec(s2, a.uid).eng) === raw);
   const s3 = reload(JSON.parse(saved)); assert.equal(J(rec(s3, a.uid).eng), raw, 'saved replacement lost unsupported growth');
   before = J(s3); assert(!PG.assign(s3, E, a.uid, 'pearl', { M, save: fail }).ok); assert.equal(J(s3), before);
@@ -103,11 +104,11 @@ for (const [name, eng] of UNSUP) test('R4-6 ' + name + ': kept byte-for-byte and
 test('R4-6 cat nested engine version is opaque: never interpreted or rewritten by roster moves, save, refresh or replacement', () => {
   const st = fresh(), eng = { v: 1, cat: { v: 42, mood: 'x' }, extra: [3] }, raw = J(eng);
   st.pets = { v: 2, list: [{ uid: 'c1', species: 'cat', room: 'c77', boughtAt: 1, eng }] };
-  assert.equal(PG.engSupport(st.pets.list[0]), 'opaque');
+  assert.equal(PG.engSupport(st.pets.list[0]), 'unsupported');
   const s2 = reload(st); assert.equal(J(rec(s2, 'c1').eng), raw);
   assert(PG.buy(s2, E, 'c77', 2, M, ok).ok);
-  let before = J(s2); assert(!PG.buy(s2, E, 'c77', 3, M, fail, false, { replace: 'c1' }).ok); assert.equal(J(s2), before);
-  assert(PG.buy(s2, E, 'c77', 4, M, ok, false, { replace: 'c1' }).ok); assert.equal(J(rec(s2, 'c1').eng), raw);
+  let before = J(s2); assert(!buySpecies(s2,E,'rabbit','c77',3,fail,false,{replace:'c1'}).ok); assert.equal(J(s2), before);
+  assert(buySpecies(s2,E,'rabbit','c77',4,ok,false,{replace:'c1'}).ok); assert.equal(J(rec(s2, 'c1').eng), raw);
   before = J(s2); assert(!PG.assign(s2, E, 'c1', 'pearl', { M, save: fail }).ok); assert.equal(J(s2), before);
   assert(PG.assign(s2, E, 'c1', 'pearl', { M, save: ok }).ok); assert.equal(J(rec(reload(s2), 'c1').eng), raw);
 });

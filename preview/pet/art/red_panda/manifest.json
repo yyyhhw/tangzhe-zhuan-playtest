@@ -2,7 +2,7 @@
   "schema": "tangzhe-companion-art/1",
   "species": "red_panda",
   "placeholder": false,
-  "releaseReady": false,
+  "releaseReady": true,
   "prototype": true,
   "source": {
     "frameSize": [
@@ -551,5 +551,6 @@
         "rest"
       ]
     }
-  }
+  },
+  "releaseScope": "preview"
 }

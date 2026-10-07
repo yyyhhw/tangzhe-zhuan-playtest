@@ -17,3 +17,8 @@ invalid('NaN anchor',m=>m.clips.run_E.frames[1].anchor[1]=NaN);
 invalid('negative scale',m=>m.atlases.run_e.sourceScale=-1);
 const airborne=M.clips.run_E.frames.find(f=>f.anchor[1]>f.sourceRect[3]);assert(airborne,'projected airborne anchor must remain legal');
 console.log(`PASS ${n} malformed multi-atlas/semantic cases rejected without exceptions; airborne anchor accepted; no fixed108-frame requirement`);
+const PG=require('../game/petgame.js'),dog=require('../art/manifest.json');
+const image=m=>({naturalWidth:m.atlas.size[0],naturalHeight:m.atlas.size[1],companionAtlases:Object.fromEntries(Object.entries(m.atlases||{}).map(([k,a])=>[k,{naturalWidth:a.size[0],naturalHeight:a.size[1]}]))});
+const spoof=copy(dog);spoof.species='cat';let rejected;assert.doesNotThrow(()=>rejected=PG.registerSpecies('cat',spoof,image(spoof),'unit-only'));assert(!rejected.ok);assert.equal(PG.assetOf('cat'),null);
+const rabbit=require('../art/rabbit/manifest.json');assert(PG.registerSpecies('rabbit',rabbit,image(rabbit),'unit-only').ok);assert(PG.registerSpecies('cat',M,image(M),'unit-only').ok);const before=PG.assetOf('cat');assert(!PG.registerSpecies('cat',spoof,image(spoof),'unit-only').ok);assert.strictEqual(PG.assetOf('cat'),before);assert(PG.assetOf('rabbit'));
+console.log('PASS dog-manifest species spoof refused; valid cat/rabbit registration continues and existing assets survive rejection');

@@ -61,16 +61,16 @@ console.log('== 读档');
   ADAPT.norm(st); const v = ADAPT.view(st), u = Object.keys(v.pets);
   ok(u.length === 1 && (v.rooms[IDS[1]] || []).includes(u[0]) && ADAPT.growth(v.pets[u[0]]) === 77, 'R2', '单只小狗旧档：留在 ' + IDS[1] + ' 的家，亲密 77 保留 ' + JSON.stringify(v));
 }
-{ // R3 旧档一间房 5 只 → 2 只留房，3 只转待命，全部保留
+{ // R3 同种旧档 5 只 → 首只留房，4 只兼容待命，全部保留
   const st = fresh(), L = ['a', 'b', 'c', 'd', 'e'].map((u, i) => ({ uid: u, species: 'cat', room: IDS[0], boughtAt: T0 + i, eng: eng(i * 10) }));
   ADAPT.mkPets(st, L); ADAPT.norm(st); const v = ADAPT.view(st);
-  ok((v.rooms[IDS[0]] || []).length === 2 && v.standby.length === 3, 'R3', '超额 5 只：房里 2、待命 3 ' + JSON.stringify(v));
+  ok((v.rooms[IDS[0]] || []).length === 1 && v.standby.length === 4, 'R3', '同种 5 只：房里 1、兼容待命 4 ' + JSON.stringify(v));
   inv(st, L.map(p => p.uid), Object.fromEntries(L.map(p => [p.uid, ADAPT.growth(p)])), 'R3');
 }
-{ // R4 坏档：同一只写在两间房 → 只留一处
+{ // R4 同 uid 冲突：保留两条成长，后者改内部 id 并兼容待命
   const st = fresh(); ADAPT.mkPets(st, [{ uid: 'a', species: 'cat', room: IDS[0], eng: eng(1) }, { uid: 'a', species: 'cat', room: IDS[1], eng: eng(1) }]);
   ADAPT.norm(st); const v = ADAPT.view(st);
-  ok(Object.keys(v.pets).length === 1 && where(v, 'a').length === 1, 'R4', '重复 uid 只保留一只、一处 ' + JSON.stringify(v));
+  ok(Object.keys(v.pets).length === 2 && where(v, 'a').length === 1 && v.standby.length === 1, 'R4', '重复 uid 保留两条、一只运行 ' + JSON.stringify(v));
 }
 { // R5 坏档：房间是没加入的 CEO / 不存在的 id → 转待命，不删
   const st = fresh(1); ADAPT.mkPets(st, [{ uid: 'a', species: 'cat', room: IDS[2], eng: eng(5) }, { uid: 'b', species: 'cat', room: 'nobody', eng: eng(6) }]);
@@ -79,7 +79,7 @@ console.log('== 读档');
 }
 
 console.log('== 调配');
-const base = () => { const st = fresh(); ADAPT.mkPets(st, [{ uid: 'a', species: 'cat', room: null, eng: eng(11) }, { uid: 'b', species: 'dog', room: null, eng: eng(22) }, { uid: 'c', species: 'cat', room: null, eng: eng(33) }]); ADAPT.norm(st); return st; };
+const base = () => { const st = fresh(); ADAPT.mkPets(st, [{ uid: 'a', species: 'cat', room: null, eng: eng(11) }, { uid: 'b', species: 'dog', room: null, eng: eng(22) }, { uid: 'c', species: 'rabbit', room: null, eng: eng(33) }]); ADAPT.norm(st); return st; };
 const ENG = { a: 51, b: 62, c: 73 }, U = ['a', 'b', 'c'];
 {
   const st = base(), c0 = st.coins;

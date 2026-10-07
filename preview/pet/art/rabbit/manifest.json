@@ -2,7 +2,7 @@
   "schema": "tangzhe-companion-art/1",
   "species": "rabbit",
   "placeholder": false,
-  "releaseReady": false,
+  "releaseReady": true,
   "prototype": true,
   "source": {
     "frameSize": [
@@ -509,5 +509,6 @@
         "rest"
       ]
     }
-  }
+  },
+  "releaseScope": "preview"
 }
