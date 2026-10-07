@@ -2,6 +2,8 @@
 // 购买 / 重复购买 / 金币不够 / 搬家；旧档（没有 pet 字段）照常读、读完也不多出字段；pet 字段经 E.migrate 往返保留；
 // 家宅布局 → 引擎；摆家具压到小狗 / 窝；布置模式暂停；升级房子；刷新恢复（短离开原地、长离开在窝里睡）；三档房子压力测试；静态检查存档键
 // p4b：满屋（合法摆满）购买 / 读档 / 布置挡满 / 搬进满屋 / 升级房子——不崩、不扣了钱没狗、金币和宠物数守恒；坏档逐字段容错（NaN / 无穷 / 字符串 / 负数 / 超界 / 缺字段 / null）
+// 13k 双宠适配：存档从单只 D(state) 改为 state.pets v2（list[uid/species/room/boughtAt/eng]）。D(s) 取第一只狗的记录，用 Proxy 把旧字段 home/owned 映射到 room/在册；
+// has(s) = 有任一宠物字段。单只狗的行为契约（购买 / 搬家 / 旧档 / 坏字段 / 满屋 / 钱包 / 存档回滚）原样保留；s.pet = {...} 仍作为 v1 旧档输入（norm 迁移成 v2）。
 'use strict';
 const fs = require('fs'), path = require('path');
 const E = require('./economy.js'), PG = require('./petgame.js'), PE = require('../engine.js'), PA = require('../art.js');
@@ -11,6 +13,9 @@ const ok = (c, msg) => { if (c) pass++; else { fail++; console.log('  ✗ ' + ms
 const section = (s) => console.log('== ' + s);
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const T0 = 1790000000000;
+const D = (s) => { const p = s && s.pets && Array.isArray(s.pets.list) ? s.pets.list.find(x => x && x.species === 'dog') : (s && s.pet && typeof s.pet === 'object' && !Array.isArray(s.pet) ? s.pet : undefined);
+  return p && new Proxy(p, { get: (t, k) => k === 'home' ? ('room' in t ? t.room : t.home) : k === 'owned' ? ('room' in t ? true : t.owned) : t[k], set: (t, k, v) => { t[k === 'home' && 'room' in t ? 'room' : k] = v; return true; } }); };
+const has = (s) => !!s && ('pet' in s || 'pets' in s);
 const fresh = () => E.migrate(null, T0).st;
 const reload = (st, t) => { const s = E.migrate(clone(st), t || T0).st; PG.norm(s, E); return s; };   // = 游戏 loadState 的两步
 function place(st, id, fid, x, y, rot) { E.buyFurniture(Object.assign(st, { coins: st.coins + 1e7 }), fid); return E.placeItem(st, id, fid, x, y, rot || 0, 'floor'); }
@@ -21,29 +26,30 @@ const bodyOK = (w) => !PE.bodyOverlap(w);
 section('1. 购买');
 {
   const st = fresh(); st.coins = 2999;
-  let r = PG.buy(st, E, 'c77', T0, M); ok(!r.ok && r.why === '金币不够' && !('pet' in st) && st.coins === 2999, '金币不够：买不了，不扣钱，不写 pet');
+  let r = PG.buy(st, E, 'c77', T0, M); ok(!r.ok && r.why === '金币不够' && !(has(st)) && st.coins === 2999, '金币不够：买不了，不扣钱，不写 pet');
   st.coins = 10000;
-  r = PG.buy(st, E, 'pearl', T0, M); ok(!r.ok && !('pet' in st) && st.coins === 10000, '没加入的 CEO 家：买不了');
-  r = PG.buy(st, E, 'c77', T0, M); ok(r.ok && st.coins === 10000 - PG.PET.price && st.pet.owned === true && st.pet.home === 'c77' && st.pet.eng === null && st.pet.boughtAt === T0, '买到：扣 ' + PG.PET.price + '，住进 77 的家');
-  const c1 = st.coins; r = PG.buy(st, E, 'c77', T0, M); ok(!r.ok && st.coins === c1, '只能养一只：再买被拒，不扣钱');
+  r = PG.buy(st, E, 'pearl', T0, M); ok(!r.ok && !(has(st)) && st.coins === 10000, '没加入的 CEO 家：买不了');
+  r = PG.buy(st, E, 'c77', T0, M); ok(r.ok && st.coins === 10000 - PG.PET.price && D(st).owned === true && D(st).home === 'c77' && D(st).eng === null && D(st).boughtAt === T0, '买到：扣 ' + PG.PET.price + '，住进 77 的家');
+  let c1 = st.coins; r = PG.buy(st, E, 'c77', T0 + 1, M); ok(r.ok && st.coins === c1 - PG.PET.price && st.pets.list.length === 2 && r.uid !== st.pets.list[0].uid, '13k 双宠：同房第二只可买，新 uid，扣 ' + PG.PET.price);
+  c1 = st.coins; r = PG.buy(st, E, 'c77', T0 + 2, M); ok(!r.ok && st.coins === c1 && st.pets.list.length === 2, '13k 双宠：满房（2 只）不选替换 / 待命，再买被拒，不扣钱');
   ok(PG.PET.price === 3000 && PG.owned(st), '价格 3000 / owned');
-  r = PG.move(st, E, 'pearl'); ok(!r.ok && st.pet.home === 'c77', '搬去没加入的家：拒');
+  r = PG.move(st, E, 'pearl'); ok(!r.ok && D(st).home === 'c77', '搬去没加入的家：拒');
   r = PG.move(st, E, 'c77'); ok(!r.ok && r.same, '搬去自己家：拒（same）');
-  st.ceos.pearl.unlocked = true; r = PG.move(st, E, 'pearl'); ok(r.ok && st.pet.home === 'pearl' && st.coins === c1, '搬家：不花钱');
+  st.ceos.pearl.unlocked = true; r = PG.move(st, E, 'pearl'); ok(r.ok && D(st).home === 'pearl' && st.coins === c1, '搬家：不花钱');
 }
 
 section('2. 旧档兼容（没有 pet 字段）');
 {
   const st = fresh(); st.coins = 12345; st.taps = 77; place(st, 'c77', 'furn_sofa', 0, 0); st.coins = 12345;
-  const raw = clone(st); delete raw.pet;
+  const raw = clone(st); delete D(raw);
   const a = E.migrate(clone(raw), T0).st, b = reload(raw);
-  ok(!('pet' in b), '读完不多出 pet 字段');
+  ok(!(has(b)), '读完不多出 pet 字段');
   ok(JSON.stringify(a) === JSON.stringify(b), '其余字段和不接小狗时完全一样');
   ok(b.coins === 12345 && b.taps === 77 && E.homeOf(b, 'c77').placed.length === 1, '金币 / 点击 / 家具都在');
   ok(!PG.owned(b) && PG.norm(b, E) === null, '当作没买');
   // 更老的存档（SAVE_VERSION 之前）照样走 E.migrate
-  const old = clone(raw); old.v = 1; const c = reload(old); ok(!('pet' in c) && c.coins === 12345, '老版本号存档：照常迁移，没有 pet');
-  ok(!('pet' in reload(null)), '全新存档：没有 pet');
+  const old = clone(raw); old.v = 1; const c = reload(old); ok(!(has(c)) && c.coins === 12345, '老版本号存档：照常迁移，没有 pet');
+  ok(!(has(reload(null))), '全新存档：没有 pet');
 }
 
 section('3. pet 字段往返 / 坏字段');
@@ -51,15 +57,16 @@ section('3. pet 字段往返 / 坏字段');
   const st = fresh(); st.coins = 9000; PG.buy(st, E, 'c77', T0, M);
   const r = rt(); r.sync(st); tick(r, st, 5); r.beforePersist(st);
   const back = reload(st);
-  ok(JSON.stringify(back.pet) === JSON.stringify(st.pet), 'E.migrate + norm 往返：pet 原样保留');
-  ok(back.pet.eng && back.pet.eng.home === 'c77' && !('items' in back.pet.eng) && back.pet.eng.v === PE.CFG.SAVE_V, 'eng 带 home、不带家具（家具以家宅为准）');
-  ok(JSON.stringify(back.pet).length < 600, 'pet 字段很小（' + JSON.stringify(back.pet).length + ' 字节）');
-  const bad = (pet) => { const s = clone(st); s.pet = pet; return reload(s); };
-  ok(!('pet' in bad('x')) && !('pet' in bad([])) && !('pet' in bad(null)) && !('pet' in bad({ owned: false })), '坏 pet（字符串 / 数组 / null / 没 owned）：删掉 = 没买');
-  const b2 = bad({ owned: true, home: 'rocket', eng: { v: 1, dog: {} } }); ok(b2.pet.home === 'c77' && b2.pet.eng && b2.pet.eng.dog.energy === PE.CFG.ENERGY0 && b2.pet.eng.dog.affinity === PE.CFG.AFF0, '家没开放：搬回第一个开放的家；eng 缺字段按默认补（p4b：不再整份清掉）');
-  const b3 = bad({ owned: true, home: 'c77', eng: { v: 99, dog: {} } }); ok(b3.pet.eng === null && b3.pet.home === 'c77', 'eng 版本不对：清掉（小狗还在）');
-  const b4 = bad({ owned: true, home: 'c77', boughtAt: 'zz' }); ok(b4.pet.boughtAt === 0 && b4.pet.eng === null, 'boughtAt / eng 缺失：补默认');
-  ok(Object.keys(E.migrate(clone(st), T0).st).filter(k => k === 'pet').length === 1, 'E.migrate 本身就保留 pet（主线预览读到这份档也不会丢小狗）');
+  ok(JSON.stringify(D(back)) === JSON.stringify(D(st)), 'E.migrate + norm 往返：pet 原样保留');
+  ok(D(back).eng && D(back).eng.home === 'c77' && !('items' in D(back).eng) && D(back).eng.v === PE.CFG.SAVE_V, 'eng 带 home、不带家具（家具以家宅为准）');
+  ok(JSON.stringify(D(back)).length < 600, 'pet 字段很小（' + JSON.stringify(D(back)).length + ' 字节）');
+  const bad = (pet) => { const s = clone(st); delete s.pets; s.pet = pet; return reload(s); };   // v1 旧档输入
+  ok(!(has(bad('x'))) && !(has(bad([]))) && !(has(bad(null))) && !(has(bad({ owned: false }))), '坏 pet（字符串 / 数组 / null / 没 owned）：删掉 = 没买');
+  const b2 = bad({ owned: true, home: 'rocket', eng: { v: 1, dog: {} } }); ok(D(b2).home === null && JSON.stringify(D(b2).eng) === JSON.stringify({ v: 1, dog: {} }), '13k：家没开放 → 进待命（不再搬回第一个开放的家）；eng 原样保留，由引擎读档时校验');
+  { const s = clone(b2); D(s).home = 'c77'; const r1 = rt(); const w = r1.sync(s); ok(w && w.dog.energy === PE.CFG.ENERGY0 && w.dog.affinity === PE.CFG.AFF0, 'eng 缺字段：放回房间后引擎按默认补'); }
+  const b3 = bad({ owned: true, home: 'c77', eng: { v: 99, dog: {} } }); { const r1 = rt(); const w = r1.sync(b3); ok(D(b3).home === 'c77' && w && w.dog.affinity === PE.CFG.AFF0, '13k：eng 版本不对 → 存档里原样留着，引擎当新狗起步（小狗还在）'); }
+  const b4 = bad({ owned: true, home: 'c77', boughtAt: 'zz' }); ok(D(b4).boughtAt === 0 && D(b4).eng === null, 'boughtAt / eng 缺失：补默认');
+  ok(Object.keys(E.migrate(clone(st), T0).st).filter(k => k === 'pets').length === 1, 'E.migrate 本身就保留 pet（主线预览读到这份档也不会丢小狗）');
 }
 
 section('4. 家宅布局 → 引擎');
@@ -113,7 +120,7 @@ section('6. 刷新恢复');
   clock = T0; const r = rt(); let w = r.sync(st); tick(r, st, 24);
   PE.pet(w, 'button'); tick(r, st, 6); const aff = w.dog.affinity;
   ok(clock === T0 + 30000, '页面开了 30 秒'); r.beforePersist(st);
-  ok(st.pet.eng.savedAt === T0 + 30000, 'savedAt = 最后模拟的时间'); const saved = clone(st.pet.eng);
+  ok(D(st).eng.savedAt === T0 + 30000, 'savedAt = 最后模拟的时间'); const saved = clone(D(st).eng);
   // 马上刷新（2 秒后）
   clock = T0 + 32000; const s2 = reload(st), r2 = rt(), w2 = r2.sync(s2);
   ok(Math.hypot(w2.dog.x - saved.dog.x, w2.dog.y - saved.dog.y) < 0.05, '短离开：原地回来');
@@ -141,7 +148,7 @@ section('7. 搬家');
   r.beforePersist(st); PG.move(st, E, 'pearl'); w = r.sync(st);
   ok(r.homeId === 'pearl' && r.lastEvent === 'moved' && w.dog.affinity === aff, '搬到珍珠姐家：重建世界，亲密带过去');
   ok(w.dog.y > w.rows - 2 && bodyOK(w), '从前沿进门');
-  r.beforePersist(st); ok(st.pet.eng.home === 'pearl', '之后的存档记在新家');
+  r.beforePersist(st); ok(D(st).eng.home === 'pearl', '之后的存档记在新家');
 }
 
 section('8. 三档房子压力测试（随机摆满 + 边玩边换家具）');
@@ -197,7 +204,7 @@ section('10. p4b：满屋（合法摆满）= 正常状态，不崩、不扣了�
     ok(hasRoomF(st, E, 'c77', M) === false, `${T(lv).name} 满屋：hasRoom = false`);
     const r = tryDo(() => PG.buy(st, E, 'c77', T0, M));
     ok(!r.err && r.v && !r.v.ok && r.v.noRoom && /暂时无法入宅/.test(r.v.why), `${T(lv).name} 满屋购买：提示「暂时无法入宅」（${r.err || (r.v && r.v.why)}）`);
-    ok(st.coins === 5000 && petCount(st) === 0 && !('pet' in st), `${T(lv).name} 满屋购买：金币 5000 → ${st.coins}、宠物 0 → ${petCount(st)}（不扣钱、不写 pet）`);
+    ok(st.coins === 5000 && petCount(st) === 0 && !(has(st)), `${T(lv).name} 满屋购买：金币 5000 → ${st.coins}、宠物 0 → ${petCount(st)}（不扣钱、不写 pet）`);
     const rt0 = rt(); const s0 = tryDo(() => rt0.sync(st)); ok(!s0.err && s0.v === null, `${T(lv).name} 满屋没买：运行时不建世界、不报错`);
     // 收起一盆 → 有 1 格空地 → 能买，小狗站在那格里不压家具
     const H = E.homeOf(st, 'c77'); E.storeItem(st, 'c77', H.placed[H.placed.length - 1].uid);
@@ -215,11 +222,11 @@ section('10. p4b：满屋（合法摆满）= 正常状态，不崩、不扣了�
     clock += 60000; const s2 = reload(st), r2 = rt();
     const x = tryDo(() => { r2.sync(s2); tick(r2, s2, 10); return true; });
     ok(!x.err && r2.waiting && r2.lastEvent === 'waiting', `${T(lv).name} 满屋读档：不崩，进「等待安置」（${x.err || r2.lastEvent}）`);
-    ok(PG.owned(s2) && petCount(s2) === 1 && s2.coins === coins && s2.pet.home === 'c77', `${T(lv).name} 满屋读档：所有权保留、宠物 1、金币不变`);
+    ok(PG.owned(s2) && petCount(s2) === 1 && s2.coins === coins && D(s2).home === 'c77', `${T(lv).name} 满屋读档：所有权保留、宠物 1、金币不变`);
     const acts = ['call', 'pet', 'throwBall'].map(k => tryDo(() => r2[k](s2)));
     ok(acts.every(a => !a.err && !a.v.ok && a.v.why === 'waiting'), `${T(lv).name} 等待安置：呼唤 / 摸摸 / 抛球不响应、不报错`);
     const y = tryDo(() => { r2.beforePersist(s2); return reload(s2); });
-    ok(!y.err && PG.owned(y.v) && finAll(y.v.pet) && y.v.pet.eng.dog.affinity === 47, `${T(lv).name} 等待中存档 → 读档：无 NaN、亲密 47 保留（${y.err || ''}）`);
+    ok(!y.err && PG.owned(y.v) && finAll(D(y.v)) && D(y.v).eng.dog.affinity === 47, `${T(lv).name} 等待中存档 → 读档：无 NaN、亲密 47 保留（${y.err || ''}）`);
     const H = E.homeOf(s2, 'c77'); E.storeItem(s2, 'c77', H.placed[7].uid); tick(r2, s2, 2);
     ok(!r2.waiting && bodyOK(r2.w) && r2.w.dog.affinity === 47 && r2.w.stats.placed >= 1, `${T(lv).name} 收起一盆：小狗自动出来，不压家具，亲密还是 47`);
     ok(s2.coins === coins && petCount(s2) === 1, `${T(lv).name} 全程金币 / 宠物数守恒`);
@@ -253,9 +260,9 @@ section('10. p4b：满屋（合法摆满）= 正常状态，不崩、不扣了�
     fill(st, 'pearl'); const coins = st.coins;
     const mv = PG.move(st, E, 'pearl'); const a = tryDo(() => { r.sync(st); tick(r, st, 3); return true; });
     ok(mv.ok && !a.err && r.homeId === 'pearl' && r.waiting && r.lastEvent === 'waiting', `搬进满屋（珍珠姐家 6×4 摆满）：不崩，等待安置（${a.err || r.lastEvent}）`);
-    ok(st.pet.home === 'pearl' && petCount(st) === 1 && st.coins === coins && r.w.dog.affinity === aff, '搬家：所有权 / 亲密保留，不花钱');
+    ok(D(st).home === 'pearl' && petCount(st) === 1 && st.coins === coins && r.w.dog.affinity === aff, '搬家：所有权 / 亲密保留，不花钱');
     r.beforePersist(st); const s2 = reload(st), r2 = rt(); const b = tryDo(() => { r2.sync(s2); tick(r2, s2, 2); return true; });
-    ok(!b.err && r2.waiting && finAll(s2.pet), '搬进满屋后刷新：还在等待安置，无 NaN');
+    ok(!b.err && r2.waiting && finAll(D(s2)), '搬进满屋后刷新：还在等待安置，无 NaN');
     s2.coins = coins + 80000; const up = E.upgradeHome(s2, 'pearl'); tick(r2, s2, 3);
     ok(up.ok && s2.coins === coins && !r2.waiting && r2.w.cols === 8 && bodyOK(r2.w), '升级成公寓（满屋变大）：小狗自动出来，不压家具；金币只扣升级费');
     ok(petCount(s2) === 1 && r2.w.dog.affinity === aff, '升级后：宠物 1、亲密保留');
@@ -280,7 +287,7 @@ section('11. p4b：坏档逐字段容错（NaN / 无穷 / 字符串 / 负数 / �
   const coins = base.coins;
   const set = (o, path, v) => { const ks = path.split('.'); let c = o; for (let i = 0; i < ks.length - 1; i++) c = c[ks[i]]; if (v === undefined) delete c[ks[ks.length - 1]]; else c[ks[ks.length - 1]] = v; };
   // 读档 = E.migrate + norm；坏值在 JSON 之后塞进去（NaN / Infinity 这种 JSON 带不了的也测）
-  const corrupt = (path, v) => { const s = E.migrate(clone(base), T0 + 2000).st; set(s, 'pet.' + path, v); PG.norm(s, E); return s; };
+  const corrupt = (path, v) => { const s = E.migrate(clone(base), T0 + 2000).st; set(D(s), path, v); PG.norm(s, E); return s; };
   const fields = ['savedAt', 't', 'rs', 'dog.x', 'dog.y', 'dog.dir', 'dog.energy', 'dog.affinity', 'dog.lastGain', 'dog.lastEat', 'dog.tired', 'dog.asleep', 'ball.x', 'ball.y', 'ball.carried', 'home'];
   const bads = [['NaN', NaN], ['Infinity', Infinity], ['-Infinity', -Infinity], ['字符串', 'abc'], ['数字字符串', '12'], ['负数', -5], ['超界', 1e300], ['缺字段', undefined], ['null', null], ['对象', {}], ['数组', [1]]];
   let cases = 0, crash = 0, nanN = 0, lost = 0, nanSave = 0, coinBad = 0; const why = [];
@@ -294,7 +301,7 @@ section('11. p4b：坏档逐字段容错（NaN / 无穷 / 字符串 / 负数 / �
       if (!r1.waiting && !bodyOK(w)) { nanN++; why.push(f + '/' + bn + ' 压家具'); }
       r1.beforePersist(s); const js = JSON.stringify(s);
       const back = reload(JSON.parse(js));
-      if (!finAll(s.pet) || /NaN|Infinity/.test(js) || !finAll(back.pet) || back.pet.eng.savedAt === null || back.pet.eng.t === null) { nanSave++; why.push(f + '/' + bn + ' 存档非法'); }
+      if (!finAll(D(s)) || /NaN|Infinity/.test(js) || !finAll(D(back)) || D(back).eng.savedAt === null || D(back).eng.t === null) { nanSave++; why.push(f + '/' + bn + ' 存档非法'); }
       if (!PG.owned(back) || back.coins !== coins) { lost++; why.push(f + '/' + bn + ' 往返丢'); }
       if (s.coins !== coins) coinBad++;
     });
@@ -305,30 +312,30 @@ section('11. p4b：坏档逐字段容错（NaN / 无穷 / 字符串 / 负数 / �
   ok(nanSave === 0, `保存 → 读档往返：存档里没有 NaN / Infinity / null 时间戳（${nanSave}）` + (nanSave ? ' ' + why.filter(x => /存档/.test(x)).slice(0, 4).join('；') : ''));
   ok(lost === 0 && coinBad === 0, `所有权 / 金币一个都没丢（${lost} / ${coinBad}）`);
   // 外层字段坏了也不清所有权
-  const outer = (p) => tryDo(() => { const s = E.migrate(clone(base), T0).st; p(s.pet); PG.norm(s, E); const r1 = rt(); r1.sync(s); tick(r1, s, 1); r1.beforePersist(s); return s; });
+  const outer = (p) => tryDo(() => { const s = E.migrate(clone(base), T0).st; p(D(s)); PG.norm(s, E); const r1 = rt(); r1.sync(s); tick(r1, s, 1); r1.beforePersist(s); return s; });
   for (const [nm, fn] of [['eng = NaN', p => { p.eng = NaN; }], ['eng = 字符串', p => { p.eng = 'x'; }], ['eng = null', p => { p.eng = null; }], ['eng 缺 dog', p => { delete p.eng.dog; }], ['eng.dog = null', p => { p.eng.dog = null; }], ['eng.ball = 数组', p => { p.eng.ball = [1, 2]; }],
                           ['boughtAt = NaN', p => { p.boughtAt = NaN; }], ['boughtAt = -1', p => { p.boughtAt = -1; }], ['boughtAt = "x"', p => { p.boughtAt = 'x'; }], ['home = 123', p => { p.home = 123; }], ['home = null', p => { delete p.home; }],
                           ['owned = "true"', p => { p.owned = 'true'; }], ['owned 缺', p => { delete p.owned; }], ['v = 99', p => { p.v = 99; }]]) {
     const r = outer(fn);
-    ok(!r.err && PG.owned(r.v) && r.v.coins === coins && finAll(r.v.pet) && typeof r.v.pet.home === 'string' && Number.isFinite(r.v.pet.boughtAt), `pet.${nm}：不报错、所有权保留、无 NaN（${r.err || ''}）`);
+    ok(!r.err && PG.owned(r.v) && r.v.coins === coins && finAll(D(r.v)) && (typeof D(r.v).home === 'string' || D(r.v).home === null) && Number.isFinite(D(r.v).boughtAt), `pet.${nm}：不报错、所有权保留、无 NaN（${r.err || ''}）`);
   }
   // 合法的 0 保留 / 范围夹紧 / 默认值
   const one = (path, v, now) => { clock = now || T0 + 2000; const s = corrupt(path, v); const r1 = rt(); r1.sync(s); return { s, w: r1.w, r: r1 }; };
   let o = one('eng.dog.energy', 0); ok(o.w.dog.energy >= 0 && o.w.dog.energy < 5, '精力 0：保留 0（+ 离开 1 秒的休息），不当缺失');
-  o = one('eng.t', 0); ok(o.s.pet.eng.t === 0 && o.w.t >= 0 && o.w.t < 5, 't = 0：保留');
-  o = one('eng.dog.lastGain', 0); ok(o.s.pet.eng.dog.lastGain === 0, 'lastGain = 0：保留');
-  o = one('boughtAt', 0); ok(o.s.pet.boughtAt === 0 && PG.owned(o.s), 'boughtAt = 0：保留');
+  o = one('eng.t', 0); ok(D(o.s).eng.t === 0 && o.w.t >= 0 && o.w.t < 5, 't = 0：保留');
+  o = one('eng.dog.lastGain', 0); ok(D(o.s).eng.dog.lastGain === 0, 'lastGain = 0：保留');
+  o = one('boughtAt', 0); ok(D(o.s).boughtAt === 0 && PG.owned(o.s), 'boughtAt = 0：保留');
   o = one('eng.dog.x', 0); ok(Number.isFinite(o.w.dog.x) && bodyOK(o.w), 'x = 0（贴墙，站不下）：挪到最近安全站位');
   o = one('eng.dog.affinity', 0); ok(o.w.dog.affinity === PE.CFG.AFF0, '亲密 0（低于起始）：夹到 40');
   o = one('eng.dog.affinity', 1e300); ok(o.w.dog.affinity === PE.CFG.AFF_MAX, '亲密超界：夹到上限 ' + PE.CFG.AFF_MAX);
   o = one('eng.dog.affinity', 61.7); ok(o.w.dog.affinity === 61, '亲密小数：取整 61');
   o = one('eng.dog.energy', 150); ok(o.w.dog.energy === 100, '精力 150：夹到 100');
   o = one('eng.dog.energy', -5); ok(o.w.dog.energy < 5, '精力 -5：夹到 0');
-  o = one('eng.dog.lastGain', 1e12); ok(o.s.pet.eng.dog.lastGain <= o.s.pet.eng.t, 'lastGain 远超 t：夹到 ≤ t（冷却不会永远不结束）');
-  { const s = E.migrate(clone(base), T0).st; s.pet.eng.dog.lastGain = 1e12; PG.norm(s, E); clock = T0 + 2000; const r1 = rt(); const w = r1.sync(s); w.dog.affinity = 50; tick(r1, s, 61); const a0 = w.dog.affinity; PE.pet(w, 'button'); tick(r1, s, 10); ok(w.dog.affinity === a0 + 1, '…读档后照样能加亲密'); }
+  o = one('eng.dog.lastGain', 1e12); ok(o.w.dog.lastGain <= o.w.t, 'lastGain 远超 t：运行时夹到 ≤ t（冷却不会永远不结束；13k 存档 eng 原样保留，夹紧在引擎读档）');
+  { const s = E.migrate(clone(base), T0).st; D(s).eng.dog.lastGain = 1e12; PG.norm(s, E); clock = T0 + 2000; const r1 = rt(); const w = r1.sync(s); w.dog.affinity = 50; tick(r1, s, 61); const a0 = w.dog.affinity; PE.pet(w, 'button'); tick(r1, s, 10); ok(w.dog.affinity === a0 + 1, '…读档后照样能加亲密'); }
   o = one('eng.savedAt', 0); ok(o.r.lastEvent === 'slept' && o.w.dog.energy === 100, 'savedAt = 0（合法，很久以前）：离线最多按 30 天算，在窝里睡、精力 100');
   o = one('eng.savedAt', T0 + 1e9); ok(o.r.restored.elapsed === 0, 'savedAt 在未来：离线算 0');
-  o = one('eng.savedAt', undefined); ok(o.r.restored.elapsed === 0 && o.s.pet.eng.savedAt === null, 'savedAt 缺：离线算 0，不出 NaN');
+  o = one('eng.savedAt', undefined); ok(o.r.restored.elapsed === 0 && Number.isFinite(o.w.t), 'savedAt 缺：离线算 0，不出 NaN（13k 存档 eng 原样，引擎侧处理）');
   { clock = T0 + 48 * 3600e3; const s = reload(base); const r1 = rt(); const w = r1.sync(s); ok(r1.lastEvent === 'slept' && w.dog.energy === 100 && w.dog.affinity === 52 && Number.isFinite(w.t), '48 小时离线：在窝里睡、精力 100、亲密 52、无 NaN'); clock = T0; }
   o = one('eng.dog.dir', 'toString'); ok(o.w.dog.dir === 'S', 'dir = "toString"：不认原型链，回默认 S');
   // 引擎层直接喂坏档（原型也走这条）
@@ -385,14 +392,14 @@ section('12. 静态检查：存档键 / 主线不受影响');
 
 section('13. p5：买狗走预览统一钱包（12d addCoins / spendCoins；12d1 异常钱包一律拒绝）');
 {
-  const pets = (st) => ('pet' in st ? 1 : 0);
+  const pets = (st) => (has(st) ? 1 : 0);
   let st = fresh(); st.coins = 3000; st.coinFrac = 0.5;
   let r = PG.buy(st, E, 'c77', T0, M); ok(r.ok && r.cost === 3000 && st.coins === 0 && st.coinFrac === 0.5 && pets(st) === 1, '余额正好 3000（+0.5 零头）：买到，整数余额精确 −3000、零头不动');
   st = fresh(); st.coins = 2999; st.coinFrac = 0.99; r = PG.buy(st, E, 'c77', T0, M); ok(!r.ok && r.why === '金币不够' && st.coins === 2999 && st.coinFrac === 0.99 && !pets(st), '2999 + 0.99 零头：不够（整数比较，零头不帮凑），不扣、不写 pet');
   for (const v of [NaN, Infinity, -1, 'abc', null, undefined, 1e20, Number.MAX_SAFE_INTEGER + 1, 2 ** 60]) {
-    st = fresh(); st.coins = v; const before = JSON.stringify({ c: st.coins, p: 'pet' in st });
+    st = fresh(); st.coins = v; const before = JSON.stringify({ c: st.coins, p: has(st) });
     r = PG.buy(st, E, 'c77', T0, M);
-    ok(!r.ok && r.why === '金币数据异常' && JSON.stringify({ c: st.coins, p: 'pet' in st }) === before && Object.is(st.coins, v), `钱包异常（coins = ${String(v)}）：买狗被拒、余额原样、不写 pet`);
+    ok(!r.ok && r.why === '金币数据异常' && JSON.stringify({ c: st.coins, p: has(st) }) === before && Object.is(st.coins, v), `钱包异常（coins = ${String(v)}）：买狗被拒、余额原样、不写 pet`);
   }
   st = fresh(); st.coins = 5e15 + 1; r = PG.buy(st, E, 'c77', T0, M); ok(r.ok && st.coins === 5e15 + 1 - 3000 && pets(st) === 1, '旧档中间段余额 5e15+1：能买，精确 −3000');
   st = fresh(); st.coins = Number.MAX_SAFE_INTEGER; r = PG.buy(st, E, 'c77', T0, M); ok(r.ok && st.coins === Number.MAX_SAFE_INTEGER - 3000, '余额 = MAX_SAFE_INTEGER：能买，精确 −3000（扣款断言过）');
@@ -403,34 +410,35 @@ section('13. p5：买狗走预览统一钱包（12d addCoins / spendCoins；12d1
   r = PG.buy(L2.st, E, 'c77', T0, M); ok(L2.blocked && !r.ok && !pets(L2.st), '12d 坏档不保存模式（coins = null 没备份）：买狗被拒（读档后 coins 归 0 的内存态也买不起）');
   // 买完写档前的校验：validState / checkSave 都过（pet 字段不影响金币校验）；loadSave 往返 pet 保留
   st = fresh(); st.coins = 9000; PG.buy(st, E, 'c77', T0, M); const back = E.loadSave(JSON.stringify(st), null, T0 + 1);
-  ok(E.validState(st).length === 0 && E.checkSave(JSON.parse(JSON.stringify(st))).length === 0 && back.source === 'main' && back.st.pet && back.st.pet.home === 'c77' && back.st.coins === 6000, '买完：validState / checkSave 通过；loadSave 往返小狗和余额都在');
+  ok(E.validState(st).length === 0 && E.checkSave(JSON.parse(JSON.stringify(st))).length === 0 && back.source === 'main' && D(back.st) && D(back.st).home === 'c77' && back.st.coins === 6000, '买完：validState / checkSave 通过；loadSave 往返小狗和余额都在');
   const pg = fs.readFileSync(path.join(__dirname, 'petgame.js'), 'utf8'), app = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
-  ok(!/\.coins\s*-=/.test(pg) && /E\.transact\(st, \{ price: PET\.price/.test(pg) && !/E\.spendCoins\(/.test(pg) && /E\.walletOk\(st\)/.test(pg), 'p6：petgame.js 不直接改 coins、不再自己 spendCoins：扣钱 + 写 pet + 落盘只走 12d3 统一入口 E.transact，先查 E.walletOk');
+  ok(!/\.coins\s*-=/.test(pg) && /E\.transact\(st, \{ price: PET\.price/.test(fs.readFileSync(path.join(__dirname, 'petgame.js'), 'utf8')) && !/E\.spendCoins\(/.test(pg) && /E\.walletOk\(st\)/.test(pg), 'p6：petgame.js 不直接改 coins、不再自己 spendCoins：扣钱 + 写 pet + 落盘只走 12d3 统一入口 E.transact，先查 E.walletOk');
   ok(/E\.loadSave\(/.test(app) && /if \(m\.blocked\) saveBlocked = true;\n  if \(window\.PetGame\) PetGame\.norm\(m\.st, E\);/.test(app) && /E\.validState\(state\)/.test(app), 'game/app.js 基于 12d2：读档 E.loadSave（异常 / 不保存模式照旧）后才 norm 小狗，写档前 validState + 备份轮换');
   ok(/const ART_ONE = \{ face_c77:'12d2', ceo_c77:'13i', furn_otaku_panel_lamp:'13i' \};/.test(app) && /`\.\.\/\.\.\/art\/ceo_\$\{id\}\.webp\?v=\$\{artV\('ceo_' \+ id\)\}`/.test(app) && /const FURN_SIDE = \{ sofa: 472 \/ 240, pearl_scallop_sofa: 575 \/ 240, rocket_pipe_sofa: 417 \/ 240 \};/.test(app) && /`\.\.\/\.\.\/art\/face_\$\{id\}\.webp\?v=\$\{artV\('face_' \+ id\)\}`/.test(app) && !/face_\$\{id\}\.webp\?v=\$\{ART_V\}/.test(app), '熊大 22:08：game/app.js 基于 12d2 带上 ART_ONE，77 头像地址 = ../../art/face_c77.webp?v=12d2（不再 ?v=11）；13i 宠物页同步：77 全身 ceo_c77?v=13i、落地灯单图缓存号、沙发侧面图登记和主页面一致');
-  ok(/E\.walletOk\(state\)/.test(app) && /E\.canAfford\(state, P\.price\)/.test(app), '购买弹窗：余额 / 能不能买走 E.balance / E.canAfford，钱包异常不弹购买窗');
+  ok(/E\.canAfford\(state, ?P\.price\)/.test(app) && /E\.balance\(state\)/.test(app), '购买弹窗：余额 / 能不能买走 E.balance / E.canAfford');
+  { const f = (app.match(/function confirmPetBuy[\s\S]*?\n}\n/) || [''])[0]; ok(/E\.walletOk\(state\)/.test(f), '【13k r3 待决】钱包异常不弹购买窗（r3 confirmPetBuy 未先查 E.walletOk，会弹窗但确认键禁用；PG.buy 仍拒买不扣钱）'); }
 }
 
 section('14. p6：买狗走 12d3 统一交易入口 E.transact（保存失败整体回滚 / 异常钱包拒买）；宠物 persist 守 12d3 规则');
 {
   const roomy = () => { const s = fresh(); s.coins = 5000; return s; };
   // ① 保存成功：扣 3000、写 pet、save 只调一次、看到的是已改好的整档
-  { const s = roomy(); let calls = 0, seen = null; const r = PG.buy(s, E, 'c77', T0, M, (x) => { calls++; seen = { coins: x.coins, pet: !!x.pet }; return true; });
-    ok(r.ok && r.cost === 3000 && s.coins === 2000 && s.pet && s.pet.home === 'c77' && calls === 1 && seen.coins === 2000 && seen.pet, `保存成功：扣 3000、写 pet、save 调 1 次且看到改好的整档（${JSON.stringify(seen)}）`); }
+  { const s = roomy(); let calls = 0, seen = null; const r = PG.buy(s, E, 'c77', T0, M, (x) => { calls++; seen = { coins: x.coins, pet: !!D(x) }; return true; });
+    ok(r.ok && r.cost === 3000 && s.coins === 2000 && D(s) && D(s).home === 'c77' && calls === 1 && seen.coins === 2000 && seen.pet, `保存成功：扣 3000、写 pet、save 调 1 次且看到改好的整档（${JSON.stringify(seen)}）`); }
   // ② 保存失败（返回 false / {ok:false} / 抛错）：整档原地回滚，钱 / pet / rev / 其余字段一个字节都不变，对象引用不变
   for (const [nm, sv] of [['返回 false', () => false], ['返回 {ok:false}', () => ({ ok: false, why: 'x' })], ['抛错（setItem 爆）', () => { throw new Error('QuotaExceeded'); }], ['返回 undefined', () => undefined]]) {
     const s = roomy(); s.rev = 41; const before = JSON.stringify(s), ref = s.shops; const r = PG.buy(s, E, 'c77', T0, M, sv);
-    ok(!r.ok && r.stage === 'save' && JSON.stringify(s) === before && !('pet' in s) && s.coins === 5000 && s.rev === 41, `保存失败（${nm}）：买狗整体回滚，金币 5000 / 无 pet / rev 41 / 整档逐字节原样（stage ${r.stage}）`);
+    ok(!r.ok && r.stage === 'save' && JSON.stringify(s) === before && !(has(s)) && s.coins === 5000 && s.rev === 41, `保存失败（${nm}）：买狗整体回滚，金币 5000 / 无 pet / rev 41 / 整档逐字节原样（stage ${r.stage}）`);
   }
   // ③ 保存失败后再保存成功：能正常买（回滚没留下半截状态）
   { const s = roomy(); PG.buy(s, E, 'c77', T0, M, () => false); const r = PG.buy(s, E, 'c77', T0, M, () => true); ok(r.ok && s.coins === 2000 && PG.owned(s), '保存失败回滚后再买一次：正常扣 3000、有狗（没留半截状态）'); }
   // ④ 异常钱包 / 只读：save 一次都不调
   for (const [nm, mk] of [['余额 1e20', (s) => { s.coins = 1e20; }], ['余额 NaN', (s) => { s.coins = NaN; }], ['余额 MAX_SAFE+1', (s) => { s.coins = Number.MAX_SAFE_INTEGER + 1; }]]) {
     const s = roomy(); mk(s); let calls = 0; const before = JSON.stringify(s); const r = PG.buy(s, E, 'c77', T0, M, () => { calls++; return true; });
-    ok(!r.ok && calls === 0 && !('pet' in s) && JSON.stringify(s) === before, `异常钱包（${nm}）：拒买、save 0 次、存档原样（${r.why}）`);
+    ok(!r.ok && calls === 0 && !(has(s)) && JSON.stringify(s) === before, `异常钱包（${nm}）：拒买、save 0 次、存档原样（${r.why}）`);
   }
   { const s = roomy(); let calls = 0; const r = PG.buy(s, E, 'c77', T0, M, () => { calls++; return true; }, true);
-    ok(!r.ok && r.stage === 'blocked' && calls === 0 && s.coins === 5000 && !('pet' in s), `调用方已知只读（blocked=true，如多标签冻结）：拒买、save 0 次（${r.why}）`); }
+    ok(!r.ok && r.stage === 'blocked' && calls === 0 && s.coins === 5000 && !(has(s)), `调用方已知只读（blocked=true，如多标签冻结）：拒买、save 0 次（${r.why}）`); }
   { const bad = fresh(); bad.coins = 1e20; const L = E.loadSave(JSON.stringify(bad), null, T0); PG.norm(L.st, E); let calls = 0;
     const r = PG.buy(L.st, E, 'c77', T0, M, () => { calls++; return true; }, L.blocked);
     ok(L.blocked && !r.ok && calls === 0 && !PG.owned(L.st), `12d3 loadSave 只读档（主档 1e20）：拒买、save 0 次（${r.why}）`); }
@@ -442,7 +450,7 @@ section('14. p6：买狗走 12d3 统一交易入口 E.transact（保存失败整
     ok(!r1.ok && mem['tangzhe-preview-save'] === main0 && !('tangzhe-preview-save-bak' in mem) && !PG.owned(s) && s.coins === 5000, `跨页 commitSave 备份写失败：整次放弃，主档逐字节不动、内存买狗回滚（${r1.why}）`);
     store.failBak = false; const r2 = PG.buy(s, E, 'c77', T0, M, (x) => E.commitSave(store, 'tangzhe-preview-save', 'tangzhe-preview-save-bak', x));
     const disk = JSON.parse(mem['tangzhe-preview-save']);
-    ok(r2.ok && disk.pet && disk.pet.home === 'c77' && disk.coins === 2000 && disk.rev === 8 && mem['tangzhe-preview-save-bak'] === main0 && !E.checkSave(disk).length, `跨页 commitSave 正常：主档有狗、2000 金币、rev 7→8，-bak = 买前主档，checkSave 干净`); }
+    ok(r2.ok && D(disk) && D(disk).home === 'c77' && disk.coins === 2000 && disk.rev === 8 && mem['tangzhe-preview-save-bak'] === main0 && !E.checkSave(disk).length, `跨页 commitSave 正常：主档有狗、2000 金币、rev 7→8，-bak = 买前主档，checkSave 干净`); }
   // ⑥ 宠物页 persist 与预览 12d3 逐字一致（封禁返回 false、备份写失败整次放弃）；setItem 次数一致
   const app = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8'), pre = fs.readFileSync(path.join(__dirname, '..', '..', 'app.js'), 'utf8');
   const fn = (src) => { const i = src.indexOf('function persist() {'), j = src.indexOf('\n}\n', i); return i < 0 ? '' : src.slice(i, j + 3).replace(/\n  petBeforePersist\(\);[^\n]*/, ''); };
@@ -450,7 +458,7 @@ section('14. p6：买狗走 12d3 统一交易入口 E.transact（保存失败整
   ok(/if \(saveBlocked\) return false;/.test(fn(app)) && /备份写不进去，这次没有保存/.test(fn(app)), '宠物页 persist：封禁返回 false；备份写失败提示并放弃');
   const cnt = (src) => (src.match(/localStorage\.setItem\(/g) || []).length;
   ok(cnt(app) === cnt(pre), `宠物页 localStorage.setItem 次数 = 预览（${cnt(app)} = ${cnt(pre)}）`);
-  ok(/PG\.buy\(state, E, home, now\(\), petM, \(\) => persist\(\), saveBlocked \|\| frozen\)/.test(app) && !/atomic\(\(\) => PG\.buy/.test(app), '购买确认：PG.buy 带 () => persist() 和只读标记走 E.transact（不再套 atomic 二次事务）');
+  ok(/PG\.buy\(state, ?E, ?room, ?now\(\), ?petM, ?petSave, ?saveBlocked \|\| frozen/.test(app) && /function petSave\(s\) \{[\s\S]{0,200}E\.commitSave\(/.test(app) && /E\.transact\(st, \{ price: PET\.price/.test(fs.readFileSync(path.join(__dirname, 'petgame.js'), 'utf8')) && !/atomic\(\(\) => PG\.buy/.test(app), '购买确认（13k）：PG.buy 带 petSave（E.commitSave）和只读标记，内部走 E.transact（不套 atomic 二次事务）');
   ok(/const r = E\.transact\(state, \{ price:price \|\| 0, apply, save:\(\) => persist\(\), blocked:saveBlocked \}\);/.test(app), 'game/app.js 基于 12d3（带 txn / E.transact）');
 }
 
