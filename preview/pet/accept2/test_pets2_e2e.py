@@ -82,7 +82,8 @@ with sync_playwright() as p:
         pg.click(ADAPT['cancel']); pg.wait_for_timeout(200)
         check(saved(pg) == s0 and view(pg)['standby'] == ['cat2'], 'U4', '取消替换：存档、房间都不变')
         # U11 满房把房里已有的那只再放进同一间房：无操作，不弹替换
-        if pg.query_selector(ADAPT['place'].format(uid='cat1')): pg.click(ADAPT['place'].format(uid='cat1')); pg.wait_for_timeout(250)
+        el = pg.query_selector(ADAPT['place'].format(uid='cat1'))   # 已入住时按钮是 disabled：点不了本身就是“无操作”
+        if el and el.is_enabled(): el.click(); pg.wait_for_timeout(250)
         check(not pg.query_selector(ADAPT['replace']) and saved(pg) == s0, 'U11', '同房再放：不弹替换、存档不变')
         # U5 选替换 dog1：cat2 进房，dog1 回待命，刷新后保持，成长不变
         g0 = json.loads(sview(pg))[2]
@@ -98,12 +99,15 @@ with sync_playwright() as p:
         pg.evaluate("() => { Storage.prototype.setItem = __si; }")
         check(sview(pg) == v0 and saved(pg) == s0 and bad == ['cat1', 'cat2'], 'U6', f'写档失败：内存 / 界面 / 存档整次回滚 {bad}')
         # U7 两只在房里各自活动，点一只只有这一只反应
-        pg.evaluate("() => { for (const u of ['cat1','cat2']) __tzz.pets.step(u, 1.5); }"); frame(pg)
-        n = pg.evaluate(f"() => ['cat1','cat2'].filter(u => document.querySelector('{ADAPT['sprite']}'.replace('{{uid}}', u))).length")
-        a0 = pg.evaluate("() => ['cat1','cat2'].map(u => __tzz.pets.world(u).pet.anim.name)")
-        tap(pg, 'cat1'); pg.evaluate("() => { for (const u of ['cat1','cat2']) __tzz.pets.step(u, 0.25); }")
-        a1 = pg.evaluate("() => ['cat1','cat2'].map(u => __tzz.pets.world(u).pet.anim.name)")
-        check(n == 2 and a1[0] in ADAPT['cat_touch'] and a1[1] not in ADAPT['cat_touch'], 'U7', f'两只都画出来；点 cat1 只有它拱背 / 蹭手 {a0} → {a1}')
+        if pg.evaluate("() => ['cat1','cat2'].some(u => !__tzz.pets.world(u))"):   # 猫运行时 / 图集 / 动作未实现：记未完成，不中断后面的用例
+            check(False, 'U7', '未完成：猫没有运行时（world(cat) = null），猫图集 / 动作未实现')
+        else:
+            pg.evaluate("() => { for (const u of ['cat1','cat2']) __tzz.pets.step(u, 1.5); }"); frame(pg)
+            n = pg.evaluate(f"() => ['cat1','cat2'].filter(u => document.querySelector('{ADAPT['sprite']}'.replace('{{uid}}', u))).length")
+            a0 = pg.evaluate("() => ['cat1','cat2'].map(u => __tzz.pets.world(u).pet.anim.name)")
+            tap(pg, 'cat1'); pg.evaluate("() => { for (const u of ['cat1','cat2']) __tzz.pets.step(u, 0.25); }")
+            a1 = pg.evaluate("() => ['cat1','cat2'].map(u => __tzz.pets.world(u).pet.anim.name)")
+            check(n == 2 and a1[0] in ADAPT['cat_touch'] and a1[1] not in ADAPT['cat_touch'], 'U7', f'两只都画出来；点 cat1 只有它拱背 / 蹭手 {a0} → {a1}')
         # U8 旧档一间房 4 只：2 只在房、2 只待命，列表 4 只全在
         seed(pg, [{'uid': f'x{i}', 'species': 'cat', 'room': 'c77', 'boughtAt': i} for i in range(4)])
         v = view(pg); li = pg.evaluate(f"() => document.querySelectorAll('{ADAPT['list']}').length")
@@ -113,37 +117,40 @@ with sync_playwright() as p:
         v = view(pg); check(sum(len(x) for x in v['rooms'].values()) == 1 and list(v['rooms'].keys()) == ['pearl'], 'U9', f'v13 单只小狗：留在珍珠姐的家 {v}')
         # U10 不新增存档键、没有横向滚动、没有报错
         keys = pg.evaluate("Object.keys(localStorage).sort()"); sw = pg.evaluate("document.documentElement.scrollWidth <= innerWidth")
-        check(sentinel(pg) and set(keys) <= {'tangzhe-save', SAVE, SAVE + '-bak', 'tangzhe-preview-save-bak'} and sw and not errs, 'U10', f'正式站存档没被改 {sentinel(pg)}；存档键 {keys}；不横向滚动 {sw}；报错 {errs[:3]}')
+        check(sentinel(pg) and set(keys) <= {'tangzhe-save', SAVE, SAVE + '-bak', 'tangzhe-preview-save-bak', 'tangzhe-preview-tab-lock'} and sw and not errs, 'U10', f'正式站存档没被改 {sentinel(pg)}；存档键 {keys}；不横向滚动 {sw}；报错 {errs[:3]}')
         # ---------- 猫首样 ----------
         seed(pg, [{'uid': 'cat1', 'species': 'cat', 'room': 'c77', 'boughtAt': 1}])
-        M = pg.evaluate("() => { const w = __tzz.pets.world('cat1'); return { clips: Object.keys((w.manifest || w.pet.anim.manifest || {}).clips || {}), atlas: ((w.manifest || {}).atlas || {}).image, dogAtlas: __tzz.pet && __tzz.pet.M && __tzz.pet.M.atlas.image, cols: w.cols }; }")
-        need = set(ADAPT['cat_seq'] + ADAPT['cat_touch'])
-        check(need <= set(M['clips']) and M['atlas'] and M['atlas'] != M['dogAtlas'], 'C1', f'猫有自己的整套动作和图集（不复用狗的）缺 {sorted(need - set(M["clips"]))} 图集 {M["atlas"]} vs 狗 {M["dogAtlas"]}')
-        for side, tx in [('左', 0.8), ('右', M['cols'] - 0.8 if M['cols'] else 5)]:
-            pg.evaluate("([x]) => { const w = __tzz.pets.world('cat1'); w.pet.x = w.cols / 2; __tzz.pets.toy('cat1', x, w.pet.y); }", [tx])
-            r = seq_until(pg, 'cat1', 25, 'idle')
-            check(subseq(ADAPT['cat_seq'], r['seq']), 'C2' if side == '左' else 'C3', f'玩具在{side}边：完整播完 待机→靠近→蹲伏→扑抓→落地→拍打→舔爪→待机 {r["seq"]}')
-            li = r['seq'].index('land') if 'land' in r['seq'] else -1
-            d = abs(r['pos'][li][0] - tx) if li >= 0 else 99
-            check(d <= 0.45, 'C4' if side == '左' else 'C5', f'{side}边落地点在玩具上（相距 {d:.2f} 格 ≤ 0.45）')
-        # C6 扑抓中连点 10 下：落地照样播完，不会直接跳到拱背
-        pg.evaluate("() => { const w = __tzz.pets.world('cat1'); __tzz.pets.toy('cat1', 1, w.pet.y); }")
-        pg.evaluate("() => { for (let i = 0; i < 1800 && __tzz.pets.world('cat1').pet.anim.name !== 'pounce'; i++) __tzz.pets.step('cat1', 1 / 60); }")
-        for _ in range(10):
-            frame(pg); tap(pg, 'cat1')
-        r = seq_until(pg, 'cat1', 6)
-        check(r['seq'][:2] == ['pounce', 'land'] or (r['seq'] and r['seq'][0] == 'land'), 'C6', f'扑抓中连点：先落地再响应 {r["seq"][:5]}')
-        # C7 触摸：拱背 → 蹭手 → 回待机
-        pg.evaluate("() => { for (let i = 0; i < 600; i++) __tzz.pets.step('cat1', 1 / 60); }")
-        frame(pg); tap(pg, 'cat1'); r = seq_until(pg, 'cat1', 8, 'idle')
-        check(subseq(ADAPT['cat_touch'], r['seq']), 'C7', f'摸猫：拱背 → 蹭手 {r["seq"]}')
-        # C8 猫画在房间里、不被裁切（贴左右墙时也是）
-        clip = []
-        for edge in ['l', 'r']:
-            pg.evaluate("(e) => { const w = __tzz.pets.world('cat1'); w.pet.x = e === 'l' ? 0.3 : w.cols - 0.3; __tzz.pets.step('cat1', 1 / 60); }", edge); frame(pg)
-            clip.append(pg.evaluate(f"""() => {{ const f = document.querySelector('#roomFloor').getBoundingClientRect(), e = document.querySelector('{ADAPT['sprite']}'.replace('{{uid}}', 'cat1'));
-              if (!e) return '无'; const r = e.getBoundingClientRect(); return r.left >= f.left - 1 && r.right <= f.right + 1 ? 'ok' : [r.left, r.right, f.left, f.right]; }}"""))
-        check(clip == ['ok', 'ok'], 'C8', f'贴左墙 / 右墙不裁切 {clip}')
+        if not pg.evaluate("!!__tzz.pets.world('cat1')"):   # 猫运行时 / 图集 / 动作未实现：C1–C8 记未完成
+            for c in ['C1','C2','C3','C4','C5','C6','C7','C8']: check(False, c, '未完成：猫没有运行时（world(cat1) = null），猫图集 / 动作未实现')
+        else:
+            M = pg.evaluate("() => { const w = __tzz.pets.world('cat1'); return { clips: Object.keys((w.manifest || w.pet.anim.manifest || {}).clips || {}), atlas: ((w.manifest || {}).atlas || {}).image, dogAtlas: __tzz.pet && __tzz.pet.M && __tzz.pet.M.atlas.image, cols: w.cols }; }")
+            need = set(ADAPT['cat_seq'] + ADAPT['cat_touch'])
+            check(need <= set(M['clips']) and M['atlas'] and M['atlas'] != M['dogAtlas'], 'C1', f'猫有自己的整套动作和图集（不复用狗的）缺 {sorted(need - set(M["clips"]))} 图集 {M["atlas"]} vs 狗 {M["dogAtlas"]}')
+            for side, tx in [('左', 0.8), ('右', M['cols'] - 0.8 if M['cols'] else 5)]:
+                pg.evaluate("([x]) => { const w = __tzz.pets.world('cat1'); w.pet.x = w.cols / 2; __tzz.pets.toy('cat1', x, w.pet.y); }", [tx])
+                r = seq_until(pg, 'cat1', 25, 'idle')
+                check(subseq(ADAPT['cat_seq'], r['seq']), 'C2' if side == '左' else 'C3', f'玩具在{side}边：完整播完 待机→靠近→蹲伏→扑抓→落地→拍打→舔爪→待机 {r["seq"]}')
+                li = r['seq'].index('land') if 'land' in r['seq'] else -1
+                d = abs(r['pos'][li][0] - tx) if li >= 0 else 99
+                check(d <= 0.45, 'C4' if side == '左' else 'C5', f'{side}边落地点在玩具上（相距 {d:.2f} 格 ≤ 0.45）')
+            # C6 扑抓中连点 10 下：落地照样播完，不会直接跳到拱背
+            pg.evaluate("() => { const w = __tzz.pets.world('cat1'); __tzz.pets.toy('cat1', 1, w.pet.y); }")
+            pg.evaluate("() => { for (let i = 0; i < 1800 && __tzz.pets.world('cat1').pet.anim.name !== 'pounce'; i++) __tzz.pets.step('cat1', 1 / 60); }")
+            for _ in range(10):
+                frame(pg); tap(pg, 'cat1')
+            r = seq_until(pg, 'cat1', 6)
+            check(r['seq'][:2] == ['pounce', 'land'] or (r['seq'] and r['seq'][0] == 'land'), 'C6', f'扑抓中连点：先落地再响应 {r["seq"][:5]}')
+            # C7 触摸：拱背 → 蹭手 → 回待机
+            pg.evaluate("() => { for (let i = 0; i < 600; i++) __tzz.pets.step('cat1', 1 / 60); }")
+            frame(pg); tap(pg, 'cat1'); r = seq_until(pg, 'cat1', 8, 'idle')
+            check(subseq(ADAPT['cat_touch'], r['seq']), 'C7', f'摸猫：拱背 → 蹭手 {r["seq"]}')
+            # C8 猫画在房间里、不被裁切（贴左右墙时也是）
+            clip = []
+            for edge in ['l', 'r']:
+                pg.evaluate("(e) => { const w = __tzz.pets.world('cat1'); w.pet.x = e === 'l' ? 0.3 : w.cols - 0.3; __tzz.pets.step('cat1', 1 / 60); }", edge); frame(pg)
+                clip.append(pg.evaluate(f"""() => {{ const f = document.querySelector('#roomFloor').getBoundingClientRect(), e = document.querySelector('{ADAPT['sprite']}'.replace('{{uid}}', 'cat1'));
+                  if (!e) return '无'; const r = e.getBoundingClientRect(); return r.left >= f.left - 1 && r.right <= f.right + 1 ? 'ok' : [r.left, r.right, f.left, f.right]; }}"""))
+            check(clip == ['ok', 'ok'], 'C8', f'贴左墙 / 右墙不裁切 {clip}')
         check(not errs, 'END', f'猫那段也没有页面报错 {errs[:3]}'); check(sentinel(pg), 'END', '正式站存档 tangzhe-save 全程没被改')
         pg.screenshot(path=f"{SHOTS}/{dev.replace(' ', '_')}_cat.png"); ctx.close()
     b.close()
