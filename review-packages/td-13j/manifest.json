@@ -1,0 +1,37 @@
+{
+  "base": "fff02e09d39c11063d3ea07ee51d1689e1c56325",
+  "sample_source": "04e717b09a5c5c496e1ab7b7487202ae20df73d2",
+  "candidate_version": "13j (local, not published)",
+  "files": {
+    "preview/app.js": "c935d367343df973919df5728135f4d9d0e11c4b74b7b1fffb7daeffe8b8cd28",
+    "preview/economy.js": "a0751b59b98114d7811919fd33cdecc9a9a6cc94f43b5edff2474aba539db38c",
+    "preview/index.html": "c7e83d0d5457b72bde7f3d248ee60de001fe2fe7c794d40f6e522e83c71a1aac",
+    "preview/version.json": "ce911e002e730d391494e82092c7d306386faf6318dfdd7923ce3f0ae709329f",
+    "preview/pet/game/index.html": "9454e9899d873d50adb6489e9d7ead8b20854c39c785486d14b92e6fe99e0063",
+    "preview/pet/game/version.json": "fb18a2f62c9dba81a7d3b6caddaf47285be3aa0cb72bd84b5dbb8a7a9152d437",
+    "preview/td/INTEGRATION.md": "e4df4400afa74bc135605c566afd9a02dbaa3480ddbc484a93fad0f0256c2374",
+    "preview/td/index.html": "e119d413c0264284e6c8a4f47fc39439299ffe34a1273f6c2d5e8df249ce0512",
+    "preview/td/td.css": "5cde61d86a368c0db0f94002d714ace85a3bd2618c248b278712c981499f3826",
+    "preview/td/td.js": "6045946bb3d908c411281c221c97cf4d03bb7495e65b7423b5a32ef3f32eaa13",
+    "preview/td/tdcore.js": "d5e925a6c7752a472706eb7e6d97c86825deb130d0b6ea8132660972cd314153",
+    "preview/td/tdhost.js": "881e2d48c8045d3f46994f14a7fdcf88b03dd3e1eb405a7dae771d164b194c56",
+    "preview/td/test_td.py": "cf8d371fb510bbdbf8e96a04b197b21b53d16143a89c3b34bdfd5a6da7f1001d",
+    "preview/td/test_td_bridge.js": "77713ad32649389574dc1c314d04d791df45ffff0a1ed51ad2cce6f758a139fa",
+    "preview/td/test_td_parent_e2e.py": "94bc3f78dcf920c85dea2d03e174064f35fa9b29f0b5e5c5808d3990df951990",
+    "preview/td/test_td_protocol.js": "68c1bc06582fd26e7a99da55023a91b2800ccf574456c377dc468d7a62873da4",
+    "preview/td/test_tdhost.js": "92ce7c25154fddd096a4636860e4b6893c4327022e96ad37fca79edd732740e2"
+  },
+  "patch_sha256": "a2f578f53f54a39c9cb474ef46c9c0caecc2aa61bce79843834e6bf5559c0867",
+  "passed": {
+    "parent_transaction_grouped_checks": 31,
+    "child_protocol_vm_grouped_checks": 9,
+    "parent_bridge_vm_grouped_checks": 6,
+    "coin_safety_assertions": 522
+  },
+  "pending": [
+    "Full economy suite blocked by absent binary artwork",
+    "Actual WebKit TD and parent E2E",
+    "Screenshots and mobile visual QA",
+    "Bear2 final independent review"
+  ]
+}
