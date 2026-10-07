@@ -1184,7 +1184,7 @@ with sync_playwright() as p:
     ur = place12c2(rp, [['furn_sofa', 0, 1, 1], ['furn_pearl_scallop_sofa', 2, 1, 1], ['furn_rocket_pipe_sofa', 4, 1, 3], ['furn_sofa', 1, 0, 0]])
     check(len(ur) == 4 and all(isinstance(x, str) and x for x in ur), f'13i 三款沙发竖放 + 沙发横放摆好 {ur}')
     wait_imgs(rp)
-    for uid, nm, nh, mir in [(ur[0], 'sofa', 472, False), (ur[1], 'pearl_scallop_sofa', 575, False), (ur[2], 'rocket_pipe_sofa', 417, True)]:
+    for uid, nm, nh, mir in [(ur[0], 'sofa', 899, False), (ur[1], 'pearl_scallop_sofa', 889, False), (ur[2], 'rocket_pipe_sofa', 859, True)]:
         g = S(rp, GEO_JS + "('" + uid + "')")
         check(g and g['src'].startswith('art/furn_' + nm + '_side.webp') and g['nw'] == 240 and g['nh'] == nh and (('mir' in g['cls']) == mir) and abs(g['dw'] - g['ew']) < 1 and abs(g['dh'] - g['ew'] * nh / 240) < 1.5 and g['foot'] < 1.5 and abs(g['eh'] - 3 * g['ew']) < 2 and g['top'] >= g['roomTop'] - 1,
               f"13i {nm} 竖放（rot {3 if mir else 1}）用真侧面图 240×{nh}、1 格宽、高 {round(g['dh']/g['ew'],2) if g else '?'} 格、贴底{'、水平镜像' if mir else ''} {g and g['src']}")

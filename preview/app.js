@@ -466,7 +466,7 @@ function avatarURL(id, key) {
 const ART_V = '12b2', PORTRAIT = { c77:1, pearl:1, otaku:1, rocket:1 };
 // 12d2：单图缓存号——只换一张图时只改这张，不动整体 ART_V。77 头像 face_c77 换回 12b2 之前的原版（杨总 19:30 / 熊大 19:34），全身 ceo_c77 保留漫画新版
 // 13i：77 店铺全身 ceo_c77 也换回 12b2 之前的原版（红衣深色围裙拿烤肉夹，= 6a732db / 72323b4^，杨总 11:36 / 熊大 11:38）；分镜格落地灯换熊大紧凑版（同名换图，单图缓存号）
-const ART_ONE = { face_c77:'12d2', ceo_c77:'13i', furn_otaku_panel_lamp:'13i' };
+const ART_ONE = { face_c77:'12d2', ceo_c77:'13i', furn_otaku_panel_lamp:'13i', furn_sofa_side:'13k', furn_pearl_scallop_sofa_side:'13k', furn_rocket_pipe_sofa_side:'13k' };
 const artV = n => ART_ONE[n] || ART_V;
 const faceURL = id => PORTRAIT[id] ? `art/face_${id}.webp?v=${artV('face_' + id)}` : avatarURL(id);
 const bustURL = id => PORTRAIT[id] ? `art/ceo_${id}.webp?v=${artV('ceo_' + id)}` : avatarURL(id);
@@ -1644,7 +1644,7 @@ const furnTall = fid => !!(FURN_ART[furnName(fid)] && FURN_UP[furnName(fid)]);
 // 12c2：竖放（rot 1/3）用侧面图。熊大补 art/furn_<名>_side.webp（宽 = 竖放后的占地宽，1 格 240px；高随图）后，在这里登记「图高 / 图宽」就生效：
 // 竖放换侧面图、底脚贴占地底边、同样封顶到房间顶边；rot 3 水平镜像；侧面图没登记或加载失败 → 保持原来的正面图等比兜底。目前素材包里没有任何侧面图，所以表是空的
 // 13i：熊大 batch2（home-transfer-20261006 3fb4756，SHA256 已核）三款沙发侧面图到齐：按 alpha>8 包围盒裁边、缩到宽 240，登记「图高 / 图宽」
-const FURN_SIDE = { sofa: 472 / 240, pearl_scallop_sofa: 575 / 240, rocket_pipe_sofa: 417 / 240 };
+const FURN_SIDE = { sofa: 899 / 240, pearl_scallop_sofa: 889 / 240, rocket_pipe_sofa: 859 / 240 };
 const furnSide = (fid, rot) => ((rot & 1) && FURN_SIDE[furnName(fid)]) || 0;
 const HOME_ICON = ['home', 'apt', 'villa'].map(n => ic(n)); // 12c1：家宅升级三档用同套 SVG（原系统 emoji）
 let homeWho = 'c77', homeSub = 'room', homeMode = 'live', homeSel = null, homeDrag = null;
