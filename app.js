@@ -32,7 +32,7 @@ function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return n
 function loadState() {
   if (TEST_MODE) { loadWallMig = { moved:0, stored:0 }; migratedFrom = null; return E.testHomesState(now(), TEST_LV); }
   const m = E.loadSave(lsGet(SAVE_KEY), lsGet(BAK_KEY), now()), raw = m.raw;
-  loadInfo = { source:m.source, bakBad:m.bakBad || [], bad:m.bad || [], badPending:!!m.badPending, unsafe:!!m.unsafe, bakOk:!!m.bakOk, bakCoins:m.bakCoins, rawCoins:m.raw && m.raw.coins, mainMissing:!!m.mainMissing };
+  loadInfo = { source:m.source, bakBad:m.bakBad || [], bad:m.bad || [], badPending:!!m.badPending, unsafe:!!m.unsafe, td50Protected:!!m.td50Protected, bakOk:!!m.bakOk, bakCoins:m.bakCoins, rawCoins:m.raw && m.raw.coins, mainMissing:!!m.mainMissing };
   if (!saveBlocked && raw && raw.v !== CFG.SAVE_VERSION && m.source !== 'broken' && !m.blocked) { try { localStorage.setItem(BAK_KEY + '-v' + (raw.v || 0), JSON.stringify(raw)); } catch (e) {} }
   loadWallMig = m.wall || { moved:0, stored:0 };
   migratedFrom = raw && m.source !== 'broken' && !m.blocked ? (raw.v !== CFG.SAVE_VERSION ? (raw.v || 0) : null) : null;
@@ -81,6 +81,15 @@ function persist() {
   // 完整备份：把当前通过完整校验的主档整份放进 BAK_KEY（README 里已有的 -bak 键，不新增键），再写新主档；坏主档永远不进备份
   let prev = null;
   try { prev = localStorage.getItem(SAVE_KEY); } catch (e) { state.rev--; toast('保存失败：读不到浏览器存储'); return false; }
+  // A concurrent page may have saved a newer ruleset. Do not overwrite it
+  // or roll the wallet back to a backup simply because this page is older.
+  if (prev) {
+    let current; try { current = JSON.parse(prev); } catch (_) {}
+    if (current && current.td50 !== undefined && (!window.TDProgress || window.TDProgress.check(current.td50).length)) {
+      state.rev--; saveBlocked = true; E.markBlocked(state);
+      toast('50波存档版本不兼容或结构损坏：已只读保护，原存档与金币未覆盖', 3600); return false;
+    }
+  }
   if (prev && prev !== json) {
     let ok = false; try { ok = !E.checkSave(JSON.parse(prev)).length; } catch (e) {}
     if (ok) {
@@ -2549,6 +2558,12 @@ function boot() {
     const place = () => { const n = $('#bottomNav'); if (n) b.style.bottom = Math.max(8, innerHeight - n.getBoundingClientRect().top + 6) + 'px'; }; place(); addEventListener('resize', place); }
   if (loadInfo.source === 'bak') toast(loadInfo.mainMissing ? '主存档不见了，已从完整备份恢复' : '存档里的金币 / 等级数据坏了（' + loadInfo.bad.slice(0, 3).join('、') + '），已从完整备份恢复', 3600, '', 'error');
   if (!upgradeGate.ok) showUpgradeProtection();
+  else if (saveBlocked && loadInfo.td50Protected) {
+    const sb = document.createElement('div'); sb.id = 'saveBadge'; sb.setAttribute('role','alert');
+    sb.textContent = '50波存档版本不兼容或结构损坏：只读保护，所有交易与自动保存暂停，原存档和金币未覆盖。请保留原存档，使用匹配版本后重试。';
+    sb.style.cssText = 'position:fixed;left:8px;right:8px;top:calc(env(safe-area-inset-top) + 6px);z-index:60;padding:10px;border:2px solid #141414;border-radius:10px;background:#ffd6d6;font-size:12px;font-weight:700';
+    document.body.appendChild(sb);
+  }
   else if (saveBlocked && loadInfo.unsafe) { const sb = document.createElement('div'); sb.id = 'saveBadge'; sb.textContent = '存档余额异常（超出安全整数）：交易已暂停、不保存，原存档未覆盖'; sb.style.cssText = 'position:fixed;left:8px;right:8px;top:calc(env(safe-area-inset-top) + 6px);z-index:60;padding:6px 10px;border:2px solid #141414;border-radius:10px;background:#ffd6d6;font-size:12px;font-weight:700;text-align:center;pointer-events:none';
     document.body.appendChild(sb); queueModal(() => { openModal(`<div class="mbubble">存档余额异常</div><div class="mtitle">余额超出能精确计算的范围</div><div class="mnote">存档里的余额是 <b>${String(loadInfo.rawCoins)}</b>，超过了 ${fmt(E.SAFE_COINS)}（安全整数上限），加减会算不准，不能当正常钱包用。为了不出错：<b>所有买卖和收入都已暂停，这次不会自动保存</b>，原存档原样保留、没有被覆盖。${loadInfo.bakOk ? `备份里有一份正常存档（余额 ${fmt(loadInfo.bakCoins)}），没有自动替换，请联系熊二 / 熊大确认后再恢复。` : '没有找到可用的备份，请联系熊二 / 熊大。'}</div><div class="mbtns"><button class="buy" id="mOk">知道了</button></div>`, false); $('#mOk').addEventListener('click', closeModal, { once:true }); }); }
   else if (saveBlocked) { const sb = document.createElement('div'); sb.id = 'saveBadge'; sb.textContent = (loadInfo.mainMissing ? '主存档不见了、备份读不出来' : '存档损坏、没有可用备份') + '：只读模式，买卖暂停、不保存，原存档未覆盖'; sb.style.cssText = 'position:fixed;left:8px;right:8px;top:calc(env(safe-area-inset-top) + 6px);z-index:60;padding:6px 10px;border:2px solid #141414;border-radius:10px;background:#ffd6d6;font-size:12px;font-weight:700;text-align:center;pointer-events:none';
@@ -2578,8 +2593,8 @@ window.__tzz = { upgradeGate, TEST_MODE, TEST_LV, SAVE_KEY, BAK_KEY, get saveBlo
   HOME_ART, FURN_ART, FURN_UP, homeAct, homeAdvanceActor, homeDrawActor, homeOwner, get homeWho() { return homeWho; }, get homeSub() { return homeSub; }, get homeMode() { return homeMode; }, set homeMode(v) { homeMode = v === 'decor' ? 'decor' : 'live'; }, get homeSel() { return homeSel; }, get homeDrag() { return homeDrag; }, homeActor, LIVE_LINES, homeUndo, resize, get canvasSize() { return { W, H }; }, pet: petHooks, pets: petsHooks, lookOf, drawPerson, drawHead, LOOKS, get bubble() { return bubble; } };
 /* ================= 科技公司塔防：与主钱包同一存档、同一原子交易 ================= */
 function tdCard() {
-  const z = TD.norm(state.td);
-  return `<div class="card td-card"><div class="ava">♜</div><div class="info"><div class="name">机房塔防<span class="tag">无尽挑战</span></div><div class="desc">8 种防御塔 · 4 位统帅 · 普通 ${TD.WAVES} 波后可继续无尽<br>最佳 ${z.best}/${TD.WAVES} 波 · 本机 TOP10 · 升级共用经营金币</div></div><button class="buy" data-act="td">去守</button></div>`;
+  const z = window.TDProgress.check(state.td50).length ? window.TDProgress.fresh() : (state.td50 || window.TDProgress.fresh());
+  return `<div class="card td-card"><div class="ava">♜</div><div class="info"><div class="name">机房塔防<span class="tag">无尽挑战</span></div><div class="desc">8 种防御塔 · 4 位统帅 · 普通 ${window.TDProgress.NORMAL_WAVES} 波后可继续无尽<br>最佳 ${z.best}/${window.TDProgress.NORMAL_WAVES} 波 · 新无尽独立 TOP10 · 升级共用经营金币</div></div><button class="buy" data-act="td">去守</button></div>`;
 }
 const tdController = window.TDHost.create({
   state:() => state, blocked:() => zbBlocked(), balance:() => E.balance(state),
@@ -2590,7 +2605,7 @@ const tdController = window.TDHost.create({
 function openTD() {
   if (frozen || tdOpen || zbOpen || !state.shops[3].open) return;
   tdOpen = true; const f = $('#tdFrame'), generation = ++tdGeneration;
-  const target = new URL('td/index.html?embed=1&v=15c', location.href);
+  const target = new URL('td/index.html?embed=1&v=15d-td50-exp2-20261008', location.href);
   f.onload = () => {
     if (!tdOpen || generation !== tdGeneration) return;
     // Verify the actual loaded document, not merely an iframe src attribute.
@@ -2600,7 +2615,7 @@ function openTD() {
     const ch = new MessageChannel(); tdPort = ch.port1;
     const port = tdPort;
     port.onmessage = e => { if (tdOpen && generation === tdGeneration && tdPort === port) tdController.msg(e.data); };
-    f.contentWindow.postMessage({td:'port'}, location.origin, [ch.port2]);
+    f.contentWindow.postMessage({td:'port',protocol:2,ruleset:window.TDProgress.RULESET_ID}, location.origin, [ch.port2]);
     tdController.reply();
   };
   f.src = target.href; $('#tdOverlay').classList.remove('hidden'); audioPause();
