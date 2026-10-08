@@ -52,20 +52,44 @@ const errs=[];const pg=async c=>{const p=await c.newPage();p.on('pageerror',e=>e
  await p.reload();await p.waitForFunction(()=>window.__zb);ck(await p.evaluate(()=>__zb.proto.endTop[0].t>998&&__zb.proto.endTop.length===2),'刷新后 999 秒还在');
  ck(await p.evaluate(()=>localStorage.getItem('tangzhe-save'))==='SENT','正式存档 sentinel 不变');
  R.push('D done');await c.close();}
-// E 两页真正同时提交：故意把读榜单放慢 40ms 拉大竞争窗口；有 Web Locks 走锁，没有就靠 storage 回补
-for(const lock of [true,false]){
+// E 两页真正同时提交（有 Web Locks）：故意把读榜单放慢 40ms 拉大竞争窗口
+for(const lock of [true]){
  const c=await b.newContext({viewport:{width:375,height:667},isMobile:true,hasTouch:true});
  await c.addInitScript(([lock,TK])=>{if(!localStorage.getItem('seed')){localStorage.setItem('tangzhe-zombie-proto',JSON.stringify({cleared:50,lv:{atk:0,rate:0,hp:0,ult:0},coins:5e10}));localStorage.setItem('seed','1')}
   const g=Storage.prototype.getItem;Storage.prototype.getItem=function(k){const v=g.call(this,k);if(k===TK){const t=performance.now();while(performance.now()-t<40);}return v};
-  if(!lock)Object.defineProperty(Navigator.prototype,'locks',{get:()=>undefined,configurable:true});},[lock,TK]);
+  },[lock,TK]);
  const A=await pg(c),Bp=await pg(c);for(const p of [A,Bp]){await p.goto(B+'/preview/zombie/');await p.waitForFunction(()=>window.__zb);}
  ck(await A.evaluate(()=>__zb.hasLock())===lock,'锁可用状态 '+lock);
  const fire=(p,pre,base)=>p.evaluate(([pre,base])=>Promise.all([0,1,2,3,4].map(i=>__zb.saveProto(z=>ZBCore.applyResult(z,{mode:'endless',t:base+i,kills:i,runId:pre+i})))),[pre,base]);
  const oks=await Promise.all([fire(A,'a',100),fire(Bp,'b',200)]);
  ck(oks.flat().every(x=>x===true),'同时提交都返回保存成功');
  await A.waitForTimeout(1500);
- const t=await top(A);ck(t.length===10&&new Set(t.map(e=>e.id)).size===10,`${lock?'有锁':'无锁回补'}：两页同时各写 5 局，10 局全在 `+t.map(e=>e.id).join());
+ const t=await top(A);ck(t.length===10&&new Set(t.map(e=>e.id)).size===10,`有锁：两页同时各写 5 局，10 局全在 `+t.map(e=>e.id).join());
  await A.close();await Bp.close();const C=await pg(c);await C.goto(B+'/preview/zombie/');await C.waitForFunction(()=>window.__zb);
- ck(await C.evaluate(()=>__zb.proto.endTop.length)===10,`${lock?'有锁':'无锁'}：两页都关掉后重开，榜单仍 10 局`);
+ ck(await C.evaluate(()=>__zb.proto.endTop.length)===10,`有锁：两页都关掉后重开，榜单仍 10 局`);
+ // 有锁：真打死、保存完成后立即关页，再打开仍在榜首
+ const D=await pg(c);await D.goto(B+'/preview/zombie/');await D.waitForFunction(()=>window.__zb);
+ const dr=await die(D,999);const did=await D.evaluate(()=>__zb.G.runId);await D.close();
+ const F=await pg(c);await F.goto(B+'/preview/zombie/');await F.waitForFunction(()=>window.__zb);
+ const fe=await F.evaluate(()=>__zb.proto.endTop[0]);ck(dr.title==='无尽新纪录！第 1 名'&&fe&&fe.id===did&&Math.floor(fe.t)===999,'有锁：保存成功立即关页后重开，本局仍在榜首 '+JSON.stringify(fe));
  R.push(`E ${lock?'lock':'nolock'} done`);await c.close();}
+// F 无锁：不写任何存档、不显示名次、不算成功，结果留着可重试
+{const c=await b.newContext({viewport:{width:375,height:667},isMobile:true,hasTouch:true});
+ await c.addInitScript(()=>{if(!localStorage.getItem('seed')){localStorage.setItem('tangzhe-zombie-proto',JSON.stringify({cleared:50,lv:{atk:2,rate:0,hp:0,ult:0},coins:5e10,endBest:{t:300,kills:9}}));localStorage.setItem('tangzhe-zombie-proto-top',JSON.stringify([{t:300,kills:9,id:'old1',at:1}]));localStorage.setItem('tangzhe-save','SENT');localStorage.setItem('seed','1')}
+  Object.defineProperty(Navigator.prototype,'locks',{get:()=>undefined,configurable:true});});
+ const p=await pg(c);await p.goto(B+'/preview/zombie/');await p.waitForFunction(()=>window.__zb);
+ const snap=()=>p.evaluate(()=>JSON.stringify(Object.keys(localStorage).sort().map(k=>[k,localStorage.getItem(k)])));
+ const s0=await snap();ck(await p.evaluate(()=>__zb.hasLock())===false,'无锁：检测到不支持锁');
+ const sv=await p.evaluate(()=>__zb.saveProto(z=>ZBCore.applyResult(z,{mode:'endless',t:500,kills:1,runId:'nolockx'})));
+ ck(sv===false&&await snap()===s0,'无锁：saveProto 返回失败，存储完全不变');
+ for(const t of [800,100]){
+  const r=await die(p,t);const q=await p.evaluate(()=>({card:document.querySelector('#result').textContent,me:!!document.querySelector('#resBoard li.me'),em:document.querySelector('#resBoard .board-me em')?.textContent,retry:!document.querySelector('#retryBtn').classList.contains('hidden'),rk:ZBCore.rankOf(__zb.proto,__zb.G.runId)}));
+  ck(r.title==='无尽结算（没存上）'&&!q.me&&q.em==='没存上'&&q.retry&&!q.rk&&q.card.includes('当前浏览器无法安全保存')&&!/第 \d+ 名/.test(r.title),`无尽 ${t} 秒真死亡（无锁）：不显示名次、标没存上、提示无法安全保存、可重试 `+JSON.stringify(r));
+  ck(await snap()===s0,`无锁 ${t} 秒：存储完全不变`);
+  await p.click('#retryBtn');await p.waitForFunction(()=>!__zb.G.wait);
+  ck(await snap()===s0&&await p.evaluate(()=>!document.querySelector('#retryBtn').classList.contains('hidden')&&document.querySelector('#resTitle').textContent==='无尽结算（没存上）'),`无锁 ${t} 秒：点重试仍失败、存储不变、结果保留`);
+  await p.click('#againBtn').catch(()=>{});await p.waitForTimeout(100);}
+ await p.reload();await p.waitForFunction(()=>window.__zb);
+ ck(await p.evaluate(()=>__zb.proto.endTop.map(e=>e.id).join())==='old1','无锁：刷新后只有原来的旧记录');
+ R.push('F nolock done');await c.close();}
 await b.close();if(fail)process.exitCode=1;console.log(R.join('\n'),`\npass ${pass} fail ${fail} pageerrors ${errs.length}`,errs.slice(0,3));

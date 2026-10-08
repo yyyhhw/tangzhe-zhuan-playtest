@@ -55,22 +55,21 @@ function writeLocal(apply) {
   Object.assign(proto, next); return true;
 }
 // 读—合并—写整段放进跨标签页锁（Web Locks），多页同时结算按顺序写；等锁超过 3 秒算保存失败（可重试）。
-// 浏览器没有 Web Locks 时直接写，靠下面 storage 监听回补：哪页发现存档里少了自己记得的成绩，就补写回去。
+// 浏览器没有 Web Locks 时无法保证不互相覆盖：什么都不写，结算页提示无法安全保存，本局结果留着可重试。
 const LOCK = 'tangzhe-zombie-proto-save';
 const hasLock = () => !!(navigator.locks && navigator.locks.request);
 function saveProto(apply) {
   if (EMBED) return Promise.resolve(true);
-  if (!hasLock()) return Promise.resolve(writeLocal(apply));
+  if (!hasLock()) return Promise.resolve(false);
   const ac = typeof AbortController === 'function' ? new AbortController() : null, tm = ac && setTimeout(() => ac.abort(), 3000);
   let p; try { p = navigator.locks.request(LOCK, ac ? { signal: ac.signal } : {}, () => writeLocal(apply)); } catch (e) { p = Promise.reject(e); }
   return p.then(ok => ok === true, () => false).finally(() => clearTimeout(tm));
 }
 const SAVE_FAIL = '存档失败：这局成绩没存上，可以点「重试保存」';
+const NO_LOCK = '当前浏览器无法安全保存：这局成绩没存上，先留着，可以点「重试保存」';
 if (!EMBED) window.addEventListener('storage', e => {
   if (e.key !== null && e.key !== PROTO_KEY && e.key !== TOP_KEY) return;
-  const st = readLocal().z, merged = mergeScores(proto, st);
-  Object.assign(proto, merged);
-  if (JSON.stringify(merged.endTop) !== JSON.stringify(st.endTop) || merged.endBest.t > st.endBest.t || merged.cleared > st.cleared) saveProto(null);
+  Object.assign(proto, mergeScores(proto, readLocal().z));
   if (!$('#board').classList.contains('hidden')) renderBoard();
   if (!$('#menu').classList.contains('hidden')) renderTrain();
 });
@@ -692,7 +691,7 @@ function boardHtml(runId) {
 }
 function renderBoard() { $('#boardList').innerHTML = boardHtml(null); }
 function settleLocal(g) {
-  saveProto(g.resApply).then(ok => { if (G !== g) return; g.wait = false; g.why = ok ? '' : SAVE_FAIL; renderResult(); });
+  saveProto(g.resApply).then(ok => { if (G !== g) return; g.wait = false; g.why = ok ? '' : hasLock() ? SAVE_FAIL : NO_LOCK; renderResult(); });
 }
 function renderResult() {
   if (!G || !G.over) return;
@@ -705,7 +704,7 @@ function renderResult() {
   else title = `第 ${G.n} 关失败…`;
   $('#resTitle').textContent = title; $('#againBtn').textContent = again; $('#againBtn').disabled = !!G.wait;
   $('#resNote').textContent = G.wait ? '正在存档…' : G.why;
-  $('#retryBtn').classList.toggle('hidden', !(!G.wait && (EMBED ? G.resMsg : G.resApply) && /^存档失败/.test(G.why)));
+  $('#retryBtn').classList.toggle('hidden', !(!G.wait && (EMBED ? G.resMsg : G.resApply) && /^(存档失败|当前浏览器无法安全保存)/.test(G.why)));
   $('#resStats').textContent = G.mode === 'endless' ? `本局${runTxt(G)} · 最好 ${Math.floor(proto.endBest.t)} 秒`
     : `坚持 ${Math.floor(G.t)} / ${G.dur} 秒 · 击倒 ${G.kills}`;
   const rb = $('#resBoard'), showBoard = G.mode === 'endless' && !G.wait;
