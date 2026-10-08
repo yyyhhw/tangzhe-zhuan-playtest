@@ -26,10 +26,13 @@
   const price = (id, lv) => Math.round(BASE[id] * GROWTH ** lv);
   const waveCount = () => WAVES;
   const cmdOf = v => (CEO_IDS.includes(v) ? v : 'rocket');
+  const validRun = id => typeof id==='string' && /^[A-Za-z0-9_-]{1,96}$/.test(id);
+  const score = (waves,kills) => Math.min(Number.MAX_SAFE_INTEGER,waves*1000+kills);
+  function validTop(top){return Array.isArray(top)&&top.length<=10&&top.every((e,i)=>e&&validRun(e.runId)&&Number.isSafeInteger(e.waves)&&e.waves>=0&&Number.isSafeInteger(e.kills)&&e.kills>=0&&e.score===score(e.waves,e.kills)&&!top.slice(0,i).some(x=>x.runId===e.runId)&&(i===0||top[i-1].score>=e.score));}
   function norm(raw) {
     const r = raw && typeof raw === 'object' ? raw : {}, lv = {};
     IDS.forEach(k => { lv[k] = Math.max(0, Math.min(MAX_UP, Math.floor(fin(r.lv && r.lv[k], 0)))); });
-    return { lv, cleared: Math.max(0, Math.min(MAX_LV, Math.floor(fin(r.cleared, 0)))), best: Math.max(0, Math.min(WAVES, Math.floor(fin(r.best, 0)))), cmd: cmdOf(r.cmd) };
+    return { ...(r.endless?{endless:{top:validTop(r.endless.top)?r.endless.top.map(e=>({...e})):[],best:Math.max(0,Math.min(Number.MAX_SAFE_INTEGER,Math.floor(fin(r.endless.best,0)))),kills:Math.max(0,Math.min(Number.MAX_SAFE_INTEGER,Math.floor(fin(r.endless.kills,0))))}}:{}), lv, cleared: Math.max(0, Math.min(MAX_LV, Math.floor(fin(r.cleared, 0)))), best: Math.max(0, Math.min(WAVES, Math.floor(fin(r.best, 0)))), cmd: cmdOf(r.cmd) };
   }
   // 一局结果并进进度：只认已解锁图（n ≤ cleared+1）；best = 守住的最多波数，守满 10 波才算通关
   function applyResult(z, res) {
@@ -40,5 +43,13 @@
     if (res.win === true && w >= WAVES) z.cleared = Math.max(z.cleared, n);
     return true;
   }
-  return { MAX_LV, WAVES, MAX_UP, GROWTH, TOWERS, TOWER_IDS, HEROES, CEO_IDS, BASE, IDS, price, waveCount, cmdOf, norm, applyResult };
+  function applyEndless(z,res){
+    if(!res||!validRun(res.runId)||!Number.isSafeInteger(res.waves)||res.waves<0||!Number.isSafeInteger(res.kills)||res.kills<0)return false;
+    const old=z.endless||{best:0,kills:0,top:[]},top=validTop(old.top)?old.top.slice():[];
+    const prev=top.find(e=>e.runId===res.runId);if(prev)return prev.waves===res.waves&&prev.kills===res.kills;
+    const entry={runId:res.runId,waves:res.waves,kills:res.kills,score:score(res.waves,res.kills)};
+    const index=top.findIndex(e=>e.score<entry.score);top.splice(index<0?top.length:index,0,entry);
+    z.endless={best:Math.max(old.best,res.waves),kills:Math.max(old.kills,res.kills),top:top.slice(0,10)};return true;
+  }
+  return { score, validTop, applyEndless, MAX_LV, WAVES, MAX_UP, GROWTH, TOWERS, TOWER_IDS, HEROES, CEO_IDS, BASE, IDS, price, waveCount, cmdOf, norm, applyResult };
 });

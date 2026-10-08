@@ -1231,6 +1231,17 @@
   function checkSave(raw) {
     if (!isObj(raw)) return ['save'];
     const bad = [], has = k => raw[k] !== undefined;
+    // Optional for old saves. Reject damaged TD data instead of silently
+    // resetting purchased levels, while leaving all unrelated fields untouched.
+    if (has('td')) {
+      const t = raw.td, ids = ['bbq','tea','book','tech','t77','tpearl','totaku','trocket','cmd_c77','cmd_pearl','cmd_otaku','cmd_rocket'];
+      if (!isObj(t) || !isObj(t.lv) || !ids.every(k => Number.isInteger(t.lv[k]) && t.lv[k] >= 0 && t.lv[k] <= 30) || !Number.isInteger(t.cleared) || t.cleared < 0 || t.cleared > 1 || !Number.isInteger(t.best) || t.best < 0 || t.best > 10 || !['c77','pearl','otaku','rocket'].includes(t.cmd)) bad.push('td');
+      if (isObj(t) && t.endless !== undefined && (!isObj(t.endless) || !Number.isSafeInteger(t.endless.best) || t.endless.best < 0 || !Number.isSafeInteger(t.endless.kills) || t.endless.kills < 0)) bad.push('td.endless');
+      if (isObj(t) && isObj(t.endless) && t.endless.top !== undefined) {
+        const top=t.endless.top;
+        if(!Array.isArray(top)||top.length>10||!top.every((e,i)=>isObj(e)&&typeof e.runId==='string'&&/^[A-Za-z0-9_-]{1,96}$/.test(e.runId)&&Number.isSafeInteger(e.waves)&&e.waves>=0&&Number.isSafeInteger(e.kills)&&e.kills>=0&&e.score===Math.min(Number.MAX_SAFE_INTEGER,e.waves*1000+e.kills)&&!top.slice(0,i).some(x=>x.runId===e.runId)&&(i===0||top[i-1].score>=e.score)))bad.push('td.endless.top');
+      }
+    }
     if (has('v') && !(Number.isInteger(raw.v) && raw.v >= 0)) bad.push('v');
     if (!isAmt(raw.coins)) bad.push('coins');
     else if (raw.coins > SAFE) bad.push('coins>安全整数');   // 12d1：超过 MAX_SAFE_INTEGER 的余额不能当钱包用

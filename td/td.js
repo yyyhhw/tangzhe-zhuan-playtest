@@ -1,10 +1,10 @@
 'use strict';
-// 科技公司塔防（样品）：一张地图、8 种塔（4 通用 + 4 CEO 塔）、4 位统帅可选。
+// 科技公司塔防：一张地图、8 种塔（4 通用 + 4 CEO 塔）、4 位统帅可选。
 // 单独打开 = 原型模式（模拟余额，只存 PROTO_KEY）；?embed=1 嵌在经营页里 = 金币、升级、进度都由经营页管（td:* postMessage），本页不写任何存档。
 (() => {
 const T = window.TDCore, SFX = window.ZBSfx;
 const EMBED = /[?&]embed=1(&|$)/.test(location.search) && window.parent !== window;
-const PROTO_KEY = 'tangzhe-td-proto';
+const PROTO_KEY = 'tangzhe-formal-td-proto-v1';
 const $ = s => document.querySelector(s);
 const fin = (v, d) => (typeof v === 'number' && isFinite(v) ? v : d);
 const INK = '#141414', PAPER = '#f7f1e3', RED = '#e63946', YEL = '#ffd23f';
@@ -40,13 +40,8 @@ const P = {
   trocket: { k: '箭', range: 3.2, rate: 1.5, dmg: 26, col: '#ff7043', kind: 'splash', rad: 0.9, synRad: 1.35, desc: '火箭范围爆炸', syn: '统帅火箭老板：爆炸范围 ×1.5' },
 };
 const TW = P;
-// 统帅：自己的普攻 / 大招 + 一项对全场塔生效的全局技能
-const CMD = {
-  c77:    { range: 2.6, rate: 0.55, dmg: 12, n: 2, col: RED,       g: { dmg: 1.15, burn: 0.12, burnT: 2 }, gDesc: '全场塔伤害 +15%，命中附带燃烧', desc: '普攻飞串穿 2 只；大招火圈烧身边一圈' },
-  pearl:  { range: 2.5, rate: 0.5,  dmg: 10, n: 2, col: '#6d4c41', g: { rate: 0.82 }, gDesc: '全场塔攻速 +22%', desc: '普攻珍珠弹跳 2 下；大招冰沙风暴冻住全场' },
-  otaku:  { range: 2.2, rate: 0.7,  dmg: 11, n: 3, col: '#3949ab', g: { range: 0.45 }, gDesc: '全场塔射程 +0.45 格', desc: '普攻回旋漫画打 3 只；大招分镜轰炸乱砸全场' },
-  rocket: { range: 3.0, rate: 0.75, dmg: 16, n: 1, col: '#ff7043', g: { crit: 0.18, critX: 2.2 }, gDesc: '全场塔 18% 暴击（×2.2 爆发）', desc: '普攻迷你火箭带溅射；大招星舰冲击波全场重击并击退' },
-};
+// 统帅仅提供建设点能力和同名塔增益；没有地图实体或直接攻击；局内建设点仍只用G.cash。
+const CMD = {c77:{g:{}},pearl:{g:{}},otaku:{g:{}},rocket:{g:{}}};
 const TIDS = T.TOWER_IDS;
 const MAX_TLV = 3;
 const upCost = tw => Math.round(T.TOWERS[tw.id].cost * 0.8 * tw.lv);
@@ -54,8 +49,25 @@ const sellBack = tw => Math.round(tw.spent * 0.6);
 const EN = { walk: { hp: 30, sp: 1.0, r: 0.28, cash: 5, col: '#7cb342' }, fast: { hp: 18, sp: 1.8, r: 0.22, cash: 4, col: '#fdd835' }, tank: { hp: 110, sp: 0.6, r: 0.36, cash: 12, col: '#6d4c41' },
   mini: { hp: 600, sp: 0.5, r: 0.42, cash: 50, col: '#ad1457', lives: 3 }, boss: { hp: 2200, sp: 0.42, r: 0.5, cash: 100, col: '#8e24aa', lives: 10 } };
 const hpMul = w => 1.17 ** w;
-const LIVES = 20, START_PTS = 160, ULT_E = 100;
+const LIVES = 20, START_PTS = 120;
+const ENERGY = Object.freeze({ cap:400, towers:8, baseRate:.5, waveSeconds:30, start77:60, rocketRate:.5, burstSeconds:10, burstCooldown:15, burstMax:.30, frostSeconds:5, frostCooldown:30, frostMax:.45 });
+function gainEnergy(value) { const before=G.cash; G.cash=Math.min(ENERGY.cap,Math.max(0,G.cash+value)); return G.cash-before; }
+const energyRatio = () => Math.min(1,Math.max(0,G.cash/ENERGY.cap));
+const burstMultiplier = () => 1+(G.cmd==='otaku' && G.skillLeft>0 ? ENERGY.burstMax*energyRatio():0);
+const frostMultiplier = () => G.cmd==='pearl' && G.skillLeft>0 ? 1-ENERGY.frostMax*energyRatio():1;
+const skillName = () => G.cmd==='otaku'?'蓄能爆发':'冰沙风暴';
+function activateSkill() {
+  if(!G||G.over||G.pendStart||paused||document.hidden||!['otaku','pearl'].includes(G.cmd)||G.cash<=0||G.skillCooldown>0||(!G.q.length&&!alive().length))return false;
+  G.skillLeft=G.cmd==='otaku'?ENERGY.burstSeconds:ENERGY.frostSeconds;
+  G.skillCooldown=G.cmd==='otaku'?ENERGY.burstCooldown:ENERGY.frostCooldown;
+  SFX.unlock();SFX.cue('build');hud();return true;
+}
+function energyDescription(id) {
+  return id==='c77'?`开局额外 ${ENERGY.start77} 建设点`:id==='rocket'?`战斗恢复额外 +${ENERGY.rocketRate}/秒（每波最多 ${ENERGY.waveSeconds} 秒）`:id==='otaku'?`手动蓄能爆发：${ENERGY.burstSeconds}秒内全塔额外增伤 ${ENERGY.burstMax*100}%×实时建设点/${ENERGY.cap}；按下起冷却${ENERGY.burstCooldown}秒，不消耗建设点`: `手动冰沙风暴：${ENERGY.frostSeconds}秒内全场额外减速 ${ENERGY.frostMax*100}%×实时建设点/${ENERGY.cap}；与茶塔乘算、普通怪减速最多75%、Boss最多50%；按下起冷却${ENERGY.frostCooldown}秒，不消耗建设点`;
+}
 function waveList(w) {
+  if(w>=T.WAVES){const k=w+1-T.WAVES,q=Array.from({length:Math.min(40,25+Math.floor(k/2))},(_,i)=>i%3===2?'fast':'walk');q.push(...Array(Math.min(8,4+Math.floor(k/5))).fill('tank'));if(k%5===0)q.push('boss');else if(k%3===0)q.push('mini');return q;}
+
   const q = [], cnt = 7 + 2 * w;
   for (let i = 0; i < cnt; i++) q.push(w >= 1 && i % 3 === 2 ? 'fast' : 'walk');
   for (let i = 0; i < Math.floor(w / 2); i++) q.push('tank');
@@ -64,20 +76,46 @@ function waveList(w) {
   return q;
 }
 
-// ---- 金币 / 存档（原型）----
-function loadProto() {
-  if (EMBED) return Object.assign({ coins: 0, ready: false, blocked: false }, T.norm(null));
-  let raw = null; try { raw = JSON.parse(localStorage.getItem(PROTO_KEY) || 'null'); } catch (e) { raw = null; }
-  const p = Object.assign({ coins: 5e10, ready: true, blocked: false }, T.norm(raw));
-  if (raw && typeof raw === 'object') p.coins = Math.max(0, Math.min(1e15, fin(raw.coins, 5e10)));
-  return p;
+const num = n => Number(n.toFixed(2));
+function cmdDetail(id) {
+  const g = CMD[id].g, s = TW[T.HEROES[id].tower];
+  const same = id === 'c77' ? `自带燃烧每秒系数 ${s.burn}→${num(s.burn*s.synBurn)}，持续 ${s.burnT}→${s.synBurnT} 秒`
+    : id === 'pearl' ? `首击后弹跳 ${s.bounce}→${s.bounce+s.synBounce} 次（最多 ${s.bounce+1+s.synBounce} 个不同目标）`
+    : id === 'otaku' ? `回程伤害系数 ${s.back}→${s.synBack}；攻击半宽 ${s.width}→${s.synWidth} 格`
+    : `爆炸半径 ${s.rad}→${s.synRad} 格`;
+  return `<b>建设点能力</b>：${energyDescription(id)}。<br><b>同名塔「${T.TOWERS[T.HEROES[id].tower].name}」</b>：${same}。`;
 }
-const proto = loadProto();
-const saveProto = () => { if (EMBED) return; try { localStorage.setItem(PROTO_KEY, JSON.stringify(proto)); } catch (e) {} };
+function towerSummary(id, lv = 1) {
+  const s = TW[id], g = gl(), dmg = s.dmg * tDmg(id) * (1 + .5 * (lv - 1)) * (g.dmg || 1) * burstMultiplier();
+  const attack = {cone:'扇形灼烧',aura:'范围减速',pierce:'直线穿透',chain:'跳跃链电',burn:'单体燃烧',bounce:'珍珠弹跳',boomerang:'往返回旋',splash:'范围爆炸'}[s.kind];
+  return `<b class="core-line">${attack} · 对地含 Boss</b><span class="core-line">伤 ${num(dmg)} · ${num(s.rate*(g.rate||1))}秒 · ${num(towerRange({id,lv}))}格</span>`;
+}
+function towerDetail(id, lv = 1) {
+  const s = TW[id], g = gl(), syn = T.TOWERS[id].ceo === G.cmd;
+  const dmg = s.dmg * tDmg(id) * (1 + .5 * (lv - 1)) * (g.dmg || 1) * burstMultiplier();
+  const extra = {cone:`70°扇形；燃烧 ${num(dmg*s.burn)}/秒 ×${s.burnT}秒`,aura:`范围内全体；基础减速 ${num(Math.min(.75,s.slow+.01*proto.lv.tea)*100)}% ×${s.slowT}秒；与技能乘算后普通怪总减速最多75%，小Boss/Boss最多50%`,pierce:`直线最多 ${s.pierce} 只；半宽 ${s.width} 格，线长为射程 +0.5 格`,chain:`首击 +${s.chain} 次跳跃；跳距 ${s.jump} 格；逐跳伤害 ×${s.fall}`,burn:`燃烧 ${num(dmg*(s.burn*(syn?s.synBurn:1)+(g.burn||0)))}/秒 ×${syn?s.synBurnT:s.burnT}秒`,bounce:`首击 +${s.bounce+(syn?s.synBounce:0)} 次弹跳；跳距 ${s.jump} 格；逐跳伤害 ×${s.fall}`,boomerang:`去程 ${num(dmg)} + 回程 ${num(dmg*(syn?s.synBack:s.back))}；半宽 ${syn?s.synWidth:s.width} 格；沿线全部`,splash:`命中点半径 ${syn?s.synRad:s.rad} 格内全体`}[s.kind];
+  return `<b>${T.TOWERS[id].name} · Lv${lv}</b><br>目标：地面敌人（含 Boss），优先最前方<br>伤害 ${num(dmg)} · 间隔 ${num(s.rate*(g.rate||1))}秒 · 范围 ${num(towerRange({id,lv}))}格<br>${extra}${g.burn && !['burn','cone'].includes(s.kind)?`；命中燃烧 ${num(dmg*g.burn)}/秒 ×${g.burnT}秒（回程除外）`:''}${g.crit?`；${g.crit*100}% 暴击 ×${g.critX}（以上为非暴击）`:''}${syn?'<br>★ '+s.syn.split('：')[1]:''}`;
+}
+
+// ---- 金币 / 存档（原型）----
+const protoStore=EMBED?null:window.TDProto.create({storage:{getItem:k=>localStorage.getItem(k),setItem:(k,v)=>localStorage.setItem(k,v)},locks:()=>window.navigator?.locks,T});
+const loadedProto=EMBED?null:protoStore.load();
+const proto=Object.assign({coins:0,ready:!EMBED,blocked:false},EMBED?T.norm(null):loadedProto.state);
+let protoNotice=loadedProto&&!loadedProto.ok?loadedProto.why:'',protoPending=false,localBuy=null,protoTask=null;
+function acceptProto(r){if(r.state){Object.assign(proto,r.state);if(!r.state.endless)delete proto.endless;}protoNotice=r.ok?'':r.why||'未保存';}
+async function purchaseProto(){
+ if(!localBuy||protoPending)return false;protoPending=true;renderMenu();
+ const r=await protoStore.buy(localBuy);acceptProto(r);protoPending=false;
+ if(r.ok||!r.uncertain)localBuy=null;
+ renderMenu();if(!r.ok)toast(protoNotice);return r.ok;
+}
+async function selectProto(cmd){
+ if(protoPending||localBuy)return false;protoPending=true;renderMenu();const r=await protoStore.select(cmd);acceptProto(r);protoPending=false;if(r.ok)cmdSel=proto.cmd;renderMenu();if(!r.ok)toast(protoNotice);return r.ok;
+}
 let cmdSel = proto.cmd, lvSel = 1;
 let pend = false, port = null, lastSent = null, buyRequest = null, buyTimer = null, buyTimedOut = false, cmdRestored = false;
 const host = m => { lastSent = m; if (port) port.postMessage(m); };
-const canSpend = n => proto.ready && !pend && !proto.blocked && isFinite(n) && n > 0 && proto.coins >= n;
+const canSpend = n => proto.ready && !pend && !protoPending && !localBuy && !proto.blocked && isFinite(n) && n > 0 && proto.coins >= n;
 if (EMBED) window.addEventListener('message', e => {
   if (port || e.source !== window.parent || e.origin !== location.origin || !e.data || e.data.td !== 'port' || !e.ports[0]) return;
   port = e.ports[0]; port.onmessage = ev => onState(ev.data); host({ td: 'hello' });
@@ -85,12 +123,13 @@ if (EMBED) window.addEventListener('message', e => {
 let hostMute = false, userMute = false;
 function bgmOk() { return !hostMute && !userMute && !!G && !G.over && !G.pendStart && !paused && !document.hidden; }
 function bgmTry() { if (bgmOk()) SFX.startBgm(G.n * 5); }
-function applyMute() { SFX.setMuted(hostMute || userMute); bgmTry(); $('#sndBtn').textContent = userMute ? '声音：关' : '声音：开'; }
+function applyMute() { SFX.setMuted(hostMute || userMute); bgmTry(); $('#sndBtn').textContent = hostMute ? '经营页已静音' : userMute ? '声音：关' : '声音：开'; }
 function onState(d) {
   if (!d || d.td !== 'state') return;
+  if(d.ack==='endlessStart'){if(!G||!G.pendingEndless||d.runId!==G.pendingEndless)return;clearTimeout(G.endlessTO);if(d.ok){Object.assign(proto,T.norm(d.z));enterEndless(G.pendingEndless);}else{G.pendingEndless=null;G.why=d.why;renderResult();}return;}
   if (d.ack === 'buy' && (!buyRequest || d.requestId !== buyRequest.requestId || d.id !== buyRequest.id)) return;
   if (d.ack === 'start' && (!G || !G.pendStart || d.runId !== G.runId)) return;
-  if (d.ack === 'result' && (!G || !G.over || !G.resMsg || d.runId !== G.runId || (G.saveOk && d.ok !== true))) return;
+  if (['result','endlessResult'].includes(d.ack) && (!G || !G.over || !G.resMsg || d.runId !== G.runId || (G.saveOk && d.ok !== true))) return;
   if (d.ack === 'buy' && buyRequest && d.requestId === buyRequest.requestId && d.id === buyRequest.id) {
     clearTimeout(buyTimer); pend = false; buyRequest = null; buyTimedOut = false;
     if (!d.ok) toast(d.why || '升级没有生效');
@@ -102,57 +141,58 @@ function onState(d) {
     clearTimeout(G.startTO);
     if (d.ok === true) { G.pendStart = false; bgmTry(); } else abortStart(d.why || '开局没登记上');
   }
-  if (d.ack === 'result' && G && G.over && G.resMsg && d.runId === G.runId) { clearTimeout(G.resultTO); G.wait = false; G.saveOk = d.ok === true; G.why = d.why || ''; renderResult(); }
+  if (['result','endlessResult'].includes(d.ack) && G && G.over && G.resMsg && d.runId === G.runId) { clearTimeout(G.resultTO); G.wait = false; G.saveOk = d.ok === true; G.why = d.why || ''; renderResult(); }
   lvSel = Math.max(1, Math.min(lvSel, proto.cleared + 1, T.MAX_LV));
   if (!G) renderMenu();
 }
 
 // ---- 菜单 ----
 const fmt = n => n >= 1e8 ? (n / 1e8).toFixed(2).replace(/\.?0+$/, '') + '亿' : n >= 1e4 ? (n / 1e4).toFixed(1).replace(/\.0$/, '') + '万' : String(Math.floor(n));
-const upName = id => id.startsWith('cmd_') ? T.HEROES[id.slice(4)].name : T.TOWERS[id].name;
-const upDesc = (id, lv) => id.startsWith('cmd_') ? `普攻 ×${(1.15 ** lv).toFixed(2)} · 大招 ×${(1.2 ** lv).toFixed(2)}` : `伤害 ×${(1.15 ** lv).toFixed(2)} · ${TW[id].desc}`;
+const upName = id => T.TOWERS[id].name;
+const upDesc = (id, lv) => `伤害 ×${(1.15 ** lv).toFixed(2)} · ${TW[id].desc}`;
 function upRow(id) {
   const lv = proto.lv[id], max = lv >= T.MAX_UP, p = T.price(id, lv);
-  return `<div class="tr"><div class="t"><b>${upName(id)} Lv${lv}</b><small>${upDesc(id, lv)}${!id.startsWith('cmd_') && TW[id].syn ? '<br>★ ' + TW[id].syn : ''}</small></div><button class="buy" data-up="${id}" type="button" ${max || !canSpend(p) ? 'disabled' : ''}>${max ? '满级' : fmt(p) + ' 金币'}</button></div>`;
+  return `<div class="tr"><div class="t"><b>${upName(id)} Lv${lv}</b><small>${upDesc(id, lv)}${TW[id].syn ? '<br>★ ' + TW[id].syn : ''}</small></div><button class="buy" data-up="${id}" type="button" ${max || !canSpend(p) ? 'disabled' : ''}>${max ? '满级' : fmt(p) + ' 金币'}</button></div>`;
 }
 function renderMenu() {
   const h = T.HEROES[cmdSel];
   $('#heroImg').src = `../art/face_${cmdSel}.webp`; $('#heroImg').alt = h.name;
   $('#heroName').textContent = `统帅：${h.name}`;
-  $('#heroDesc').innerHTML = `${CMD[cmdSel].desc}。<br><b>全局技能</b>：${CMD[cmdSel].gDesc}；同名塔「${T.TOWERS[h.tower].name}」${TW[h.tower].syn.split('：')[1]}。<br>点空地造塔，点路面让统帅走位，守满 ${T.WAVES} 波过关。`;
+  $('#heroDesc').innerHTML = `${cmdDetail(cmdSel)}<br>统帅不上地图、不参与攻击；作战单位只有 8 种防御塔。局内建设点上限400，最多同时8座；战斗每秒恢复0.5、每波最多30秒，倒计时及暂停不恢复。选塔查看属性，点格子预览后确认建造。`;
   $('#cmdPick').innerHTML = T.CEO_IDS.map(id => `<button type="button" data-cmd="${id}" class="${id === cmdSel ? 'on' : ''}"><img src="../art/face_${id}.webp" alt="">${T.HEROES[id].name}</button>`).join('');
   $('#lvTxt').textContent = `第 ${lvSel} 关`;
   $('#lvTxt').textContent = T.MAX_LV > 1 ? `第 ${lvSel} 关` : '科技园区';
-  $('#lvInfo').textContent = `${T.WAVES} 波 · 第 5 波小 Boss · 第 10 波 Boss`;
+  $('#lvInfo').textContent = `${T.WAVES} 波 · 第 5 波小 Boss · 第 10 波 Boss（漏过扣 20 生命）`;
   $('#lvProg').textContent = proto.cleared ? '已通关 ✓' : `最佳 ${proto.best}/${T.WAVES} 波`;
   $('#lvPrev').classList.toggle('hidden', T.MAX_LV <= 1); $('#lvNext').classList.toggle('hidden', T.MAX_LV <= 1);
   $('#lvPrev').disabled = lvSel <= 1; $('#lvNext').disabled = lvSel >= Math.min(T.MAX_LV, proto.cleared + 1);
   $('#walletLbl').textContent = EMBED ? '经营金币' : '模拟余额';
   $('#walletTxt').textContent = proto.ready ? fmt(proto.coins) : '…';
   $('#upNote').textContent = !EMBED ? '单独打开是原型模式：用模拟金币，不碰经营存档。局内造塔用建设点，每局重置。' : proto.blocked ? '存档异常（只读），现在不能升级' : '花的是经营金币；塔防本身不产金币。';
+  $('#protoStatus').textContent=EMBED?'':protoPending?'正在安全保存…':protoNotice;
   $('#upTowers').innerHTML = TIDS.map(upRow).join('');
-  $('#upCmds').innerHTML = T.CEO_IDS.map(id => upRow('cmd_' + id)).join('');
+  $('#legacyCmdNote').textContent = T.CEO_IDS.some(id => proto.lv['cmd_'+id] > 0) ? '77与火箭的建设点能力自动生效；阿宅与珍珠需点击战斗顶部技能键。同名塔增强自动生效。旧攻击/技能升级记录保留但不再生效，不折算为新能力或塔加成；不提供统帅升级。' : '77与火箭的建设点能力自动生效；阿宅与珍珠需点击战斗顶部技能键。同名塔增强自动生效，不提供统帅升级。';
   $('#exitBtn').classList.toggle('hidden', !EMBED);
-  $('#startBtn').disabled = !proto.ready || proto.blocked || pend;
-  $('#buyRetryBtn').classList.toggle('hidden', !buyTimedOut);
+  $('#startBtn').disabled = !proto.ready || proto.blocked || pend || protoPending || !!localBuy;
+  $('#buyRetryBtn').classList.toggle('hidden', !(buyTimedOut||localBuy));
 }
 function buyUp(id) {
-  if (!T.IDS.includes(id)) return false;
+  if (!T.TOWER_IDS.includes(id)) return false;
   const lv = proto.lv[id]; if (lv >= T.MAX_UP) return false;
   const p = T.price(id, lv); if (!canSpend(p)) return false;
   if (EMBED) { pend = true; buyRequest = { td:'buy', id, requestId:'b-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2) }; sendBuy(); renderMenu(); return true; }
-  proto.coins -= p; proto.lv[id] = lv + 1; saveProto(); renderMenu(); return true;
+  localBuy={id,expectedLevel:lv,requestId:'p-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)};protoTask=purchaseProto();return true;
 }
 function sendBuy() {
   if (!buyRequest) return;
   buyTimedOut = false; host(buyRequest); clearTimeout(buyTimer);
   buyTimer = setTimeout(() => { if (!buyRequest) return; buyTimedOut = true; renderMenu(); toast('升级确认超时，可重试确认；不会重复扣款'); }, 4000);
 }
-$('#buyRetryBtn').onclick = () => { sendBuy(); renderMenu(); };
+$('#buyRetryBtn').onclick = () => { if(!EMBED)return purchaseProto();sendBuy();renderMenu(); };
 $('#menu').addEventListener('click', e => {
   SFX.unlock();
   const u = e.target.closest('[data-up]'); if (u) return buyUp(u.dataset.up);
-  const c = e.target.closest('[data-cmd]'); if (c) { cmdSel = c.dataset.cmd; if (!EMBED) { proto.cmd = cmdSel; saveProto(); } renderMenu(); }
+  const c = e.target.closest('[data-cmd]'); if (c) { if(!EMBED)return selectProto(c.dataset.cmd);cmdSel=c.dataset.cmd;renderMenu(); }
 });
 $('#lvPrev').onclick = () => { lvSel = Math.max(1, lvSel - 1); renderMenu(); };
 $('#lvNext').onclick = () => { lvSel = Math.min(T.MAX_LV, proto.cleared + 1, lvSel + 1); renderMenu(); };
@@ -163,36 +203,37 @@ let G = null, paused = false, raf = 0, last = 0, sel = null;
 const tDmg = id => 1.15 ** proto.lv[id];
 const gl = () => CMD[G.cmd].g;
 function start(n) {
-  if (EMBED && (proto.blocked || pend)) return false;
+  if (protoPending||localBuy||(EMBED && (proto.blocked || pend))) return false;
   n = Math.max(1, Math.min(T.MAX_LV, proto.cleared + 1, Math.floor(fin(n, lvSel))));
   if (!proto.ready) return false;
   SFX.unlock();
-  const c = posAt(2);
-  G = { n, cmd: cmdSel, W: T.WAVES, wave: 0, q: [], spawnT: 0, breakT: 6, es: [], tw: new Map(), fx: [], lives: LIVES, cash: START_PTS, kills: 0, t: 0, energy: 0,
-    c: { x: c[0], y: c[1], tx: c[0], ty: c[1], cd: 0 }, over: false, win: false, runId: Date.now().toString(36) + Math.random().toString(36).slice(2, 7), pendStart: EMBED };
+  G = { n, cmd: cmdSel, W: T.WAVES, wave: 0, q: [], spawnT: 0, breakT: 5, es: [], tw: new Map(), fx: [], lives: LIVES, cash: START_PTS+(cmdSel==='c77'?ENERGY.start77:0), interestSeconds:0, skillLeft:0, skillCooldown:0, kills: 0, t: 0, damageByTower: {}, over: false, win: false, runId: Date.now().toString(36) + Math.random().toString(36).slice(2, 7), pendStart: EMBED };
   if (EMBED) { const game = G; host({ td: 'start', runId: G.runId, n, cmd: G.cmd }); G.startTO = setTimeout(() => { if (G === game && G.pendStart) abortStart('开局登记超时'); }, 4000); }
-  paused = false; sel = null; show(null); bar(); resize(); hud(); last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop); bgmTry();
+  paused = false; SFX.setPaused(false); sel = {k:'build',id:null,x:null,y:null}; show(null); bar(); resize(); hud(); last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop); bgmTry();
   return true;
 }
 function abortStart(why) { SFX.stopBgm(); G = null; show('#menu'); renderMenu(); toast(why); }
 function nextWave() {
-  if (!G || G.over || G.pendStart || G.wave >= G.W || G.q.length) return;
-  G.q = waveList(G.wave); G.wave++; G.breakT = 0; G.spawnT = 0; toast(`第 ${G.wave} 波`); bar();
+  if (!G || G.over || G.pendStart || (!G.endless && G.wave >= G.W) || G.q.length || alive().length || G.breakT > 0 || paused) return;
+  G.q = waveList(G.wave); G.wave++; G.interestSeconds=0; G.breakT = 0; G.spawnT = 0; SFX.cue('wave'); toast(`第 ${G.wave} 波`); bar();
 }
+// Normal waves4–10 gain graduated durability; endless stats remain the reviewed baseline.
 function spawn(type) {
-  const b = EN[type], hp = b.hp * hpMul(G.wave - 1);
-  G.es.push({ type, d: 0, hp, max: hp, sp: b.sp, r: b.r, slowT: 0, slowK: 1, stunT: 0, burnT: 0, burnD: 0, x: -0.5, y: 1.5 });
+  const b = EN[type],k=Math.max(0,G.wave-T.WAVES),hp = Math.min(1e12,(type==='boss'&&!G.endless?800:b.hp) * hpMul(Math.min(G.wave-1,9)) * (G.endless||type==='boss'?1:1+.5*Math.max(0,Math.min(G.wave-1,9)-2)) * (G.endless?Math.pow(1.12,Math.min(k,300)):1));
+  G.es.push({ type, d: 0, hp, max: hp, sp: b.sp*(G.endless?Math.min(1.25,1+.01*k):1), r: b.r, slowT: 0, slowK: 1, stunT: 0, burnT: 0, burnD: 0, x: -0.5, y: 1.5 });
 }
 const alive = () => G.es.filter(e => e.hp > 0);
 const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
 function inRange(p, r) { return alive().filter(e => Math.hypot(e.x - p.x, e.y - p.y) <= r).sort((a, b) => b.d - a.d); }
-function hit(e, dmg, o) {
-  if (!e || e.hp <= 0) return;
-  e.hp -= dmg; SFX.hit();
+function hit(e, dmg, o, source) {
+  if (!e || e.hp <= 0 || !TIDS.includes(source)) return;
+  dmg *= burstMultiplier();
+  G.damageByTower[source] = (G.damageByTower[source] || 0) + dmg;
+  e.hp -= dmg; if (!o || !o.dot) { SFX.hit(); e.flash = 0.12; }
   if (o && o.slow) { e.slowT = Math.max(e.slowT, o.slowT || 1); e.slowK = Math.min(e.slowK === 1 ? 1 : e.slowK, 1 - o.slow); }
   if (o && o.stun && e.type !== 'boss' && e.type !== 'mini') e.stunT = Math.max(e.stunT, o.stun);
-  if (o && o.burn) { e.burnT = Math.max(e.burnT, o.burnT || 3); e.burnD = Math.max(e.burnD, o.burn); }
-  if (e.hp <= 0) { G.kills++; G.cash += EN[e.type].cash; G.energy = Math.min(ULT_E, G.energy + 4); SFX.kill(e.type === 'boss'); G.fx.push({ k: 'pop', x: e.x, y: e.y, t: 0.3, c: '#fff' }); }
+  if (o && o.burn) { e.burnT = Math.max(e.burnT, o.burnT || 3); if (o.burn >= e.burnD) e.burnSource = source; e.burnD = Math.max(e.burnD, o.burn); }
+  if (e.hp <= 0) { G.kills++; gainEnergy(EN[e.type].cash); SFX.kill(e.type === 'boss'); G.fx.push({ k: 'pop', x: e.x, y: e.y, t: 0.3, c: '#fff' }); }
 }
 const line = (a, b, c, t = 0.12) => G.fx.push({ k: 'line', x: a.x, y: a.y, x2: b.x, y2: b.y, c, t, t0: t });
 const ring = (p, r, c, t = 0.3) => G.fx.push({ k: 'ring', x: p.x, y: p.y, r, c, t, t0: t });
@@ -200,9 +241,11 @@ const ring = (p, r, c, t = 0.3) => G.fx.push({ k: 'ring', x: p.x, y: p.y, r, c, 
 function onLine(p, dir, len, w) { return alive().filter(e => { const vx = e.x - p.x, vy = e.y - p.y, t = vx * dir.x + vy * dir.y; return t >= 0 && t <= len && Math.abs(vx * dir.y - vy * dir.x) <= w + e.r; }).sort((a, b) => Math.hypot(a.x - p.x, a.y - p.y) - Math.hypot(b.x - p.x, b.y - p.y)); }
 const towerRange = tw => TW[tw.id].range + 0.2 * (tw.lv - 1) + (gl().range || 0);
 function towerFire(tw) {
+  const strike = (e, dmg, options) => hit(e, dmg, options, tw.id);
   const s = TW[tw.id], syn = T.TOWERS[tw.id].ceo === G.cmd, g = gl(), lvK = 1 + 0.5 * (tw.lv - 1);
   const range = towerRange(tw), p = { x: tw.x + 0.5, y: tw.y + 0.5 };
   const tg = inRange(p, range); if (!tg.length) return false;
+  SFX.shot(({bbq:'c77',tea:'pearl',book:'otaku',tech:'tech',t77:'c77',tpearl:'pearl',totaku:'otaku',trocket:'rocket'})[tw.id]); tw.flash = 0.14;
   const crit = g.crit && Math.random() < g.crit;
   const dmg = s.dmg * tDmg(tw.id) * lvK * (g.dmg || 1) * (crit ? g.critX : 1);
   const gb = g.burn ? { burn: dmg * g.burn, burnT: g.burnT } : null;   // 77 全局燃烧
@@ -213,113 +256,106 @@ function towerFire(tw) {
       const a0 = Math.atan2(dir.y, dir.x), half = s.arc / 2 * Math.PI / 180;
       G.fx.push({ k: 'cone', x: p.x, y: p.y, a: a0, h: half, r: range, c: s.col, t: 0.25, t0: 0.25 });
       tg.filter(e => { let d = Math.atan2(e.y - p.y, e.x - p.x) - a0; d = Math.atan2(Math.sin(d), Math.cos(d)); return Math.abs(d) <= half; })
-        .forEach(e => hit(e, dmg, { burn: Math.max(dmg * s.burn, gb ? gb.burn : 0), burnT: s.burnT }));
+        .forEach(e => strike(e, dmg, { burn: Math.max(dmg * s.burn, gb ? gb.burn : 0), burnT: s.burnT }));
       break;
     }
-    case 'aura': ring(p, range, s.col, 0.25); tg.forEach(e => hit(e, dmg, Object.assign({ slow: Math.min(0.75, s.slow + 0.01 * proto.lv.tea), slowT: s.slowT }, gb))); break;
-    case 'pierce': { const hs = onLine(p, dir, range + 0.5, s.width).slice(0, s.pierce); line(p, { x: p.x + dir.x * (range + 0.5), y: p.y + dir.y * (range + 0.5) }, s.col, 0.15); hs.forEach(e => hit(e, dmg, gb)); break; }
-    case 'chain': { let cur = e0, k = dmg; const hs = new Set([e0]); line(p, e0, s.col); hit(e0, k, gb);
-      for (let i = 0; i < s.chain; i++) { const nx = inRange(cur, s.jump).find(x => !hs.has(x)); if (!nx) break; k *= s.fall; line(cur, nx, s.col); hit(nx, k, gb); hs.add(nx); cur = nx; } break; }
-    case 'burn': line(p, e0, s.col); hit(e0, dmg, { burn: dmg * s.burn * (syn ? s.synBurn : 1) + (gb ? gb.burn : 0), burnT: syn ? s.synBurnT : s.burnT }); break;
+    case 'aura': ring(p, range, s.col, 0.25); tg.forEach(e => strike(e, dmg, Object.assign({ slow: Math.min(0.75, s.slow + 0.01 * proto.lv.tea), slowT: s.slowT }, gb))); break;
+    case 'pierce': { const hs = onLine(p, dir, range + 0.5, s.width).slice(0, s.pierce); line(p, { x: p.x + dir.x * (range + 0.5), y: p.y + dir.y * (range + 0.5) }, s.col, 0.15); hs.forEach(e => strike(e, dmg, gb)); break; }
+    case 'chain': { let cur = e0, k = dmg; const hs = new Set([e0]); line(p, e0, s.col); strike(e0, k, gb);
+      for (let i = 0; i < s.chain; i++) { const nx = inRange(cur, s.jump).find(x => !hs.has(x)); if (!nx) break; k *= s.fall; line(cur, nx, s.col); strike(nx, k, gb); hs.add(nx); cur = nx; } break; }
+    case 'burn': line(p, e0, s.col); strike(e0, dmg, { burn: dmg * s.burn * (syn ? s.synBurn : 1) + (gb ? gb.burn : 0), burnT: syn ? s.synBurnT : s.burnT }); break;
     case 'bounce': { let cur = e0, prev = p, k = dmg; const hs = new Set(), n = s.bounce + (syn ? s.synBounce : 0);
-      for (let i = 0; i <= n && cur; i++) { line(prev, cur, s.col); hit(cur, k, gb); hs.add(cur); prev = cur; k *= s.fall; cur = inRange(cur, s.jump).find(x => !hs.has(x)); } break; }
+      for (let i = 0; i <= n && cur; i++) { line(prev, cur, s.col); strike(cur, k, gb); hs.add(cur); prev = cur; k *= s.fall; cur = inRange(cur, s.jump).find(x => !hs.has(x)); } break; }
     case 'boomerang': { const w = syn ? s.synWidth : s.width, hs = onLine(p, dir, range, w);
       G.fx.push({ k: 'boom', x: p.x, y: p.y, x2: p.x + dir.x * range, y2: p.y + dir.y * range, c: s.col, t: 0.4, t0: 0.4 });
-      hs.forEach(e => hit(e, dmg, gb)); hs.forEach(e => hit(e, dmg * (syn ? s.synBack : s.back))); break; }
-    case 'splash': { const r = syn ? s.synRad : s.rad; line(p, e0, s.col, 0.2); ring(e0, r, s.col); inRange(e0, r).forEach(x => hit(x, dmg, gb)); break; }
+      hs.forEach(e => strike(e, dmg, gb)); hs.forEach(e => strike(e, dmg * (syn ? s.synBack : s.back))); break; }
+    case 'splash': { const r = syn ? s.synRad : s.rad; line(p, e0, s.col, 0.2); ring(e0, r, s.col); inRange(e0, r).forEach(x => strike(x, dmg, gb)); break; }
   }
   return true;
 }
-function cmdFire() {
-  const s = CMD[G.cmd], dmg = s.dmg * 1.15 ** proto.lv['cmd_' + G.cmd] * 1.1 ** Math.max(0, G.wave - 1), c = G.c;
-  const tg = inRange(c, s.range); if (!tg.length) return false;
-  SFX.shot(G.cmd);
-  if (G.cmd === 'rocket') { line(c, tg[0], s.col, 0.2); ring(tg[0], 0.7, s.col); inRange(tg[0], 0.7).forEach(e => hit(e, dmg)); }
-  else if (G.cmd === 'pearl') { let cur = tg[0], prev = c, hs = new Set(); for (let i = 0; i <= s.n && cur; i++) { line(prev, cur, s.col); hit(cur, dmg); hs.add(cur); prev = cur; cur = inRange(cur, 1.8).find(x => !hs.has(x)); } }
-  else tg.slice(0, s.n).forEach(e => { line(c, e, s.col); hit(e, dmg); });
-  return true;
-}
-function castUlt() {
-  if (!G || G.over || G.pendStart || paused || G.energy < ULT_E) return false;
-  G.energy = 0; SFX.ult(G.cmd);
-  const m = 1.2 ** proto.lv['cmd_' + G.cmd] * 1.17 ** Math.max(0, G.wave - 1), c = G.c, all = alive();
-  if (G.cmd === 'c77') { ring(c, 2.4, RED, 0.6); inRange(c, 2.4).forEach(e => hit(e, 70 * m, { burn: 10 * m })); toast('火圈！'); }
-  else if (G.cmd === 'pearl') { all.forEach(e => { hit(e, 10 * m); if (e.type === 'boss' || e.type === 'mini') { e.slowT = 3; e.slowK = 0.5; } else e.stunT = Math.max(e.stunT, 3); }); G.fx.push({ k: 'frost', t: 3, t0: 3 }); toast('冰沙风暴！'); }
-  else if (G.cmd === 'otaku') { for (let i = 0; i < 20; i++) { const e = all[Math.floor(Math.random() * all.length)]; if (e) { ring(e, 0.6, '#3949ab', 0.5); hit(e, 30 * m); } } toast('分镜轰炸！'); }
-  else { all.forEach(e => { hit(e, 45 * m); e.d = Math.max(0, e.d - 1.5); }); G.fx.push({ k: 'wave', x: c.x, y: c.y, t: 0.7, t0: 0.7 }); toast('星舰冲击波！'); }
-  bar(); return true;
-}
 function build(id, x, y) {
-  if (!G || G.over || !TW[id] || x < 0 || y < 0 || x >= COLS || y >= ROWS || isPath(x, y) || G.tw.has(x + ',' + y)) return false;
-  const cost = T.TOWERS[id].cost; if (G.cash < cost) return false;
-  G.cash -= cost; G.tw.set(x + ',' + y, { id, x, y, lv: 1, cd: 0, spent: cost }); sel = null; bar(); return true;
+  if (!G || G.over || G.pendStart || paused || !Number.isInteger(x) || !Number.isInteger(y) || !TW[id] || x < 0 || y < 0 || x >= COLS || y >= ROWS || isPath(x, y) || G.tw.has(x + ',' + y)) return false;
+  const cost = T.TOWERS[id].cost; if (G.tw.size>=ENERGY.towers) { toast('最多同时8座塔，拆除后可补建'); return false; } if (G.cash < cost) { toast('建设点不足'); return false; }
+  SFX.cue('build'); G.cash -= cost; G.tw.set(x + ',' + y, { id, x, y, lv: 1, cd: 0, spent: cost }); sel = null; bar(); return true;
 }
 function upTower(x, y) {
+  if (!G || G.over || paused || G.pendStart) return false;
   const tw = G && G.tw.get(x + ',' + y); if (!tw || tw.lv >= MAX_TLV) return false;
   const c = upCost(tw); if (G.cash < c) return false;
   G.cash -= c; tw.spent += c; tw.lv++; bar(); return true;
 }
-function sell(x, y) { const tw = G && G.tw.get(x + ',' + y); if (!tw) return false; G.cash += sellBack(tw); G.tw.delete(x + ',' + y); sel = null; bar(); return true; }
-function moveCmd(x, y) { if (!G || !isPath(x, y)) return false; G.c.tx = x + 0.5; G.c.ty = y + 0.5; return true; }
+function sell(x, y) { if (!G || G.over || paused || G.pendStart) return false; const tw = G && G.tw.get(x + ',' + y); if (!tw) return false; const refunded=gainEnergy(sellBack(tw)); toast(`拆除返还 ${num(refunded)} 建设点（上限${ENERGY.cap}）`); G.tw.delete(x + ',' + y); sel = null; bar(); return true; }
 
 function step(dt) {
-  if (!G || G.over || G.pendStart) return;
-  G.t += dt;
-  G.energy = Math.min(ULT_E, G.energy + 1.5 * dt);
-  if (!G.q.length && G.wave < G.W && !alive().length) { if (G.breakT <= 0 && G.wave > 0) { G.breakT = 5; G.cash += 20 + 5 * G.wave; } G.breakT -= dt; if (G.breakT <= 0) nextWave(); }
+  if (!G || G.over || G.pendStart || paused || document.hidden) return;
+  dt=Math.max(0,dt); G.t += dt; const combat=G.q.length>0||alive().length>0;
+  if(combat){const interest=Math.min(dt,Math.max(0,ENERGY.waveSeconds-G.interestSeconds));G.interestSeconds+=interest;gainEnergy(interest*(ENERGY.baseRate+(G.cmd==='rocket'?ENERGY.rocketRate:0)));}
+  if (!G.q.length && (G.endless || G.wave < G.W) && !alive().length) { if (G.breakT <= 0 && G.wave > 0) { G.breakT = 5; gainEnergy(G.endless?50:20 + 5 * G.wave); } const before = Math.ceil(G.breakT); G.breakT = Math.max(0, G.breakT - dt); if (Math.ceil(G.breakT) !== before && G.breakT > 0) SFX.cue('tick'); if (G.breakT <= 0) nextWave(); }
   if (G.q.length) { G.spawnT -= dt; if (G.spawnT <= 0) { const ty = G.q.shift(); spawn(ty); G.spawnT = ty === 'fast' ? 0.5 : ty === 'boss' ? 2 : 0.8; } }
   for (const e of G.es) {
     if (e.hp <= 0) continue;
-    if (e.burnT > 0) { e.burnT -= dt; hit(e, e.burnD * dt); if (e.hp <= 0) continue; }
+    e.flash = Math.max(0, (e.flash || 0) - dt);
+    if (e.burnT > 0) { e.burnT -= dt; hit(e, e.burnD * dt, {dot:true}, e.burnSource); if (e.hp <= 0) continue; }
     if (e.slowT > 0) { e.slowT -= dt; if (e.slowT <= 0) e.slowK = 1; }
-    if (e.stunT > 0) { e.stunT -= dt; } else e.d += e.sp * e.slowK * dt;
+    if (e.stunT > 0) { e.stunT -= dt; } else e.d += e.sp * Math.max(['mini','boss'].includes(e.type)?.5:.25,e.slowK*frostMultiplier()) * dt;
     const [x, y] = posAt(e.d); e.x = x; e.y = y;
-    if (e.d >= PLEN) { e.hp = 0; G.lives -= EN[e.type].lives || 1; SFX.hurt(); toast('机房被闯了！'); if (G.lives <= 0) { G.lives = 0; return end(false); } }
+    if (e.d >= PLEN) { e.hp = 0; G.lives -= e.type==='boss'&&!G.endless ? 20 : EN[e.type].lives || 1; SFX.hurt(); toast('机房被闯了！'); if (G.lives <= 0) { G.lives = 0; return end(false); } }
   }
   G.es = G.es.filter(e => e.hp > 0);
-  for (const tw of G.tw.values()) { tw.cd -= dt; if (tw.cd <= 0 && towerFire(tw)) tw.cd = TW[tw.id].rate * (gl().rate || 1); }
-  const c = G.c, dx = c.tx - c.x, dy = c.ty - c.y, dd = Math.hypot(dx, dy);
-  if (dd > 0.01) { const mv = Math.min(dd, 3 * dt); c.x += dx / dd * mv; c.y += dy / dd * mv; }
-  c.cd -= dt; if (c.cd <= 0 && cmdFire()) c.cd = CMD[G.cmd].rate;
+  for (const tw of G.tw.values()) { tw.flash = Math.max(0, (tw.flash || 0) - dt); tw.cd -= dt; if (tw.cd <= 0 && towerFire(tw)) tw.cd = TW[tw.id].rate * (gl().rate || 1); }
+  if(combat){G.skillLeft=Math.max(0,G.skillLeft-dt); G.skillCooldown=Math.max(0,G.skillCooldown-dt);}
   for (const f of G.fx) f.t -= dt;
   G.fx = G.fx.filter(f => f.t > 0);
-  if (G.wave >= G.W && !G.q.length && !G.es.length) end(true);
+  if (!G.endless && G.wave >= G.W && !G.q.length && !G.es.length) end(true);
 }
 function end(win) {
   if (!G || G.over) return;
   G.over = true; G.win = win; SFX.stopBgm(); win ? SFX.win() : SFX.lose();
-  const res = { td: 'result', runId: G.runId, n: G.n, win, waves: win ? G.wave : Math.max(0, G.wave - 1), cmd: G.cmd, kills: G.kills };
-  if (EMBED) { G.resMsg = res; sendResult(); }
-  else { T.applyResult(proto, res); saveProto(); G.saveOk = true; }
+  const res = Object.freeze(G.endless?{td:'endlessResult',runId:G.runId,n:G.n,cmd:G.cmd,waves:Math.max(0,G.wave-10-((G.lives<=0||G.q.length||alive().length)?1:0)),kills:Math.max(0,G.kills-G.normalResult.kills)}:{ td: 'result', runId: G.runId, n: G.n, win, waves: win ? G.wave : Math.max(0, G.wave - 1), cmd: G.cmd, kills: G.kills });
+  if(!G.endless)G.normalResult=res; G.resMsg=res;
+  sendResult();
   renderResult(); show('#result');
 }
+function enterEndless(id){G.runId=id;G.pendingEndless=null;G.endless=true;G.over=false;G.win=false;G.breakT=5;G.resMsg=null;G.saveOk=false;G.wait=false;paused=false;show(null);bar();last=performance.now();bgmTry();}
+function continueEndless(){
+  if(!G||G.endless||!G.over||!G.win||!G.saveOk||G.wait||G.pendingEndless)return false;
+  const id=G.endlessId||(G.endlessId='e_'+Date.now().toString(36)+Math.random().toString(36).slice(2,7));
+  if(!EMBED){enterEndless(id);return true;}
+  G.pendingEndless=id;host({td:'endlessStart',runId:id,parentRunId:G.runId,n:G.n,cmd:G.cmd});
+  const game=G;G.endlessTO=setTimeout(()=>{if(G===game&&G.pendingEndless===id){G.pendingEndless=null;G.why='无尽登记超时，可重试继续';renderResult();}},4000);renderResult();return true;
+}
+$('#endlessBtn').onclick=continueEndless;
 function sendResult() {
   if (!G || !G.resMsg) return;
+  if(!EMBED){const game=G,message=G.resMsg;if(G.wait)return;G.wait=true;G.saveOk=false;G.savePromise=protoStore.settle(message).then(r=>{acceptProto(r);if(G!==game||G.resMsg!==message)return;G.wait=false;G.saveOk=r.ok;G.why=r.ok?'':protoNotice;renderResult();});renderResult();return;}
   const game = G; G.wait = true; host(G.resMsg); clearTimeout(G.resultTO);
   G.resultTO = setTimeout(() => { if (G !== game || !G.wait) return; G.wait = false; G.saveOk = false; G.why = '结算确认超时，可重试保存'; renderResult(); }, 4000);
 }
 function renderResult() {
   if (!G) return;
-  const saved = !EMBED || G.saveOk;
+  const saved = !!G.saveOk;
+  $('#endlessBtn').classList.toggle('hidden',!!G.endless||!G.win);$('#endlessBtn').disabled=!G.saveOk||G.wait||!!G.pendingEndless;
   $('#resTitle').textContent = G.wait ? '结算中…' : G.win && saved ? '守住了！' : G.win ? '存档失败' : '机房失守';
   $('#resStats').textContent = `守了 ${G.win ? G.W : Math.max(0, G.wave - 1)}/${G.W} 波 · 击倒 ${G.kills} · 剩余生命 ${G.lives}`;
-  $('#resNote').textContent = G.wait ? '' : !saved ? `这局进度没记上${G.why ? '（' + G.why + '）' : ''}` : G.win ? `${T.WAVES} 波全部守住！` : `最佳 ${proto.best}/${T.WAVES} 波 · 去升级防御塔或统帅再来`;
-  $('#retryBtn').classList.toggle('hidden', !(EMBED && !G.wait && !G.saveOk));
+  $('#resNote').textContent = G.wait ? '' : !saved ? `这局进度没记上${G.why ? '（' + G.why + '）' : ''}` : G.win ? `${T.WAVES} 波全部守住！` : `最佳 ${proto.best}/${T.WAVES} 波 · 调整布阵或升级防御塔再来`;
+  if(G.endless){$('#resStats').textContent=`无尽守住 ${Math.max(0,G.wave-10-((G.lives<=0||G.q.length||alive().length)?1:0))} 波 · 击倒 ${G.resMsg?.kills||0}`;$('#resNote').textContent=G.wait?'保存无尽纪录中':saved?`无尽最高 ${proto.endless?.best||0} 波；不发经营金币`:G.why||'无尽纪录未保存';}
+  else if(G.pendingEndless||G.why)$('#resNote').textContent=G.pendingEndless?'无尽登记中…':G.why;
+  const board=$('#endlessBoard');board.classList.toggle('hidden',!G.endless);
+  if(G.endless){const top=proto.endless?.top||[],rank=top.findIndex(e=>e.runId===G.runId),points=T.score(G.resMsg.waves,G.resMsg.kills);board.innerHTML=`<h3>无尽历史 TOP 10</h3><p class="note">分数＝完成无尽波数×1000＋无尽击杀数<br>同分先取得优先</p><ol>${top.map(e=>`<li${e.runId===G.runId?' class="current-score"':''}>${e.score} 分 · ${e.waves} 波 / ${e.kills} 击杀</li>`).join('')}</ol>${!top.length?'<p>暂无已保存历史分数</p>':''}<p class="current-score">本次 ${points} 分 · ${!saved?'尚未保存，名次待确认':rank>=0?'历史第 '+(rank+1)+' 名':'未上榜'}</p>`;}
+  $('#retryBtn').classList.toggle('hidden', !(!G.wait && !G.saveOk));
   $('#againBtn').textContent = G.win && saved && G.n < T.MAX_LV ? '下一关' : '再来一局';
   $('#againBtn').disabled = !!G.wait;
 }
 $('#retryBtn').onclick = () => { if (G && G.over && !G.wait && G.resMsg) { sendResult(); renderResult(); } };
 $('#againBtn').onclick = () => { if (!G || G.wait) return; const n = G.win && (!EMBED || G.saveOk) ? G.n + 1 : G.n; G = null; lvSel = Math.min(T.MAX_LV, proto.cleared + 1, n); start(lvSel); };
 $('#menuBtn').onclick = () => { if (G && G.wait) return; G = null; SFX.stopBgm(); show('#menu'); renderMenu(); };
-function setPause(on) { if (!G || G.over) return; paused = on; if (on) SFX.stopBgm(); else bgmTry(); show(on ? '#pause' : null); if (!on) last = performance.now(); }
+function setPause(on) { if (!G || G.over) return; paused = on; if (on) SFX.stopBgm(); else { SFX.unlock(); bgmTry(); } SFX.setPaused(on); show(on ? '#pause' : null); if (!on) last = performance.now(); hud(); }
 $('#pauseBtn').onclick = () => setPause(true);
 $('#resumeBtn').onclick = () => setPause(false);
-$('#sndBtn').onclick = () => { userMute = !userMute; applyMute(); };
+$('#sndBtn').onclick = () => { userMute = !userMute; SFX.unlock(); applyMute(); };
 $('#quitBtn').onclick = () => { if (!G) return; paused = false; G.pendStart ? abortStart('已退出') : end(false); };
 document.addEventListener('visibilitychange', () => { if (document.hidden) setPause(true); });
 $('#startBtn').onclick = () => start(lvSel);
-$('#waveBtn').onclick = () => nextWave();
-$('#ultBtn').onclick = () => castUlt();
 
 // ---- HUD / 底栏 ----
 let toastT = 0;
@@ -327,31 +363,57 @@ function toast(s) { const t = $('#toast'); t.textContent = s; t.classList.add('o
 function show(id) { for (const s of ['#menu', '#pause', '#result']) $(s).classList.toggle('hidden', s !== id); $('#hud').classList.toggle('hidden', id === '#menu'); }
 function hud() {
   if (!G) return;
-  $('#lifeTxt').textContent = `❤ ${G.lives}`; $('#cashTxt').textContent = `建设点 ${Math.floor(G.cash)}`; $('#waveTxt').textContent = `波 ${G.wave}/${G.W}`;
-  const h = T.HEROES[G.cmd]; $('#ultLbl').textContent = h.btn || h.ult; $('#ultBtn').setAttribute('aria-label', '大招：' + h.ult);
-  $('#ultFill').style.height = (G.energy / ULT_E * 100) + '%';
-  const rdy = G.energy >= ULT_E && !G.over && !G.pendStart; $('#ultBtn').disabled = !rdy; $('#ultBtn').classList.toggle('ready', rdy);
-  const canWave = !G.q.length && G.wave < G.W && !alive().length && !G.pendStart;
-  $('#waveBtn').disabled = !canWave; $('#waveBtn').textContent = canWave && G.wave > 0 ? `开波 ${Math.max(0, Math.ceil(G.breakT))}` : canWave ? `开波 ${Math.max(0, Math.ceil(G.breakT))}` : '进攻中';
-  if (sel && sel.k === 'build') document.querySelectorAll('#twGrid button').forEach(b => { b.disabled = G.cash < T.TOWERS[b.dataset.tw].cost; });
+  $('#lifeTxt').textContent = `❤ ${G.lives}`; $('#cashTxt').textContent = `建设点 ${Math.floor(G.cash)}/${ENERGY.cap}`; $('#waveTxt').textContent = G.endless?`无尽 ${G.wave-10}`:`波 ${G.wave}/${G.W}`;
+  $('#passiveStatus').textContent = `塔 ${G.tw.size}/${ENERGY.towers} · `+(G.interestSeconds<ENERGY.waveSeconds && (G.q.length||alive().length)?`+${ENERGY.baseRate+(G.cmd==='rocket'?ENERGY.rocketRate:0)}/秒`:'恢复暂停');
+  const skill=$('#skillBtn'),hasSkill=['otaku','pearl'].includes(G.cmd);skill.classList.toggle('hidden',!hasSkill);
+  skill.disabled=paused||document.hidden||G.over||G.pendStart||G.cash<=0||G.skillCooldown>0||(!G.q.length&&!alive().length);
+  skill.textContent=hasSkill?`${skillName()}\n${G.skillLeft>0?`${Math.ceil(G.skillLeft)}秒 · ${num((G.cmd==='otaku'?ENERGY.burstMax:ENERGY.frostMax)*energyRatio()*100)}%`:G.skillCooldown>0?`冷却 ${Math.ceil(G.skillCooldown)}秒`:!G.q.length&&!alive().length?'战斗开始可用':G.cash<=0?'需建设点':'可用'}`:'';
+  skill.setAttribute('aria-label',hasSkill?`${skillName()}，${G.skillLeft>0?'持续中':G.skillCooldown>0?'冷却中':!G.q.length&&!alive().length?'战斗开始可用':G.cash<=0?'需要建设点':'准备就绪'}`:'无手动技能');
+  if(sel?.k==='build'&&sel.id)$('#buildInfo').innerHTML=towerSummary(sel.id);
+  if(sel?.k==='tower'){const tw=G.tw.get(sel.x+','+sel.y);if(tw){$('#twInfo').innerHTML=towerSummary(tw.id,tw.lv);$('#twSell').textContent=`拆除 +${num(Math.min(sellBack(tw),ENERGY.cap-G.cash))}（封顶${ENERGY.cap}）`;}}
+
+  const canWave = !G.q.length && (G.endless || G.wave < G.W) && !alive().length && !G.pendStart;
+  $('#waveBtn').classList.toggle('hidden', canWave); $('#waveBtn').textContent = canWave ? `第 ${G.wave + 1} 波 · ${Math.max(1, Math.ceil(G.breakT))} 秒` : G.pendStart ? '登记中' : '进攻中';
+  $('#countdown').classList.toggle('hidden', !canWave || paused || G.over);
+  $('#countdown').textContent = `第 ${G.wave + 1} 波即将来临 · ${Math.max(1, Math.ceil(G.breakT))}`;
+  if (sel && sel.k === 'build' && sel.id) $('#buildConfirm').disabled = sel.x === null || isPath(sel.x,sel.y) || G.tw.has(sel.x+','+sel.y) || G.cash < T.TOWERS[sel.id].cost || G.tw.size>=ENERGY.towers || G.pendStart;
   if (sel && sel.k === 'tower') { const tw = G.tw.get(sel.x + ',' + sel.y); if (tw) $('#twUp').disabled = tw.lv >= MAX_TLV || G.cash < upCost(tw); }
 }
 function bar() {
-  $('#barMain').classList.toggle('hidden', !!sel); $('#barBuild').classList.toggle('hidden', !sel || sel.k !== 'build'); $('#barTower').classList.toggle('hidden', !sel || sel.k !== 'tower');
+  $('#barMain').classList.toggle('hidden', !!sel && sel.k === 'tower'); $('#barBuild').classList.toggle('hidden', !!sel && sel.k === 'tower'); $('#barTower').classList.toggle('hidden', !sel || sel.k !== 'tower');
   if (!G) return;
-  if (sel && sel.k === 'build') $('#twGrid').innerHTML = TIDS.map(id => `<button type="button" data-tw="${id}" class="${T.TOWERS[id].ceo === G.cmd ? 'syn' : ''}">${T.TOWERS[id].ceo === G.cmd ? '★' : ''}${T.TOWERS[id].name}<small>${T.TOWERS[id].cost}</small></button>`).join('');
+  if (!sel || sel.k === 'build') { const choice = sel || {}, scroll = $('#twGrid').scrollLeft || 0; $('#twGrid').innerHTML = TIDS.map(id => `<button type="button" data-tw="${id}" class="${T.TOWERS[id].ceo === G.cmd ? 'syn' : ''} ${choice.id === id ? 'chosen' : ''}">${T.TOWERS[id].ceo === G.cmd ? '★' : ''}${T.TOWERS[id].name}<small>${T.TOWERS[id].cost}</small></button>`).join('');
+    $('#twGrid').scrollLeft = scroll;
+    $('#buildInfo').innerHTML = choice.id ? towerSummary(choice.id) : '';
+    $('#buildInspector').classList.toggle('hidden', !choice.id);
+    $('#buildConfirm').disabled = !choice.id || choice.x === null || isPath(choice.x, choice.y) || G.tw.has(choice.x+','+choice.y) || G.cash < T.TOWERS[choice.id].cost || G.tw.size>=ENERGY.towers;
+    $('#buildConfirm').textContent = choice.id ? `建造 · ${T.TOWERS[choice.id].cost}` : '请选择塔';
+  }
   if (sel && sel.k === 'tower') {
     const tw = G.tw.get(sel.x + ',' + sel.y); if (!tw) { sel = null; return bar(); }
     const syn = T.TOWERS[tw.id].ceo === G.cmd;
-    $('#twInfo').innerHTML = `<b>${T.TOWERS[tw.id].name} Lv${tw.lv}</b><br>${TW[tw.id].desc}${syn ? '<br>★ ' + TW[tw.id].syn.split('：')[1] : ''}`;
+    $('#twInfo').innerHTML = towerSummary(tw.id, tw.lv);
     $('#twUp').textContent = tw.lv >= MAX_TLV ? '已满级' : `升级 ${upCost(tw)}`; $('#twSell').textContent = `拆除 +${sellBack(tw)}`;
   }
-  hud();
+  resize(); positionBuildActions(); hud();
 }
-$('#twGrid').addEventListener('click', e => { const b = e.target.closest('[data-tw]'); if (b && sel) build(b.dataset.tw, sel.x, sel.y); });
-$('#buildX').onclick = $('#twX').onclick = () => { sel = null; bar(); };
+$('#twGrid').addEventListener('click', e => { const b = e.target.closest('[data-tw]'); if (b) { sel = {k:'build',id:b.dataset.tw,x:null,y:null}; bar(); } });
+$('#buildConfirm').onclick = () => { if (sel && sel.id && sel.x !== null) build(sel.id, sel.x, sel.y); };
+$('#buildX').onclick = $('#cancelChoice').onclick = $('#twX').onclick = () => { sel = null; bar(); };
 $('#twUp').onclick = () => { if (sel) upTower(sel.x, sel.y); };
+$('#skillBtn').onclick = activateSkill;
 $('#twSell').onclick = () => { if (sel) sell(sel.x, sel.y); };
+
+function openTowerDetails() {
+  if (!G || G.over || G.pendStart || !sel) return;
+  const tw = sel.k === 'tower' ? G.tw.get(sel.x+','+sel.y) : sel.id ? {id:sel.id,lv:1} : null;
+  if (!tw) return;
+  $('#fullTowerInfo').innerHTML = towerDetail(tw.id,tw.lv); setPause(true);
+  $('#towerDetails').classList.remove('hidden'); $('#closeDetails').focus?.();
+}
+$('#detailsBtn').onclick = $('#twDetails').onclick = openTowerDetails;
+$('#closeDetails').onclick = () => { $('#towerDetails').classList.add('hidden'); setPause(false); (sel?.k === 'tower' ? $('#twDetails') : $('#detailsBtn')).focus?.(); };
+addEventListener('keydown', e => { if(e.key === 'Escape' && !$('#towerDetails').classList.contains('hidden')) $('#closeDetails').onclick(); });
 
 // ---- 画面 ----
 const cv = $('#cv'), cx = cv.getContext('2d');
@@ -359,65 +421,87 @@ let W = 0, H = 0, S = 40, OX = 0, OY = 0;
 function resize() {
   const dpr = Math.min(2, window.devicePixelRatio || 1); W = innerWidth; H = innerHeight;
   cv.width = W * dpr; cv.height = H * dpr; cx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  const top = 64 + parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sat') || 0), bot = (barMaxH() || 110) + 6;
+  const top = 88 + parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sat') || 0), bot = (barMaxH() || 110) + 6;
   S = Math.floor(Math.min((W - 12) / COLS, (H - top - bot) / ROWS)); OX = Math.round((W - S * COLS) / 2); OY = Math.round(top + Math.max(0, (H - top - bot - S * ROWS) / 2));
 }
 addEventListener('resize', resize);
-// 底栏三种状态（提示 / 造塔 / 选中塔）取最高的那个固定住，弹出造塔栏时地图不被挡、也不跳
-function barMaxH() {
-  const b = $('#bar'), ids = ['#barMain', '#barBuild', '#barTower'], was = ids.map(i => $(i).classList.contains('hidden')), g = $('#twGrid'), had = g.innerHTML;
-  if (!b.offsetParent) return 0;
-  if (!had) g.innerHTML = TIDS.map(id => `<button type="button">${T.TOWERS[id].name}<small>0</small></button>`).join('');
-  b.style.minHeight = ''; let m = 0;
-  for (const i of ids) { ids.forEach(x => $(x).classList.toggle('hidden', x !== i)); m = Math.max(m, b.offsetHeight); }
-  ids.forEach((x, k) => $(x).classList.toggle('hidden', was[k])); if (!had) g.innerHTML = '';
-  b.style.minHeight = m + 'px'; return m;
+// Actual compact dock height; only choosing/closing inspection changes map layout.
+function barMaxH() { return $('#bar').offsetHeight || 128; }
+function positionBuildActions() {
+  const el = $('#buildActions'), active = sel?.k === 'build' && sel.id && sel.x !== null;
+  el.classList.toggle('hidden', !active || paused || G?.over);
+  if (!active) return;
+  const width = Math.min(214, innerWidth-16), x = px(sel.x+.5), y = py(sel.y);
+  el.style.width = width+'px'; el.style.left = Math.max(8,Math.min(innerWidth-width-8,x-width/2))+'px';
+  const below = y+S+8; const bottom = innerHeight-barMaxH();
+  el.style.top = (below+48 < bottom ? below : Math.max(56,y-56))+'px';
 }
-const IMG = {}; T.CEO_IDS.forEach(id => { const i = new Image(); i.src = `../art/face_${id}.webp`; IMG[id] = i; });
+
 const px = x => OX + x * S, py = y => OY + y * S;
+// Small vector emblems keep the paper/comic palette while giving each attack family a silhouette.
+function drawTowerEmblem(id,x,y,r) {
+  cx.save(); cx.translate(x,y); cx.lineWidth=1.8; cx.strokeStyle=INK; cx.fillStyle='#fffaf0';
+  if (id==='tea' || id==='tpearl') { cx.beginPath(); cx.moveTo(-r,-r*.65);cx.lineTo(-r*.7,r);cx.lineTo(r*.7,r);cx.lineTo(r,-r*.65);cx.closePath();cx.fill();cx.stroke();cx.beginPath();cx.moveTo(0,-r*.5);cx.lineTo(r*.4,-r*1.4);cx.stroke(); for(let i=0;i<3;i++){cx.beginPath();cx.arc((i-1)*r*.4,r*.5,r*.15,0,7);cx.fillStyle='#6d4c41';cx.fill();} }
+  else if(id==='book' || id==='totaku') { cx.rotate(-.18);cx.fillRect(-r,-r,r*2,r*2);cx.strokeRect(-r,-r,r*2,r*2);cx.beginPath();cx.moveTo(0,-r);cx.lineTo(0,r);cx.moveTo(-r*.7,-r*.35);cx.lineTo(-r*.2,-r*.35);cx.moveTo(r*.2,r*.2);cx.lineTo(r*.7,r*.2);cx.stroke(); }
+  else if(id==='tech') {cx.fillStyle=YEL;cx.beginPath();cx.moveTo(r*.4,-r*1.3);cx.lineTo(-r,r*.15);cx.lineTo(-r*.1,r*.15);cx.lineTo(-r*.4,r*1.3);cx.lineTo(r,-r*.15);cx.lineTo(r*.1,-r*.15);cx.closePath();cx.fill();cx.stroke();}
+  else if(id==='trocket') {cx.beginPath();cx.moveTo(0,-r*1.3);cx.quadraticCurveTo(r*1.1,-r*.2,r*.6,r*.7);cx.lineTo(-r*.6,r*.7);cx.quadraticCurveTo(-r*1.1,-r*.2,0,-r*1.3);cx.fill();cx.stroke();cx.fillStyle=YEL;cx.beginPath();cx.moveTo(-r*.4,r*.7);cx.lineTo(0,r*1.4);cx.lineTo(r*.4,r*.7);cx.fill();cx.fillStyle='#7fd1e8';cx.beginPath();cx.arc(0,-r*.1,r*.28,0,7);cx.fill();cx.stroke();}
+  else {cx.rotate(.35);cx.beginPath();cx.moveTo(0,-r*1.4);cx.lineTo(0,r*1.4);cx.stroke();for(let i=-1;i<=1;i++){cx.fillStyle=i===0?YEL:'#fffaf0';cx.fillRect(-r*.7,i*r*.7-r*.25,r*1.4,r*.5);cx.strokeRect(-r*.7,i*r*.7-r*.25,r*1.4,r*.5);}}
+  cx.restore();
+}
 function draw() {
   cx.fillStyle = PAPER; cx.fillRect(0, 0, W, H);
   if (!G) return;
   for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) {
     const p = isPath(x, y);
     cx.fillStyle = p ? '#e9d3a8' : '#fffaf0'; cx.fillRect(px(x) + 1, py(y) + 1, S - 2, S - 2);
-    if (!p) { cx.strokeStyle = '#d9cfb8'; cx.setLineDash([3, 3]); cx.strokeRect(px(x) + 2.5, py(y) + 2.5, S - 5, S - 5); cx.setLineDash([]); }
+    if (p) { cx.fillStyle = '#b9a681'; cx.beginPath(); cx.arc(px(x+.5),py(y+.5),1.5,0,7); cx.fill(); }
+    if (!p) { cx.fillStyle = '#e8dec6'; cx.fillRect(px(x)+5,py(y)+S-5,S-10,2); cx.strokeStyle = '#d9cfb8'; cx.setLineDash([3, 3]); cx.strokeRect(px(x) + 2.5, py(y) + 2.5, S - 5, S - 5); cx.setLineDash([]); }
   }
   cx.fillStyle = INK; cx.font = `900 ${Math.round(S * 0.3)}px sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle';
   cx.fillText('入口', px(0.5), py(0.5)); cx.fillText('机房', px(5.5), py(ROWS - 0.15));
-  if (sel) { cx.strokeStyle = RED; cx.lineWidth = 3; cx.strokeRect(px(sel.x) + 1.5, py(sel.y) + 1.5, S - 3, S - 3); cx.lineWidth = 1;
-    const tw = G.tw.get(sel.x + ',' + sel.y); if (tw) { cx.strokeStyle = 'rgba(230,57,70,.5)'; cx.beginPath(); cx.arc(px(tw.x + 0.5), py(tw.y + 0.5), towerRange(tw) * S, 0, 7); cx.stroke(); } }
+  if (sel && sel.x !== null) { cx.strokeStyle = RED; cx.lineWidth = 3; cx.strokeRect(px(sel.x) + 1.5, py(sel.y) + 1.5, S - 3, S - 3); cx.lineWidth = 1;
+    const tw = sel.k === 'build' && sel.id ? {id:sel.id,x:sel.x,y:sel.y,lv:1} : G.tw.get(sel.x + ',' + sel.y); if (tw) { cx.strokeStyle = 'rgba(230,57,70,.5)'; cx.beginPath(); cx.arc(px(tw.x + 0.5), py(tw.y + 0.5), towerRange(tw) * S, 0, 7); cx.stroke(); } }
   for (const tw of G.tw.values()) {
     const s = TW[tw.id], x = px(tw.x), y = py(tw.y), syn = T.TOWERS[tw.id].ceo === G.cmd;
-    cx.fillStyle = s.col; cx.strokeStyle = INK; cx.lineWidth = 2.5; cx.beginPath(); cx.roundRect ? cx.roundRect(x + 4, y + 4, S - 8, S - 8, 8) : cx.rect(x + 4, y + 4, S - 8, S - 8); cx.fill(); cx.stroke(); cx.lineWidth = 1;
-    cx.fillStyle = '#fff'; cx.font = `900 ${Math.round(S * 0.42)}px sans-serif`; cx.fillText(s.k, x + S / 2, y + S / 2 + 1);
+    cx.fillStyle = 'rgba(20,20,20,.18)'; cx.beginPath(); cx.ellipse(x + S/2, y + S - 3, S*.4, S*.12, 0, 0, 7); cx.fill();
+    cx.fillStyle = tw.flash > 0 ? '#fff3c4' : s.col; cx.strokeStyle = INK; cx.lineWidth = 2.5; cx.beginPath(); cx.roundRect ? cx.roundRect(x + 4, y + 4, S - 8, S - 8, 8) : cx.rect(x + 4, y + 4, S - 8, S - 8); cx.fill(); cx.stroke(); cx.lineWidth = 1;
+    cx.fillStyle = 'rgba(255,255,255,.35)'; cx.fillRect(x+8,y+7,S-16,4);
+    drawTowerEmblem(tw.id,x+S/2,y+S*.46,S*.24);
+    cx.fillStyle = INK; cx.font = `900 ${Math.max(8,Math.round(S*.22))}px sans-serif`; cx.fillText(s.k,x+S*.78,y+S*.77);
     for (let i = 0; i < tw.lv; i++) { cx.fillStyle = YEL; cx.fillRect(x + 7 + i * 7, y + S - 11, 5, 5); }
     if (syn) { cx.fillStyle = YEL; cx.font = `900 ${Math.round(S * 0.3)}px sans-serif`; cx.fillText('★', x + S - 9, y + 11); }
   }
+  // Placement ghost is visual only: the map/cash mutate only in build().
+  if (sel?.k === 'build' && sel.id && sel.x !== null) {
+    const p = TW[sel.id], x = px(sel.x), y = py(sel.y);
+    const blocked = isPath(sel.x,sel.y) || G.tw.has(sel.x+','+sel.y);
+    cx.save(); cx.globalAlpha = blocked ? .4 : .65;
+    cx.fillStyle = p.col; cx.strokeStyle = blocked ? RED : INK; cx.lineWidth = 2;
+    cx.setLineDash([3,2]); cx.beginPath();
+    if (cx.roundRect) cx.roundRect(x+4,y+4,S-8,S-8,7); else cx.rect(x+4,y+4,S-8,S-8);
+    cx.fill(); cx.stroke(); cx.setLineDash([]);
+    drawTowerEmblem(sel.id,x+S/2,y+S*.43,S*.24);
+    cx.globalAlpha = 1; cx.fillStyle = blocked ? RED : INK;
+    cx.font = `900 ${Math.max(9,Math.round(S*.22))}px sans-serif`;
+    cx.fillText(blocked ? '不可建' : '待建', x+S/2, y+S*.8); cx.restore();
+  }
   for (const e of G.es) {
     const b = EN[e.type], x = px(e.x), y = py(e.y), r = e.r * S;
-    cx.fillStyle = e.stunT > 0 ? '#b3e5fc' : b.col; cx.strokeStyle = INK; cx.lineWidth = 2; cx.beginPath(); cx.arc(x, y, r, 0, 7); cx.fill(); cx.stroke(); cx.lineWidth = 1;
+    cx.fillStyle = e.flash > 0 ? '#fff' : e.stunT > 0 ? '#b3e5fc' : b.col; cx.strokeStyle = INK; cx.lineWidth = 2; cx.beginPath(); cx.arc(x, y, r, 0, 7); cx.fill(); cx.stroke(); cx.lineWidth = 1;
     cx.fillStyle = INK; cx.fillRect(x - r * 0.45, y - r * 0.2, r * 0.25, r * 0.25); cx.fillRect(x + r * 0.2, y - r * 0.2, r * 0.25, r * 0.25);
     if (e.burnT > 0) { cx.fillStyle = '#ff9800'; cx.beginPath(); cx.arc(x, y - r, r * 0.3, 0, 7); cx.fill(); }
     cx.fillStyle = '#fff'; cx.fillRect(x - r, y - r - 7, r * 2, 4); cx.fillStyle = RED; cx.fillRect(x - r, y - r - 7, r * 2 * Math.max(0, e.hp / e.max), 4);
     if (e.type === 'boss' || e.type === 'mini') { cx.fillStyle = YEL; cx.font = `900 ${Math.round(S * 0.4)}px sans-serif`; cx.fillText('♛', x, y - r - 16); }
   }
-  const c = G.c, cr = S * 0.42;
-  cx.strokeStyle = 'rgba(20,20,20,.15)'; cx.beginPath(); cx.arc(px(c.x), py(c.y), CMD[G.cmd].range * S, 0, 7); cx.stroke();
-  cx.save(); cx.beginPath(); cx.arc(px(c.x), py(c.y), cr, 0, 7); cx.clip();
-  if (IMG[G.cmd].complete && IMG[G.cmd].naturalWidth) cx.drawImage(IMG[G.cmd], px(c.x) - cr, py(c.y) - cr, cr * 2, cr * 2); else { cx.fillStyle = CMD[G.cmd].col; cx.fill(); }
-  cx.restore(); cx.strokeStyle = YEL; cx.lineWidth = 4; cx.beginPath(); cx.arc(px(c.x), py(c.y), cr, 0, 7); cx.stroke(); cx.strokeStyle = INK; cx.lineWidth = 2; cx.stroke(); cx.lineWidth = 1;
   for (const f of G.fx) {
     const a = Math.max(0, f.t / (f.t0 || 0.3));
     cx.globalAlpha = a;
-    if (f.k === 'line') { cx.strokeStyle = f.c; cx.lineWidth = 3; cx.beginPath(); cx.moveTo(px(f.x), py(f.y)); cx.lineTo(px(f.x2), py(f.y2)); cx.stroke(); cx.lineWidth = 1; }
+    if (f.k === 'line') { cx.strokeStyle = f.c; cx.lineWidth = 5; cx.lineCap = 'round'; cx.beginPath(); cx.moveTo(px(f.x), py(f.y)); cx.lineTo(px(f.x2), py(f.y2)); cx.stroke(); cx.strokeStyle = '#fffaf0'; cx.lineWidth = 1.5; cx.stroke(); cx.lineWidth = 1; }
     else if (f.k === 'ring') { cx.strokeStyle = f.c; cx.lineWidth = 3; cx.beginPath(); cx.arc(px(f.x), py(f.y), f.r * S * (1.1 - a * 0.3), 0, 7); cx.stroke(); cx.lineWidth = 1; }
-    else if (f.k === 'pop') { cx.fillStyle = YEL; cx.beginPath(); cx.arc(px(f.x), py(f.y), S * 0.3 * (1.5 - a), 0, 7); cx.fill(); }
-    else if (f.k === 'frost') { cx.globalAlpha = 0.18 * a + 0.05; cx.fillStyle = '#7fd1e8'; cx.fillRect(OX, OY, S * COLS, S * ROWS); }
+    else if (f.k === 'pop') { cx.strokeStyle = '#e8590c'; cx.lineWidth=2; for(let i=0;i<6;i++){const angle=i*Math.PI/3,rr=S*(1-a)*.6;cx.beginPath();cx.moveTo(px(f.x)+Math.cos(angle)*rr,py(f.y)+Math.sin(angle)*rr);cx.lineTo(px(f.x)+Math.cos(angle)*(rr+4),py(f.y)+Math.sin(angle)*(rr+4));cx.stroke();} cx.lineWidth=1; cx.fillStyle = YEL; cx.beginPath(); cx.arc(px(f.x), py(f.y), S * 0.3 * (1.5 - a), 0, 7); cx.fill(); }
     else if (f.k === 'cone') { cx.fillStyle = f.c; cx.globalAlpha = 0.35 * a; cx.beginPath(); cx.moveTo(px(f.x), py(f.y)); cx.arc(px(f.x), py(f.y), f.r * S, f.a - f.h, f.a + f.h); cx.closePath(); cx.fill(); }
     else if (f.k === 'boom') { const u = 1 - a, k = u < 0.5 ? u * 2 : 2 - u * 2; cx.fillStyle = f.c; cx.fillRect(px(f.x + (f.x2 - f.x) * k) - S * 0.18, py(f.y + (f.y2 - f.y) * k) - S * 0.22, S * 0.36, S * 0.44); }
     else if (f.k === 'txt') { cx.fillStyle = RED; cx.font = `900 ${Math.round(S * 0.32)}px sans-serif`; cx.fillText(f.s, px(f.x), py(f.y)); }
-    else if (f.k === 'wave') { cx.strokeStyle = '#ff7043'; cx.lineWidth = 6; cx.beginPath(); cx.arc(px(f.x), py(f.y), (1 - a) * S * 12, 0, 7); cx.stroke(); cx.lineWidth = 1; }
     cx.globalAlpha = 1;
   }
 }
@@ -426,18 +510,22 @@ cv.addEventListener('pointerdown', e => {
   if (!G || G.over || paused) return;
   const x = Math.floor((e.clientX - OX) / S), y = Math.floor((e.clientY - OY) / S);
   if (x < 0 || y < 0 || x >= COLS || y >= ROWS) { sel = null; return bar(); }
-  if (G.tw.has(x + ',' + y)) sel = { k: 'tower', x, y };
-  else if (isPath(x, y)) { moveCmd(x, y); sel = null; }
-  else sel = { k: 'build', x, y };
+  if (sel?.k === 'build' && sel.id) {
+    sel.x = x; sel.y = y;
+    if (isPath(x,y) || G.tw.has(x+','+y)) toast('这里不能建造，请选择空地');
+  } else if (G.tw.has(x + ',' + y)) sel = {k:'tower',x,y};
+  else { toast(isPath(x,y) ? '路面不能建造' : '先在下方选择防御塔'); sel = null; }
   bar();
 });
 function loop(now) {
-  const dt = Math.min(0.05, (now - last) / 1000); last = now;
+  const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
   if (G && !paused && !G.over) step(dt);
-  draw(); hud();
+  draw(); hud(); positionBuildActions();
   raf = requestAnimationFrame(loop);
 }
+window.render_game_to_text = () => JSON.stringify({mode:!G?'menu':G.over?'result':paused?'paused':'playing',coordinates:'grid origin top-left, x right, y down',wave:G?.wave,countdown:G?.breakT,cash:G?.cash,lives:G?.lives,passiveCommander:G?.cmd,damageByTower:G?.damageByTower,energyCap:ENERGY.cap,towerLimit:ENERGY.towers,interestSeconds:G?.interestSeconds,skillLeft:G?.skillLeft,skillCooldown:G?.skillCooldown,selection:sel,towers:G?[...G.tw.values()]:[],enemies:G?.es});
+window.advanceTime = ms => { for (let left=ms;left>0;left-=1000/60) step(Math.min(left,1000/60)/1000); draw(); hud(); };
 resize(); renderMenu(); show('#menu'); raf = requestAnimationFrame(loop);
-window.__td = { EMBED, proto, P, towerRange, start, step, build, upTower, sell, moveCmd, castUlt, nextWave, buyUp, onState, setPause, renderMenu, isPath, waveList, PLEN, TW, CMD,
-  get G() { return G; }, get geo() { return { S, OX, OY, COLS, ROWS }; }, get lastSent() { return lastSent; }, get pend() { return pend; }, get paused() { return paused; }, get cmdSel() { return cmdSel; }, set cmdSel(v) { if (T.CEO_IDS.includes(v)) { cmdSel = v; renderMenu(); } } };
+window.__td = { EMBED, proto, protoStore, selectProto, P, ENERGY, continueEndless, end, spawn, activateSkill, burstMultiplier, frostMultiplier, gainEnergy, hit, towerFire, towerRange, start, step, build, upTower, sell, nextWave, buyUp, onState, setPause, renderMenu, isPath, waveList, PLEN, TW, CMD,
+  get protoPending(){return protoPending;}, get protoTask(){return protoTask;}, get G() { return G; }, get geo() { return { S, OX, OY, COLS, ROWS }; }, get lastSent() { return lastSent; }, get pend() { return pend; }, get paused() { return paused; }, get cmdSel() { return cmdSel; }, set cmdSel(v) { if (T.CEO_IDS.includes(v)) { cmdSel = v; renderMenu(); } } };
 })();
