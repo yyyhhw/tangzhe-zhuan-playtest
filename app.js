@@ -1336,6 +1336,7 @@ function renderGacha() {
     return `<div class="card super ${has ? '' : 'dim'}"><div class="ava sq">${has ? SUPER_ICON[it.id] : '❓'}</div><div class="info"><div class="name">${it.name}<span class="tag ${has ? 'match' : 'idle'}">${E.SHOPS[it.shop].short}</span></div><div class="desc">${it.desc}</div></div></div>`; }).join('');
   h += `<div class="sec-title">普通收藏 ${ownR}/${E.REGULAR_ITEMS.length}</div>`;
   h += `<div class="item-grid">${E.REGULAR_ITEMS.map(it => { const has = state.gacha.owned.includes(it.id);
+    if (has && it.type === 'card') return `<button type="button" class="item story-open" data-act="card" data-arg="${it.id}" aria-label="重看故事卡：${it.name}"><span class="t">故事卡</span>${storyArt(it.id)}<span>${it.name}</span><span class="story-replay-hint">点击重看 ›</span></button>`;
     return `<div class="item ${has ? '' : 'no'}"><span class="t">${TYPE_LABEL[it.type]}</span>${itemIcon(it.id)}${has ? it.name : '？？？'}</div>`; }).join('')}</div>`;
   h += `<div class="note">规则：不重复收藏盒，共 ${total} 件：普通收藏 ${E.REGULAR_ITEMS.length} 件（衣服 8 / 帽子 8 / 装饰 8 / 故事卡 8）+ 超级装饰 ${E.SUPER_ITEMS.length} 件。每抽先定类别：<b>超级装饰 ${P(CFG.SUPER_P)}</b>、普通收藏 ${P(1 - CFG.SUPER_P)}，再从该类<b>还没收集的</b>里等概率抽；连续 ${CFG.SUPER_PITY - 1} 抽没出超级装饰，第 ${CFG.SUPER_PITY} 抽必出。某一类抽完了，就只出另一类。每抽必得新物品，最多 ${total} 抽集齐，集齐后不能再买、不扣金币。普通收藏只是好看，<b>不加产速</b>；超级装饰加本店产量和专属效果，但不抽也能正常开齐店铺。单价 ${fmt(CFG.GACHA_PRICE)}。</div>`;
   return h;
@@ -1382,16 +1383,17 @@ function renderCol() {
 function renderTab() {
   if (tab === 'home' && homeDrag) return; // 家宅拖动中不重画（dirty 留着，松手后再画）
   const html = tab === 'shop' ? renderShop() : tab === 'ceo' ? renderCeo() : tab === 'gacha' ? renderGacha() : tab === 'home' ? renderHome() : renderCol();
-  // Resource readiness may mark the page dirty without changing the collection.
+  const storyTab = tab === 'col' || tab === 'gacha';
+  // Resource readiness may mark the page dirty without changing either catalog.
   // Keep its existing nodes (including focus and decoded images) in that case.
-  if (tab !== 'col' || renderedColHtml !== html) {
-    const panel = $('#panel'), scroll = tab === 'col' ? {top:panel.scrollTop, x:window.scrollX, y:window.scrollY} : null;
-    const focused = tab === 'col' && tabBody.contains(document.activeElement) ? document.activeElement.closest('.story-open')?.dataset.arg : null;
+  if (!storyTab || renderedColHtml !== html) {
+    const panel = $('#panel'), scroll = storyTab ? {top:panel.scrollTop, x:window.scrollX, y:window.scrollY} : null;
+    const focused = storyTab && tabBody.contains(document.activeElement) ? document.activeElement.closest('.story-open')?.dataset.arg : null;
     tabBody.innerHTML = html;
     if (focused) tabBody.querySelector(`.story-open[data-arg="${focused}"]`)?.focus({preventScroll:true});
     if (scroll) { panel.scrollTop = scroll.top; window.scrollTo(scroll.x, scroll.y); }
   }
-  renderedColHtml = tab === 'col' ? html : null;
+  renderedColHtml = storyTab ? html : null;
   dirty = false; updateCompactHead(); refreshDynamic(true); // 顶部「谁在管哪家店」跟着一起刷新（调任/交换/新 CEO 后两处同步）
 }
 function setTab(t) {
@@ -1654,14 +1656,14 @@ function showCard(id) {
   const it = E.ITEM_BY_ID[id];
   // Replaying is read-only: ownership comes from the existing collection IDs.
   if (!it || it.type !== 'card' || !state.gacha.owned.includes(id)) return;
-  const opener = document.activeElement, panel = $('#panel');
+  const opener = document.activeElement, panel = $('#panel'), sourceTab = tab;
   const scroll = {top:panel.scrollTop, x:window.scrollX, y:window.scrollY};
-  openModal(`<section id="storyReplay" aria-labelledby="storyReplayTitle"><div class="mtitle" id="storyReplayTitle">${it.name}</div>${storyArt(id, true)}<div class="mnote">${it.text}</div><button type="button" class="buy big" id="mOk">返回收藏</button></section>`, false);
+  openModal(`<section id="storyReplay" aria-labelledby="storyReplayTitle"><div class="mtitle" id="storyReplayTitle">${it.name}</div>${storyArt(id, true)}<div class="mnote">${it.text}</div><button type="button" class="buy big" id="mOk">${sourceTab === 'gacha' ? '返回盲盒图鉴' : '返回收藏'}</button></section>`, false);
   $('#mOk').addEventListener('click', () => {
     closeModal();
     // A legitimate collection update can replace the opener while the dialog is
     // open. Resolve by story ID rather than depending on the old DOM instance.
-    if (tab === 'col') {
+    if (tab === sourceTab && (tab === 'col' || tab === 'gacha')) {
       const target = tabBody.querySelector(`.story-open[data-arg="${id}"]`) || (opener?.isConnected ? opener : null);
       target?.focus({preventScroll:true}); panel.scrollTop = scroll.top; window.scrollTo(scroll.x, scroll.y);
     }
