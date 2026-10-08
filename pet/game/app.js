@@ -25,11 +25,13 @@ const TAB = rid();
 let frozen = false, state, migratedFrom = null, loadWallMig = { moved:0, stored:0 };
 // 12d 金币安全：读档走 E.loadSave（主档坏 → 完整备份 BAK_KEY；都坏 → saveBlocked：只在内存里玩，绝不覆盖原档）；写档前 E.validState 校验
 let loadInfo = { source:'new', bad:[] }, saveBlocked = !upgradeGate.ok, lastGood = null;
-function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function lsGet(k) { try { return {ok:true,value:localStorage.getItem(k)}; } catch (e) { return {ok:false,value:null}; } }
 function loadState() {
   if (TEST_MODE) { loadWallMig = { moved:0, stored:0 }; migratedFrom = null; return E.testHomesState(now(), TEST_LV); }
-  const m = E.loadSave(lsGet(SAVE_KEY), lsGet(BAK_KEY), now()), raw = m.raw;
-  loadInfo = { source:m.source, bakBad:m.bakBad || [], bad:m.bad || [], badPending:!!m.badPending, unsafe:!!m.unsafe, td50Protected:!!m.td50Protected, bakOk:!!m.bakOk, bakCoins:m.bakCoins, rawCoins:m.raw && m.raw.coins, mainMissing:!!m.mainMissing };
+  const mainRead = lsGet(SAVE_KEY), backupRead = lsGet(BAK_KEY);
+  const m = E.loadSave(mainRead.value, backupRead.value, now()), raw = m.raw;
+  if (!mainRead.ok || !backupRead.ok) { m.blocked = true; m.readError = true; m.source = 'storage-read-protected'; E.markBlocked(m.st); }
+  loadInfo = { source:m.source, readError:!!m.readError, bakBad:m.bakBad || [], bad:m.bad || [], badPending:!!m.badPending, unsafe:!!m.unsafe, td50Protected:!!m.td50Protected, tdCampaignProtected:!!m.tdCampaignProtected, bakOk:!!m.bakOk, bakCoins:m.bakCoins, rawCoins:m.raw && m.raw.coins, mainMissing:!!m.mainMissing };
   if (!saveBlocked && raw && raw.v !== CFG.SAVE_VERSION && m.source !== 'broken' && !m.blocked) { try { localStorage.setItem(BAK_KEY + '-v' + (raw.v || 0), JSON.stringify(raw)); } catch (e) {} }
   loadWallMig = m.wall || { moved:0, stored:0 };
   migratedFrom = raw && m.source !== 'broken' && !m.blocked ? (raw.v !== CFG.SAVE_VERSION ? (raw.v || 0) : null) : null;
@@ -39,7 +41,7 @@ function loadState() {
   // Roster migration is committed atomically after boot; failed writes keep raw save intact.
   return m.st;
 }
-function storedRev() { if (TEST_MODE) return -1; try { const r = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); return r ? (r.rev || 0) : -1; } catch (e) { return -1; } }
+function storedRev() { if (TEST_MODE) return -1; let text; try { text = localStorage.getItem(SAVE_KEY); } catch (e) { return null; } try { const r = JSON.parse(text || 'null'); return r ? (r.rev || 0) : -1; } catch (e) { return -1; } }
 // 保存 = 先确认没有别的页面写过（rev 比我新就冻结本页），再整份原子写入
 // 12d3（熊大 22:08 第 4 条）：只读模式返回 false（不假装保存成功）；写前 E.validState（含序列化后 E.checkSave）；
 //   备份写失败 → 整次保存放弃，主档不动；跨页写档（宠物 / 打僵尸）用 E.commitSave，同一套规矩
@@ -58,14 +60,47 @@ function upgradeWritable() {
   if (!upgradeGate.canWrite()) { saveBlocked = true; E.markBlocked(state); showUpgradeProtection(); return false; }
   return true;
 }
-function persist() {
+function persist(operation) {
   if (!upgradeWritable()) return false;
   if (frozen) return false;
   if (TEST_MODE) { state.rev++; return true; }   // 测试房间：只在内存里，永远不写真存档
   if (saveBlocked) return false;                  // 12d：坏档 / 余额异常且没有可用备份 → 只读，原档一个字节都不改；12d3：如实返回失败（交易据此回滚）
+  // A write may have reached disk even when its read-back failed. Keep its
+  // exact bytes and action identity until an owned retry can prove the outcome.
+  const intent = JSON.stringify(state), op = typeof operation === 'string' ? operation : null;
+  const pending = persist.pending;
+  if (pending) {
+    let disk, owner;
+    try {
+      if (typeof TAB !== 'string' || typeof LOCK_KEY !== 'string' || pending.owner !== TAB) return false;
+      owner = JSON.parse(localStorage.getItem(LOCK_KEY) || 'null');
+      if (!owner || owner.tab !== TAB) { if (owner && owner.tab !== TAB) freeze(); return false; }
+      disk = localStorage.getItem(SAVE_KEY);
+    } catch (_) { toast('保存状态尚未确认，请稍后重试确认', 2800); return false; }
+    if (disk === pending.json) {
+      let committed; try { committed = JSON.parse(disk); } catch (_) {}
+      if (!committed || E.checkSave(committed).length) { saveBlocked = true; E.markBlocked(state); return false; }
+      // A different action must never be ACKed merely because an earlier write
+      // committed. Host fingerprints include the original request/result id.
+      if (op !== pending.operation || intent !== pending.intent) {
+        toast('上一笔保存仍待确认，请重试原操作，暂不进行其他交易', 3000); return false;
+      }
+      for (const key of Object.keys(state)) delete state[key];
+      Object.assign(state, committed); lastGood = disk; persist.pending = null;
+      return true; // No backup rotation, new revision, repeat charge or write.
+    }
+    if (disk === pending.previous) persist.pending = null; // Verified not committed; normal retry is safe.
+    else {
+      let newer; try { newer = JSON.parse(disk); } catch (_) {}
+      if (!newer || E.checkSave(newer).length) { saveBlocked = true; E.markBlocked(state); toast('当前存档不兼容或损坏，未覆盖原数据', 3000); }
+      else freeze(); // Another valid write is authoritative; do not overwrite it.
+      return false;
+    }
+  }
   const bad = E.validState(state);                // 12d：写档前校验（金币 / 等级 / 待领取收益 + 12d3 整档结构），坏了不写、恢复上一份好档
   if (bad.length) { restoreGood(bad); return false; }
   const sr = storedRev();
+  if (sr === null) { toast('暂时读不到存档版本，未写入，请稍后重试', 2800); return false; }
   if (sr > state.rev) { freeze(); return false; }
   const t = now();
   if (t > state.lastSeen) state.lastSeen = t;
@@ -80,6 +115,11 @@ function persist() {
   // or roll the wallet back to a backup simply because this page is older.
   if (prev) {
     let current; try { current = JSON.parse(prev); } catch (_) {}
+    if (current && Number.isSafeInteger(current.rev) && current.rev > state.rev - 1) { state.rev--; freeze(); return false; }
+    if (current && current.tdCampaign !== undefined && (!window.TDStageProgress || window.TDStageProgress.check(current.tdCampaign).length)) {
+      state.rev--; saveBlocked = true; E.markBlocked(state);
+      toast('50关存档版本不兼容或结构损坏：已只读保护，原存档与金币未覆盖', 3600); return false;
+    }
     if (current && current.td50 !== undefined && (!window.TDProgress || window.TDProgress.check(current.td50).length)) {
       state.rev--; saveBlocked = true; E.markBlocked(state);
       toast('50波存档版本不兼容或结构损坏：已只读保护，原存档与金币未覆盖', 3600); return false;
@@ -92,8 +132,9 @@ function persist() {
       catch (e) { state.rev--; toast('保存失败：备份写不进去，这次没有保存（原存档未改）', 2600); return false; }   // 12d3：备份失败 → 主档不动
     }
   }
-  try { localStorage.setItem(SAVE_KEY, json); if (localStorage.getItem(SAVE_KEY) !== json) throw new Error('main mismatch'); lastGood = json; return true; }
-  catch (e) { state.rev--; toast('保存失败：浏览器存储不可用（无痕模式？）'); return false; }
+  persist.pending = {json, intent, previous:prev, operation:op, owner:typeof TAB === 'string' ? TAB : null};
+  try { localStorage.setItem(SAVE_KEY, json); if (localStorage.getItem(SAVE_KEY) !== json) throw new Error('main mismatch'); lastGood = json; persist.pending = null; return true; }
+  catch (e) { state.rev--; toast('保存状态尚未确认，请重试原操作；不要重复交易', 3000); return false; }
 }
 // 内存里出现坏值（NaN / ∞ / 负数 / 非数字）：不写盘，整档回到上一次成功写入的样子
 function restoreGood(bad) {
@@ -103,8 +144,10 @@ function restoreGood(bad) {
 }
 // 12d3 统一交易（熊大 22:08 第 3 条）：扣款 + 改状态 + 落盘一起走 E.transact——persist() 失败就整档回滚（钱、等级、物品都还原），
 // 提示「保存失败」、不播成功效果。what = 失败提示里的「什么没生效」
-function txn(apply, price, what) {
-  const r = E.transact(state, { price:price || 0, apply, save:() => persist(), blocked:saveBlocked });
+function txn(apply, price, what, operation) {
+  if (persist.pending && (typeof operation === 'string' ? operation : null) !== persist.pending.operation) return {ok:false,stage:'blocked',uncertain:true,why:'请先重试确认上一笔保存'};
+  const r = E.transact(state, { price:price || 0, apply, save:() => persist(operation), blocked:saveBlocked });
+  if (!r.ok && persist.pending) r.uncertain = true;
   if (!r.ok && r.stage !== 'pay' && r.stage !== 'apply') saveFailNote(r, what);
   return r;
 }
@@ -778,7 +821,7 @@ const coinsEl = $('#coins'), cpsEl = $('#cps'), tabBody = $('#tabBody'), toastEl
 let tab = 'shop', buyAmt = 1, dirty = true, renderedColHtml = null;
 // 12d：所有入账走 E.addCoins（坏值拒绝、到上限停住、旧档超上限不再增长）；返回实际到账
 let capWarned = false;
-function earn(v) { const r = E.addCoins(state, v); if (r.capped) capNote(); return r.ok ? r.added : 0; }
+function earn(v) { if (persist.pending) return 0; const r = E.addCoins(state, v); if (r.capped) capNote(); return r.ok ? r.added : 0; }
 function capNote() { if (capWarned) return; capWarned = true; toast('金币到上限 ' + fmt(CFG.COIN_CAP) + '：先花掉一些，收益才会继续进账', 3200); }
 function popWord(w) { sfxWord.textContent = w; sfxWord.classList.remove('pop'); void sfxWord.offsetWidth; sfxWord.classList.add('pop'); }
 function bumpCoins() { coinsEl.classList.remove('bump'); void coinsEl.offsetWidth; coinsEl.classList.add('bump'); }
@@ -853,6 +896,7 @@ function sayLine(who, txt, sec = 2.6) { bubble = { who, txt, until:clock + sec }
 
 // 在线收益：按真实时间累计；中途超过 5 秒没跑（锁屏/切走）就当离线结算
 function tick() {
+  if (persist.pending) return false;
   const t = now(), gap = (t - state.lastSeen) / 1000;
   if (gap < 0) { if (t > state.maxSeen - CFG.CLOCK_TOLERANCE * 1000) state.lastSeen = t; return; }
   if (gap > 5) { onReturn(); return; }
@@ -861,6 +905,7 @@ function tick() {
   state.lastSeen = t; if (t > state.maxSeen) state.maxSeen = t;
 }
 function onReturn() {
+  if (persist.pending) return false;
   if (frozen) return;
   const p = E.settleOffline(state, now(), rid);
   persist();
@@ -878,6 +923,7 @@ function comboNow() { return comboLive(tapSec()) ? combo.n : 0; }     // 下一�
 let critFx = null;                                                       // 同一时间只留一个暴击特效：新的替换旧的，不堆粒子
 const TIER_COLOR = [YELLOW, '#ffb703', '#ff4f9a', '#9d4edd'];
 function tapShop(x, y) {
+  if (persist.pending) return false;
   const i = state.cur, s = state.shops[i];
   if (!s.open) { toast(i > 0 && !state.shops[i - 1].open ? '先把上一家店开起来' : '在下面点「开张」'); return; }
   const ts = tapSec(), prev = comboLive(ts) ? combo.n : 0;
@@ -1136,6 +1182,7 @@ function updateBig() {
 }
 
 function hitBig(x, y) {
+  if (persist.pending) return false;
   // 点大客户：加快服务（不立刻结算）
   if (order && order.shop === state.cur && order.r != null) {
     if (Math.hypot(x - order.x, y - order.y) <= order.r * 1.2) {
@@ -1227,6 +1274,7 @@ function doUpgradeShop(i, btn) {
   handleUnlocks(unlocked);
 }
 function act(a, arg, btn) {
+  if (persist.pending) return false;
   const i = state.cur;
   switch (a) {
     case 'open': { const r = atomic(() => E.openShop(state, +arg), '开张没有生效，金币已退回'); if (!buyOk(r, btn)) return; afterBuy(btn, E.SHOPS[+arg].name + ' 开张啦！'); signAnim = { shop:+arg, from:'招租中', t0:clock }; handleUnlocks(r.unlocked); break; }
@@ -2111,6 +2159,7 @@ function petSyncActors() {
 function petBeforePersist() { for (const a of petActors.values()) a.rt.beforePersist(state); }
 function petPrepare(s) { for (const a of petActors.values()) a.rt.beforePersist(s); }
 function petSave(s) {
+  if (persist.pending) return false;
   if (!upgradeWritable()) return false;
   if (saveBlocked || frozen) return false;
   if (TEST_MODE) { s.rev++; return true; }
@@ -2293,6 +2342,7 @@ function homeAutoPlace(fid) {
   sfx('no'); toast(E.FURN_BY_ID[fid].wall ? '墙面挂满了：先收一幅，或者换个位置' : '房间放不下了：先收回点东西，或者升级房子');
 }
 function homeAct(a, arg, b) {
+  if (persist.pending) return false;
   switch (a) {
     case 'homeGetUp': homeLeavePose(homeWho);dirty=true;return;
     case 'petTarget': petTarget(arg);return;
@@ -2490,9 +2540,9 @@ document.addEventListener('gesturestart', e => e.preventDefault());
 let lastTouchEnd = 0;
 document.addEventListener('touchend', e => { const t = Date.now(); if (t - lastTouchEnd < 300 && !e.target.closest('button')) e.preventDefault(); lastTouchEnd = t; }, { passive:false });
 
-function onHide() { if (frozen || petManual) return; petHiddenAt = now(); tick(); if (order) order = null; /* 离线不结算进行中的团单，避免和离线收益纠缠 */ special = null; state.lastSeen = now(); persist(); audioPause(); }
+function onHide() { if (frozen || petManual || persist.pending) return; petHiddenAt = now(); tick(); if (order) order = null; /* 离线不结算进行中的团单，避免和离线收益纠缠 */ special = null; state.lastSeen = now(); persist(); audioPause(); }
 function onShow() {
-  if (frozen || petManual) return;
+  if (frozen || petManual || persist.pending) return;
   if (!lockMine()) { freeze(); return; }
   if (storedRev() > state.rev) { freeze(); return; }
   tick(); audioResume(); lastFrame = performance.now(); petResume();
@@ -2511,7 +2561,7 @@ let lastFrame = performance.now(), dynAcc = 0, saveAcc = 0;
 function frame(ts) {
   requestAnimationFrame(frame);
   const dt = Math.min(0.1, (ts - lastFrame) / 1000); lastFrame = ts; clock = ts / 1000;
-  if (frozen) return;
+  if (frozen || persist.pending) return; // Pause accrual and mutations until the exact commit is confirmed.
   if (petManual) { if (dirty) renderTab(); petFrame(0); return; }
   tick(); updateBig(); updateGuests(dt); updateSupers();
   if (focusT > 0) focusT -= dt; if (shake > 0) shake = Math.max(0, shake - dt * 1.5);
@@ -2542,9 +2592,15 @@ function boot() {
     const place = () => { const n = $('#bottomNav'); if (n) b.style.bottom = Math.max(8, innerHeight - n.getBoundingClientRect().top + 6) + 'px'; }; place(); addEventListener('resize', place); }
   if (loadInfo.source === 'bak') toast(loadInfo.mainMissing ? '主存档不见了，已从完整备份恢复' : '存档里的金币 / 等级数据坏了（' + loadInfo.bad.slice(0, 3).join('、') + '），已从完整备份恢复', 3600, '', 'error');
   if (!upgradeGate.ok) showUpgradeProtection();
-  else if (saveBlocked && loadInfo.td50Protected) {
+  else if (saveBlocked && loadInfo.readError) {
     const sb = document.createElement('div'); sb.id = 'saveBadge'; sb.setAttribute('role','alert');
-    sb.textContent = '50波存档版本不兼容或结构损坏：只读保护，所有交易与自动保存暂停，原存档和金币未覆盖。请保留原存档，使用匹配版本后重试。';
+    sb.textContent = '浏览器存档暂时读不到：已暂停交易和自动保存，原存档未覆盖。请恢复存储访问后刷新。';
+    sb.style.cssText = 'position:fixed;left:8px;right:8px;top:calc(env(safe-area-inset-top) + 6px);z-index:60;padding:10px;border:2px solid #141414;border-radius:10px;background:#ffd6d6;font-size:12px;font-weight:700';
+    document.body.appendChild(sb);
+  }
+  else if (saveBlocked && (loadInfo.td50Protected || loadInfo.tdCampaignProtected)) {
+    const sb = document.createElement('div'); sb.id = 'saveBadge'; sb.setAttribute('role','alert');
+    sb.textContent = '塔防存档版本不兼容或结构损坏：只读保护，所有交易与自动保存暂停，原存档和金币未覆盖。请保留原存档，使用匹配版本后重试。';
     sb.style.cssText = 'position:fixed;left:8px;right:8px;top:calc(env(safe-area-inset-top) + 6px);z-index:60;padding:10px;border:2px solid #141414;border-radius:10px;background:#ffd6d6;font-size:12px;font-weight:700';
     document.body.appendChild(sb);
   }

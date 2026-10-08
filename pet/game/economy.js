@@ -1,8 +1,8 @@
 /* 躺着也能赚 — 经济/结算核心 v2（CEO + 员工）。纯函数，不依赖 DOM，浏览器 / Node 通用。 */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory(typeof require === 'function' ? require('../../td/tdprogress.js') : undefined);
-  else root.Economy = factory(root.TDProgress);
-})(typeof self !== 'undefined' ? self : this, function (TDProgress) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(typeof require === 'function' ? require('../../td/tdprogress.js') : undefined, typeof require === 'function' ? require('../../td/tdcampaign-progress.js') : undefined);
+  else root.Economy = factory(root.TDProgress, root.TDStageProgress);
+})(typeof self !== 'undefined' ? self : this, function (TDProgress, TDStageProgress) {
   'use strict';
 
   /* ================= 可调参数（数值都在这里） ================= */
@@ -1244,6 +1244,7 @@
     }
     // Extension validation is strict; old 10-wave data remains untouched.
     if (has('td50')) bad.push(...(TDProgress ? TDProgress.check(raw.td50) : ['td50.module']));
+    if (has('tdCampaign')) bad.push(...(TDStageProgress ? TDStageProgress.check(raw.tdCampaign) : ['tdCampaign.module']));
     if (has('v') && !(Number.isInteger(raw.v) && raw.v >= 0)) bad.push('v');
     if (!isAmt(raw.coins)) bad.push('coins');
     else if (raw.coins > SAFE) bad.push('coins>安全整数');   // 12d1：超过 MAX_SAFE_INTEGER 的余额不能当钱包用
@@ -1337,11 +1338,12 @@
     const mBad = m.err ? ['json'] : checkSave(m.raw);
     if (!mBad.length) return Object.assign(migrate(m.raw, now), { source:'main', bad:[], raw:m.raw });
     const mainRev = m.raw && isObj(m.raw) && isAmt(m.raw.rev) ? m.raw.rev : 0;
-    // A newer/invalid td50 extension is read-only. Never replace its wallet
+    // A newer/invalid campaign or td50 extension is read-only. Never replace its wallet
     // with an older backup just because this build cannot understand its rules.
-    if (mBad.some(k => k.startsWith('td50'))) {
-      const onlyExtension = mBad.every(k => k.startsWith('td50'));
-      const r = Object.assign(migrate(onlyExtension ? m.raw : null, now), {source:'td50-protected',bad:mBad,raw:m.raw,mainRev,blocked:true,td50Protected:true,bakOk:!bBad.length});
+    if (mBad.some(k => k.startsWith('td50') || k.startsWith('tdCampaign'))) {
+      const campaign = mBad.some(k => k.startsWith('tdCampaign'));
+      const onlyExtension = mBad.every(k => k.startsWith('td50') || k.startsWith('tdCampaign'));
+      const r = Object.assign(migrate(onlyExtension ? m.raw : null, now), {source:campaign ? 'tdCampaign-protected' : 'td50-protected',bad:mBad,raw:m.raw,mainRev,blocked:true,tdCampaignProtected:campaign,td50Protected:mBad.some(k => k.startsWith('td50')),bakOk:!bBad.length});
       markBlocked(r.st); return r;
     }
     // 12d1：主档余额超出安全整数（如 1e20）→ 原文原样保留、不自动拿备份覆盖，进入异常模式（不写盘、封禁所有交易）；备份是否可用只做提示

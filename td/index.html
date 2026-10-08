@@ -9,14 +9,14 @@
 <meta name="format-detection" content="telephone=no">
 <title>科技公司塔防</title>
 <link rel="icon" href="../icon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="td.css?v=15d-td50-exp2-20261008">
+<link rel="stylesheet" href="td.css?v=15e-td-campaign-exp1-20261008">
 </head>
 <body>
 <canvas id="cv"></canvas>
 
 <div id="hud" class="hidden">
   <div class="hud-top">
-    <div class="pill vitals-pill"><span id="lifeTxt">❤ 20</span><span id="waveTxt">波 0/10</span></div>
+    <div class="pill vitals-pill"><span id="lifeTxt">❤ 20</span><span id="stageTxt">第1关</span><span id="waveTxt">0/10波</span></div>
     <div class="pill" id="cashTxt">建设点 120/400</div>
     <button id="skillBtn" class="skill-btn hidden" type="button">技能</button>
     <button class="speed-btn" id="speedBtn" type="button" aria-pressed="false">速度 ×1</button>
@@ -46,9 +46,10 @@
     <div class="cmd-pick" id="cmdPick"></div>
   </div>
   <div class="card">
-    <div class="row"><h2>地图</h2><span class="wallet" id="lvProg"></span></div>
+    <div class="row"><h2>50关战役</h2><span class="wallet" id="lvProg"></span></div>
     <div class="lvsel"><button class="buy" id="lvPrev" type="button" aria-label="上一关">‹</button><div><b id="lvTxt">第 1 关</b><small id="lvInfo"></small></div><button class="buy" id="lvNext" type="button" aria-label="下一关">›</button></div>
   </div>
+  <div id="stageGrid" class="stage-grid"></div><p id="campaignNotice" class="note"></p><button id="menuEndlessBtn" class="buy big" type="button">随机地图 · 开始无尽</button>
   <div class="card">
     <div class="row"><h2>永久升级</h2><span class="wallet"><span id="walletLbl">模拟余额</span> <b id="walletTxt">0</b></span></div>
     <p class="note" id="upNote">单独打开是原型模式：用模拟金币，不碰经营存档。</p>
@@ -66,7 +67,8 @@
 
 <section id="pause" class="screen dim hidden">
   <div class="card center">
-    <h2>暂停中</h2><p class="note" id="budgetInfo"></p><p>波次倒计时、敌人与建设点均冻结。<br>切到后台会暂停，返回后点继续。</p>
+    <h2>暂停中</h2><p class="note" id="budgetInfo"></p><p>开局10秒、波间5秒；倍速同时影响战斗与倒计时。<br>暂停时倒计时、敌人与建设点均冻结。<br>切到后台会暂停，返回后点继续。</p>
+    <button id="retryStartBtn" class="buy big hidden" type="button">重试开局确认</button>
     <button class="buy big" id="resumeBtn" type="button">继续</button>
     <button class="buy" id="pauseSpeedBtn" type="button" aria-pressed="false">速度 ×1</button>
     <button class="buy" id="sndBtn" type="button">声音：开</button>
@@ -81,7 +83,7 @@
     <p class="note" id="resNote"></p>
     <div id="endlessBoard" class="hidden"></div>
     <button class="buy hidden" id="retryBtn" type="button">重试保存</button>
-    <button class="buy big hidden" id="endlessBtn" type="button">继续无尽（保留生命与布阵）</button>
+    <button class="buy big hidden" id="endlessBtn" type="button">随机地图 · 新一局无尽</button>
     <button class="buy big red" id="againBtn" type="button">再来一局</button>
     <button class="buy" id="menuBtn" type="button">回升级</button>
   </div>
@@ -90,10 +92,12 @@
 <section id="endlessPrep" class="endless-prep hidden"><strong>无尽入场准备</strong><p id="endlessPrepCount"></p><button id="endlessPrepStart" class="buy" type="button">进入无尽</button><button id="endlessPrepBack" class="buy" type="button">返回结算</button></section>
 
 <script src="tdcore.js?v=15c"></script>
-<script src="tdwaves.js?v=15d-td50-exp2-20261008"></script>
-<script src="tdprogress.js?v=15d-td50-exp2-20261008"></script>
+<script src="tdwaves.js?v=15e-td-campaign-exp1-20261008"></script>
+<script src="tdprogress.js?v=15e-td-campaign-exp1-20261008"></script>
+<script src="tdcampaign.js?v=15e-td-campaign-exp1-20261008"></script>
+<script src="tdcampaign-progress.js?v=15e-td-campaign-exp1-20261008"></script>
 <script src="tdsfx.js?v=15c"></script>
-<script src="tdproto.js?v=15d-td50-exp2-20261008"></script>
-<script src="td.js?v=15d-td50-exp2-20261008"></script>
+<script src="tdproto.js?v=15e-td-campaign-exp1-20261008"></script>
+<script src="td.js?v=15e-td-campaign-exp1-20261008"></script>
 </body>
 </html>

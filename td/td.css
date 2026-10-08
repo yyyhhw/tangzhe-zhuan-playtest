@@ -75,3 +75,8 @@ button:focus-visible{outline:3px solid #1e6ea2;outline-offset:2px}
 
 
 .endless-prep{position:fixed;z-index:15;left:8px;right:8px;top:8px;background:var(--paper,#f7f1e3);border:3px solid #141414;padding:8px;border-radius:8px;box-shadow:3px 3px #141414;font-size:13px}.endless-prep p{margin:4px 0}.endless-prep .buy{min-height:36px;margin-right:6px}
+
+.stage-grid{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));gap:5px;margin:10px 0}.stage-grid button{min-height:36px;padding:3px;border:2px solid #141414;border-radius:7px;background:#fffaf0;font-weight:800}.stage-grid button.on{background:#ffd23f}.stage-grid button.cleared{border-color:#2e7d32}.stage-grid button:disabled{opacity:.36}#campaignNotice{line-height:1.6}#stageGrid{max-width:660px;margin:10px auto}#campaignNotice{max-width:660px;margin:10px auto}#menuEndlessBtn{display:block;margin:10px auto} @media(max-width:420px){.stage-grid{grid-template-columns:repeat(10,minmax(0,1fr));gap:3px}.stage-grid button{font-size:12px}}
+
+/* Three short lines keep stage and wave distinct within the 44px mobile HUD. */
+.hud-top .vitals-pill{line-height:11px;font-size:10px;min-height:44px}#stageGrid{width:100%}.stage-grid button{min-height:44px}@media(max-width:420px){.stage-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}.stage-grid button{font-size:14px}}
