@@ -11,9 +11,26 @@
     const r = raw && typeof raw === 'object' ? raw : {}, lv = {};
     IDS.forEach(k => { lv[k] = Math.max(0, Math.min(MAX_TRAIN, Math.floor(fin(r.lv && r.lv[k], 0)))); });
     const eb = r.endBest && typeof r.endBest === 'object' ? r.endBest : {};
+    const endBest = { t: Math.max(0, Math.min(86400, fin(eb.t, 0))), kills: Math.max(0, Math.floor(fin(eb.kills, 0))) };
     return { lv, cleared: Math.max(0, Math.min(MAX_LV, Math.floor(fin(r.cleared, 0)))), best: Math.max(0, Math.floor(fin(r.best, 0))),
-      endBest: { t: Math.max(0, Math.min(86400, fin(eb.t, 0))), kills: Math.max(0, Math.floor(fin(eb.kills, 0))) } };
+      endBest, endTop: normTop(r.endTop, endBest) };
   }
+  // 无尽排行榜：按坚持秒数排（同秒按击倒、再按先到），最多 TOP_N 条；id = 开局 runId，同一局只记一次。
+  // 老档没有榜单时，只把已有的「最好成绩」作为唯一一条历史记录，不补造其它对局。
+  const TOP_N = 10, ID_RE = /^[a-z0-9]{1,40}$/i;
+  const cmpTop = (a, b) => b.t - a.t || b.kills - a.kills || a.at - b.at;
+  function normTop(raw, endBest) {
+    if (!Array.isArray(raw)) return endBest.t > 0 ? [{ t: endBest.t, kills: endBest.kills, id: 'legacy', at: 0 }] : [];
+    const seen = new Set(), out = [];
+    for (const e of raw) {
+      if (!e || typeof e !== 'object' || typeof e.id !== 'string' || !ID_RE.test(e.id) || seen.has(e.id)) continue;
+      seen.add(e.id);
+      out.push({ t: Math.max(0, Math.min(86400, fin(e.t, 0))), kills: Math.max(0, Math.min(1e7, Math.floor(fin(e.kills, 0)))), id: e.id, at: Math.max(0, fin(e.at, 0)) });
+    }
+    return out.sort(cmpTop).slice(0, TOP_N);
+  }
+  // 本局名次：1..TOP_N；没上榜 = 0
+  const rankOf = (z, id) => { const k = (z && Array.isArray(z.endTop) ? z.endTop : []).findIndex(e => e.id === id); return k < 0 ? 0 : k + 1; };
   // 上场角色：烧烤店在任 CEO（经营页 zb:'state' 的 ceo 字段，null = 没人在任）。技能做好的才进 PLAYABLE；老经营页不带 ceo 字段时按 77
   const HEROES = { c77: { name: '77', atk: '飞串', ult: '火圈' }, pearl: { name: '珍珠姐', atk: '珍珠弹', ult: '冰沙风暴', btn: '冰沙' }, otaku: { name: '阿宅店长', atk: '回旋漫画', ult: '分镜轰炸', btn: '分镜' }, rocket: { name: '火箭老板', atk: '迷你火箭', ult: '星舰冲击波', btn: '星舰' } };
   const CEO_IDS = Object.keys(HEROES), PLAYABLE = ['c77', 'pearl', 'otaku', 'rocket'];
@@ -22,7 +39,14 @@
   function applyResult(z, res) {
     if (!res || typeof res !== 'object') return false;
     const t = Math.max(0, Math.min(86400, fin(res.t, 0))), kills = Math.max(0, Math.min(1e7, Math.floor(fin(res.kills, 0))));
-    if (res.mode === 'endless') { if (z.cleared < MAX_LV) return false; if (t > z.endBest.t) z.endBest = { t, kills }; }
+    if (res.mode === 'endless') {
+      if (z.cleared < MAX_LV) return false;
+      const id = typeof res.runId === 'string' && ID_RE.test(res.runId) ? res.runId : null;
+      if (!Array.isArray(z.endTop)) z.endTop = normTop(null, z.endBest);
+      if (id && z.endTop.some(e => e.id === id)) return true;   // 同一局重发（重试保存）不重复上榜
+      if (t > z.endBest.t) z.endBest = { t, kills };
+      if (id) z.endTop = normTop(z.endTop.concat({ t, kills, id, at: Date.now() }), z.endBest);
+    }
     else {
       const n = Math.floor(fin(res.n, 0));
       if (n < 1 || n > Math.min(MAX_LV, z.cleared + 1)) return false;
@@ -31,5 +55,5 @@
     z.best = Math.max(z.best, kills);
     return true;
   }
-  return { MAX_LV, MAX_TRAIN, GROWTH, BASE, IDS, HEROES, CEO_IDS, PLAYABLE, heroOf, price, levelDur, norm, applyResult };
+  return { MAX_LV, MAX_TRAIN, GROWTH, BASE, IDS, HEROES, CEO_IDS, PLAYABLE, heroOf, price, levelDur, norm, applyResult, TOP_N, rankOf };
 });

@@ -88,7 +88,7 @@ with sync_playwright() as p:
         check(en['mode'] == 'endless' and not en['over'] and en['t'] > 399 and not en['bad'] and en2['nb'] == 420 and en2['clock'] == '6:40' and en2['lvl'] == '无尽 难度 63', f'{dn} 无尽 400 秒：不结束、Boss 每 60 秒、计时正数、难度 63 {en} {en2}')
         pg.locator('#pauseBtn').tap(); pg.locator('#quitBtn').tap(); pg.wait_for_timeout(100)
         q = S(pg, "({title:document.getElementById('resTitle').textContent, best:JSON.parse(localStorage.getItem(__zb.PROTO_KEY)).endBest})")
-        check(q['title'] == '无尽新纪录！' and q['best']['t'] > 399, f'{dn} 无尽手动退出：结算并保存最好成绩 {q}')
+        check(q['title'].startswith('无尽新纪录！') and q['best']['t'] > 399, f'{dn} 无尽手动退出：结算并保存最好成绩 {q}')
         # 性能：120 只同屏时单步模拟耗时
         pg.locator('#againBtn').tap(); pg.wait_for_timeout(100); pg.locator('#pauseBtn').tap()
         pf = S(pg, """(()=>{const G=__zb.G; G.t=120; for(let i=0;i<120;i++) G.zs.push({type:'walker',x:Math.random()*innerWidth,y:Math.random()*innerHeight,r:13,hp:1e9,maxHp:1e9,sp:30,dmg:0,col:'#8fbf7a',flash:0,kx:0,ky:0,wob:0});

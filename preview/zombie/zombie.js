@@ -600,7 +600,7 @@ $('#train').addEventListener('click', e => {
   else if (Wallet.spend(price(t, lv))) { proto.lv[t.id] = lv + 1; saveProto(); }
   renderTrain();
 });
-function show(id) { for (const s of ['#menu', '#pause', '#result']) $(s).classList.toggle('hidden', s !== id); $('#hud').classList.toggle('hidden', id === '#menu'); }
+function show(id) { for (const s of ['#menu', '#pause', '#result', '#board']) $(s).classList.toggle('hidden', s !== id); $('#hud').classList.toggle('hidden', id === '#menu'); }
 function newRunId() {
   try { if (crypto && crypto.getRandomValues) return Array.from(crypto.getRandomValues(new Uint32Array(3))).map(x => x.toString(36).padStart(7, '0')).join(''); } catch (e) {}
   return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2);
@@ -635,27 +635,40 @@ function end(win) {
     // 经营页是唯一写档方：等它回执（ack:'result'）后再按权威进度显示通关 / 解锁，存档失败不报喜；带上开局 runId 供父页对照
     G.wait = true; G.resMsg = { zb: 'result', mode: G.mode, n: G.n, win, t: G.t, kills: G.kills, ceo: G.ceo, runId: G.runId }; host(G.resMsg);
   } else {
-    proto.best = Math.max(proto.best, G.kills);
-    if (G.mode === 'endless') { if (G.t > proto.endBest.t) proto.endBest = { t: G.t, kills: G.kills }; }
-    else if (win) proto.cleared = Math.max(proto.cleared, G.n);
+    if (G.mode === 'endless') ZB.applyResult(proto, { mode: 'endless', t: G.t, kills: G.kills, runId: G.runId });
+    else { proto.best = Math.max(proto.best, G.kills); if (win) proto.cleared = Math.max(proto.cleared, G.n); }
     saveProto();
   }
   renderResult(); show('#result');
 }
+// 无尽 TOP10：本局那行高亮；没上榜时榜单下面单列本局分数
+const runTxt = e => `坚持 ${Math.floor(e.t)} 秒 · 击倒 ${e.kills}`;
+function boardHtml(runId) {
+  const top = proto.endTop || [];
+  if (!top.length) return '<p class="note">还没有无尽记录</p>';
+  return '<ol class="board">' + top.map((e, k) => `<li class="${e.id === runId ? 'me' : ''}"><b>第 ${k + 1} 名</b><span>${runTxt(e)}</span>${e.id === runId ? '<em>本局</em>' : ''}</li>`).join('') + '</ol>';
+}
+function renderBoard() { $('#boardList').innerHTML = boardHtml(null); }
 function renderResult() {
   if (!G || !G.over) return;
   let title, again = '再来一局';
   const saved = G.mode === 'endless' ? proto.endBest.t >= G.t - 1e-6 : proto.cleared >= G.n;
   if (G.wait) title = '结算中…';
-  else if (G.mode === 'endless') title = G.why ? '无尽结算（没存上）' : saved && G.t > G.prevBest ? '无尽新纪录！' : '无尽结算';
+  else if (G.mode === 'endless') { const rk = ZB.rankOf(proto, G.runId); title = G.why ? '无尽结算（没存上）' : rk === 1 ? '无尽新纪录！第 1 名' : rk ? `无尽结算 · 第 ${rk} 名` : '无尽结算 · 未上榜'; }
   else if (G.win && saved) { title = G.n >= MAX_LV ? `第 ${G.n} 关通关！无尽模式开放` : `第 ${G.n} 关通关！`; again = G.n >= MAX_LV ? '进入无尽' : '下一关'; }
   else if (G.win) { title = `第 ${G.n} 关没存上`; again = '再打一次'; }
   else title = `第 ${G.n} 关失败…`;
   $('#resTitle').textContent = title; $('#againBtn').textContent = again; $('#againBtn').disabled = !!G.wait;
   $('#resNote').textContent = G.wait ? '正在存档…' : G.why;
   $('#retryBtn').classList.toggle('hidden', !(EMBED && !G.wait && G.resMsg && /^存档失败/.test(G.why)));
-  $('#resStats').textContent = G.mode === 'endless' ? `坚持 ${Math.floor(G.t)} 秒 · 击倒 ${G.kills} · 最好 ${Math.floor(proto.endBest.t)} 秒`
+  $('#resStats').textContent = G.mode === 'endless' ? `本局${runTxt(G)} · 最好 ${Math.floor(proto.endBest.t)} 秒`
     : `坚持 ${Math.floor(G.t)} / ${G.dur} 秒 · 击倒 ${G.kills}`;
+  const rb = $('#resBoard'), showBoard = G.mode === 'endless' && !G.wait;
+  rb.classList.toggle('hidden', !showBoard);
+  if (showBoard) {
+    const rk = ZB.rankOf(proto, G.runId);
+    rb.innerHTML = '<h3>无尽排行榜 TOP10</h3>' + boardHtml(G.runId) + (rk ? '' : `<p class="board-me"><b>本局</b><span>${runTxt(G)}</span><em>${G.why ? '没存上' : '未上榜'}</em></p>`);
+  }
 }
 function setPause(on) { if (!G || G.over) return; paused = on; if (on) SFX.stopBgm(); else bgmTry(); joy.on = false; show(on ? '#pause' : null); if (!on) last = performance.now(); }
 function loop(now) {
@@ -666,6 +679,8 @@ function loop(now) {
 }
 $('#startBtn').addEventListener('click', () => start('level', selLv));
 $('#endlessBtn').addEventListener('click', () => start('endless'));
+$('#boardBtn').addEventListener('click', () => { renderBoard(); show('#board'); });
+$('#boardBack').addEventListener('click', () => { renderTrain(); show('#menu'); draw(); });
 $('#againBtn').addEventListener('click', () => {
   if (G && G.wait) return;
   if (!canPlay()) { G = null; renderTrain(); show('#menu'); draw(); return; }
@@ -694,5 +709,5 @@ if (EMBED) {
 selLv = Math.min(MAX_LV, proto.cleared + 1);
 resize(); renderTrain(); draw();
 // 测试钩子：只读状态 + 固定步长推进
-window.__zb = { EMBED, get ceo() { return proto.ceo; }, renderResult, send: host, onState, canPlay, get lastSent() { return lastSent; }, get pend() { return pend; }, get G() { return G; }, proto, Wallet, step, castUlt, start, setPause, joy, PROTO_KEY, price, TRAIN, levelDur, renderTrain, saveProto, MAX_LV };
+window.__zb = { EMBED, get ceo() { return proto.ceo; }, renderResult, send: host, onState, canPlay, get lastSent() { return lastSent; }, get pend() { return pend; }, get G() { return G; }, proto, Wallet, step, renderBoard, castUlt, start, setPause, joy, PROTO_KEY, price, TRAIN, levelDur, renderTrain, saveProto, MAX_LV };
 })();
