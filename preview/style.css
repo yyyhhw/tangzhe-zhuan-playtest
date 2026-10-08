@@ -754,3 +754,25 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 .story-open>b{grid-column:1/-1}.story-open .story-art{grid-column:1;grid-row:2/span 2;width:96px;margin:0}
 .story-open .story-text{grid-column:2;grid-row:2;margin:0;font-size:12px}.story-open .story-replay-hint{grid-column:2;grid-row:3;margin:0;font-size:11px}
 .story-open .story-art-status{padding:5px;font-size:10px;line-height:1.3}
+
+/* Owned story cards also replay from the blind-box catalog. */
+.item.story-open{display:flex;gap:3px;aspect-ratio:auto;min-height:126px;padding:16px 4px 5px;font-size:11px;text-align:center;justify-content:flex-start}
+.item.story-open .story-art{width:100%;margin:0;flex:none}
+.item.story-open .story-replay-hint{font-size:10px;margin:0}
+.item.story-open .story-art-status{font-size:9px;padding:2px}
+
+/* Collection artwork: consistent padding without cropping native hat/clothes drawings. */
+.item-art{display:inline-flex;position:relative;width:52px;height:52px;flex:0 0 auto;align-items:center;justify-content:center}
+.item-art img{display:block;width:100%;height:100%;object-fit:contain;transform:none!important}
+.item-art img[hidden],.item-art-status[hidden]{display:none!important}
+.item-art-status{font-size:10px;line-height:1.3;font-weight:400;color:#666}
+.ava .item-art{width:100%;height:100%}
+.ava .item-art img{position:static;width:100%;height:100%}
+.item-grid>.item:not(.story-open){gap:3px;padding-top:15px;aspect-ratio:auto;min-height:94px}
+.reveal-item{width:140px;margin:8px auto;font-size:14px;padding:8px;gap:6px;aspect-ratio:auto}
+.reveal-item .item-art{width:112px;height:112px}
+.reveal-story{width:100%;max-width:360px;margin:4px auto}
+@media(max-width:350px){.item-grid .item-art{width:44px;height:44px}}
+
+.item-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
+.item-grid>.item{min-width:0;overflow-wrap:anywhere}
