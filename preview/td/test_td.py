@@ -70,15 +70,15 @@ with sync_playwright() as p:
     for cmd in ['c77', 'pearl', 'otaku', 'rocket']:
         u = E("(c) => { const G = __fresh(c); G.es = [__mk(5), __mk(8), __mk(12)]; __td.step(0.0001); G.c.x = G.c.tx = 4.5; G.c.y = G.c.ty = 2.5; G.energy = 100; const s0 = ZBSfx.state.count.ult || 0; const ok = __td.castUlt(); return { ok, e: G.energy, hit: G.es.filter(e => e.hp < 1e6).length, stun: G.es.filter(e => e.stunT > 0).length, lbl: document.getElementById('ultLbl').textContent }; }", cmd)
         check(u['ok'] and u['e'] == 0 and u['hit'] >= 1, f'统帅 {cmd} 大招能放、清能量、打到僵尸 {u}')
-    # 统帅不占塔位：站的格子能造塔；只走路面
+    # 被动统帅不接受移动；建造仍只允许空地
     nb = E("() => { const G = __fresh('pearl'); const ok1 = __td.moveCmd(4, 2), ok2 = __td.moveCmd(2, 1); G.cash = 1e4; const b = __td.build('bbq', 2, 2); return [ok1, ok2, b, __td.build('bbq', 2, 1)]; }")
-    check(nb == [False, True, True, False], f'统帅只能走路面、不占塔位；路面不能造塔 {nb}')
+    check(nb == [False, False, True, False], f'统帅不能移动、不占塔位；路面不能造塔 {nb}')
     # 局内建设点：每局重置成 160，剩余不兑换主金币；塔可局内升级 / 拆除
     bp = E("() => { const c0 = __td.proto.coins; let G = __fresh('rocket'); const a = G.cash; __td.build('bbq', 4, 2); const b = G.cash; const up = __td.upTower(4, 2); const sl = __td.sell(4, 2); const c = G.cash; G = __fresh('rocket'); return [a, b, up, sl, c, G.cash, __td.proto.coins === c0]; }")
     check(bp[0] == 160 and bp[1] == 100 and bp[2] and bp[3] and bp[5] == 160 and bp[6], f'建设点每局 160，造塔扣点、可升级 / 拆除，下局重置，主金币不变 {bp}')
     # 统帅开局锁定
     lk = E("() => { const G = __fresh('pearl'); __td.cmdSel = 'c77'; return [G.cmd, document.getElementById('ultLbl').textContent]; }")
-    check(lk == ['pearl', '冰沙'], f'统帅开局锁定，菜单换人不影响本局 {lk}')
+    check(lk == ['pearl', '自动 · 冰沙'], f'统帅开局锁定，菜单换人不影响本局 {lk}')
     # 原型：主金币永久升级只写 tangzhe-td-proto
     up = E("() => { if (__td.G) __td.G.over = true; const c0 = __td.proto.coins, p = TDCore.price('bbq', 0); const a = __td.buyUp('bbq'); const c1 = __td.proto.coins; const s = JSON.parse(localStorage.getItem('tangzhe-td-proto')); return { a, spent: c0 - c1, p, lv: __td.proto.lv.bbq, saved: s.lv.bbq, keys: Object.keys(localStorage) }; }")
     check(up['a'] and up['spent'] == up['p'] and up['lv'] == 1 and up['saved'] == 1 and up['keys'] == ['tangzhe-td-proto'], f'原型：永久升级扣模拟金币、只写 tangzhe-td-proto {up}')
@@ -147,7 +147,7 @@ with sync_playwright() as p:
         mb = pg.evaluate("(() => { const m = document.getElementById('menu'); m.scrollTop = m.scrollHeight; const r = document.getElementById('startBtn').getBoundingClientRect(); return r.bottom <= innerHeight + 1 && r.height > 0; })()")
         check(mb, f'{dn} 菜单拉到底「开守」可点')
         pg.locator('#cmdPick [data-cmd=c77]').tap(); pg.locator('#startBtn').tap(); pg.wait_for_timeout(300)
-        pg.evaluate("(() => { const G = __td.G; G.cash = 2000; G.wave = 4; [['bbq',4,2],['t77',2,3],['tech',3,5],['book',4,6],['tea',2,5],['tpearl',6,8],['totaku',4,8],['trocket',0,5]].forEach(a => __td.build(...a)); __td.nextWave(); for (let i = 0; i < 260; i++) __td.step(0.03); })()")
+        pg.evaluate("(() => { const G = __td.G; G.cash = 2000; G.wave = 4; [['bbq',4,2],['t77',2,3],['tech',3,5],['book',4,6],['tea',2,5],['tpearl',6,8],['totaku',4,8],['trocket',0,5]].forEach(a => __td.build(...a)); G.breakT = 0; __td.nextWave(); for (let i = 0; i < 260; i++) __td.step(0.03); })()")
         g = pg.evaluate("__td.geo")
         pg.mouse.click(g['OX'] + g['S'] * 0.5, g['OY'] + g['S'] * 2.5); pg.wait_for_timeout(200)
         lay = pg.evaluate("(() => { const g = __td.geo, bar = document.getElementById('bar').getBoundingClientRect(), top = document.querySelector('.hud-top').getBoundingClientRect(); return { gridTop: g.OY, gridBot: g.OY + g.S * g.ROWS, barTop: bar.top, hudBot: top.bottom, build: !document.getElementById('barBuild').classList.contains('hidden'), n: document.querySelectorAll('#twGrid button').length, star: document.querySelector('#twGrid .syn') && document.querySelector('#twGrid .syn').textContent }; })()")

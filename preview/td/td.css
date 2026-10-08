@@ -58,3 +58,20 @@ p{margin:0;font-size:14px;line-height:1.5}
 @keyframes pulse{to{box-shadow:4px 4px 0 var(--ink),0 0 0 7px rgba(230,57,70,.25)}}
 .row h2{white-space:nowrap;flex:none}
 @media (max-width:380px){.hero img{width:64px;height:64px}h1{font-size:20px}#heroDesc{font-size:13px;line-height:1.5}.cmd-pick button{font-size:12px}}
+
+/* td2: stable compact dock, touch-first inspection */
+#bar{max-height:52dvh;overflow-y:auto;min-height:0!important}
+#barMain{min-height:88px}#barTower{flex-wrap:wrap}#twInfo{flex-basis:100%;font-weight:500}
+.build-info{height:116px;overflow-y:auto;font-size:12px;line-height:1.45;padding:8px;border:2px dashed #d9cfb8;border-radius:8px;background:#fff}
+.build-info b{font-size:14px}.build-actions{display:flex;gap:10px}.build-actions>*{flex:1}.tw-grid .chosen{outline:3px solid var(--red);outline-offset:-3px;background:#ffe7ca}
+.countdown{position:absolute;top:calc(59px + var(--sat));left:50%;transform:translateX(-50%);border:2px solid var(--ink);background:var(--yellow);box-shadow:3px 3px 0 var(--ink);border-radius:8px;padding:5px 12px;font-size:14px;font-weight:900;white-space:nowrap}
+.toast{top:calc(100px + var(--sat));font-size:14px;-webkit-text-stroke:0;background:var(--panel);border-radius:6px}
+#ultBtn .ult-lbl{font-size:12px}#waveBtn:disabled{color:var(--ink);background:var(--yellow)}
+.hero{align-items:flex-start}.hero img{width:64px;height:64px}#heroDesc{font-size:13px}
+@media(min-width:700px){#bar{max-width:650px;left:50%;transform:translateX(-50%);border:3px solid var(--ink);border-radius:14px 14px 0 0}}
+
+#barMain{min-height:48px}#ultBtn{width:48px;height:48px;box-shadow:none}#ultBtn .ult-lbl{font-size:10px}#waveBtn{padding:4px 8px;min-height:40px;font-size:12px}.bar-tip{font-size:11px}
+#barBuild{gap:5px}.tw-grid button{min-height:44px;font-size:11px}.build-info{height:102px;padding:5px 8px}#cancelChoice{min-height:36px;padding:4px}
+.build-actions{position:fixed;z-index:4;pointer-events:auto;filter:drop-shadow(0 3px 5px #0003)}.build-actions .buy{min-height:48px;padding:6px 10px;white-space:nowrap;font-size:13px}
+#bar{max-width:none;left:0;right:0;transform:none;border-radius:0;border-left:0;border-right:0}.build-actions.hidden{display:none}
+@media(min-width:700px){#barBuild,.bar-tip,#barMain,#barTower{max-width:650px;margin:auto}}
