@@ -2405,7 +2405,7 @@ window.__tzz = { upgradeGate, TEST_MODE, TEST_LV, SAVE_KEY, BAK_KEY, get saveBlo
 /* ================= 科技公司塔防：与主钱包同一存档、同一原子交易 ================= */
 function tdCard() {
   const z = TD.norm(state.td);
-  return `<div class="card td-card"><div class="ava">♜</div><div class="info"><div class="name">机房塔防<span class="tag">样品</span></div><div class="desc">8 种防御塔 · 4 位统帅 · ${TD.WAVES} 波<br>最佳 ${z.best}/${TD.WAVES} 波 · 升级共用经营金币</div></div><button class="buy" data-act="td">去守</button></div>`;
+  return `<div class="card td-card"><div class="ava">♜</div><div class="info"><div class="name">机房塔防<span class="tag">无尽挑战</span></div><div class="desc">8 种防御塔 · 4 位统帅 · 普通 ${TD.WAVES} 波后可继续无尽<br>最佳 ${z.best}/${TD.WAVES} 波 · 本机 TOP10 · 升级共用经营金币</div></div><button class="buy" data-act="td">去守</button></div>`;
 }
 const tdController = window.TDHost.create({
   state:() => state, blocked:() => zbBlocked(), balance:() => E.balance(state),
@@ -2416,7 +2416,7 @@ const tdController = window.TDHost.create({
 function openTD() {
   if (frozen || tdOpen || zbOpen || !state.shops[3].open) return;
   tdOpen = true; const f = $('#tdFrame'), generation = ++tdGeneration;
-  const target = new URL('td/index.html?embed=1&v=13k', location.href);
+  const target = new URL('td/index.html?embed=1&v=15-td-balance1', location.href);
   f.onload = () => {
     if (!tdOpen || generation !== tdGeneration) return;
     // Verify the actual loaded document, not merely an iframe src attribute.

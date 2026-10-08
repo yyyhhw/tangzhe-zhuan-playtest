@@ -1,0 +1,10 @@
+'use strict';
+const vm=require('node:vm'),fs=require('node:fs'),assert=require('node:assert/strict');
+let time=1000, tones=0, resumes=0;const events={};
+const param=()=>({value:0,setValueAtTime(){},exponentialRampToValueAtTime(){}});
+const node=()=>({connect(){},gain:param(),frequency:param(),start(){tones++},stop(){}});
+class Audio {constructor(){this.state='suspended';this.currentTime=0;this.sampleRate=100;this.destination={};}createGain(){return node()}createDynamicsCompressor(){return {connect(){},threshold:param(),knee:param(),ratio:param(),attack:param(),release:param()}}createBuffer(){return {getChannelData:()=>new Float32Array(100)}}createOscillator(){return node()}createBufferSource(){return node()}createBiquadFilter(){return node()}resume(){resumes++;this.state='running';return Promise.resolve()}suspend(){this.state='suspended';return Promise.resolve()}}
+const ctx={window:{AudioContext:Audio},document:{hidden:false,addEventListener:(n,f)=>events[n]=f},performance:{now:()=>time},setInterval:()=>1,clearInterval(){}};
+vm.createContext(ctx);vm.runInContext(fs.readFileSync(__dirname+'/tdsfx.js','utf8'),ctx);const s=ctx.window.ZBSfx;
+s.hit();assert.equal(tones,0);s.unlock();assert.equal(resumes,1);s.shot('tech');const initial=tones;for(let i=0;i<50;i++)s.shot('tech');assert.equal(tones,initial);time+=100;s.shot('pearl');assert(tones>initial);s.setMuted(true);const silent=tones;s.hit();s.cue('wave');assert.equal(tones,silent);assert.equal(s.state.master.gain.value,0);s.setMuted(false);s.setPaused(true);s.shot('rocket');assert.equal(tones,silent);ctx.document.hidden=true;events.visibilitychange();assert.equal(s.state.ctx.state,'suspended');ctx.document.hidden=false;events.visibilitychange();s.setPaused(false);time+=1000;s.cue('build');assert(tones>silent);assert.equal(s.state.master.gain.value,.7);assert.equal(s.state.sfx.gain.value,.32);
+console.log('TD audio: gesture unlock, rate gate, mute, pause, visibility and gain checks passed (mock AudioContext; no audible playback claim)');
