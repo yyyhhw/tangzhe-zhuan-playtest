@@ -22,16 +22,46 @@ const TRAIN = [
 const MAX_TRAIN = ZB.MAX_TRAIN;
 const price = (t, lv) => ZB.price(t.id, lv);
 function fireInterval(lv) { return Math.max(0.2, 0.55 * 0.95 ** lv); }
+// 原型页无尽榜单单独存 TOP_KEY：旧版页面只认 PROTO_KEY，存档时清不掉榜单。
+// 每次保存先读回两份存档、和内存合并（训练 / 进度取大、榜单按局并集）再写，多开标签页不会互相覆盖成绩。
+const TOP_KEY = 'tangzhe-zombie-proto-top';
+function readLocal() {
+  let raw = null, top = null;
+  try { raw = JSON.parse(localStorage.getItem(PROTO_KEY) || 'null'); } catch (e) { raw = null; }
+  try { top = JSON.parse(localStorage.getItem(TOP_KEY) || 'null'); } catch (e) { top = null; }
+  const r = raw && typeof raw === 'object' ? raw : {};
+  return { raw, z: ZB.norm(Object.assign({}, r, { endTop: Array.isArray(top) ? top : r.endTop })) };
+}
+function mergeScores(a, b) {
+  const lv = {}; ZB.IDS.forEach(k => { lv[k] = Math.max(a.lv[k] || 0, b.lv[k] || 0); });
+  const eb = a.endBest.t >= b.endBest.t ? a.endBest : b.endBest;
+  return ZB.norm({ lv, cleared: Math.max(a.cleared, b.cleared), best: Math.max(a.best, b.best), endBest: { t: eb.t, kills: eb.kills }, endTop: (a.endTop || []).concat(b.endTop || []) });
+}
 function loadProto() {
   if (EMBED) return Object.assign({ coins: 0, ready: false, blocked: false, ceo: null }, ZB.norm(null));
-  let raw = null; try { raw = JSON.parse(localStorage.getItem(PROTO_KEY) || 'null'); } catch (e) { raw = null; }
+  const { raw, z } = readLocal();
   const q = new URLSearchParams(location.search).get('ceo');
-  const p = Object.assign({ coins: 5e10, ready: true, blocked: false, ceo: ZB.heroOf(q === null ? undefined : q) }, ZB.norm(raw));
+  const p = Object.assign({ coins: 5e10, ready: true, blocked: false, ceo: ZB.heroOf(q === null ? undefined : q) }, z);
   if (raw && typeof raw === 'object') p.coins = Math.max(0, Math.min(1e15, fin(raw.coins, 5e10)));
   return p;
 }
 const proto = loadProto();
-const saveProto = () => { if (EMBED) return; try { localStorage.setItem(PROTO_KEY, JSON.stringify(proto)); } catch (e) {} };
+// apply：本局结果，作用在合并后的副本上；两份都写成功才并回内存，失败返回 false、内存不变，可原样重试
+function saveProto(apply) {
+  if (EMBED) return true;
+  const next = mergeScores(proto, readLocal().z);
+  if (apply) apply(next);
+  const keep = Object.assign({}, proto, next); delete keep.endTop;
+  try { localStorage.setItem(TOP_KEY, JSON.stringify(next.endTop)); localStorage.setItem(PROTO_KEY, JSON.stringify(keep)); } catch (e) { return false; }
+  Object.assign(proto, next); return true;
+}
+const SAVE_FAIL = '存档失败：这局成绩没存上，可以点「重试保存」';
+if (!EMBED) window.addEventListener('storage', e => {
+  if (e.key !== null && e.key !== PROTO_KEY && e.key !== TOP_KEY) return;
+  Object.assign(proto, mergeScores(proto, readLocal().z));
+  if (!$('#board').classList.contains('hidden')) renderBoard();
+  if (!$('#menu').classList.contains('hidden')) renderTrain();
+});
 let pend = false, firstSync = true;
 let port = null;
 let lastSent = null;
@@ -635,9 +665,9 @@ function end(win) {
     // 经营页是唯一写档方：等它回执（ack:'result'）后再按权威进度显示通关 / 解锁，存档失败不报喜；带上开局 runId 供父页对照
     G.wait = true; G.resMsg = { zb: 'result', mode: G.mode, n: G.n, win, t: G.t, kills: G.kills, ceo: G.ceo, runId: G.runId }; host(G.resMsg);
   } else {
-    if (G.mode === 'endless') ZB.applyResult(proto, { mode: 'endless', t: G.t, kills: G.kills, runId: G.runId });
-    else { proto.best = Math.max(proto.best, G.kills); if (win) proto.cleared = Math.max(proto.cleared, G.n); }
-    saveProto();
+    const g = G, res = { mode: 'endless', t: g.t, kills: g.kills, runId: g.runId };
+    g.resApply = g.mode === 'endless' ? z => ZB.applyResult(z, res) : z => { z.best = Math.max(z.best, g.kills); if (win) z.cleared = Math.max(z.cleared, g.n); };
+    if (!saveProto(g.resApply)) g.why = SAVE_FAIL;
   }
   renderResult(); show('#result');
 }
@@ -660,7 +690,7 @@ function renderResult() {
   else title = `第 ${G.n} 关失败…`;
   $('#resTitle').textContent = title; $('#againBtn').textContent = again; $('#againBtn').disabled = !!G.wait;
   $('#resNote').textContent = G.wait ? '正在存档…' : G.why;
-  $('#retryBtn').classList.toggle('hidden', !(EMBED && !G.wait && G.resMsg && /^存档失败/.test(G.why)));
+  $('#retryBtn').classList.toggle('hidden', !(!G.wait && (EMBED ? G.resMsg : G.resApply) && /^存档失败/.test(G.why)));
   $('#resStats').textContent = G.mode === 'endless' ? `本局${runTxt(G)} · 最好 ${Math.floor(proto.endBest.t)} 秒`
     : `坚持 ${Math.floor(G.t)} / ${G.dur} 秒 · 击倒 ${G.kills}`;
   const rb = $('#resBoard'), showBoard = G.mode === 'endless' && !G.wait;
@@ -697,7 +727,10 @@ $('#sndBtn').addEventListener('click', () => { userMute = !userMute; applyMute()
 for (const ev of ['pointerdown', 'touchend', 'click']) document.addEventListener(ev, () => SFX.unlock(), true);
 $('#resumeBtn').addEventListener('click', () => setPause(false));
 // 存档失败时用同一份结算消息（同 runId）重试，父页按权威进度回执后结算页刷新
-$('#retryBtn').addEventListener('click', () => { if (!G || !G.over || G.wait || !G.resMsg) return; G.wait = true; G.why = ''; renderResult(); host(G.resMsg); });
+$('#retryBtn').addEventListener('click', () => {
+  if (!G || !G.over || G.wait) return;
+  if (!EMBED) { if (G.resApply) { G.why = saveProto(G.resApply) ? '' : SAVE_FAIL; renderResult(); } return; }
+  if (!G.resMsg) return; G.wait = true; G.why = ''; renderResult(); host(G.resMsg); });
 $('#quitBtn').addEventListener('click', () => { paused = false; end(false); });
 $('#ultBtn').addEventListener('click', () => { castUlt(); hud(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) setPause(true); });
@@ -709,5 +742,5 @@ if (EMBED) {
 selLv = Math.min(MAX_LV, proto.cleared + 1);
 resize(); renderTrain(); draw();
 // 测试钩子：只读状态 + 固定步长推进
-window.__zb = { EMBED, get ceo() { return proto.ceo; }, renderResult, send: host, onState, canPlay, get lastSent() { return lastSent; }, get pend() { return pend; }, get G() { return G; }, proto, Wallet, step, renderBoard, castUlt, start, setPause, joy, PROTO_KEY, price, TRAIN, levelDur, renderTrain, saveProto, MAX_LV };
+window.__zb = { EMBED, get ceo() { return proto.ceo; }, renderResult, send: host, onState, canPlay, get lastSent() { return lastSent; }, get pend() { return pend; }, get G() { return G; }, proto, Wallet, step, renderBoard, castUlt, start, setPause, joy, PROTO_KEY, TOP_KEY, price, TRAIN, levelDur, renderTrain, saveProto, MAX_LV };
 })();

@@ -12,22 +12,28 @@
     IDS.forEach(k => { lv[k] = Math.max(0, Math.min(MAX_TRAIN, Math.floor(fin(r.lv && r.lv[k], 0)))); });
     const eb = r.endBest && typeof r.endBest === 'object' ? r.endBest : {};
     const endBest = { t: Math.max(0, Math.min(86400, fin(eb.t, 0))), kills: Math.max(0, Math.floor(fin(eb.kills, 0))) };
+    const endTop = normTop(r.endTop, endBest);
+    if (endTop[0] && endTop[0].t > endBest.t) { endBest.t = endTop[0].t; endBest.kills = endTop[0].kills; }
     return { lv, cleared: Math.max(0, Math.min(MAX_LV, Math.floor(fin(r.cleared, 0)))), best: Math.max(0, Math.floor(fin(r.best, 0))),
-      endBest, endTop: normTop(r.endTop, endBest) };
+      endBest, endTop };
   }
   // 无尽排行榜：按坚持秒数排（同秒按击倒、再按先到），最多 TOP_N 条；id = 开局 runId，同一局只记一次。
   // 老档没有榜单时，只把已有的「最好成绩」作为唯一一条历史记录，不补造其它对局。
   const TOP_N = 10, ID_RE = /^[a-z0-9]{1,40}$/i;
+  const legId = t => 'legacy' + Math.round(t * 1000).toString(36);
   const cmpTop = (a, b) => b.t - a.t || b.kills - a.kills || a.at - b.at;
   function normTop(raw, endBest) {
-    if (!Array.isArray(raw)) return endBest.t > 0 ? [{ t: endBest.t, kills: endBest.kills, id: 'legacy', at: 0 }] : [];
+    if (!Array.isArray(raw)) return endBest.t > 0 ? [{ t: endBest.t, kills: endBest.kills, id: legId(endBest.t), at: 0 }] : [];
     const seen = new Set(), out = [];
     for (const e of raw) {
       if (!e || typeof e !== 'object' || typeof e.id !== 'string' || !ID_RE.test(e.id) || seen.has(e.id)) continue;
       seen.add(e.id);
       out.push({ t: Math.max(0, Math.min(86400, fin(e.t, 0))), kills: Math.max(0, Math.min(1e7, Math.floor(fin(e.kills, 0)))), id: e.id, at: Math.max(0, fin(e.at, 0)) });
     }
-    return out.sort(cmpTop).slice(0, TOP_N);
+    out.sort(cmpTop);
+    // 最好成绩必须在榜上（旧页面只会更新 endBest）：没有就补一条 legacy；id 由成绩决定，重复读档不会多出来
+    if (endBest.t > 0 && !out.some(e => e.t >= endBest.t)) { out.push({ t: endBest.t, kills: endBest.kills, id: legId(endBest.t), at: 0 }); out.sort(cmpTop); }
+    return out.slice(0, TOP_N);
   }
   // 本局名次：1..TOP_N；没上榜 = 0
   const rankOf = (z, id) => { const k = (z && Array.isArray(z.endTop) ? z.endTop : []).findIndex(e => e.id === id); return k < 0 ? 0 : k + 1; };

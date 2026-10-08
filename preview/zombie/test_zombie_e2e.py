@@ -97,8 +97,8 @@ with sync_playwright() as p:
         S(pg, "__zb.setPause(false)"); pg.wait_for_timeout(300); pg.screenshot(path=f'{OUT}/{tag}_crowd.png')
         # 存档隔离 + 坏档
         iso = S(pg, "({a:localStorage.getItem('tangzhe-save'), b:localStorage.getItem('tangzhe-preview-save'), keys:Object.keys(localStorage).sort()})")
-        check(iso['a'] == 'SENTINEL' and iso['b'] == 'SENTINEL2' and iso['keys'] == ['tangzhe-preview-save', 'tangzhe-save', 'tangzhe-zombie-proto'], f'{dn} 存档隔离：经营正式 / 预览存档原样，只新增原型键 {iso}')
-        pg.evaluate("localStorage.setItem('tangzhe-zombie-proto', JSON.stringify({coins:'abc', lv:{atk:-3, rate:1e9, hp:NaN, ult:'x'}, best:Infinity, cleared:1e9, endBest:{t:'x', kills:-5}}))"); pg.reload(); pg.wait_for_timeout(400)
+        check(iso['a'] == 'SENTINEL' and iso['b'] == 'SENTINEL2' and iso['keys'] == ['tangzhe-preview-save', 'tangzhe-save', 'tangzhe-zombie-proto', 'tangzhe-zombie-proto-top'], f'{dn} 存档隔离：经营正式 / 预览存档原样，只新增原型键和原型榜单键 {iso}')
+        pg.evaluate("localStorage.setItem('tangzhe-zombie-proto', JSON.stringify({coins:'abc', lv:{atk:-3, rate:1e9, hp:NaN, ult:'x'}, best:Infinity, cleared:1e9, endBest:{t:'x', kills:-5}})); localStorage.setItem('tangzhe-zombie-proto-top', JSON.stringify([{t:'x', id:'<b>'}, 5, null]))"); pg.reload(); pg.wait_for_timeout(400)
         bad = S(pg, "({c:__zb.proto.coins, lv:__zb.proto.lv, best:__zb.proto.best, cl:__zb.proto.cleared, eb:__zb.proto.endBest, w:document.getElementById('walletTxt').textContent})")
         check(bad['c'] == 5e10 and bad['lv'] == {'atk': 0, 'rate': 30, 'hp': 0, 'ult': 0} and bad['best'] == 0 and bad['cl'] == 50 and bad['eb'] == {'t': 0, 'kills': 0}, f'{dn} 坏档：非法字段回默认 / 截到范围，不报错 {bad}')
         # 上场角色：?ceo= 模拟烧烤店在任 CEO；技能没做的显示即将开放，没人在任提示去派人，两种都开不了局
