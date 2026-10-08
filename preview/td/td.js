@@ -69,7 +69,7 @@ function cmdDetail(id) {
   const s = CMD[id], lv = proto.lv['cmd_' + id], dmg = num(s.dmg * 1.15 ** lv);
   const attack = {c77:'优先前进最远的 2 个目标',pearl:'首击后最多弹跳 2 次，每跳 1.8 格',otaku:'优先前进最远的 3 个目标',rocket:'命中点半径 0.7 格溅射'}[id];
   const ult = {c77:'支援位周围 2.4 格：70 伤害，附 10/秒燃烧 3 秒',pearl:'全场 10 伤害；普通敌人冻结 3 秒，Boss 减速 50% 持续 3 秒',otaku:'随机目标共 20 次轰炸，每次 30 伤害（可能重复目标）',rocket:'全场 45 伤害，击退 1.5 格'}[id];
-  return `固定入口支援位（2.5,1.5），自动攻击 ${dmg} / ${s.rate} 秒，范围 ${s.range} 格；${attack}。<br>满 100 能量自动${T.HEROES[id].ult}：${ult}；技能伤害当前升级 ×${num(1.2 ** lv)}。每秒 +1.5 能量、击杀 +4；无有效目标保留能量。支援伤害每波 ×1.1、技能伤害每波 ×1.17（首波为基准）。`;
+  return `固定入口支援位（${posAt(2).join(',')}），自动攻击 ${dmg} / ${s.rate} 秒，范围 ${s.range} 格；${attack}。<br>满 100 能量自动${T.HEROES[id].ult}：${ult}；技能伤害当前升级 ×${num(1.2 ** lv)}。每秒 +1.5 能量、击杀 +4；无有效目标保留能量。支援伤害每波 ×1.1、技能伤害每波 ×1.17（首波为基准）。`;
 }
 function towerDetail(id, lv = 1) {
   const s = TW[id], g = gl(), syn = T.TOWERS[id].ceo === G.cmd;
