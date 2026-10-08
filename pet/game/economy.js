@@ -1231,12 +1231,6 @@
   function checkSave(raw) {
     if (!isObj(raw)) return ['save'];
     const bad = [], has = k => raw[k] !== undefined;
-    // Optional for old saves. Reject damaged TD data instead of silently
-    // resetting purchased levels, while leaving all unrelated fields untouched.
-    if (has('td')) {
-      const t = raw.td, ids = ['bbq','tea','book','tech','t77','tpearl','totaku','trocket','cmd_c77','cmd_pearl','cmd_otaku','cmd_rocket'];
-      if (!isObj(t) || !isObj(t.lv) || !ids.every(k => Number.isInteger(t.lv[k]) && t.lv[k] >= 0 && t.lv[k] <= 30) || !Number.isInteger(t.cleared) || t.cleared < 0 || t.cleared > 1 || !Number.isInteger(t.best) || t.best < 0 || t.best > 10 || !['c77','pearl','otaku','rocket'].includes(t.cmd)) bad.push('td');
-    }
     if (has('v') && !(Number.isInteger(raw.v) && raw.v >= 0)) bad.push('v');
     if (!isAmt(raw.coins)) bad.push('coins');
     else if (raw.coins > SAFE) bad.push('coins>安全整数');   // 12d1：超过 MAX_SAFE_INTEGER 的余额不能当钱包用

@@ -1,0 +1,556 @@
+{
+  "schema": "tangzhe-companion-art/1",
+  "species": "alpaca",
+  "placeholder": false,
+  "releaseReady": true,
+  "prototype": true,
+  "source": {
+    "frameSize": [
+      256,
+      256
+    ],
+    "origin": [
+      128,
+      208
+    ],
+    "perFrameCrop": false,
+    "shadow": "separate"
+  },
+  "runtime": {
+    "cellSize": 128,
+    "origin": [
+      64,
+      104
+    ],
+    "displayTiles": 1.65,
+    "sourceScale": 0.5
+  },
+  "atlas": {
+    "image": "alpaca_prototype_16_v2.png",
+    "size": [
+      1254,
+      1254
+    ],
+    "mode": "sourceRect"
+  },
+  "directions": {
+    "drawn": [
+      "E",
+      "N",
+      "S"
+    ],
+    "mirror": {
+      "W": "E"
+    }
+  },
+  "shadow": {
+    "procedural": true
+  },
+  "clips": {
+    "idle_E": {
+      "dir": "E",
+      "inPlace": false,
+      "loop": true,
+      "frames": [
+        {
+          "sourceIndex": 0,
+          "sourceRect": [
+            68,
+            72,
+            204,
+            247
+          ],
+          "anchor": [
+            87.5,
+            240
+          ],
+          "dir": "E",
+          "ms": 240
+        }
+      ]
+    },
+    "idle_N": {
+      "dir": "N",
+      "inPlace": false,
+      "loop": true,
+      "frames": [
+        {
+          "sourceIndex": 4,
+          "sourceRect": [
+            108,
+            368,
+            121,
+            246
+          ],
+          "anchor": [
+            60.5,
+            240
+          ],
+          "dir": "N",
+          "ms": 240
+        }
+      ]
+    },
+    "idle_S": {
+      "dir": "S",
+      "inPlace": false,
+      "loop": true,
+      "frames": [
+        {
+          "sourceIndex": 6,
+          "sourceRect": [
+            719,
+            366,
+            121,
+            248
+          ],
+          "anchor": [
+            63.5,
+            242
+          ],
+          "dir": "S",
+          "ms": 240
+        }
+      ]
+    },
+    "walk_E": {
+      "dir": "E",
+      "inPlace": false,
+      "loop": true,
+      "frames": [
+        {
+          "sourceIndex": 1,
+          "sourceRect": [
+            367,
+            72,
+            203,
+            245
+          ],
+          "anchor": [
+            105.0,
+            239
+          ],
+          "dir": "E",
+          "ms": 180
+        },
+        {
+          "sourceIndex": 2,
+          "sourceRect": [
+            682,
+            73,
+            206,
+            246
+          ],
+          "anchor": [
+            98.0,
+            239
+          ],
+          "dir": "E",
+          "ms": 180
+        },
+        {
+          "sourceIndex": 3,
+          "sourceRect": [
+            991,
+            72,
+            205,
+            246
+          ],
+          "anchor": [
+            91.5,
+            239
+          ],
+          "dir": "E",
+          "ms": 180
+        }
+      ]
+    },
+    "walk_N": {
+      "dir": "N",
+      "inPlace": false,
+      "loop": true,
+      "frames": [
+        {
+          "sourceIndex": 4,
+          "sourceRect": [
+            108,
+            368,
+            121,
+            246
+          ],
+          "anchor": [
+            60.5,
+            240
+          ],
+          "dir": "N",
+          "ms": 180
+        },
+        {
+          "sourceIndex": 5,
+          "sourceRect": [
+            415,
+            367,
+            123,
+            247
+          ],
+          "anchor": [
+            61.5,
+            241
+          ],
+          "dir": "N",
+          "ms": 180
+        }
+      ]
+    },
+    "walk_S": {
+      "dir": "S",
+      "inPlace": false,
+      "loop": true,
+      "frames": [
+        {
+          "sourceIndex": 6,
+          "sourceRect": [
+            719,
+            366,
+            121,
+            248
+          ],
+          "anchor": [
+            63.5,
+            242
+          ],
+          "dir": "S",
+          "ms": 180
+        },
+        {
+          "sourceIndex": 7,
+          "sourceRect": [
+            1028,
+            367,
+            121,
+            247
+          ],
+          "anchor": [
+            63.5,
+            241
+          ],
+          "dir": "S",
+          "ms": 180
+        }
+      ]
+    },
+    "attention": {
+      "dir": "E",
+      "inPlace": true,
+      "loop": false,
+      "frames": [
+        {
+          "sourceIndex": 8,
+          "sourceRect": [
+            55,
+            687,
+            255,
+            230
+          ],
+          "anchor": [
+            81.0,
+            223
+          ],
+          "dir": "E",
+          "ms": 240
+        },
+        {
+          "sourceIndex": 9,
+          "sourceRect": [
+            364,
+            663,
+            230,
+            254
+          ],
+          "anchor": [
+            89.5,
+            247
+          ],
+          "dir": "E",
+          "ms": 240
+        }
+      ]
+    },
+    "groom": {
+      "dir": "E",
+      "inPlace": true,
+      "loop": true,
+      "frames": [
+        {
+          "sourceIndex": 12,
+          "sourceRect": [
+            62,
+            967,
+            228,
+            238
+          ],
+          "anchor": [
+            90.0,
+            232
+          ],
+          "dir": "E",
+          "ms": 240
+        },
+        {
+          "sourceIndex": 13,
+          "sourceRect": [
+            370,
+            963,
+            226,
+            242
+          ],
+          "anchor": [
+            90.5,
+            236
+          ],
+          "dir": "E",
+          "ms": 240
+        }
+      ]
+    },
+    "play": {
+      "dir": "E",
+      "inPlace": true,
+      "loop": false,
+      "frames": [
+        {
+          "sourceIndex": 10,
+          "sourceRect": [
+            660,
+            681,
+            246,
+            232
+          ],
+          "anchor": [
+            115.5,
+            227
+          ],
+          "dir": "E",
+          "ms": 240
+        },
+        {
+          "sourceIndex": 11,
+          "sourceRect": [
+            977,
+            674,
+            244,
+            237
+          ],
+          "anchor": [
+            88.5,
+            232
+          ],
+          "dir": "E",
+          "ms": 240
+        }
+      ]
+    },
+    "rest": {
+      "dir": "E",
+      "inPlace": true,
+      "loop": true,
+      "frames": [
+        {
+          "sourceIndex": 14,
+          "sourceRect": [
+            675,
+            998,
+            211,
+            196
+          ],
+          "anchor": [
+            106.5,
+            190
+          ],
+          "dir": "E",
+          "ms": 700
+        },
+        {
+          "sourceIndex": 15,
+          "sourceRect": [
+            989,
+            1042,
+            214,
+            151
+          ],
+          "anchor": [
+            107.0,
+            144
+          ],
+          "dir": "E",
+          "ms": 700
+        }
+      ]
+    },
+    "petted": {
+      "dir": "E",
+      "inPlace": true,
+      "loop": false,
+      "frames": [
+        {
+          "sourceIndex": 8,
+          "sourceRect": [
+            55,
+            687,
+            255,
+            230
+          ],
+          "anchor": [
+            81.0,
+            223
+          ],
+          "dir": "E",
+          "ms": 240
+        },
+        {
+          "sourceIndex": 9,
+          "sourceRect": [
+            364,
+            663,
+            230,
+            254
+          ],
+          "anchor": [
+            89.5,
+            247
+          ],
+          "dir": "E",
+          "ms": 240
+        }
+      ]
+    }
+  },
+  "sourceManifest": "source-manifest.json",
+  "sourceImageSHA256": "9e32d2ea84c2d131f04a7bfe29546f4a8f29f2359e0ceee81b7a35575f000307",
+  "limitations": [
+    "脚底锚点为估计值，需在游戏内检查漂移和抖动。"
+  ],
+  "body": {
+    "E": [
+      70.25,
+      215.0
+    ],
+    "N": [
+      97.25,
+      158.75
+    ],
+    "S": [
+      96.25,
+      156.75
+    ]
+  },
+  "renderBounds": {
+    "left": -87.0,
+    "right": 87.0,
+    "top": -123.5,
+    "bottom": 3.5
+  },
+  "poseCatalog": {
+    "primary:0": {
+      "dir": "E",
+      "clips": [
+        "idle_E"
+      ]
+    },
+    "primary:4": {
+      "dir": "N",
+      "clips": [
+        "idle_N",
+        "walk_N"
+      ]
+    },
+    "primary:6": {
+      "dir": "S",
+      "clips": [
+        "idle_S",
+        "walk_S"
+      ]
+    },
+    "primary:1": {
+      "dir": "E",
+      "clips": [
+        "walk_E"
+      ]
+    },
+    "primary:2": {
+      "dir": "E",
+      "clips": [
+        "walk_E"
+      ]
+    },
+    "primary:3": {
+      "dir": "E",
+      "clips": [
+        "walk_E"
+      ]
+    },
+    "primary:5": {
+      "dir": "N",
+      "clips": [
+        "walk_N"
+      ]
+    },
+    "primary:7": {
+      "dir": "S",
+      "clips": [
+        "walk_S"
+      ]
+    },
+    "primary:8": {
+      "dir": "E",
+      "clips": [
+        "attention",
+        "petted"
+      ]
+    },
+    "primary:9": {
+      "dir": "E",
+      "clips": [
+        "attention",
+        "petted"
+      ]
+    },
+    "primary:12": {
+      "dir": "E",
+      "clips": [
+        "groom"
+      ]
+    },
+    "primary:13": {
+      "dir": "E",
+      "clips": [
+        "groom"
+      ]
+    },
+    "primary:10": {
+      "dir": "E",
+      "clips": [
+        "play"
+      ]
+    },
+    "primary:11": {
+      "dir": "E",
+      "clips": [
+        "play"
+      ]
+    },
+    "primary:14": {
+      "dir": "E",
+      "clips": [
+        "rest"
+      ]
+    },
+    "primary:15": {
+      "dir": "E",
+      "clips": [
+        "rest"
+      ]
+    }
+  },
+  "releaseScope": "preview"
+}

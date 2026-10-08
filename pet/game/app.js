@@ -1,11 +1,8 @@
 /* 躺着也能赚 v1（试玩版）— 四家店 · CEO + 员工 · 离线 · 每日双倍 · 不重复盲盒（32 普通 + 4 超级装饰）· CEO 穿搭 */
+/* 宠物 p5 副本：基于预览 12d3 的 app.js，只加小狗钩子（搜「宠物 p4」）；存档键不变，宠物名单使用 state.pets 字段 */
 (async () => {
 'use strict';
 const E = window.Economy, CFG = E.CFG;
-const TD = window.TDCore; let tdOpen = false, tdPort = null, tdGeneration = 0;
-const ZB = window.ZBCore; var zbOpen = false, zbPort = null;
-const ZB_SHOP = 0; var zbLastCeo = null, zbRun = null; const zbUsedRuns = new Set();   // 13d：用过的 runId（本页内存），重复 / 过期的 start 不能把旧局重新激活   // 13a：打僵尸 = 烧烤摊（店 0）；zbLastCeo = 最近一次成功结算的上场 CEO（只在内存）
-// 13c：zbRun = 父页开局登记 { runId, ceoId, startedAt, settled }——结算只认这份记录、同一局只结一次；中途调岗不要求仍在任
 const SAVE_KEY = 'tangzhe-save', BAK_KEY = 'tangzhe-save-bak', LOCK_KEY = 'tangzhe-tab-lock';
 // 12b2 测试房间：只有网址带 ?test=homes 才进；整局放在内存里，不读、不写任何 localStorage（真存档 / 备份 / 多标签锁都不碰），刷新就重置
 // &lv=3 → 四家都是豪宅，默认四家都是公寓
@@ -125,7 +122,7 @@ function goPage(url) {
 function claimLock() { if (TEST_MODE || saveBlocked) return; try { localStorage.setItem(LOCK_KEY, JSON.stringify({ tab:TAB, t:now() })); } catch (e) {} }
 function lockMine() { if (TEST_MODE) return true; try { const v = JSON.parse(localStorage.getItem(LOCK_KEY) || 'null'); return !v || v.tab === TAB; } catch (e) { return true; } }
 function freeze() {
-  if (frozen) return; frozen = true; if (zbOpen) closeZombie(); if (tdOpen) closeTD();
+  if (frozen) return; frozen = true;
   $('#lockOverlay').classList.remove('hidden'); audioPause();
 }
 window.addEventListener('storage', e => {
@@ -171,7 +168,7 @@ function audioUnlock() { // 只能在用户手势里调用（iOS）
   if (!AU.started) { AU.started = true; startBgm(); }
 }
 function audioPause() { if (AU.ctx && AU.ctx.state === 'running') AU.ctx.suspend().catch(() => {}); stopBgm(); }
-function audioResume() { if (!AU.ctx || state.muted || document.hidden || frozen || tdOpen) return; AU.ctx.resume().catch(() => {}); if (AU.started) startBgm(); }
+function audioResume() { if (!AU.ctx || state.muted || document.hidden || frozen) return; AU.ctx.resume().catch(() => {}); if (AU.started) startBgm(); }
 function tone(f, t, dur, type = 'sine', vol = 0.3, dest = AU.sfx, f2) {
   const c = AU.ctx, o = c.createOscillator(), g = c.createGain();
   o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
@@ -492,8 +489,8 @@ const ART_V = '12b2', PORTRAIT = { c77:1, pearl:1, otaku:1, rocket:1 };
 // 13i：77 店铺全身 ceo_c77 也换回 12b2 之前的原版（红衣深色围裙拿烤肉夹，= 6a732db / 72323b4^，杨总 11:36 / 熊大 11:38）；分镜格落地灯换熊大紧凑版（同名换图，单图缓存号）
 const ART_ONE = { face_c77:'12d2', ceo_c77:'13i', furn_otaku_panel_lamp:'13i', furn_sofa_side:'13k', furn_pearl_scallop_sofa_side:'13k', furn_rocket_pipe_sofa_side:'13k' };
 const artV = n => ART_ONE[n] || ART_V;
-const faceURL = id => PORTRAIT[id] ? `art/face_${id}.webp?v=${artV('face_' + id)}` : avatarURL(id);
-const bustURL = id => PORTRAIT[id] ? `art/ceo_${id}.webp?v=${artV('ceo_' + id)}` : avatarURL(id);
+const faceURL = id => PORTRAIT[id] ? `../../art/face_${id}.webp?v=${artV('face_' + id)}` : avatarURL(id);
+const bustURL = id => PORTRAIT[id] ? `../../art/ceo_${id}.webp?v=${artV('ceo_' + id)}` : avatarURL(id);
 const faceImg = id => `<img src="${faceURL(id)}"${PORTRAIT[id] ? ` class="art" data-fb="${id}"` : ''} alt="">`;
 const bustImg = id => `<img src="${bustURL(id)}"${PORTRAIT[id] ? ` class="art" data-fb="${id}"` : ''} alt="">`;
 // CEO×店铺 任职形象（16 张）：本行用 ceo_<id>.webp，其余放 art/job_<id>_<店id>.webp，交过来一张在 JOB_ART 里登记一张
@@ -501,10 +498,10 @@ const JOB_ART = { c77_tea:1, c77_book:1, c77_tech:1, pearl_bbq:1, pearl_book:1, 
   otaku_bbq:1, otaku_tea:1, otaku_tech:1, rocket_bbq:1, rocket_tea:1, rocket_book:1 }; // 熊大 12 张补图已全部到齐
 // 4 张特殊跨行漫画整图（熊大交付原图 → 480² WebP）；图加载失败自动退回两格头像+文字
 const CROSS_ART = { 'rocket@0':'cross_rocket_bbq', 'c77@3':'cross_c77_tech', 'pearl@2':'cross_pearl_book', 'otaku@1':'cross_otaku_tea' };
-const crossURL = k => `art/${CROSS_ART[k]}.webp?v=${ART_V}`;
+const crossURL = k => `../../art/${CROSS_ART[k]}.webp?v=${ART_V}`;
 const homeShop = id => E.CEO_BY_ID[id].home;
 const hasJobArt = (id, i) => i === homeShop(id) ? !!PORTRAIT[id] : !!JOB_ART[id + '_' + E.SHOPS[i].id];
-const jobURL = (id, i) => i !== homeShop(id) && JOB_ART[id + '_' + E.SHOPS[i].id] ? `art/job_${id}_${E.SHOPS[i].id}.webp?v=${ART_V}` : bustURL(id);
+const jobURL = (id, i) => i !== homeShop(id) && JOB_ART[id + '_' + E.SHOPS[i].id] ? `../../art/job_${id}_${E.SHOPS[i].id}.webp?v=${ART_V}` : bustURL(id);
 const jobImg = (id, i) => `<img src="${jobURL(id, i)}"${PORTRAIT[id] ? ` class="art" data-fb="${id}"` : ''} alt="">`;
 const jobView = {}; // 每位 CEO 在 CEO 页正在看哪家店的形象（不存档，默认当前任职）
 function jobShown(id) {
@@ -1159,9 +1156,6 @@ function doUpgradeShop(i, btn) {
 function act(a, arg, btn) {
   const i = state.cur;
   switch (a) {
-    case 'td': openTD(); return;
-    case 'zombie': if (!zbCeo()) return openAssignTo(ZB_SHOP); openZombie(); return;   // 12e 打僵尸入口（板砖 b640f25）；13a：烧烤摊没 CEO → 打开派 CEO 选单
-    case 'zbAssign': return openAssignTo(ZB_SHOP);   // 13a「先派 CEO」
     case 'open': { const r = atomic(() => E.openShop(state, +arg), '开张没有生效，金币已退回'); if (!buyOk(r, btn)) return; afterBuy(btn, E.SHOPS[+arg].name + ' 开张啦！'); signAnim = { shop:+arg, from:'招租中', t0:clock }; handleUnlocks(r.unlocked); break; }
     case 'up': return doUpgradeShop(+arg, btn);
     case 'hire': { const r = atomic(() => E.hireEmp(state, +arg), '雇人没有生效，金币已退回'); if (!buyOk(r, btn)) return; afterBuy(btn, '雇到 ' + E.SHOPS[+arg].emp.name + '！开始自动赚钱'); sayLine('e', E.SHOPS[+arg].emp.line, 3); if (+arg === 3) queueModal(showGachaOpen); break; }
@@ -1278,13 +1272,7 @@ function renderShop() {
     h += `<div class="card hl"><div class="ava">👔</div><div class="info"><div class="name">CEO 空缺</div><div class="desc">派一位 CEO 来：专长对口 ×${CFG.MATCH_MULT}，跨行 ×${CFG.CROSS_MULT} + 专属事件</div></div>
       <button class="buy" data-act="assignTo" data-arg="${i}">派 CEO</button></div>`;
   }
-  h += shopGameCard(i);   // 13h（杨总 11:30 经营优先）：小游戏入口统一放店铺页最下面（CEO 任职 / 调离区块之后），顶部不再放大入口
   return h;
-}
-// 13h：每家店自己的小游戏入口（只在店铺页最底部）；烧烤摊 = 打僵尸，其余三家以后各有自己的游戏，加在这里
-function shopGameCard(i) {
-  const card = i === ZB_SHOP ? zbCard() : i === 3 ? tdCard() : '';
-  return card ? `<div class="sec-title shop-game-title">小游戏</div>${card}` : '';
 }
 function ceoPost(id) { const s = state.ceos[id]; return s.at >= 0 ? E.signOf(state, s.at).name : '休息中（空着）'; }
 function jobGallery(id) {
@@ -1640,7 +1628,7 @@ const STORY_ART = Object.freeze({k_1:'story_k_1.webp',k_2:'story_k_2.webp',k_3:'
 function storyArt(id, large = false) {
   const item = E.ITEM_BY_ID[id], file = STORY_ART[id];
   if (!file || !item || item.type !== 'card' || !state.gacha.owned.includes(id)) return '';
-  return `<span class="story-art${large ? ' story-art-large' : ''}" data-story-state="loading"><img data-story-art="${id}" src="art/storycards/${file}?v=15" alt="故事插图：${item.name}" width="1024" height="768" loading="${large ? 'eager' : 'lazy'}" decoding="async"><span class="story-art-status" role="status">插图加载中…</span></span>`;
+  return `<span class="story-art${large ? ' story-art-large' : ''}" data-story-state="loading"><img data-story-art="${id}" src="../../art/storycards/${file}?v=15" alt="故事插图：${item.name}" width="1024" height="768" loading="${large ? 'eager' : 'lazy'}" decoding="async"><span class="story-art-status" role="status">插图加载中…</span></span>`;
 }
 for (const event of ['load','error']) document.addEventListener(event, e => {
   const img = e.target;
@@ -1728,8 +1716,8 @@ function furnInner(fid, rot, inRoom) {
   const st = tall ? `left:0;top:auto;bottom:0;width:100%;height:${tallH(side || FURN_UP[n])};transform:none`
     : inRoom && f.wall && !odd ? `left:50%;top:0;width:100%;height:100%;transform:translateX(-50%)`
     : `width:${odd ? sz.h / sz.w * 100 : 100}%;height:${odd ? sz.w / sz.h * 100 : 100}%;transform:translate(-50%,-50%) rotate(${rot * 90}deg)`;
-  const front = `art/furn_${n}.webp?v=${artV('furn_' + n)}`;
-  const img = !FURN_ART[n] ? '' : side ? `<img class="side${rot === 3 ? ' mir' : ''}" src="art/furn_${n}_side.webp?v=${artV('furn_' + n + '_side')}" data-homefb="1" data-front="${front}" data-fronth="${tallH(FURN_UP[n])}" alt="">`
+  const front = `../../art/furn_${n}.webp?v=${artV('furn_' + n)}`;
+  const img = !FURN_ART[n] ? '' : side ? `<img class="side${rot === 3 ? ' mir' : ''}" src="../../art/furn_${n}_side.webp?v=${artV('furn_' + n + '_side')}" data-homefb="1" data-front="${front}" data-fronth="${tallH(FURN_UP[n])}" alt="">`
     : `<img src="${front}" data-homefb="1" alt="">`;
   return `<div class="fi" style="${st}"><span class="fe">${f.emoji}</span>${img}</div>`;
 }
@@ -1789,7 +1777,7 @@ function renderRoom() {
   // 墙面禁区（和 E.canPlace / E.findFree 同一份 E.wallBlockedCells）：平时隐藏，拖挂画时斜纹标红
   const wallBlocks = E.wallBlockedCells(state, id).map(([x, y]) => `<i class="wall-block" style="left:${x / T.cols * 100}%;top:${y / E.WALL_ROWS * 100}%;width:${100 / T.cols}%;height:${100 / E.WALL_ROWS}%"></i>`).join('');
   h += `<div class="room tier-${T.id}${hasArt ? ' has-art' : ''}${dockHost ? ' pet-host-docked' : ''}" id="room" data-tier="${T.id}" style="--cols:${T.cols};--rows:${T.rows};--wall:${T.wall};--floor:${T.floor};--trim:${T.trim}">
-    ${hasArt ? `<img class="room-art" src="art/home_${artKey}.webp?v=${ART_V}" data-homefb="1" alt="" onerror="this.closest('.room')&&this.closest('.room').classList.remove('has-art')">` : ''}
+    ${hasArt ? `<img class="room-art" src="../../art/home_${artKey}.webp?v=${ART_V}" data-homefb="1" alt="" onerror="this.closest('.room')&&this.closest('.room').classList.remove('has-art')">` : ''}
     <div class="room-wall" id="roomWall"><span class="rw-deco">${T.id === 'hut' ? ic('window') : T.id === 'apt' ? ic('window') + ic('window') : ic('spark') + ic('candle') + ic('spark')}</span><span class="rw-name">${c.name}的${T.name}</span><div class="wall-grid" id="wallGrid">${wallBlocks}${wallItems}<div class="room-hl hidden" id="wallHl"></div></div></div>
     <div class="room-floor" id="roomFloor">${floorItems}<div class="home-actor" id="homeActor" style="left:${(homeActorOf(id).x + 0.5) / T.cols * 100}%;top:${(homeActorOf(id).y + 0.5) / T.rows * 100}%"><span class="ha-ava">${ava(id)}</span>${(() => { const ac = homeActorOf(id); return ac.line && ac.until > clock ? `<b class="ha-line">${ac.line}</b>` : ''; })()}<i class="ha-act">${(() => { const ac = homeActorOf(id); return ac.act === 'rest' ? ic('zz') : ac.act === 'read' ? ic('book') : ac.act === 'dress' ? ic('shirt') : ''; })()}</i></div><div class="room-hl hidden" id="roomHl"></div></div></div>`;
   h += petInteractionBar();
@@ -1891,7 +1879,7 @@ function confirmHomeUp(id) {
 }
 // 12d3：摆放 / 移动 / 旋转 / 收回都先 atomic（改 + 落盘一起），这里只处理结果；没存上 → 已回滚、已提示
 const HOME_FAIL = '摆放没有生效，已恢复原样';
-/* Two-species roster. Runtime and art readiness are tracked per species. */
+/* Two-slot roster: only the dog has a runtime/atlas in this draft. */
 const PG = window.PetGame, PET_LIBS = !!(PG && window.PetEngine && window.PetArt && window.PetPuppy);
 let petM = null, petHiddenAt = 0, petManual = false;
 let petPanelOpen=false, petSelection='dog', petSelectedUid=null, petInteractUid=null;
@@ -1908,19 +1896,19 @@ const PET_WAIT = '等待安置：屋里没有空地，请收起或挪开家具�
 function petState(uid) { const a = petActors.get(uid); if (!a) return ''; if (a.rt.unsupported) return 'unsupported'; const w = a.rt.w; return w ? (w.noRoom ? 'waiting' : 'live') : ''; }
 function petInit(tryN) {
   if (!PET_LIBS) return;
-  fetch('pet/art/manifest.json?v=p6').then(r => { if (!r.ok) throw new Error('manifest'); return r.json(); }).then(m => {
+  fetch('../art/manifest.json?v=p6').then(r => { if (!r.ok) throw new Error('manifest'); return r.json(); }).then(m => {
     const v = window.PetArt.validateManifest(m); if (!v.ok) throw new Error(v.errors.join('；'));
     petM = m; petLoadSpecies(); document.body.dataset.petReady = '1'; dirty = true;
   }).catch(e => { if ((tryN || 0) < 3) setTimeout(() => petInit((tryN || 0) + 1), 600); else console.warn('宠物资源未加载：' + e.message); });
 }
 async function petLoadSpecies() {
   try {
-    const response=await fetch('pet/art/species.json?v=15'); if(!response.ok)throw Error('species catalog');
+    const response=await fetch('../art/species.json?v=15'); if(!response.ok)throw Error('species catalog');
     const entries=await response.json();
     for(const entry of entries) {
       if(!PG.SPECIES[entry.species] || entry.species==='dog' || !/^[a-z_]+$/.test(entry.species))continue;
       try {
-        const base='pet/art/'+entry.species+'/', r=await fetch(base+'manifest.json?v=15');if(!r.ok)throw Error('manifest');
+        const base='../art/'+entry.species+'/', r=await fetch(base+'manifest.json?v=15');if(!r.ok)throw Error('manifest');
         const m=await r.json(), check=window.PetArt.validateManifest(m);if(!check.ok)throw Error(check.errors.join(';'));
         const image=new Image();image.src=base+m.atlas.image;await image.decode();
         image.companionAtlases={};await Promise.all(Object.entries(m.atlases||{}).map(async([key,a])=>{const im=new Image();im.src=base+a.image;await im.decode();image.companionAtlases[key]=im;}));
@@ -1934,7 +1922,7 @@ function petSyncActors() {
   const v = petRoster();
   for (const [uid,a] of petActors) if (!v.pets[uid] || !petManifest(v.pets[uid].species) || !v.pets[uid].room) { a.view.detach(); petActors.delete(uid); }
   if (petM) for (const p of Object.values(v.pets)) if (petManifest(p.species) && p.room && !petActors.has(p.uid)) {
-    petActors.set(p.uid, { rt:PG.createRuntime({E, manifest:petManifest(p.species), species:p.species, uid:p.uid}), view:PG.createView({manifest:petManifest(p.species), species:p.species, image:PG.assetOf(p.species)?.image, PA:window.PetArt, PP:window.PetPuppy, atlasBase:'pet/art/', ver:'p6', uid:p.uid}) });
+    petActors.set(p.uid, { rt:PG.createRuntime({E, manifest:petManifest(p.species), species:p.species, uid:p.uid}), view:PG.createView({manifest:petManifest(p.species), species:p.species, image:PG.assetOf(p.species)?.image, PA:window.PetArt, PP:window.PetPuppy, atlasBase:'../art/', ver:'p6', uid:p.uid}) });
   }
   return v;
 }
@@ -2306,8 +2294,6 @@ $('#mute').addEventListener('click', () => {
   state.muted = !state.muted; $('#mute').classList.toggle('off', state.muted);
   if (state.muted) { if (AU.master) AU.master.gain.value = 0; audioPause(); }
   else { audioUnlock(); if (AU.master) AU.master.gain.value = 1; audioResume(); }
-  tdController.reply();
-  zbReply();   // 13e：小游戏开着时把静音状态同步过去
   if (!persist() && !saveBlocked && !frozen) toast('声音已切换，但保存失败：刷新后会恢复原设置', 2600);   // 12d3：声音开关是设置不是进度，照常生效（不能让玩家关不掉声音），只提示没存上
 });
 $('#dailyChip').addEventListener('click', () => toast(E.canDouble(state, now()) ? '每日双倍：今天第一次领离线收益可以免费翻倍（先封顶再翻倍）' : '今天的双倍用过啦，马来西亚时间早上 5 点重置', 2600));
@@ -2402,138 +2388,7 @@ window.__tzz = { upgradeGate, TEST_MODE, TEST_LV, SAVE_KEY, BAK_KEY, get saveBlo
   hitBig, modalOpen, closeModal, get frozen() { return frozen; },
   audioState() { return AU.ctx ? AU.ctx.state : 'none'; }, showPreview, openAssign, JOB_ART, jobShown, jobURL, showJobArt,
   HOME_ART, FURN_ART, FURN_UP, homeAct, get homeWho() { return homeWho; }, get homeSub() { return homeSub; }, get homeMode() { return homeMode; }, set homeMode(v) { homeMode = v === 'decor' ? 'decor' : 'live'; }, get homeSel() { return homeSel; }, get homeDrag() { return homeDrag; }, homeActor, LIVE_LINES, homeUndo, resize, get canvasSize() { return { W, H }; }, pet: petHooks, pets: petsHooks, lookOf, drawPerson, drawHead, LOOKS, get bubble() { return bubble; } };
-/* ================= 科技公司塔防：与主钱包同一存档、同一原子交易 ================= */
-function tdCard() {
-  const z = TD.norm(state.td);
-  return `<div class="card td-card"><div class="ava">♜</div><div class="info"><div class="name">机房塔防<span class="tag">样品</span></div><div class="desc">8 种防御塔 · 4 位统帅 · ${TD.WAVES} 波<br>最佳 ${z.best}/${TD.WAVES} 波 · 升级共用经营金币</div></div><button class="buy" data-act="td">去守</button></div>`;
-}
-const tdController = window.TDHost.create({
-  state:() => state, blocked:() => zbBlocked(), balance:() => E.balance(state),
-  transact:(apply, price) => txn(apply, price, '塔防升级或进度没有生效'),
-  changed:() => { dirty = true; }, close:() => closeTD(),
-  send:d => { if (tdOpen && tdPort) tdPort.postMessage(d); }
-});
-function openTD() {
-  if (frozen || tdOpen || zbOpen || !state.shops[3].open) return;
-  tdOpen = true; const f = $('#tdFrame'), generation = ++tdGeneration;
-  const target = new URL('td/index.html?embed=1&v=13k', location.href);
-  f.onload = () => {
-    if (!tdOpen || generation !== tdGeneration) return;
-    // Verify the actual loaded document, not merely an iframe src attribute.
-    let loaded; try { loaded = new URL(f.contentWindow.location.href); } catch (e) { return; }
-    if (loaded.origin !== location.origin || loaded.pathname !== target.pathname) return;
-    if (tdPort) tdPort.close(); tdController.reset();
-    const ch = new MessageChannel(); tdPort = ch.port1;
-    const port = tdPort;
-    port.onmessage = e => { if (tdOpen && generation === tdGeneration && tdPort === port) tdController.msg(e.data); };
-    f.contentWindow.postMessage({td:'port'}, location.origin, [ch.port2]);
-    tdController.reply();
-  };
-  f.src = target.href; $('#tdOverlay').classList.remove('hidden'); audioPause();
-}
-function closeTD() {
-  if (!tdOpen) return;
-  tdOpen = false; tdGeneration++; tdController.reset();
-  if (tdPort) { tdPort.close(); tdPort = null; }
-  const f = $('#tdFrame'); f.onload = null; f.src = 'about:blank';
-  $('#tdOverlay').classList.add('hidden'); dirty = true; audioResume();
-}
-Object.defineProperties(window.__tzz, {openTD:{value:openTD}, closeTD:{value:closeTD}, tdOpen:{get:() => tdOpen}, tdRun:{get:() => tdController.run}, tdReply:{value:() => tdController.reply()}});
-
-/* ================= 打僵尸（zombie/?embed=1，全屏 iframe）=================
-   只和经营共用金币：价格、等级上限、进度校验都在这边按 ZBCore 算，训练扣款和结算进度都走 txn → E.transact（扣款 + 改状态 + persist 一起成功，失败整体回滚）。
-   小游戏页不写任何存档，也不能加金币；iframe 加载后经营页递给它一个 MessageChannel 端口，只认这个端口发来的 hello / buy / result / close。 */
-function zbState() { return (state.zombie = ZB.norm(state.zombie)); }
-/* 13a 店铺入口 + 当前 CEO（方案 1：每家店一个小游戏，烧烤摊 = 打僵尸）：
-   谁是烧烤摊现任 CEO 谁上场（E.ceoAt(state, 0)）；四项训练、关卡、首通记录都还在 state.zombie，算店里的共享设备，不挪到任何 CEO 名下、不新增存档字段。
-   zb:'state' 带 ceo（烧烤摊现任 CEO id，没有 = null）。
-   13c（熊大 06:33 第 1 条）：真正开局时小游戏发 zb:'start'，父页确认当时在任 CEO 并登记 zbRun（内存）；结算对照 zbRun（ceo / runId 对上、只结一次），中途调岗不误伤；回菜单再开局会重新登记。 */
-function zbCeo() { return E.ceoAt(state, ZB_SHOP); }
-function zbCard() {
-  const id = zbCeo(), cleared = ZB.norm(state.zombie).cleared;
-  if (!id) return `<div class="card zb-card hl" data-zb-ceo=""><div class="ava">👔</div><div class="info"><div class="name">打僵尸<span class="tag">小游戏</span></div><div class="desc">烧烤摊没有 CEO，派一位来上场 · <span style="white-space:nowrap">已通关 <b>${cleared}/${ZB.MAX_LV}</b></span></div></div><button class="buy" data-act="zbAssign" data-arg="${ZB_SHOP}">先派 CEO</button></div>`;
-  const c = E.CEO_BY_ID[id], lv = state.ceos[id].lv;
-  return `<div class="card zb-card" data-zb-ceo="${id}">${ava(id)}<div class="info"><div class="name">打僵尸<span class="tag">小游戏</span></div><div class="desc">上场：<b class="zb-who">${c.name}</b> Lv.${lv}（烧烤摊 CEO）· <span style="white-space:nowrap">已通关 <b>${cleared}/${ZB.MAX_LV}</b></span>${id !== 'c77' ? '<br>训练 / 关卡进度是店里共用的' : ''}</div></div><button class="buy" data-act="zombie" data-arg="${ZB_SHOP}">去打</button></div>`;
-}
-function zbBlocked() { return frozen || saveBlocked || E.isBlocked(state) || !E.walletOk(state) || !!(loadInfo && (loadInfo.unsafe || loadInfo.blocked)); }
-function zbReply(why, extra) {
-  if (!zbOpen || !zbPort) return;
-  const ok = !zbBlocked();
-  zbPort.postMessage(Object.assign({ zb:'state', coins: ok ? E.balance(state) : 0, z: zbState(), blocked: !ok, why: why || '', ceo: zbCeo(), muted: !!state.muted }, extra));   // 13e：muted 让小游戏跟经营页静音开关走   // 13a：ceo = 烧烤摊现任 CEO id / null
-}
-function openZombie() {
-  if (frozen || zbOpen || !ZB) return;
-  zbOpen = true; const f = $('#zbFrame');
-  f.onload = () => {
-    if (!zbOpen || zbPort || !/\/zombie\//.test(f.src)) return;
-    const ch = new MessageChannel(); zbPort = ch.port1; zbPort.onmessage = e => zbMsg(e.data);
-    f.contentWindow.postMessage({ zb:'port' }, location.origin, [ch.port2]); zbReply();
-  };
-  f.src = 'zombie/?embed=1&v=15'; $('#zbOverlay').classList.remove('hidden'); audioPause();
-}
-function closeZombie() {
-  if (!zbOpen) return; zbOpen = false; zbRun = null; if (zbPort) { zbPort.close(); zbPort = null; }
-  $('#zbOverlay').classList.add('hidden'); $('#zbFrame').src = 'about:blank'; dirty = true; audioResume();
-}
-function zbMsg(d) {
-  if (!zbOpen || !d || typeof d !== 'object') return;
-  if (d.zb === 'close') return closeZombie();
-  if (d.zb === 'hello') return zbReply();
-  // 13c：真正开局——确认烧烤摊现任 CEO，生成本局记录（内存）；菜单打开后再调岗，下一次开局会走这里重新确认
-  if (d.zb === 'start') {
-    const ack = { ack:'start' }, ceo = zbCeo();
-    const askId = (typeof d.runId === 'string' && d.runId.length >= 6 && d.runId.length <= 80) ? d.runId : null;
-    // 13d（熊大 09:54 第 2 条）：开局登记防重——同一 runId 重发只回原登记（已结算的不翻回未结算、不看此刻在任）；用过的旧 runId 一律拒，不动当前这局
-    if (askId && zbRun && zbRun.runId === askId) return zbReply(zbRun.settled ? '这局已经结算过了' : '', Object.assign(ack, { ok: !zbRun.settled, runId: zbRun.runId, ceo: zbRun.ceoId, dup: true }));
-    if (askId && zbUsedRuns.has(askId)) return zbReply('这局编号已经用过，没法重新开局', Object.assign(ack, { ok:false, runId: askId, dup: true }));
-    if (!ceo) { zbRun = null; return zbReply('烧烤摊没有 CEO，没法开局', Object.assign(ack, { ok:false, runId: askId })); }
-    if (zbBlocked()) { zbRun = null; return zbReply(frozen ? '游戏已在别的页面打开，没法开局' : '存档异常（只读模式），没法开局', Object.assign(ack, { ok:false, runId: askId })); }
-    let runId = askId || rid(); while (zbUsedRuns.has(runId)) runId = rid();
-    zbUsedRuns.add(runId);
-    zbRun = { runId, ceoId: ceo, startedAt: now(), settled: false };   // 权威是父页此刻的在任，不看小游戏自报的 ceo
-    return zbReply('', Object.assign(ack, { ok:true, runId: zbRun.runId, ceo: zbRun.ceoId }));
-  }
-  if (d.zb === 'result') {
-    const ack = { ack:'result' };
-    // 13c：只认开局登记的那份 zbRun——ceo / runId 对上、同一局只结一次；不要求结算时此人仍在任（中途调岗不误伤）
-    if (!zbRun) return zbReply(zbBlocked() ? (frozen ? '游戏已在别的页面打开，这局进度没记上' : '存档异常（只读模式），这局进度没记上') : '本局未开局登记，进度没记上', ack);
-    if (zbRun.settled) return zbReply('这局已经结算过了', ack);
-    if (d.runId !== zbRun.runId || d.ceo !== zbRun.ceoId) return zbReply('本局角色对不上，进度没记上', ack);
-    if (zbBlocked()) return zbReply(frozen ? '游戏已在别的页面打开，这局进度没记上' : '存档异常（只读模式），这局进度没记上', ack);
-    const r = txn(st => {
-      const z = st.zombie = ZB.norm(st.zombie), before = JSON.stringify(z);
-      if (!ZB.applyResult(z, d)) return { ok:false, why:'invalid' };
-      return JSON.stringify(z) === before ? { ok:false, why:'same' } : { ok:true };
-    }, 0, '这局进度没记上');
-    if (r.ok) { zbRun.settled = true; zbLastCeo = zbRun.ceoId; dirty = true; return zbReply('', ack); }
-    if (r.stage === 'apply') {
-      // why:'same' = 进度没变（比如重复通同一关）——仍算这局已处理，避免同消息再刷
-      if (r.why === 'same') { zbRun.settled = true; zbLastCeo = zbRun.ceoId; }
-      return zbReply(r.why === 'invalid' ? '这局结果无效，没记上' : '', ack);
-    }
-    dirty = true;
-    return zbReply('存档失败，这局进度没记上', ack);
-  }
-  if (zbBlocked()) return zbReply(frozen ? '游戏已在别的页面打开，这里不能花金币' : '存档异常（只读模式），暂时不能花金币');
-  if (d.zb === 'buy') {
-    if (!ZB.IDS.includes(d.id)) return zbReply();
-    const lv = zbState().lv[d.id];
-    if (lv >= ZB.MAX_TRAIN) return zbReply('已满级');
-    const r = txn(st => {
-      const z = st.zombie = ZB.norm(st.zombie);
-      if (z.lv[d.id] !== lv) return { ok:false, why:'训练等级已变化，请重试' };
-      z.lv[d.id] = lv + 1; return { ok:true };
-    }, ZB.price(d.id, lv), '训练没生效，没扣金币');
-    dirty = true;
-    if (r.ok) return zbReply('');
-    return zbReply(r.stage === 'pay' || r.stage === 'apply' ? r.why : '存档失败，没扣金币');
-  }
-}
-Object.defineProperties(window.__tzz, { openZombie:{ value:openZombie }, closeZombie:{ value:closeZombie }, zbOpen:{ get:() => zbOpen }, zbCeo:{ value:zbCeo }, zbLastCeo:{ get:() => zbLastCeo }, zbRun:{ get:() => zbRun }, openAssignTo:{ value:openAssignTo }, zbReply:{ value:zbReply } });
-// Deterministic pet-only inspection for isolated acceptance tools.
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&petPanelOpen&&!modalOpen()){e.preventDefault();homeAct('petClose');}});
-window.render_game_to_text = () => JSON.stringify({coordinates:'floor tiles; origin back-left, x right, y toward viewer',pets:petsHooks.debug()});
-window.advanceTime = ms => { petManual=true;petSyncActors();for(const a of petActors.values()){a.rt.sync(state);a.rt.step(Math.max(0,ms)/1000);}petsHooks.draw(); };
 
 })();
 

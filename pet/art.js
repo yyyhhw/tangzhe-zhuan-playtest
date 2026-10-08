@@ -18,7 +18,43 @@
   const EVENTS = ['ball_pick', 'ball_drop'];
   const eq2 = (a, b) => Array.isArray(a) && a.length === 2 && a[0] === b[0] && a[1] === b[1];
 
+  // New-species prototype contract: variable frame counts, no canine ball events.
+  function validateCompanionManifest(m) {
+    const errors=[], err=x=>errors.push(x), src=m.source||{},rt=m.runtime||{},at=m.atlas||{},clips=m.clips||{},used=new Set();
+    if (!['cat','red_panda','robot','panda_cub','alpaca','rabbit'].includes(m.species)) err('unknown species');
+    if (m.placeholder !== false) err('companion art must not be placeholder');
+    if (!eq2(src.frameSize,[256,256]) || !eq2(src.origin,[128,208]) || src.perFrameCrop !== false || src.shadow !== 'separate') err('invalid source geometry');
+    if (rt.cellSize!==128 || !eq2(rt.origin,[64,104]) || !(rt.displayTiles>0 && rt.displayTiles<=3)) err('invalid runtime geometry');
+    const rectMode=at.mode==='sourceRect';
+    for(const [key,a] of Object.entries(m.atlases||{}))if(!a||!/^[a-z_]+$/.test(key)||!Array.isArray(a.size)||a.size.length!==2||!a.size.every(v=>Number.isInteger(v)&&v>0&&v<=8192)||!/^[a-zA-Z0-9_.-]+\.(png|webp)$/.test(a.image||'')||!(a.sourceScale>0&&a.sourceScale<=4))err('invalid additional atlas '+key);
+    if(!Array.isArray(at.size)||at.size.length!==2||!at.size.every(v=>Number.isInteger(v)&&v>0&&v<=8192)||!/^[a-zA-Z0-9_.-]+\.(png|webp)$/.test(at.image||''))err('invalid atlas');
+    if(rectMode){if(!(rt.sourceScale>0&&rt.sourceScale<=4))err('invalid uniform source scale');}
+    else if (!Number.isInteger(at.cols)||!Number.isInteger(at.rows)||at.cols<1||at.rows<1||!eq2(at.size,[at.cols*128,at.rows*128]))err('invalid grid');
+    const cell=(id,where)=>{if(!Number.isInteger(id)||id<0||id>=at.cols*at.rows)err('invalid cell '+where);used.add(id);};
+    for(const name of ['idle_E','idle_N','idle_S','attention','groom','play','rest','petted'])if(!clips[name])err('missing '+name);
+    let frameCount=0;
+    for(const [name,c] of Object.entries(clips)){
+      if(!c||!Array.isArray(c.frames)||!c.frames.length){err('empty '+name);continue;}
+      if(!/^(idle|walk|run)_[ENS]$|^(attention|groom|play|rest|petted)$/.test(name))err('unsupported companion action '+name);
+      if(/^(idle|walk|run)_/.test(name)&&(c.dir!==name.slice(-1)||c.inPlace!==false||c.loop!==true))err('wrong motion mapping '+name);
+      for(const f of c.frames){
+        if(!f||typeof f!=='object'){err('invalid frame '+name);continue;}
+        if(rectMode){const r=f.sourceRect,a=f.anchor,fa=f.imageKey?(m.atlases||{})[f.imageKey]:at;if(!fa||!Array.isArray(fa.size)||!Array.isArray(r)||r.length!==4||!r.every(Number.isFinite)||r[0]<0||r[1]<0||r[2]<=0||r[3]<=0||r[0]+r[2]>fa.size[0]||r[1]+r[3]>fa.size[1])err('invalid source rectangle '+name);
+          if(!Array.isArray(a)||a.length!==2||!a.every(Number.isFinite))err('invalid ground anchor '+name);used.add((f.imageKey||'primary')+':'+f.sourceIndex);
+          const pose=(m.poseCatalog||{})[(f.imageKey||'primary')+':'+f.sourceIndex];if(!pose||pose.dir!==c.dir||!Array.isArray(pose.clips)||!pose.clips.includes(name))err('wrong pose mapping '+name);
+        }else cell(f.cell,name);
+        if(!(f.ms>0&&f.ms<=4000))err('invalid frame time '+name);frameCount++;
+      }
+      if(!['E','N','S'].includes(c.dir))err('invalid direction '+name);
+    }
+    for(const dir of ['E','N','S']){const b=(m.body||{})[dir];if(!b||b.length!==2||!b.every(Number.isFinite)||b[0]<0||b[0]>=128||b[1]<=128||b[1]>256)err('invalid body '+dir);}
+    if(!(m.directions&&m.directions.mirror&&m.directions.mirror.W==='E'))err('missing west mirror');
+    if(!m.shadow)err('missing shadow');else if(!m.shadow.procedural)cell(m.shadow.cell,'shadow');
+    if(m.releaseReady===true) for(const dir of ['E','N','S'])if(!clips['walk_'+dir]||clips['walk_'+dir].frames.length<2)err('release needs animated walk '+dir);
+    return {ok:!errors.length,errors,frameCount,cellsUsed:used.size,capacity:rectMode?used.size:at.cols*at.rows};
+  }
   function validateManifest(m) {
+    if (m && m.schema === "tangzhe-companion-art/1") return validateCompanionManifest(m);
     const errors = [];
     const err = (s) => errors.push(s);
     if (!m || typeof m !== 'object') return { ok: false, errors: ['manifest 不是对象'], frameCount: 0 };
@@ -134,5 +170,20 @@
     }
     return this.fired;
   };
-  return { SCHEMA, REQUIRED, IN_PLACE, EVENTS, validateManifest, resolveClip, cellRect, clipDuration, Animator };
+  function canvasHit(canvas,x,y) {
+    if(!canvas)return false;const r=canvas.getBoundingClientRect();
+    const px=Math.floor((x-r.left)/r.width*canvas.width),py=Math.floor((y-r.top)/r.height*canvas.height);
+    if(px<0||py<0||px>=canvas.width||py>=canvas.height)return false;
+    try{return canvas.getContext('2d').getImageData(px,py,1,1).data[3]>64;}catch(e){return false;}
+  }
+  function validateCompanionPixels(m,image) {
+    if(typeof document==='undefined')return {ok:true,skipped:true};
+    const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d'),seen=new Set();
+    for(const c of Object.values(m.clips))for(const f of c.frames){const key=(f.imageKey||'primary')+':'+f.sourceIndex;if(seen.has(key))continue;seen.add(key);
+      const source=f.imageKey?image.companionAtlases[f.imageKey]:image,r=f.sourceRect;
+      if(!r)continue;canvas.width=Math.ceil(r[2]);canvas.height=Math.ceil(r[3]);
+      try{ctx.drawImage(source,...r,0,0,r[2],r[3]);const pixels=ctx.getImageData(0,0,canvas.width,canvas.height).data;let visible=false;for(let i=3;i<pixels.length;i+=4)if(pixels[i]>16){visible=true;break;}if(!visible)return {ok:false,why:'动作帧完全透明：'+key};}catch(e){return {ok:false,why:'无法核验动作像素：'+key};}
+    }return {ok:true,frames:seen.size};
+  }
+  return { canvasHit, validateCompanionPixels, SCHEMA, REQUIRED, IN_PLACE, EVENTS, validateManifest, resolveClip, cellRect, clipDuration, Animator };
 });

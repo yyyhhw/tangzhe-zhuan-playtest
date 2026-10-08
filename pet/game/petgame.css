@@ -25,3 +25,32 @@
 .pet-card .name .tag{white-space:nowrap}
 .pet-card #petNoRoom{max-width:96px;white-space:normal;line-height:1.25;padding:6px 8px}
 .pet-wait{border-color:#e07a3f;background:#fff4e6;line-height:1.5}
+
+
+/* Two-slot responsive management. */
+.pet-manager{margin:10px 0;padding:10px;border:2px solid #c38655;border-radius:12px;background:#fff6e8;min-width:0}
+#petSlots{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:8px 0}
+.pet-slot{min-height:84px;padding:8px;border:1px dashed #ae795a;border-radius:8px;min-width:0;overflow-wrap:anywhere}
+.pet-slot small,.pet-list-row small{display:block;font-size:11px;line-height:1.5}
+.pet-slot b,.pet-list-row b{font-size:12px}
+.pet-slot .buy{min-height:40px;margin-top:5px;font-size:12px;width:100%}
+.pet-list-row{display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #dbbea3}
+.pet-list-row>div{flex:1;min-width:0;overflow-wrap:anywhere}
+.pet-list-row .buy{min-height:40px;flex-shrink:0;font-size:12px}
+.pet-replace-option{display:block;min-height:44px;width:100%;margin-top:10px;white-space:normal;overflow-wrap:anywhere}
+#petReplace{max-height:65vh;overflow-y:auto}
+.pet-manager summary{padding:8px 0;min-height:40px}
+
+/* Explicit display rules on small must not override the hidden state. */
+.pet-manager [hidden]{display:none!important}
+/* One collapsed pet entry; only the selected species exposes controls. */
+.pet-entry{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;padding:10px 12px;margin:10px 0;border:3px solid #141414;border-radius:12px;background:#fff4c2;color:#141414;text-align:left;font:inherit;cursor:pointer;box-shadow:3px 3px 0 #141414}
+.pet-entry>span{font-weight:900;white-space:nowrap}.pet-entry>small{flex:1;font-size:12px}.pet-entry>b{font-size:25px}
+.pet-panel header{position:sticky;top:0;z-index:2;background:#fff6e8;padding:5px 0;display:flex;justify-content:space-between;align-items:center;gap:8px}.pet-panel h3,.pet-panel h4{margin:0}.pet-panel h4{font-size:20px;margin-bottom:8px}.pet-panel header small{font-size:12px}.pet-panel .buy{min-height:44px;white-space:normal}
+.pet-choices{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:12px 0}.pet-choice{min-width:0;min-height:58px;border:2px solid #141414;border-radius:9px;background:#fffaf0;color:#141414;font:inherit;padding:7px 3px;cursor:pointer}.pet-choice span{display:block;font-size:13px;font-weight:800}.pet-choice small{display:block;font-size:11px;margin-top:3px}.pet-choice.on{background:#ffd84d;box-shadow:2px 2px 0 #141414}.pet-selected{padding:12px;border:2px solid #141414;border-radius:10px;background:#fffaf0}.pet-selected p{margin:8px 0}.pet-arrange,.pet-records{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}.pet-selected .pet-bar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}.pet-selected .pet-bar .buy{padding:7px 3px;font-size:12px}.pet-quarantine{font-size:12px;margin-top:10px}.pet-panel :focus-visible,.pet-entry:focus-visible{outline:3px solid #cf3c29;outline-offset:3px}
+@media(max-width:350px){.pet-choice span{font-size:12px}.pet-entry>small{font-size:11px}.pet-panel{padding:9px}}
+
+/* Interactions stay with the visible room, separate from pet management. */
+.pet-interaction{margin:4px 0 8px;padding:5px 7px;border:2px solid #141414;border-radius:10px;background:#fff8e8}.pet-interaction:empty{display:none}.pet-targets{display:flex;align-items:center;gap:5px;margin-bottom:4px}.pet-targets small{font-size:11px}.pet-target{min-height:44px;padding:4px 8px;border:2px solid #141414;border-radius:8px;background:#fffaf0;font:inherit;font-size:12px;font-weight:800;cursor:pointer}.pet-target.on{background:#ffd84d}.pet-interaction .pet-bar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin:0}.pet-interaction .buy{min-height:44px;padding:6px 2px;font-size:12px;white-space:normal}.pet-targeted .pet-cv{filter:drop-shadow(0 0 2px #ffc929)}.pet-interaction :focus-visible{outline:3px solid #cf3c29;outline-offset:2px}
+/* Keep the room avatar from covering the pet being watched/interacted with. */
+.room-floor:has(> .pet-targeted) .home-actor{z-index:6}
