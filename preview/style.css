@@ -742,3 +742,15 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 .home-host{display:flex;align-items:center;gap:7px;min-height:38px;margin:4px 0;padding:3px 7px;border:2px solid var(--ink);border-radius:9px;background:#fff8e8;font-size:12px}.home-host>.ava{width:30px;height:30px;flex:0 0 30px}.home-host>b{white-space:nowrap}.home-host>span{min-width:0;font-size:11px;line-height:1.3;overflow-wrap:anywhere}
 .pet-host-docked .home-actor .ha-ava,.pet-host-docked .home-actor .ha-line,.pet-host-docked .home-actor .ha-act{display:none}
 .pet-host-docked .home-actor{width:12px!important;height:12px!important;transform:translate(-50%,-50%);z-index:1!important;border:2px solid #537854;border-radius:50%;background:rgba(255,255,255,.45)}
+
+/* Only owned story cards render an image; failures leave the original text readable. */
+.story-art{display:block;position:relative;width:100%;aspect-ratio:4/3;margin:9px 0;border:2px solid var(--ink);border-radius:8px;background:#fff8e8;overflow:hidden}
+.story-art img{display:block;position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+.story-art-status{position:absolute;inset:0;display:grid;place-items:center;padding:18px;background:#fff8e8;color:#665742;font-size:12px;font-weight:500;line-height:1.6;text-align:center}
+.story-art [hidden]{display:none!important}.story-art-large{max-height:48dvh;margin:10px 0 12px}
+#storyReplay .mnote{color:#3d352d;font-size:14px;line-height:1.6;text-align:left}
+
+.story-open{display:grid;grid-template-columns:96px minmax(0,1fr);gap:8px 12px;align-items:start}
+.story-open>b{grid-column:1/-1}.story-open .story-art{grid-column:1;grid-row:2/span 2;width:96px;margin:0}
+.story-open .story-text{grid-column:2;grid-row:2;margin:0;font-size:12px}.story-open .story-replay-hint{grid-column:2;grid-row:3;margin:0;font-size:11px}
+.story-open .story-art-status{padding:5px;font-size:10px;line-height:1.3}

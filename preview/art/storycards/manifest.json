@@ -1,0 +1,82 @@
+[
+  {
+    "id": "k_1",
+    "filename": "story_k_1.webp",
+    "sha256": "6e6be40ad7e10ab86cd076a7699005b4950038748479c68dad5adcc6187cf7d8",
+    "bytes": 217208,
+    "dimensions": [
+      1024,
+      768
+    ]
+  },
+  {
+    "id": "k_2",
+    "filename": "story_k_2.webp",
+    "sha256": "735568bd9a97af6bab868c03e8804ae88c617d8ab0c2b5d635321ec7d25f4a94",
+    "bytes": 182826,
+    "dimensions": [
+      1024,
+      768
+    ]
+  },
+  {
+    "id": "k_3",
+    "filename": "story_k_3.webp",
+    "sha256": "a071fd00e2b0dbde27e8603eea1e284cd68e0b91792c2b3b9ba56f79f696b307",
+    "bytes": 221802,
+    "dimensions": [
+      1024,
+      768
+    ]
+  },
+  {
+    "id": "k_4",
+    "filename": "story_k_4.webp",
+    "sha256": "7d3d38078b9b1d5cd5240b0d4d51f6e063ae3db197458e7bfd4610d8650e0634",
+    "bytes": 197966,
+    "dimensions": [
+      1024,
+      768
+    ]
+  },
+  {
+    "id": "k_5",
+    "filename": "story_k_5.webp",
+    "sha256": "d270a0266282e2aad0f31c3feb32113a957e58c131c7b5eb3c2de9da7ea95621",
+    "bytes": 143420,
+    "dimensions": [
+      1024,
+      768
+    ]
+  },
+  {
+    "id": "k_6",
+    "filename": "story_k_6.webp",
+    "sha256": "808ad7637047b2e1cf7922aac5321715239d74487402a1a0d695321cdf8eed33",
+    "bytes": 167694,
+    "dimensions": [
+      1024,
+      768
+    ]
+  },
+  {
+    "id": "k_7",
+    "filename": "story_k_7.webp",
+    "sha256": "8db0a06e2b959f2ef034e4218bf651e1fae716fba0b09b177861da68dec3eaa0",
+    "bytes": 145716,
+    "dimensions": [
+      1024,
+      768
+    ]
+  },
+  {
+    "id": "k_8",
+    "filename": "story_k_8.webp",
+    "sha256": "cbca247297b3b6a3b6189705727ed90fd6208b9fdf926607407ed9d945232286",
+    "bytes": 241100,
+    "dimensions": [
+      1024,
+      768
+    ]
+  }
+]

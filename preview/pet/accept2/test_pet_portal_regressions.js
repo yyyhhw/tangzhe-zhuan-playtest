@@ -47,7 +47,7 @@ test('two-species full-room waiting, furniture removal, house upgrade and replac
  }
 });
 test('cache/version aligned in both local entries; preview save keys preserved',()=>{
- for(const folder of ['preview','preview/pet/game']){const h=fs.readFileSync(folder+'/index.html','utf8'),v=JSON.parse(fs.readFileSync(folder+'/version.json')).v;assert.equal(v,'13k-night2');assert(h.includes("var B='"+v+"'"));for(const q of h.matchAll(/(?:src|href)="[^"\s]+\?v=([^"\s]+)"/g))assert.equal(q[1],v);}
+ for(const folder of ['preview','preview/pet/game']){const h=fs.readFileSync(folder+'/index.html','utf8'),v=JSON.parse(fs.readFileSync(folder+'/version.json')).v;assert.equal(v,'13k-story1');assert(h.includes("var B='"+v+"'"));for(const q of h.matchAll(/(?:src|href)="[^"\s]+\?v=([^"\s]+)"/g))assert.equal(q[1],v);}
  for(const file of ['preview/app.js','preview/pet/game/app.js']){const src=fs.readFileSync(file,'utf8');assert(src.includes('tangzhe-preview-save'));assert(src.includes("e.key==='Escape'&&petPanelOpen"));}
 });
 console.log(n+' focused portal/migration/storage/floor/cache cases passed');

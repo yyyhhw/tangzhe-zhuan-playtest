@@ -1349,7 +1349,7 @@ function renderCol() {
   const cards = E.ITEMS.filter(i => i.type === 'card');
   h += `<div class="sec-title">故事卡图鉴 ${cards.filter(c => own.has(c.id)).length}/${cards.length}</div>`;
   h += cards.map((c, k) => own.has(c.id)
-    ? `<button type="button" class="story story-open" data-act="card" data-arg="${c.id}" aria-label="重看故事卡：${c.name}"><b>${k + 1}. ${c.name}</b><span class="story-text">${c.text}</span><span class="story-replay-hint">已收集 · 点击重看 ›</span></button>` : `<div class="story no" aria-label="第 ${k + 1} 张故事卡，未收集"><b>${k + 1}. ？？？</b><p>还没收集</p></div>`).join('');
+    ? `<button type="button" class="story story-open" data-act="card" data-arg="${c.id}" aria-label="重看故事卡：${c.name}"><b>${k + 1}. ${c.name}</b>${storyArt(c.id)}<span class="story-text">${c.text}</span><span class="story-replay-hint">已收集 · 点击重看 ›</span></button>` : `<div class="story no" aria-label="第 ${k + 1} 张故事卡，未收集"><b>${k + 1}. ？？？</b><p>还没收集</p></div>`).join('');
   h += `<div class="note">${setDone ? `✅ 已集齐 ${cards.length} 张故事卡：解锁专属外观「金牌摊主」（金马甲 + 金厨师帽），在衣橱里给任意 CEO 换上。` : `集齐 ${cards.length} 张故事卡，解锁专属外观「金牌摊主」（金马甲 + 金厨师帽）。`}</div>`;
   h += `<div class="sec-title">设置</div><div class="card"><div class="info"><div class="name">存档</div><div class="desc">版本 v${state.v} · 自动保存在本机浏览器 · 每日双倍按马来西亚时间早上 5 点重置</div></div>
     <button class="buy ghost" data-act="reset" data-arg="">重新开始</button></div><div class="note">试玩版 · 只花游戏金币，没有任何真钱购买。</div>`;
@@ -1602,12 +1602,26 @@ function showReveal(resumed) {
   const mc = $('#mCol'); if (mc) mc.addEventListener('click', () => { closeModal(); setTab('col'); }, { once:true });
   const ms = $('#mGoShop'); if (ms) ms.addEventListener('click', () => { closeModal(); switchShop(it.shop); setTab('shop'); }, { once:true });
 }
+const STORY_ART = Object.freeze({k_1:'story_k_1.webp',k_2:'story_k_2.webp',k_3:'story_k_3.webp',k_4:'story_k_4.webp',k_5:'story_k_5.webp',k_6:'story_k_6.webp',k_7:'story_k_7.webp',k_8:'story_k_8.webp'});
+function storyArt(id, large = false) {
+  const item = E.ITEM_BY_ID[id], file = STORY_ART[id];
+  if (!file || !item || item.type !== 'card' || !state.gacha.owned.includes(id)) return '';
+  return `<span class="story-art${large ? ' story-art-large' : ''}" data-story-state="loading"><img data-story-art="${id}" src="art/storycards/${file}?v=13k-story1" alt="故事插图：${item.name}" width="1024" height="768" loading="${large ? 'eager' : 'lazy'}" decoding="async"><span class="story-art-status" role="status">插图加载中…</span></span>`;
+}
+for (const event of ['load','error']) document.addEventListener(event, e => {
+  const img = e.target;
+  if (!(img instanceof HTMLImageElement) || !img.hasAttribute('data-story-art')) return;
+  const box = img.closest('.story-art'), status = box && box.querySelector('.story-art-status');
+  if (!status) return;
+  const failed = event === 'error'; box.dataset.storyState = failed ? 'error' : 'ready'; img.hidden = failed; status.hidden = !failed;
+  if (failed) status.textContent = '插图暂时无法加载，仍可阅读故事文字。';
+}, true);
 function showCard(id) {
   const it = E.ITEM_BY_ID[id];
   // Replaying is read-only: ownership comes from the existing collection IDs.
   if (!it || it.type !== 'card' || !state.gacha.owned.includes(id)) return;
   const opener = document.activeElement;
-  openModal(`<section id="storyReplay" aria-labelledby="storyReplayTitle"><div class="mtitle" id="storyReplayTitle">${it.name}</div><div class="mnote">${it.text}</div><button type="button" class="buy big" id="mOk">返回收藏</button></section>`, false);
+  openModal(`<section id="storyReplay" aria-labelledby="storyReplayTitle"><div class="mtitle" id="storyReplayTitle">${it.name}</div>${storyArt(id, true)}<div class="mnote">${it.text}</div><button type="button" class="buy big" id="mOk">返回收藏</button></section>`, false);
   $('#mOk').addEventListener('click', () => { closeModal(); if (opener && opener.isConnected) opener.focus({preventScroll:true}); }, {once:true});
   $('#mOk').focus({preventScroll:true});
 }
@@ -1858,12 +1872,12 @@ function petInit(tryN) {
 }
 async function petLoadSpecies() {
   try {
-    const response=await fetch('pet/art/species.json?v=13k-night2'); if(!response.ok)throw Error('species catalog');
+    const response=await fetch('pet/art/species.json?v=13k-story1'); if(!response.ok)throw Error('species catalog');
     const entries=await response.json();
     for(const entry of entries) {
       if(!PG.SPECIES[entry.species] || entry.species==='dog' || !/^[a-z_]+$/.test(entry.species))continue;
       try {
-        const base='pet/art/'+entry.species+'/', r=await fetch(base+'manifest.json?v=13k-night2');if(!r.ok)throw Error('manifest');
+        const base='pet/art/'+entry.species+'/', r=await fetch(base+'manifest.json?v=13k-story1');if(!r.ok)throw Error('manifest');
         const m=await r.json(), check=window.PetArt.validateManifest(m);if(!check.ok)throw Error(check.errors.join(';'));
         const image=new Image();image.src=base+m.atlas.image;await image.decode();
         image.companionAtlases={};await Promise.all(Object.entries(m.atlases||{}).map(async([key,a])=>{const im=new Image();im.src=base+a.image;await im.decode();image.companionAtlases[key]=im;}));
@@ -2410,7 +2424,7 @@ function openZombie() {
     const ch = new MessageChannel(); zbPort = ch.port1; zbPort.onmessage = e => zbMsg(e.data);
     f.contentWindow.postMessage({ zb:'port' }, location.origin, [ch.port2]); zbReply();
   };
-  f.src = 'zombie/?embed=1&v=13k-night2'; $('#zbOverlay').classList.remove('hidden'); audioPause();
+  f.src = 'zombie/?embed=1&v=13k-story1'; $('#zbOverlay').classList.remove('hidden'); audioPause();
 }
 function closeZombie() {
   if (!zbOpen) return; zbOpen = false; zbRun = null; if (zbPort) { zbPort.close(); zbPort = null; }
