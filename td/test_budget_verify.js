@@ -1,0 +1,5 @@
+require('fs').mkdirSync(__dirname+'/evidence/speed',{recursive:true});
+const fs=require('fs'),assert=require('assert/strict'),{run}=require('./test_budget_experiment.js');
+const seeds=[['c77',1245,10,3],['pearl',1253,10,1],['otaku',1165,10,0],['rocket',1245,10,3]],results=[];
+for(const [cmd,cap,count,kind]of seeds){let best;for(let budget=cap-9;budget<=cap;budget++){const r=run(cmd,budget,count,kind);if(r.win){best=r;break;}}assert(best);const recommended=Math.ceil(best.budget*1.3),verify=run(cmd,recommended,count,kind);assert(verify.win);results.push({...best,recommended,recommendedVerified:true});console.log(cmd,best.budget,recommended,best.lives);}
+fs.writeFileSync(__dirname+'/evidence/speed/budget-verified.json',JSON.stringify({source:require('crypto').createHash('sha256').update(fs.readFileSync(__dirname+'/td.js')).digest('hex'),method:'Zero permanent upgrades; 4 deterministic strategies × 5 tower counts, approximate binary search then 10 integer budgets near best. Finite sampled minimum, not a global optimum. Count accepted income incl initial; cap holding at400; refunds excluded and never replenish budget.',results},null,2));

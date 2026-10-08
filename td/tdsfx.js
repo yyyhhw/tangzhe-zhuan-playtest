@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   const BPM_MIN = 100, BPM_MAX = 150;
-  const S = { ctx: null, master: null, music: null, sfx: null, muted: false, paused: false, on: false, bpm: BPM_MIN, step: 0, next: 0, timer: 0, last: {}, count: {}, noiseBuf: null };
+  const S = { ctx: null, master: null, music: null, sfx: null, muted: false, paused: false, on: false, bpm: BPM_MIN, step: 0, next: 0, timer: 0, track: 0, voices: new Set(), last: {}, count: {}, noiseBuf: null };
   const now = () => S.ctx ? S.ctx.currentTime : 0;
   const ready = () => S.ctx && S.ctx.state === 'running' && !S.muted && !S.paused && !document.hidden;
   function unlock() {
@@ -23,13 +23,13 @@
     const t = at || now(), o = S.ctx.createOscillator(), g = S.ctx.createGain();
     o.type = type; o.frequency.setValueAtTime(f0, t); if (f1 && f1 !== f0) o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur);
     g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    o.connect(g); g.connect(out || S.sfx); o.start(t); o.stop(t + dur + 0.02);
+    o.connect(g); g.connect(out || S.sfx); S.voices.add(o); o.onended=()=>S.voices.delete(o); o.start(t); o.stop(t + dur + 0.02);
   }
   function noise(dur, vol, fType, f0, f1, at, out) {
     const t = at || now(), src = S.ctx.createBufferSource(), fl = S.ctx.createBiquadFilter(), g = S.ctx.createGain();
     src.buffer = S.noiseBuf; fl.type = fType || 'bandpass'; fl.frequency.setValueAtTime(f0 || 1200, t); if (f1) fl.frequency.exponentialRampToValueAtTime(f1, t + dur);
     g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-    src.connect(fl); fl.connect(g); g.connect(out || S.sfx); src.start(t, Math.random() * 0.5); src.stop(t + dur + 0.02);
+    src.connect(fl); fl.connect(g); g.connect(out || S.sfx); S.voices.add(src); src.onended=()=>S.voices.delete(src); src.start(t, Math.random() * 0.5); src.stop(t + dur + 0.02);
   }
   const SHOT = {
     tech: () => tone('triangle', 1600, 250, .09, .08),
@@ -48,8 +48,13 @@
     win() { if (!ready() || !gate('win', 0)) return; const t = now(); [523, 659, 784, 1047].forEach((f, i) => tone('triangle', f, f, 0.3, 0.2, t + i * 0.12)); },
     lose() { if (!ready() || !gate('lose', 0)) return; const t = now(); [392, 330, 262].forEach((f, i) => tone('triangle', f, f * 0.98, 0.35, 0.2, t + i * 0.18)); }
   };
-  // 背景乐：16 步循环（低音 + 军鼓 + 旋律）；难度越高越快，BPM 封顶 150
-  const BASS = [55, 0, 55, 0, 65.4, 0, 55, 0, 49, 0, 49, 0, 58.3, 0, 65.4, 0], LEAD = [440, 0, 523, 0, 0, 494, 0, 440, 392, 0, 440, 0, 0, 523, 587, 0];
+  // 三首项目原创程序乐曲；无外部录音或第三方旋律。每局选曲，跨波保持。
+  const TRACKS = [
+    {name:'街角进行曲', bass:[55,0,55,0,65.4,0,55,0,49,0,49,0,58.3,0,65.4,0],lead:[440,0,523,0,0,494,0,440,392,0,440,0,0,523,587,0],voice:'square',beat:4},
+    {name:'霓虹巡游',bass:[73.42,0,0,110,0,73.42,0,0,65.41,0,0,98,0,65.41,0,0],lead:[587,740,880,0,740,0,659,587,523,659,784,0,659,0,587,0],voice:'triangle',beat:8},
+    {name:'星光工坊',bass:[65.41,0,98,0,82.41,0,98,0,55,0,82.41,0,73.42,0,98,0],lead:[523,0,0,784,659,0,587,0,440,0,659,0,587,784,0,659],voice:'sine',beat:4}
+  ];
+  function newTrack(random=Math.random){stopBgm();S.track=Math.min(2,Math.max(0,Math.floor(random()*3)));S.step=0;S.next=0;return S.track;}
   function bpmFor(d) { return Math.round(Math.min(BPM_MAX, BPM_MIN + Math.max(0, d - 1) * 1.2)); }
   function setTempo(d) { S.bpm = bpmFor(d); }
   function tick() {
@@ -57,16 +62,16 @@
     const spb = 60 / S.bpm / 4;
     if (S.next < now()) S.next = now() + 0.05;
     while (S.next < now() + 0.15) {
-      const i = S.step % 16, t = S.next;
+      const i = S.step % 16, t = S.next, track=TRACKS[S.track], BASS=track.bass, LEAD=track.lead;
       if (BASS[i]) tone('triangle', BASS[i], BASS[i], spb * 1.6, 0.5, t, S.music);
-      if (LEAD[i] && (S.step >> 4) % 2) tone('square', LEAD[i], LEAD[i], spb * 0.9, 0.12, t, S.music);
-      if (i % 4 === 0) tone('sine', 120, 45, 0.12, 0.6, t, S.music);
+      if (LEAD[i] && (S.step >> 4) % 2) tone(track.voice, LEAD[i], LEAD[i], spb * 0.9, 0.12, t, S.music);
+      if (i % track.beat === 0) tone('sine', 120, 45, 0.12, 0.6, t, S.music);
       if (i % 8 === 4) noise(0.1, 0.35, 'highpass', 1500, 0, t, S.music);
       S.step++; S.next += spb;
     }
   }
-  function startBgm(d) { setTempo(d); if (S.on || S.muted) return; S.on = true; S.step = 0; S.next = 0; clearInterval(S.timer); S.timer = setInterval(tick, 40); tick(); }
-  function stopBgm() { S.on = false; clearInterval(S.timer); }
+  function startBgm(d) { setTempo(d); if (S.on || S.muted) return; S.on = true; S.next = 0; clearInterval(S.timer); S.timer = setInterval(tick, 40); tick(); }
+  function stopBgm() { S.on = false; clearInterval(S.timer); S.timer=0; for(const voice of S.voices){try{voice.stop();}catch(e){}} S.voices.clear(); }
   document.addEventListener('visibilitychange', () => { if (!S.ctx) return; if (document.hidden) S.ctx.suspend().catch(() => {}); else if (!S.muted) S.ctx.resume().catch(() => {}); });
-  window.ZBSfx = Object.assign(sfx, { unlock, setMuted, setPaused, startBgm, stopBgm, setTempo, bpmFor, BPM_MIN, BPM_MAX, state: S });
+  window.ZBSfx = Object.assign(sfx, { unlock, setMuted, setPaused, startBgm, stopBgm, newTrack, TRACKS, setTempo, bpmFor, BPM_MIN, BPM_MAX, state: S });
 })();

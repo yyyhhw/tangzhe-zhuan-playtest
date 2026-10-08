@@ -1,0 +1,11 @@
+const assert=require('node:assert/strict'),Z=require('./zombie/zbcore.js'),E=require('./economy.js');let n=0;const check=(fn)=>{fn();n++};
+const st=E.newState(1790000000000);st.coins=12345;st.extra={unchanged:true};st.zombie={cleared:50,endBest:{t:700,kills:7},extra:'keep',endTop:[{t:700,kills:7,id:'first',at:1},{t:500,kills:5,id:'second',at:2}]};const raw=JSON.parse(JSON.stringify(st));Z.preserveFormalTop(st);
+check(()=>assert.deepEqual(st.zombie.endTop,raw.zombie.endTop));check(()=>assert.deepEqual(st.zombieEndTopV1,raw.zombie.endTop));check(()=>{const copy=JSON.parse(JSON.stringify(st));delete copy.zombieEndTopV1;assert.deepEqual(copy,raw)});
+check(()=>{st.zombie.endTop[0].t=701;assert.equal(st.zombieEndTopV1[0].t,700);st.zombie.endTop[0].t=700});
+check(()=>{delete st.zombie.endTop;Z.preserveFormalTop(st);assert.deepEqual(st.zombie.endTop,raw.zombie.endTop)});
+check(()=>{delete st.zombie.endTop;st.zombie.endBest={t:900,kills:9};Z.preserveFormalTop(st);assert.equal(st.zombie.endTop.length,3);assert.equal(st.zombie.endTop[0].t,900);assert.deepEqual(st.zombie.endTop.slice(1),raw.zombie.endTop)});
+check(()=>{const s=JSON.stringify(st);Z.preserveFormalTop(st);assert.equal(JSON.stringify(st),s)});
+check(()=>{const s=JSON.stringify(st);const result=E.transact(st,{price:10,apply:s=>Z.applyResult(s.zombie,{mode:'endless',t:1000,kills:10,runId:'failed'}),save:()=>{Z.preserveFormalTop(st);return false}});assert.equal(result.ok,false);assert.equal(JSON.stringify(st),s)});
+check(()=>{st.zombieEndTopV1=Array.from({length:20},(_,i)=>({id:'r'+i,t:i*100,kills:0,at:i})).concat(null,{id:'<bad>',t:1e9});Z.preserveFormalTop(st);assert.equal(st.zombie.endTop.length,10);assert.equal(st.zombieEndTopV1.length,10);assert.equal(st.coins,12345);assert.equal(st.zombie.extra,'keep')});
+check(()=>{const reset=E.newState(1790000000000);Z.preserveFormalTop(reset);assert(!reset.zombieEndTopV1)});
+console.log('formal TOP10 mirror: '+n+' checks passed');

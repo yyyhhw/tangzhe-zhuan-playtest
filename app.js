@@ -39,6 +39,7 @@ function loadState() {
   if (m.source === 'bak') m.st.rev = Math.max(m.st.rev || 0, m.mainRev || 0);   // 从备份恢复：rev 不低于坏主档，免得多标签锁误判
   if (m.blocked) saveBlocked = true;
   if (saveBlocked) E.markBlocked(m.st);
+  if (!m.blocked) ZB.preserveFormalTop(m.st); // Recover only leaderboard rows, never wallet/other fields.
   // Roster migration is committed atomically after boot; failed writes keep raw save intact.
   return m.st;
 }
@@ -74,6 +75,7 @@ function persist() {
   if (t > state.lastSeen) state.lastSeen = t;
   state.maxSeen = Math.max(state.maxSeen || 0, state.lastSeen);
   petBeforePersist();   // 宠物名单 v2：按实例写入 state.pets.list[].eng（同一份存档）
+  ZB.preserveFormalTop(state); // Mirror and main leaderboard commit or roll back together.
   state.rev++;
   const json = JSON.stringify(state);
   // 完整备份：把当前通过完整校验的主档整份放进 BAK_KEY（README 里已有的 -bak 键，不新增键），再写新主档；坏主档永远不进备份
@@ -776,8 +778,72 @@ function earn(v) { const r = E.addCoins(state, v); if (r.capped) capNote(); retu
 function capNote() { if (capWarned) return; capWarned = true; toast('金币到上限 ' + fmt(CFG.COIN_CAP) + '：先花掉一些，收益才会继续进账', 3200); }
 function popWord(w) { sfxWord.textContent = w; sfxWord.classList.remove('pop'); void sfxWord.offsetWidth; sfxWord.classList.add('pop'); }
 function bumpCoins() { coinsEl.classList.remove('bump'); void coinsEl.offsetWidth; coinsEl.classList.add('bump'); }
-let toastTimer = 0;
-function toast(msg, ms = 1900, placement = '') { toastEl.classList.toggle('toast-header', placement === 'header'); toastEl.setAttribute('role','status'); toastEl.textContent = msg; toastEl.classList.remove('hidden'); toastEl.style.animation = 'none'; void toastEl.offsetWidth; toastEl.style.animation = ''; clearTimeout(toastTimer); toastTimer = setTimeout(() => toastEl.classList.add('hidden'), ms); }
+let toastTimer = 0, toastGeneration = 0, toastActive = null, toastQueue = [], toastSuspended = false;
+// Error > operation feedback (default) > explicitly marked ambient events.
+// Pending feedback: newest 3, FIFO, 8s TTL. Ambient: latest 1, 3s TTL.
+// Expiry uses both clocks so suspension or a wall-clock adjustment cannot replay old events.
+const TOAST_ERROR = /保存失败|存档异常|数据异常|没有生效/;
+function toastExpired(item) { return performance.now() >= item.until || Date.now() >= item.wallUntil; }
+function toastStop() {
+  clearTimeout(toastTimer); toastTimer = 0; toastGeneration++;
+  toastActive = null; toastEl.classList.add('hidden');
+}
+function toastPrune() { toastQueue = toastQueue.filter(item => !toastExpired(item)); }
+function toastEnqueue(item) {
+  toastQueue = toastQueue.filter(old => !(old.priority === item.priority && (item.priority === 0 || old.msg === item.msg)));
+  const peers = toastQueue.filter(old => old.priority === item.priority);
+  if (peers.length >= 3) toastQueue.splice(toastQueue.indexOf(peers[0]), 1);
+  toastQueue.push(item);
+}
+function toastShow(item) {
+  toastStop();
+  toastActive = { ...item, until:performance.now() + item.ms, wallUntil:Date.now() + item.ms };
+  toastEl.classList.toggle('toast-header', item.placement === 'header');
+  toastEl.setAttribute('role', item.priority === 2 ? 'alert' : 'status');
+  toastEl.textContent = item.msg; toastEl.classList.remove('hidden');
+  toastEl.style.animation = 'none'; void toastEl.offsetWidth; toastEl.style.animation = '';
+  const generation = toastGeneration;
+  toastTimer = setTimeout(() => {
+    if (generation !== toastGeneration) return;
+    toastStop(); toastDrain();
+  }, item.ms);
+}
+function toastDrain() {
+  toastPrune();
+  if (document.hidden || toastActive || !toastQueue.length) return;
+  const index = toastQueue.findIndex(item => item.priority === 1);
+  const item = toastQueue.splice(index < 0 ? 0 : index, 1)[0];
+  toastShow(item);
+}
+function toast(msg, ms = 1900, placement = '', kind = 'feedback') {
+  const priority = kind === 'error' || TOAST_ERROR.test(msg) ? 2 : kind === 'ambient' ? 0 : 1;
+  toastPrune();
+  // Synchronize expired active state before handling fresh input, even if its timer is late.
+  if (toastActive && toastExpired(toastActive)) toastStop();
+  if (document.hidden && priority < 2) return;
+  const ttl = priority === 0 ? 3000 : 8000;
+  const item = { msg, ms, placement, priority, until:performance.now() + ttl, wallUntil:Date.now() + ttl };
+  if (toastActive && toastActive.priority > priority) { toastEnqueue(item); return; }
+  // A new operation supersedes older pending feedback; ambient events never evict it.
+  if (priority === 1) toastQueue = toastQueue.filter(old => old.priority !== 1);
+  if (priority === 0 && toastQueue.some(old => old.priority === 1)) { toastEnqueue(item); toastDrain(); return; }
+  if (priority === 0) toastQueue = toastQueue.filter(old => old.priority !== 0);
+  toastShow(item);
+}
+function toastSuspend() {
+  toastSuspended = true; toastQueue = [];
+  if (toastActive && toastActive.priority < 2) toastStop();
+}
+function toastResume(event) {
+  // Initial pageshow is not a resume: boot may already have queued important feedback.
+  if (!toastSuspended && !(event && event.persisted)) return;
+  toastSuspended = false; toastQueue = [];
+  if (toastActive && toastExpired(toastActive)) toastStop();
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden) toastSuspend(); else toastResume(); });
+window.addEventListener('pagehide', toastSuspend);
+window.addEventListener('pageshow', toastResume);
+
 function shakeEl(el) { if (!el) return; el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
 function sayLine(who, txt, sec = 2.6) { bubble = { who, txt, until:clock + sec }; }
 
@@ -1006,7 +1072,7 @@ function startOrder(shop) {
   if (state.cur === shop && tab === 'shop') {
     sayLine('e', meta.line, 2.8);
     addText(meta.name, W / 2, H * 0.38, { size:18 * U, color:RED, life:1.4 });
-  } else toast(E.SHOPS[shop].short + '来了「' + meta.name + '」');
+  } else toast(E.SHOPS[shop].short + '来了「' + meta.name + '」', 1900, '', 'ambient');
 }
 
 function finishOrder() {
@@ -1059,7 +1125,7 @@ function updateBig() {
       special = { shop, t0:clock, meta, x:0, y:0, r:48 * U };
       sfx('big'); popWord('特殊客人！');
       if (state.cur === shop) addText(meta.name, W / 2, H * 0.36, { size:16 * U, color:'#ff4f9a', life:1.5 });
-      else toast(E.SHOPS[shop].short + '来了特殊客人「' + meta.name + '」');
+      else toast(E.SHOPS[shop].short + '来了特殊客人「' + meta.name + '」', 1900, '', 'ambient');
     }
     scheduleSpecial();
   }
@@ -1105,7 +1171,7 @@ function showSpecialComic(meta, paid) {
 const superNext = { tea:null, book:null, tech:null };
 function superAnnounce(i, word, msg, amt) {
   if (state.cur === i && tab !== 'col') { popWord(word); focusT = 0.5; shake = 0.3; addText(msg, W / 2, H * 0.42, { size:16 * U, color:'#ff4f9a', life:1.8, rot:-0.04 }); if (amt) burstCoins(W * 0.585, H * 0.7, 14); }
-  else toast(msg, 2400);
+  else toast(msg, 2400, '', 'ambient');
   sfx('mile');
 }
 function updateSupers() {
@@ -1193,21 +1259,77 @@ const DECOR_SPOT = { d_stool:'门口左侧的小椅', d_lights:'遮阳棚下的�
 const DECOR_ICON = { d_stool:'🪑', d_lights:'🌶️', d_neon:'🏮', d_board:'🪧', d_balloon:'🎈', d_poster:'📰', d_cat:'🐱', d_plant:'🪴' };
 const TYPE_LABEL = { clothes:'衣服', hat:'帽子', decor:'装饰', card:'故事卡', super:'超级装饰' };
 const thumbCache = {};
+// Small object drawings use the shop's ink outlines and warm, flat palette.
+// These are collection thumbnails only; store scene rendering is unchanged.
+function drawCollectible(c, id) {
+  const line = (pts, color = INK, width = 3) => { c.beginPath(); pts.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y)); c.strokeStyle=color;c.lineWidth=width;c.stroke(); };
+  const oval = (x,y,rx,ry,color,rot=0) => {c.beginPath();c.ellipse(x,y,rx,ry,rot,0,TAU);inkFill(c,color,2.5);};
+  const box = (x,y,w,h,color,r=4) => {rr(c,x,y,w,h,r);inkFill(c,color,2.5);};
+  const label = (s,x,y,size,color=INK) => {c.fillStyle=color;c.font=`900 ${size}px sans-serif`;c.textAlign='center';c.textBaseline='middle';c.fillText(s,x,y);};
+  c.lineJoin='round';c.lineCap='round';
+  if(id==='d_stool') {
+    line([[-21,2],[-26,34]]);line([[21,2],[26,34]]);line([[-23,21],[23,21]],'#92663d');
+    box(-30,-9,60,15,'#e9c46a');for(let k=-3;k<=3;k++)line([[k*7,-6],[k*7,3]],'#92663d',1.5);
+  } else if(id==='d_lights') {
+    c.beginPath();c.moveTo(-38,-25);c.quadraticCurveTo(0,-6,38,-25);c.strokeStyle=INK;c.lineWidth=3;c.stroke();
+    for(let k=0;k<4;k++){c.save();c.translate(-29+k*19,-17+Math.sin(k*Math.PI/3)*6);c.rotate(.3);line([[0,0],[0,8]],'#2d6a4f');c.beginPath();c.moveTo(-4,7);c.bezierCurveTo(-15,20,-4,34,5,37);c.bezierCurveTo(-1,25,12,17,5,7);c.closePath();inkFill(c,RED,2);line([[-5,14],[-6,20]],'#fff3a0',2);c.restore();}
+  } else if(id==='d_neon') {
+    line([[-24,-23],[-24,-33],[24,-33],[24,-23]]);box(-39,-23,78,48,'#2b2d42',8);box(-33,-17,66,36,'#2b2d42',5);label('77',0,3,30,'#ff8fc7');
+  } else if(id==='d_board') {
+    line([[-26,38],[-9,-35]]);line([[26,38],[9,-35]]);box(-30,-34,60,58,'#31594c');label('今日',0,-16,15,'#fff8e8');label('龙门阵',0,5,14,'#fff8e8');line([[-20,17],[13,17]],'#e9c46a',2);
+  } else if(id==='d_poster') {
+    c.save();c.rotate(.06);box(-29,-37,58,74,'#fff',2);label('热血',0,-20,20,RED);label('连载',0,3,17);box(-21,20,42,7,YELLOW,1);c.restore();
+  } else if(id==='d_balloon') {
+    c.beginPath();c.moveTo(0,9);c.bezierCurveTo(-14,25,15,27,1,42);c.strokeStyle=INK;c.lineWidth=2.5;c.stroke();oval(0,-14,25,30,'#ff8fc7');c.beginPath();c.moveTo(0,13);c.lineTo(-5,20);c.lineTo(5,20);c.closePath();inkFill(c,'#ef476f',2);oval(-7,-23,5,9,'#fff8e8',.35);
+  } else if(id==='d_cat') {
+    oval(0,18,25,24,'#fff8e8');oval(-22,24,10,8,'#fff8e8');oval(22,24,10,8,'#fff8e8');
+    c.beginPath();c.moveTo(-23,-8);c.lineTo(-23,-34);c.lineTo(-7,-24);c.lineTo(8,-24);c.lineTo(23,-34);c.lineTo(23,-8);c.closePath();inkFill(c,'#fff8e8',2.5);
+    oval(0,-10,25,20,'#fff8e8');line([[-14,-12],[-8,-14],[-3,-12]]);line([[4,-12],[10,-14],[15,-12]]);label('ω',0,0,17);box(-17,7,34,6,RED,2);oval(0,23,12,15,YELLOW);label('招',0,23,15);oval(29,-1,9,17,'#fff8e8',.15);line([[25,-10],[31,-10]],'#92663d',1.5);
+  } else if(id==='d_plant') {
+    for(const [x,y,r] of [[-22,-19,-.7],[17,-28,.7],[-7,-34,-.3],[28,-7,1],[-28,1,-1]]){line([[0,19],[x,y]],'#2d6a4f',3);c.save();c.translate(x,y);c.rotate(r);c.beginPath();c.moveTo(0,13);c.bezierCurveTo(-23,0,-10,-19,0,-9);c.bezierCurveTo(10,-19,23,0,0,13);inkFill(c,'#70ad69',2);line([[0,9],[0,-6]],'#2d6a4f',1.5);c.restore();}
+    c.beginPath();c.moveTo(-21,14);c.lineTo(21,14);c.lineTo(16,38);c.lineTo(-16,38);c.closePath();inkFill(c,'#e9a474',2.5);box(-24,9,48,9,'#efc49a');
+  } else if(id==='s_panda') {
+    oval(0,18,27,24,'#fff');oval(-17,-27,11,11,INK);oval(17,-27,11,11,INK);oval(0,-10,28,25,'#fff');oval(-11,-11,8,10,INK,.4);oval(11,-11,8,10,INK,-.4);oval(-10,-13,2,3,'#fff');oval(10,-13,2,3,'#fff');oval(0,0,4,3,INK);oval(-19,29,12,9,INK);oval(19,29,12,9,INK);
+    line([[-26,31],[27,-3]],'#92663d',4);for(let i=0;i<3;i++){c.save();c.translate(-10+i*11,20-i*8);c.rotate(-.6);box(-6,-7,12,14,'#a8c66c',2);line([[-4,-2],[4,-2]],'#537854',1.5);c.restore();}oval(-23,11,9,12,INK);oval(23,11,9,12,INK);
+  } else if(id==='s_fountain') {
+    box(-30,31,60,8,'#e9c46a');box(-5,-25,10,58,'#e9c46a');
+    for(const [y,w] of [[-13,19],[9,28]]){oval(0,y,w,7,'#f6e7d7');c.beginPath();c.moveTo(-w,y);c.quadraticCurveTo(0,y+27,w,y);c.closePath();inkFill(c,'#ffb9ce',2.5);}
+    for(const [x,y] of [[0,-33],[-13,-21],[13,-21],[-22,0],[22,0],[-31,18],[31,18]])oval(x,y,4,4,'#3d2c2e');
+  } else if(id==='s_portal') {
+    box(-30,30,60,10,'#e9c46a');oval(0,-3,30,38,'#7fbac7');oval(0,-3,22,30,'#403a73');
+    c.beginPath();for(let a=0;a<Math.PI*4;a+=.08){const r=1+a*1.4,x=Math.cos(a)*r,y=-3+Math.sin(a)*r;a?c.lineTo(x,y):c.moveTo(x,y);}c.strokeStyle='#c5a8ee';c.lineWidth=3;c.stroke();for(const [x,y] of [[-24,-29],[26,20]]){line([[x-4,y],[x+4,y]],YELLOW,3);line([[x,y-4],[x,y+4]],YELLOW,3);}
+  } else if(id==='s_sun') {
+    box(-26,26,52,14,'#6e9fab');box(-11,8,22,20,'#b9d5dc');
+    for(let i=0;i<8;i++){const a=i*TAU/8;line([[Math.cos(a)*27,-9+Math.sin(a)*27],[Math.cos(a)*36,-9+Math.sin(a)*36]],'#ef8a38',4);}
+    oval(0,-9,23,23,'#ffb638');oval(0,-9,14,14,YELLOW);line([[-8,-9],[0,-18],[7,-9],[0,1]],'#fff8e8',3);box(-19,30,10,4,'#70d5ad',1);box(9,30,10,4,'#70d5ad',1);
+  }
+}
 function itemThumb(id) {
   if (thumbCache[id]) return thumbCache[id];
-  const it = E.ITEM_BY_ID[id] || {}, o = document.createElement('canvas'); o.width = o.height = 96; const c = o.getContext('2d');
-  if (it.type === 'clothes' || id === 'c_gold') { c.translate(48, 108); c.scale(0.85, 0.85); drawPerson(c, 0, 0, 1, Object.assign({}, LOOKS.c77, CLOTHES[id], { bow:null, pants:null }), {}); }
-  else if (it.type === 'hat' || id === 'h_gold') { c.translate(48, 150); c.scale(1.05, 1.05); drawHead(c, Object.assign({}, LOOKS.c77, { hat:id }), {}); }
+  const it=E.ITEM_BY_ID[id]||{},source=document.createElement('canvas');source.width=source.height=384;
+  const c=source.getContext('2d');c.translate(192,270);c.scale(1.5,1.5);
+  if(it.type==='clothes'||id==='c_gold') drawPerson(c,0,0,1,Object.assign({},LOOKS.c77,CLOTHES[id],{bow:null,pants:null}),{});
+  else if(it.type==='hat'||id==='h_gold') drawHead(c,Object.assign({},LOOKS.c77,{hat:id}),{});
+  else if(it.type==='decor'||it.type==='super') {c.translate(0,-60);drawCollectible(c,id);}
   else return null;
-  return (thumbCache[id] = o.toDataURL());
+  // Fit actual painted bounds, including straw, brims and outlines, with padding.
+  const pixels=c.getImageData(0,0,384,384).data;let x0=384,y0=384,x1=-1,y1=-1;
+  for(let y=0;y<384;y++)for(let x=0;x<384;x++)if(pixels[(y*384+x)*4+3]){x0=Math.min(x0,x);y0=Math.min(y0,y);x1=Math.max(x1,x);y1=Math.max(y1,y);}
+  if(x1<0)return null;
+  const o=document.createElement('canvas');o.width=o.height=128;const w=x1-x0+1,h=y1-y0+1,s=108/Math.max(w,h);
+  o.getContext('2d').drawImage(source,x0,y0,w,h,(128-w*s)/2,(128-h*s)/2,w*s,h*s);
+  return (thumbCache[id]=o.toDataURL());
 }
 function itemIcon(id) {
-  const it = E.ITEM_BY_ID[id];
-  if (it && it.type === 'decor') return `<span class="ii">${DECOR_ICON[id]}</span>`;
-  if (it && it.type === 'super') return `<span class="ii">${SUPER_ICON[id]}</span>`;
-  if (it && it.type === 'card') return `<span class="ii">📜</span>`;
-  const u = itemThumb(id); return u ? `<img src="${u}" alt="" style="width:44px;height:44px">` : '<span class="ii">❓</span>';
+  const it=E.ITEM_BY_ID[id];
+  if(it&&it.type==='card')return '<span class="ii">📜</span>';
+  const u=itemThumb(id);
+  return u?`<span class="item-art"><img data-item-art="${id}" src="${u}" alt=""><span class="item-art-status" hidden>图示暂不可用</span></span>`:'<span class="ii">❓</span>';
 }
+document.addEventListener('error',e=>{
+  const img=e.target;if(!(img instanceof HTMLImageElement)||!img.hasAttribute('data-item-art'))return;
+  img.hidden=true;img.closest('.item-art').querySelector('.item-art-status').hidden=false;
+},true);
 const ava = (id, cls = '') => PORTRAIT[id] ? `<div class="ava art ${cls}">${faceImg(id)}</div>` : `<div class="ava ${cls}"><img src="${avatarURL(id, JSON.stringify(E.CEO_BY_ID[id] ? wearOf(id) : ''))}" alt=""></div>`;
 const btn = (act, arg, label, cost, extra = '') => `<button class="buy ${extra}" data-act="${act}" data-arg="${arg}" ${cost != null ? `data-cost="${cost}"` : ''}>${label}${cost != null ? `<small>${fmt(cost)}</small>` : ''}</button>`;
 function rateDelta(fn) { const c = E.cloneState(state); fn(c); return E.baseRate(c) - E.baseRate(state); }
@@ -1253,7 +1375,7 @@ function renderShop() {
       : '<br>还没员工：不会自动赚钱（可以点画面手动赚）'}
     ${critLine(i)}</div>`;
   if (E.hasSuper(state, i)) { const sp = E.ITEM_BY_ID[E.SUPER_OF_SHOP[i]];
-    h += `<div class="card super"><div class="ava sq">${SUPER_ICON[sp.id]}</div><div class="info"><div class="name">${sp.name}<span class="tag match">超级装饰</span></div><div class="desc">${sp.desc}</div></div></div>`; }
+    h += `<div class="card super"><div class="ava sq">${itemIcon(sp.id)}</div><div class="info"><div class="name">${sp.name}<span class="tag match">超级装饰</span></div><div class="desc">${sp.desc}</div></div></div>`; }
   h += `<div class="row-head"><div class="sec-title">店铺</div><div class="buyamt">${[1, 10, 'max'].map(a => `<button data-act="amt" data-arg="${a}" class="${buyAmt === a ? 'on' : ''}">${a === 'max' ? 'MAX' : 'x' + a}</button>`).join('')}</div></div>`;
   h += `<div class="card"><div class="ava sq">${SHOP_ICON[i]}</div><div class="info"><div class="name">${S.short}<span class="lv">Lv.${s.lv}</span></div>
     <div class="desc">当前基础产量 <b>${fmt(E.shopBase(i, s.lv))}</b>/秒原料${nm ? ` · 下一里程碑 Lv${nm} → 收益 ×${E.milestoneMult(nm)}` : ' · 里程碑全拿下 ×8'}</div>
@@ -1333,9 +1455,10 @@ function renderGacha() {
   }
   h += `<div class="sec-title">超级装饰 ${ownS}/${E.SUPER_ITEMS.length}（每店一件，只能抽到）</div>`;
   h += E.SUPER_ITEMS.map(it => { const has = state.gacha.owned.includes(it.id);
-    return `<div class="card super ${has ? '' : 'dim'}"><div class="ava sq">${has ? SUPER_ICON[it.id] : '❓'}</div><div class="info"><div class="name">${it.name}<span class="tag ${has ? 'match' : 'idle'}">${E.SHOPS[it.shop].short}</span></div><div class="desc">${it.desc}</div></div></div>`; }).join('');
+    return `<div class="card super ${has ? '' : 'dim'}"><div class="ava sq">${has ? itemIcon(it.id) : '❓'}</div><div class="info"><div class="name">${it.name}<span class="tag ${has ? 'match' : 'idle'}">${E.SHOPS[it.shop].short}</span></div><div class="desc">${it.desc}</div></div></div>`; }).join('');
   h += `<div class="sec-title">普通收藏 ${ownR}/${E.REGULAR_ITEMS.length}</div>`;
   h += `<div class="item-grid">${E.REGULAR_ITEMS.map(it => { const has = state.gacha.owned.includes(it.id);
+    if (has && it.type === 'card') return `<button type="button" class="item story-open" data-act="card" data-arg="${it.id}" aria-label="重看故事卡：${it.name}"><span class="t">故事卡</span>${storyArt(it.id)}<span>${it.name}</span><span class="story-replay-hint">点击重看 ›</span></button>`;
     return `<div class="item ${has ? '' : 'no'}"><span class="t">${TYPE_LABEL[it.type]}</span>${itemIcon(it.id)}${has ? it.name : '？？？'}</div>`; }).join('')}</div>`;
   h += `<div class="note">规则：不重复收藏盒，共 ${total} 件：普通收藏 ${E.REGULAR_ITEMS.length} 件（衣服 8 / 帽子 8 / 装饰 8 / 故事卡 8）+ 超级装饰 ${E.SUPER_ITEMS.length} 件。每抽先定类别：<b>超级装饰 ${P(CFG.SUPER_P)}</b>、普通收藏 ${P(1 - CFG.SUPER_P)}，再从该类<b>还没收集的</b>里等概率抽；连续 ${CFG.SUPER_PITY - 1} 抽没出超级装饰，第 ${CFG.SUPER_PITY} 抽必出。某一类抽完了，就只出另一类。每抽必得新物品，最多 ${total} 抽集齐，集齐后不能再买、不扣金币。普通收藏只是好看，<b>不加产速</b>；超级装饰加本店产量和专属效果，但不抽也能正常开齐店铺。单价 ${fmt(CFG.GACHA_PRICE)}。</div>`;
   return h;
@@ -1348,7 +1471,7 @@ function renderCol() {
   const clothes = ['none', ...E.ITEMS.filter(i => i.type === 'clothes' && own.has(i.id)).map(i => i.id), ...(setDone ? ['c_gold'] : [])];
   const hats = ['none', ...E.ITEMS.filter(i => i.type === 'hat' && own.has(i.id)).map(i => i.id), ...(setDone ? ['h_gold'] : [])];
   const nameOf = (id, slot) => id === 'none' ? (slot === 'hat' ? '默认帽子' : '默认衣服') : id === 'c_gold' ? '金马甲' : id === 'h_gold' ? '金厨师帽' : E.ITEM_BY_ID[id].name;
-  const cell = (slot, id) => `<button class="item ${((eq[slot] || 'none') === id) ? 'sel' : ''}" data-act="equip" data-arg="${who}:${slot}:${id}">${id === 'none' ? `<span class="ii">${slot === 'hat' ? '🧢' : '👕'}</span>` : (itemThumb(id) ? `<img src="${itemThumb(id)}" style="width:44px;height:44px" alt="">` : '')}${nameOf(id, slot)}</button>`;
+  const cell = (slot, id) => `<button class="item ${((eq[slot] || 'none') === id) ? 'sel' : ''}" data-act="equip" data-arg="${who}:${slot}:${id}">${id === 'none' ? `<span class="ii">${slot === 'hat' ? '🧢' : '👕'}</span>` : itemIcon(id)}${nameOf(id, slot)}</button>`;
   const clothName = eq.clothes ? nameOf(eq.clothes) : '默认衣服';
   const hatName = eq.hat ? nameOf(eq.hat) : '默认帽子';
   let h = `<div class="sec-title">CEO 衣橱（穿在 CEO 身上，换店跟着人走）</div>
@@ -1364,11 +1487,11 @@ function renderCol() {
   if (clothes.length + hats.length <= 2) h += `<div class="note">从盲盒里抽到衣服、帽子后，在这里给 CEO 换上。两个「默认」分别是衣服和帽子，点选后能看出区别。</div>`;
   const supers = E.SUPER_ITEMS.filter(it => own.has(it.id));
   if (supers.length) { h += `<div class="sec-title">超级装饰（常驻生效）</div>`;
-    h += supers.map(it => `<div class="card super"><div class="ava sq">${SUPER_ICON[it.id]}</div><div class="info"><div class="name">${it.name}<span class="tag match">${E.SHOPS[it.shop].short}</span></div><div class="desc">${it.desc}</div></div></div>`).join(''); }
+    h += supers.map(it => `<div class="card super"><div class="ava sq">${itemIcon(it.id)}</div><div class="info"><div class="name">${it.name}<span class="tag match">${E.SHOPS[it.shop].short}</span></div><div class="desc">${it.desc}</div></div></div>`).join(''); }
   h += `<div class="sec-title">店铺装饰</div><div class="note">四家店共用，开店后可见；只改变店景，不增加产速。<button class="decor-view" data-act="goShop" data-arg="${state.cur}">查看店景 ›</button></div>`;
   const decors = E.ITEMS.filter(i => i.type === 'decor');
   h += decors.map(d => own.has(d.id)
-    ? `<div class="card decor-card" data-decor="${d.id}"><div class="ava sq">${DECOR_ICON[d.id]}</div><div class="info"><div class="name">${d.name}</div><div class="desc"><b class="decor-state">${decorOn(d.id) ? '已摆出 · 四家店' : '已收起'}</b><br>${DECOR_SPOT[d.id]}</div></div><button class="toggle ${decorOn(d.id) ? 'on' : ''}" aria-label="${decorOn(d.id) ? '收起' : '摆出'}${d.name}" data-act="decor" data-arg="${d.id}">${decorOn(d.id) ? '收起' : '摆出'}</button></div>`
+    ? `<div class="card decor-card" data-decor="${d.id}"><div class="ava sq">${itemIcon(d.id)}</div><div class="info"><div class="name">${d.name}</div><div class="desc"><b class="decor-state">${decorOn(d.id) ? '已摆出 · 四家店' : '已收起'}</b><br>${DECOR_SPOT[d.id]}</div></div><button class="toggle ${decorOn(d.id) ? 'on' : ''}" aria-label="${decorOn(d.id) ? '收起' : '摆出'}${d.name}" data-act="decor" data-arg="${d.id}">${decorOn(d.id) ? '收起' : '摆出'}</button></div>`
     : `<div class="card dim"><div class="ava sq">❓</div><div class="info"><div class="name">？？？</div><div class="desc">盲盒里抽</div></div></div>`).join('');
   const cards = E.ITEMS.filter(i => i.type === 'card');
   h += `<div class="sec-title">故事卡图鉴 ${cards.filter(c => own.has(c.id)).length}/${cards.length}</div>`;
@@ -1382,16 +1505,17 @@ function renderCol() {
 function renderTab() {
   if (tab === 'home' && homeDrag) return; // 家宅拖动中不重画（dirty 留着，松手后再画）
   const html = tab === 'shop' ? renderShop() : tab === 'ceo' ? renderCeo() : tab === 'gacha' ? renderGacha() : tab === 'home' ? renderHome() : renderCol();
-  // Resource readiness may mark the page dirty without changing the collection.
+  const storyTab = tab === 'col' || tab === 'gacha';
+  // Resource readiness may mark the page dirty without changing either catalog.
   // Keep its existing nodes (including focus and decoded images) in that case.
-  if (tab !== 'col' || renderedColHtml !== html) {
-    const panel = $('#panel'), scroll = tab === 'col' ? {top:panel.scrollTop, x:window.scrollX, y:window.scrollY} : null;
-    const focused = tab === 'col' && tabBody.contains(document.activeElement) ? document.activeElement.closest('.story-open')?.dataset.arg : null;
+  if (!storyTab || renderedColHtml !== html) {
+    const panel = $('#panel'), scroll = storyTab ? {top:panel.scrollTop, x:window.scrollX, y:window.scrollY} : null;
+    const focused = storyTab && tabBody.contains(document.activeElement) ? document.activeElement.closest('.story-open')?.dataset.arg : null;
     tabBody.innerHTML = html;
     if (focused) tabBody.querySelector(`.story-open[data-arg="${focused}"]`)?.focus({preventScroll:true});
     if (scroll) { panel.scrollTop = scroll.top; window.scrollTo(scroll.x, scroll.y); }
   }
-  renderedColHtml = tab === 'col' ? html : null;
+  renderedColHtml = storyTab ? html : null;
   dirty = false; updateCompactHead(); refreshDynamic(true); // 顶部「谁在管哪家店」跟着一起刷新（调任/交换/新 CEO 后两处同步）
 }
 function setTab(t) {
@@ -1625,7 +1749,7 @@ function showReveal(resumed) {
   sfx(sup ? 'mile' : 'reveal'); popWord(sup ? '超级！' : '开！'); if (sup) { focusT = 0.8; shake = 0.5; }
   const note = it.type === 'card' ? '“' + it.text + '”<br>' : it.type === 'decor' ? '已摆进四家店，开店后可见（收藏页可收起）<br>' : sup ? `<b>${it.desc}</b><br>已经放进${E.SHOPS[it.shop].name}，常驻生效<br>` : '去收藏页给 CEO 换上<br>';
   openModal(`<div class="mbubble">${resumed ? '上次开盒的结果' : sup ? '✨ 超级装饰！✨' : '开盒！'}</div>
-    <div style="display:flex;justify-content:center;margin:4px 0"><div class="item ${sup ? 'superpop' : ''}" style="width:110px;font-size:14px">${itemIcon(it.id)}<b>${it.name}</b></div></div>
+    ${it.type === 'card' ? `<div class="reveal-story">${storyArt(it.id, true)}</div>` : `<div class="reveal-item item ${sup ? 'superpop' : ''}">${itemIcon(it.id)}<b>${it.name}</b></div>`}
     <div class="mtitle">${TYPE_LABEL[it.type]}：${it.name}</div>
     <div class="mnote">${note}本次概率：${last.odds} · 已收集 ${state.gacha.owned.length}/${total}</div>
     ${last.setDone ? `<div class="pv-tags"><div>🎉 集齐 ${E.CARD_COUNT} 张故事卡！解锁专属外观「${E.SET_REWARD.name}」（金马甲 + 金厨师帽）</div></div>` : ''}
@@ -1654,14 +1778,14 @@ function showCard(id) {
   const it = E.ITEM_BY_ID[id];
   // Replaying is read-only: ownership comes from the existing collection IDs.
   if (!it || it.type !== 'card' || !state.gacha.owned.includes(id)) return;
-  const opener = document.activeElement, panel = $('#panel');
+  const opener = document.activeElement, panel = $('#panel'), sourceTab = tab;
   const scroll = {top:panel.scrollTop, x:window.scrollX, y:window.scrollY};
-  openModal(`<section id="storyReplay" aria-labelledby="storyReplayTitle"><div class="mtitle" id="storyReplayTitle">${it.name}</div>${storyArt(id, true)}<div class="mnote">${it.text}</div><button type="button" class="buy big" id="mOk">返回收藏</button></section>`, false);
+  openModal(`<section id="storyReplay" aria-labelledby="storyReplayTitle"><div class="mtitle" id="storyReplayTitle">${it.name}</div>${storyArt(id, true)}<div class="mnote">${it.text}</div><button type="button" class="buy big" id="mOk">${sourceTab === 'gacha' ? '返回盲盒图鉴' : '返回收藏'}</button></section>`, false);
   $('#mOk').addEventListener('click', () => {
     closeModal();
     // A legitimate collection update can replace the opener while the dialog is
     // open. Resolve by story ID rather than depending on the old DOM instance.
-    if (tab === 'col') {
+    if (tab === sourceTab && (tab === 'col' || tab === 'gacha')) {
       const target = tabBody.querySelector(`.story-open[data-arg="${id}"]`) || (opener?.isConnected ? opener : null);
       target?.focus({preventScroll:true}); panel.scrollTop = scroll.top; window.scrollTo(scroll.x, scroll.y);
     }
@@ -1753,11 +1877,61 @@ const LIVE_LINES = {
   otaku:  { walk:['分镜走位，从这格到那格。','地板也是画框。','别踩到我的手办投影。'], rest:['存档点……睡着了。','梦里下一话更新。','被窝是我的次元。'], read:['这本我标了书签！','名场面在第 42 页。','读完去改招牌文案。'], dress:['连帽衫＋新徽章。','换上角色扮演装。','镜子前先摆个 pose。'] },
   rocket: { walk:['舱内巡检开始。','步进电机：启动。','火星还远，先走到窗边。'], rest:['休眠模式 ON。','充电 20 分钟。','梦到小店起飞。'], read:['说明书：怎么把床送上轨道。','这页有推力公式。','读完继续画火箭。'], dress:['胸针要亮。','换发射正装。','地上的装备，穿上！'] },
 };
-function liveLine(id, act) { const pack = LIVE_LINES[id] || LIVE_LINES.c77, arr = pack[act] || pack.walk; return arr[Math.floor(Math.random() * arr.length)]; }
+function liveLine(id, act) { if(act==='sit')return '坐一会儿，陪你们玩。';const pack = LIVE_LINES[id] || LIVE_LINES.c77, arr = pack[act] || pack.walk; return arr[Math.floor(Math.random() * arr.length)]; }
+function homeFreePoint(id,x,y) {
+  const H=E.homeOf(state,id),T=E.homeTier(H.lv),pts=[];
+  for(let py=0;py<T.rows;py++)for(let px=0;px<T.cols;px++){
+    if(H.placed.some(p=>{if(E.itemSurf(p)==='wall'||E.FURN_BY_ID[p.fid]?.layer==='rug')return false;const z=E.furnSize(p.fid,p.rot);return px+.5>p.x&&px+.5<p.x+z.w&&py+.5>p.y&&py+.5<p.y+z.h;}))continue;
+    pts.push({x:px,y:py});
+  }
+  pts.sort((a,b)=>Math.hypot(a.x-x,a.y-y)-Math.hypot(b.x-x,b.y-y));return pts[0]||null;
+}
 function homeActorOf(id) {
-  const T = E.homeTier(E.homeOf(state, id).lv);
-  if (!homeActor[id]) homeActor[id] = { x:Math.floor(T.cols / 2), y:Math.floor(T.rows / 2), tx:null, ty:null, act:null, line:'', until:0 };
-  return homeActor[id];
+  const H=E.homeOf(state,id),T=E.homeTier(H.lv);
+  if (!homeActor[id]) {const p=homeFreePoint(id,Math.floor(T.cols/2),Math.floor(T.rows/2))||{x:0,y:0};homeActor[id]={...p,tx:null,ty:null,act:null,line:'',until:0,revision:0,pose:null,pendingPose:null};}
+  const ac=homeActor[id];
+  if(ac.pose){const p=H.placed.find(p=>p.uid===ac.pose.uid),cap=p&&HomeInteraction.capability(p.fid);
+    if(!cap){ac.pose=null;ac.revision++;const q=homeFreePoint(id,ac.x,ac.y);if(q)Object.assign(ac,q);}
+    else {const z=E.furnSize(p.fid,p.rot),key=[p.uid,p.x,p.y,p.rot].join(':');if(ac.pose.key!==key){ac.pose.key=key;ac.revision++;}if(HomeInteraction.profile(p.fid).ground){
+      const q=HomeInteraction.rugPoint(E,H,p,ac);
+      if(q){if(q.x!==ac.x||q.y!==ac.y)ac.revision++;Object.assign(ac,q);}
+      else{ac.pose=null;ac.pendingPose=null;ac.tx=ac.ty=null;ac.revision++;const free=homeFreePoint(id,ac.x,ac.y);if(free)Object.assign(ac,free);toast('地毯上没有空位了，先起身；挪开家具再坐吧');}
+    }else if(HomeInteraction.profile(p.fid).location==='beside'){const q=homeFreePoint(id,p.x+z.w,p.y+z.h-1);if(q)Object.assign(ac,q);else{ac.pose=null;ac.revision++;}}else{ac.x=p.x+z.w/2-.5;ac.y=p.y+z.h/2-.5;}}}
+  if(ac.pendingPose){const p=H.placed.find(p=>p.uid===ac.pendingPose.uid);
+    if(!p){ac.pendingPose=null;ac.tx=ac.ty=null;ac.revision++;}
+    else if(HomeInteraction.profile(p.fid)?.ground){const q=HomeInteraction.rugPoint(E,H,p,{x:ac.tx??ac.x,y:ac.ty??ac.y});if(q){ac.tx=q.x;ac.ty=q.y;}else{ac.pendingPose=null;ac.tx=ac.ty=null;ac.revision++;toast('地毯上没有空位了，挪开家具再坐吧');}}
+  }
+  return ac;
+}
+function homeLeavePose(id) {const ac=homeActorOf(id),p=ac.pose?homeFreePoint(id,ac.x,ac.y):null;if(ac.pose&&!p){toast('没有可以站立的空地，先挪开一些家具吧');return null;}ac.pose=ac.pendingPose=null;ac.revision++;ac.act=null;if(p)Object.assign(ac,p);return ac;}
+function homeOwner(room,uid){
+  const ac=homeActorOf(room),active=tab==='home'&&homeWho===room&&homeSub==='room'&&homeMode==='live';
+  let x=(ac.visualFallback||ac).x+.5,y=(ac.visualFallback||ac).y+.5;
+  if(active&&ac.pose){const el=$('#homeActor'),floor=$('#roomFloor'),T=E.homeTier(E.homeOf(state,room).lv);if(el?.classList.contains('posed')&&floor){const r=el.getBoundingClientRect(),f=floor.getBoundingClientRect();if(f.width&&f.height){x=(r.x+r.width/2-f.x)/f.width*T.cols;y=(r.y+r.height/2+(ac.pose.kind==='sit'?r.height*.064:0)-f.y)/f.height*T.rows;}}}
+  const item=ac.pose&&E.homeOf(state,room).placed.find(p=>p.uid===ac.pose.uid),profile=item&&HomeInteraction.profile(item.fid);
+  const furniture=item&&!ac.visualFallback&&!profile.ground&&profile.location!=='beside'?{x:item.x,y:item.y,...E.furnSize(item.fid,item.rot)}:null;
+  return {x,y,furniture,revision:ac.revision,active,avoid:[...petActors].filter(([id,a])=>id!==uid&&a.rt.homeId===room&&a.rt.w).map(([,a])=>({x:a.rt.w.dog.x,y:a.rt.w.dog.y}))};
+}
+function homeDrawActor(){
+  if(tab!=='home'||homeSub!=='room')return;const el=$('#homeActor'),floor=$('#roomFloor');if(!el||!floor)return;
+  const ac=homeActorOf(homeWho),T=E.homeTier(E.homeOf(state,homeWho).lv),p=ac.pose&&E.homeOf(state,homeWho).placed.find(p=>p.uid===ac.pose.uid),profile=p&&HomeInteraction.profile(p.fid);
+  const stand=()=>{el.classList.remove('posed');const q=profile?(homeFreePoint(homeWho,ac.x,ac.y)||ac):ac;ac.visualFallback=profile?{x:q.x,y:q.y}:null;el.style.cssText=`left:${(q.x+.5)/T.cols*100}%;top:${(q.y+.5)/T.rows*100}%`;};
+  if(!profile){stand();return;}
+  const f=[...floor.querySelectorAll('.furn')].find(e=>e.dataset.uid===p.uid),img=f?.querySelector('img');
+  if(!f||!img||!img.complete||!img.naturalWidth){stand();return;}
+  const ir=img.getBoundingClientRect(),fr=floor.getBoundingClientRect(),z=E.furnSize(p.fid,p.rot),side=p.rot%2;
+  const size=profile.pose==='lie'?Math.min(94,ir.width*.84):68;
+  const beside=profile.location==='beside',ground=beside||profile.ground,x=ground?(ac.x+.5)/T.cols*fr.width:ir.left-fr.left+ir.width*profile.u,y=(ground?(ac.y+.5)/T.rows*fr.height:ir.top-fr.top+ir.height*profile.v)-(profile.pose==='sit'?size*.064:0);
+  el.style.cssText=`left:${x}px;top:${y}px;--pose-width:${size}px;--pose-height:${size}px;--pose-z:${beside||profile.ground?6:11+(p.y+z.h)*10}`;
+  const cv=el.querySelector('canvas'),key=JSON.stringify([p.fid,p.rot,lookOf(homeWho)]);if(cv.dataset.pose!==key){HomeInteraction.drawPose(cv.getContext('2d'),drawPerson,lookOf(homeWho),profile.pose,profile.pose==='lie'?(side?-.22:profile.angle)*(p.rot===2||p.rot===3?-1:1):0);cv.dataset.pose=key;}
+  ac.visualFallback=null;el.classList.add('posed');
+}
+function homeAdvanceActor(dt){
+  if(tab!=='home'||homeSub!=='room'||homeMode!=='live')return;
+  const ac=homeActorOf(homeWho);
+  if(ac.tx!=null){const d=Math.hypot(ac.tx-ac.x,ac.ty-ac.y),step=Math.min(2.8*dt,d);if(d<.05){ac.x=ac.tx;ac.y=ac.ty;ac.tx=ac.ty=null;if(ac.pendingPose){ac.pose=ac.pendingPose;ac.pendingPose=null;ac.revision++;dirty=true;homeActorOf(homeWho);}}else{ac.x+=(ac.tx-ac.x)/d*step;ac.y+=(ac.ty-ac.y)/d*step;}}
+  else if(ac.line&&ac.until<clock){ac.line='';if(!ac.pose)ac.act=null;const el=$('#homeActor');el?.querySelector('.ha-line')?.remove();}
+  homeDrawActor();
 }
 
 function renderHome() {
@@ -1785,18 +1959,19 @@ function renderRoom() {
   const floorItems = H.placed.filter(p => !isWall(p)).slice().sort((a, b) => isRug(a) - isRug(b) || footY(a) - footY(b) || a.x - b.x).map(p => mkFurn(p, T.rows)).join('');
   const artKey = `${id}_${H.lv}`, hasArt = !!HOME_ART[artKey];
   const dockHost = homeMode === 'live' && (petRoster().rooms[id] || []).length > 0;
-  if (dockHost) h += `<div class="home-host" id="homeHost">${ava(id)}<b>${c.name}</b><span id="homeHostLine">${homeActorOf(id).line || '在家陪伴宠物'}</span></div>`;
+  // CEO remains visibly inside the room; pets draw in front of the standing portrait.
   // 墙面禁区（和 E.canPlace / E.findFree 同一份 E.wallBlockedCells）：平时隐藏，拖挂画时斜纹标红
   const wallBlocks = E.wallBlockedCells(state, id).map(([x, y]) => `<i class="wall-block" style="left:${x / T.cols * 100}%;top:${y / E.WALL_ROWS * 100}%;width:${100 / T.cols}%;height:${100 / E.WALL_ROWS}%"></i>`).join('');
   h += `<div class="room tier-${T.id}${hasArt ? ' has-art' : ''}${dockHost ? ' pet-host-docked' : ''}" id="room" data-tier="${T.id}" style="--cols:${T.cols};--rows:${T.rows};--wall:${T.wall};--floor:${T.floor};--trim:${T.trim}">
     ${hasArt ? `<img class="room-art" src="art/home_${artKey}.webp?v=${ART_V}" data-homefb="1" alt="" onerror="this.closest('.room')&&this.closest('.room').classList.remove('has-art')">` : ''}
     <div class="room-wall" id="roomWall"><span class="rw-deco">${T.id === 'hut' ? ic('window') : T.id === 'apt' ? ic('window') + ic('window') : ic('spark') + ic('candle') + ic('spark')}</span><span class="rw-name">${c.name}的${T.name}</span><div class="wall-grid" id="wallGrid">${wallBlocks}${wallItems}<div class="room-hl hidden" id="wallHl"></div></div></div>
-    <div class="room-floor" id="roomFloor">${floorItems}<div class="home-actor" id="homeActor" style="left:${(homeActorOf(id).x + 0.5) / T.cols * 100}%;top:${(homeActorOf(id).y + 0.5) / T.rows * 100}%"><span class="ha-ava">${ava(id)}</span>${(() => { const ac = homeActorOf(id); return ac.line && ac.until > clock ? `<b class="ha-line">${ac.line}</b>` : ''; })()}<i class="ha-act">${(() => { const ac = homeActorOf(id); return ac.act === 'rest' ? ic('zz') : ac.act === 'read' ? ic('book') : ac.act === 'dress' ? ic('shirt') : ''; })()}</i></div><div class="room-hl hidden" id="roomHl"></div></div></div>`;
+    <div class="room-floor" id="roomFloor">${floorItems}<div class="home-actor" id="homeActor" style="left:${(homeActorOf(id).x + 0.5) / T.cols * 100}%;top:${(homeActorOf(id).y + 0.5) / T.rows * 100}%"><canvas class="ha-pose" width="240" height="240" aria-label="CEO坐卧姿态"></canvas><span class="ha-ava">${ava(id)}</span>${(() => { const ac = homeActorOf(id); return ac.line && ac.until > clock ? `<b class="ha-line">${ac.line}</b>` : ''; })()}<i class="ha-act">${(() => { const ac = homeActorOf(id); return ac.act === 'rest' ? ic('zz') : ac.act === 'read' ? ic('book') : ac.act === 'dress' ? ic('shirt') : ''; })()}</i></div><div class="room-hl hidden" id="roomHl"></div></div></div>`;
   h += petInteractionBar();
+  if(homeActorOf(id).pose)h += `<button class="buy alt" data-act="homeGetUp">起身</button>`;
   const st = undoStack(id);
   h += `<div class="mode-tabs" role="tablist"><button class="mt ${homeMode === 'live' ? 'on' : ''}" data-act="homeMode" data-arg="live">${ic('live')}生活</button><button class="mt ${homeMode === 'decor' ? 'on' : ''}" data-act="homeMode" data-arg="decor">${ic('decor')}布置</button></div>`;
   h += `<div class="room-tools">${homeMode === 'decor' ? (sel ? `<span class="rt-sel">已选：<b>${E.FURN_BY_ID[sel.fid].name}</b></span><button class="buy alt" data-act="homeRot" data-arg="${sel.uid}">↻ 旋转</button><button class="buy alt" data-act="homeStore" data-arg="${sel.uid}">${ic('box')}收回</button>`
-    : '<span class="rt-sel">布置：点家具选中 / 拖动换位；挂画拖到墙面</span>') : '<span class="rt-sel">生活：点空地走过去 · 点床休息 · 点书架看书 · 点衣柜换装</span>'}
+    : '<span class="rt-sel">布置：点家具选中 / 拖动换位；挂画拖到墙面</span>') : '<span class="rt-sel">生活：点空地走过去 · 点床躺下 · 点座椅坐下 · 点书架看书 · 点衣柜换装</span>'}
     ${homeMode === 'decor' ? `<button class="buy alt" data-act="homeUndo" data-arg="${id}" ${st.length ? '' : 'disabled'}>↶ 撤销${st.length ? ' ' + st.length : ''}</button>` : ''}</div>`;
   h += petRoomBar(id);
   const inv = Object.entries(E.furnInvOf(state)).filter(([, n]) => n > 0);
@@ -1808,7 +1983,7 @@ function renderRoom() {
         <div class="note">布置模式：拖家具、旋转、收回。挂画只挂墙。生活模式下去点空地 / 床 / 书架 / 衣柜互动。</div>`
       : `<div class="note">仓库空空。去商城买家具，再回来布置 ${c.name} 的房间。</div>`;
   } else {
-    h += `<div class="note live-note">生活模式：点地板空位让 ${c.name} 走过去；点<b>床</b>休息、点<b>书架</b>看书、点<b>衣柜</b>换装。要摆家具请切到「布置」。</div>
+    h += `<div class="note live-note">生活模式：点地板空位让 ${c.name} 走过去；点<b>床</b>躺下、点<b>座椅</b>坐下、点<b>书架</b>看书、点<b>衣柜</b>换装。要摆家具请切到「布置」。</div>
       <button class="buy alt mall-go" data-act="homeSub" data-arg="mall">${ic('mall')}去商城</button>`;
   }
   return h;
@@ -1934,7 +2109,7 @@ function petSyncActors() {
   const v = petRoster();
   for (const [uid,a] of petActors) if (!v.pets[uid] || !petManifest(v.pets[uid].species) || !v.pets[uid].room) { a.view.detach(); petActors.delete(uid); }
   if (petM) for (const p of Object.values(v.pets)) if (petManifest(p.species) && p.room && !petActors.has(p.uid)) {
-    petActors.set(p.uid, { rt:PG.createRuntime({E, manifest:petManifest(p.species), species:p.species, uid:p.uid}), view:PG.createView({manifest:petManifest(p.species), species:p.species, image:PG.assetOf(p.species)?.image, PA:window.PetArt, PP:window.PetPuppy, atlasBase:'pet/art/', ver:'p6', uid:p.uid}) });
+    petActors.set(p.uid, { rt:PG.createRuntime({E, manifest:petManifest(p.species), species:p.species, uid:p.uid, owner:homeOwner, feedback:msg=>toast(msg)}), view:PG.createView({manifest:petManifest(p.species), species:p.species, image:PG.assetOf(p.species)?.image, PA:window.PetArt, PP:window.PetPuppy, atlasBase:'pet/art/', ver:'p6', uid:p.uid}) });
   }
   return v;
 }
@@ -1950,8 +2125,8 @@ function petSave(s) {
   return r;
 }
 function petFrame(dt) {
+  homeDrawActor();
   const v = petSyncActors(), room = tab === 'home' && homeSub === 'room' && !!$('#roomFloor');
-  const hostLine = $('#homeHostLine'); if (hostLine) { const ac = homeActorOf(homeWho), text = ac.line && ac.until > clock ? ac.line : ac.tx != null ? '正在走过去' : '在家陪伴宠物'; if (hostLine.textContent !== text) hostLine.textContent = text; }
   for (const [uid,a] of petActors) {
     const p = v.pets[uid], w = petManual ? a.rt.sync(state) : a.rt.frame(dt, state, {decorHere:room && p.room === homeWho && homeMode === 'decor'});
     const show = room && p.room === homeWho;
@@ -1962,7 +2137,7 @@ function petFrame(dt) {
     for (const b of document.querySelectorAll('.pet-bar[data-uid="'+q+'"] button')) b.disabled = p.room !== homeWho || p.compatibility || homeMode === 'decor' || st === 'waiting' || st === 'unsupported';
     const hint = document.querySelector('[data-pet-wait="'+q+'"]');
     if (hint) { hint.hidden = st !== 'waiting' && st !== 'unsupported'; hint.textContent = st === 'unsupported' ? PET_UNSUP : PET_WAIT; }
-    if (a.was === 'waiting' && st === 'live' && show) toast('宠物跑出来了：屋里有空地了');
+    if (a.was === 'waiting' && st === 'live' && show) toast('宠物跑出来了：屋里有空地了', 1900, '', 'ambient');
     if (st) a.was = st;
   }
 }
@@ -2080,7 +2255,10 @@ function petMoveHere(home) { const p = Object.values(petRoster().pets).find(p =>
 function petDo(k,uid) {
   petSyncActors(); const a = petActors.get(uid), p = petRoster().pets[uid]; if (!a || !p || p.room !== homeWho) return;
   const r = k === 'call' ? a.rt.call(state) : k === 'pet' ? a.rt.pet(state,'button') : a.rt.throwBall(state);
-  if (!r.ok) { toast(r.why === 'waiting' ? PET_WAIT : r.why === 'unsupported' ? PET_UNSUP : r.why === 'noRoute' ? '空地不够跑一圈：挪开一些家具，再来玩吧' : '它现在忙着，等一会儿再试'); return; } sfx('tap');
+  petActionFeedback(r);
+}
+function petActionFeedback(r){
+  if(!r.ok){toast(r.why==='waiting'?PET_WAIT:r.why==='unsupported'?PET_UNSUP:r.why==='noRoute'?'到主人身边的路被挡住了，挪开家具或换块空地再试吧':'它现在忙着，等一会儿再试');return false;}sfx('tap');return true;
 }
 function petTap(e) {
   const v = petRoster(), floor = $('#roomFloor'); if (!floor) return false;
@@ -2095,7 +2273,7 @@ function petTap(e) {
     }
     return b[2]-a[2];
   });
-  if (!hit.length) return false; petTarget(hit[0][0]);hit[0][1].rt.pet(state,'tap'); sfx('tap'); return true;
+  if (!hit.length) return false; petTarget(hit[0][0]);petActionFeedback(hit[0][1].rt.pet(state,'tap'));return true;
 }
 const petsHooks = {
   view() { const v=petSyncActors(); for (const [uid,a] of petActors) { a.rt.sync(state); const eng=a.rt.snapshot(); if (eng) v.pets[uid]={...v.pets[uid],eng}; } return v; }, manual(on) { petManual = !!on; lastFrame = performance.now(); },
@@ -2121,6 +2299,7 @@ function homeAutoPlace(fid) {
 }
 function homeAct(a, arg, b) {
   switch (a) {
+    case 'homeGetUp': homeLeavePose(homeWho);dirty=true;return;
     case 'petTarget': petTarget(arg);return;
     case 'petOpen': if(petPanelOpen)return;petPanelOpen=true;petPanelFocus(true);return;
     case 'petClose': if(!petPanelOpen)return;petPanelOpen=false;petPanelFocus(false);return;
@@ -2168,18 +2347,21 @@ function homeLiveTap(e) {
   const fEl = e.target.closest('#roomFloor .furn');
   const id = homeWho, T = E.homeTier(E.homeOf(state, id).lv), ac = homeActorOf(id);
   const go = (x, y, act) => {
+    if(!homeLeavePose(id))return;
     x = Math.max(0, Math.min(T.cols - 1, x | 0)); y = Math.max(0, Math.min(T.rows - 1, y | 0));
-    ac.tx = x; ac.ty = y; ac.act = act || null; ac.line = liveLine(id, act || 'walk'); ac.until = clock + 2.4;
-    sfx('tap'); dirty = true;
+    const free=homeFreePoint(id,x,y);if(!free){toast('没有可以站立的空地，先挪开一些家具吧');return;}
+    ac.tx = free.x; ac.ty = free.y; ac.act = act || null; ac.line = liveLine(id, act || 'walk'); ac.until = clock + 2.4;
+    sfx('tap'); dirty = true;return true;
   };
   if (fEl) {
     const p = E.homeOf(state, id).placed.find(q => q.uid === fEl.dataset.uid); if (!p) return;
     const f = E.FURN_BY_ID[p.fid], sz = E.furnSize(p.fid, p.rot);
     const cx = p.x + Math.floor(sz.w / 2), cy = p.y + Math.floor(sz.h / 2);
-    const act = E.furnLiveAct(p.fid);
-    if (act === 'rest') return go(cx, Math.min(T.rows - 1, p.y + sz.h - 1), 'rest');
-    if (act === 'read' || act === 'dress') return go(cx, Math.min(T.rows - 1, p.y + 1), act);
-    return go(cx, cy, 'walk');
+    const cap=HomeInteraction.capability(p.fid),act=E.furnLiveAct(p.fid);
+    if(cap){let point={x:cx,y:cy};if(HomeInteraction.profile(p.fid).ground){const r=floor.getBoundingClientRect();point=HomeInteraction.rugPoint(E,E.homeOf(state,id),p,{x:(e.clientX-r.left)/r.width*T.cols-.5,y:(e.clientY-r.top)/r.height*T.rows-.5});if(!point){toast('地毯上没有可以坐的空位，挪开家具再试吧');return;}}
+      if(go(point.x,point.y,cap==='lie'?'rest':'sit'))ac.pendingPose={uid:p.uid,kind:cap};return;}
+    if(act==='read'||act==='dress')return go(cx,cy,act);
+    go(cx,cy,'walk');toast('这件家具先在旁边看看，不坐上去');return;
   }
   if (!e.target.closest('#roomFloor')) return;
   const r = floor.getBoundingClientRect(), x = Math.floor((e.clientX - r.left) / r.width * T.cols), y = Math.floor((e.clientY - r.top) / r.height * T.rows);
@@ -2344,16 +2526,8 @@ function frame(ts) {
     if (state.shops[i].open) { const cid = E.ceoAt(state, i); if (Math.random() < 0.5 && cid) sayLine('c', Math.random() < 0.5 ? E.CEO_BY_ID[cid].line : E.SIGNS[cid][i][1]); else if (state.shops[i].emp > 0) sayLine('e', E.SHOPS[i].emp.line); } }
   render(clock);
   dynAcc += dt; if (dynAcc > 0.25) { dynAcc = 0; refreshDynamic(); }
-  // 家宅生活：CEO 走向目标格（只改小人 DOM，不整页重画）
-  if (tab === 'home' && homeSub === 'room' && homeMode === 'live') {
-    const ac = homeActorOf(homeWho), el = $('#homeActor'), T = E.homeTier(E.homeOf(state, homeWho).lv);
-    if (ac.tx != null) {
-      const spd = 2.8 * dt, dx = ac.tx - ac.x, dy = ac.ty - ac.y, d = Math.hypot(dx, dy);
-      if (d < 0.05) { ac.x = ac.tx; ac.y = ac.ty; ac.tx = ac.ty = null; }
-      else { ac.x += dx / d * Math.min(spd, d); ac.y += dy / d * Math.min(spd, d); }
-      if (el) { el.style.left = ((ac.x + 0.5) / T.cols * 100) + '%'; el.style.top = ((ac.y + 0.5) / T.rows * 100) + '%'; }
-    } else if (ac.line && ac.until < clock) { ac.line = ''; ac.act = null; if (el) { const b = el.querySelector('.ha-line'), i = el.querySelector('.ha-act'); if (b) b.remove(); if (i) i.textContent = ''; } }
-  }
+  // Owner movement updates the current interaction anchor.
+  homeAdvanceActor(dt);
   if (dirty) renderTab();
   petFrame(dt);   // 宠物 p4：小狗一直在过日子；在它家的生活页才画
   saveAcc += dt; if (saveAcc > 5) { saveAcc = 0; persist(); }
@@ -2373,7 +2547,7 @@ function boot() {
   scheduleBig(); scheduleSpecial(); renderTabs(); setTab(TEST_MODE ? 'home' : 'shop');
   if (TEST_MODE) { const b = document.createElement('div'); b.id = 'testBadge'; b.textContent = '测试房间 · ' + (TEST_LV === 3 ? '豪宅' : '公寓') + ' · 不存档，刷新重置'; document.body.appendChild(b);
     const place = () => { const n = $('#bottomNav'); if (n) b.style.bottom = Math.max(8, innerHeight - n.getBoundingClientRect().top + 6) + 'px'; }; place(); addEventListener('resize', place); }
-  if (loadInfo.source === 'bak') toast(loadInfo.mainMissing ? '主存档不见了，已从完整备份恢复' : '存档里的金币 / 等级数据坏了（' + loadInfo.bad.slice(0, 3).join('、') + '），已从完整备份恢复', 3600);
+  if (loadInfo.source === 'bak') toast(loadInfo.mainMissing ? '主存档不见了，已从完整备份恢复' : '存档里的金币 / 等级数据坏了（' + loadInfo.bad.slice(0, 3).join('、') + '），已从完整备份恢复', 3600, '', 'error');
   if (!upgradeGate.ok) showUpgradeProtection();
   else if (saveBlocked && loadInfo.unsafe) { const sb = document.createElement('div'); sb.id = 'saveBadge'; sb.textContent = '存档余额异常（超出安全整数）：交易已暂停、不保存，原存档未覆盖'; sb.style.cssText = 'position:fixed;left:8px;right:8px;top:calc(env(safe-area-inset-top) + 6px);z-index:60;padding:6px 10px;border:2px solid #141414;border-radius:10px;background:#ffd6d6;font-size:12px;font-weight:700;text-align:center;pointer-events:none';
     document.body.appendChild(sb); queueModal(() => { openModal(`<div class="mbubble">存档余额异常</div><div class="mtitle">余额超出能精确计算的范围</div><div class="mnote">存档里的余额是 <b>${String(loadInfo.rawCoins)}</b>，超过了 ${fmt(E.SAFE_COINS)}（安全整数上限），加减会算不准，不能当正常钱包用。为了不出错：<b>所有买卖和收入都已暂停，这次不会自动保存</b>，原存档原样保留、没有被覆盖。${loadInfo.bakOk ? `备份里有一份正常存档（余额 ${fmt(loadInfo.bakCoins)}），没有自动替换，请联系熊二 / 熊大确认后再恢复。` : '没有找到可用的备份，请联系熊二 / 熊大。'}</div><div class="mbtns"><button class="buy" id="mOk">知道了</button></div>`, false); $('#mOk').addEventListener('click', closeModal, { once:true }); }); }
@@ -2401,7 +2575,7 @@ window.__tzz = { upgradeGate, TEST_MODE, TEST_LV, SAVE_KEY, BAK_KEY, get saveBlo
   get big() { return order; }, get order() { return order; }, get special() { return special; }, get guests() { return guests; },
   hitBig, modalOpen, closeModal, get frozen() { return frozen; },
   audioState() { return AU.ctx ? AU.ctx.state : 'none'; }, showPreview, openAssign, JOB_ART, jobShown, jobURL, showJobArt,
-  HOME_ART, FURN_ART, FURN_UP, homeAct, get homeWho() { return homeWho; }, get homeSub() { return homeSub; }, get homeMode() { return homeMode; }, set homeMode(v) { homeMode = v === 'decor' ? 'decor' : 'live'; }, get homeSel() { return homeSel; }, get homeDrag() { return homeDrag; }, homeActor, LIVE_LINES, homeUndo, resize, get canvasSize() { return { W, H }; }, pet: petHooks, pets: petsHooks, lookOf, drawPerson, drawHead, LOOKS, get bubble() { return bubble; } };
+  HOME_ART, FURN_ART, FURN_UP, homeAct, homeAdvanceActor, homeDrawActor, homeOwner, get homeWho() { return homeWho; }, get homeSub() { return homeSub; }, get homeMode() { return homeMode; }, set homeMode(v) { homeMode = v === 'decor' ? 'decor' : 'live'; }, get homeSel() { return homeSel; }, get homeDrag() { return homeDrag; }, homeActor, LIVE_LINES, homeUndo, resize, get canvasSize() { return { W, H }; }, pet: petHooks, pets: petsHooks, lookOf, drawPerson, drawHead, LOOKS, get bubble() { return bubble; } };
 /* ================= 科技公司塔防：与主钱包同一存档、同一原子交易 ================= */
 function tdCard() {
   const z = TD.norm(state.td);
@@ -2416,7 +2590,7 @@ const tdController = window.TDHost.create({
 function openTD() {
   if (frozen || tdOpen || zbOpen || !state.shops[3].open) return;
   tdOpen = true; const f = $('#tdFrame'), generation = ++tdGeneration;
-  const target = new URL('td/index.html?embed=1&v=15-td-balance1', location.href);
+  const target = new URL('td/index.html?embed=1&v=15c', location.href);
   f.onload = () => {
     if (!tdOpen || generation !== tdGeneration) return;
     // Verify the actual loaded document, not merely an iframe src attribute.
@@ -2469,7 +2643,7 @@ function openZombie() {
     const ch = new MessageChannel(); zbPort = ch.port1; zbPort.onmessage = e => zbMsg(e.data);
     f.contentWindow.postMessage({ zb:'port' }, location.origin, [ch.port2]); zbReply();
   };
-  f.src = 'zombie/?embed=1&v=15'; $('#zbOverlay').classList.remove('hidden'); audioPause();
+  f.src = 'zombie/?embed=1&v=15c'; $('#zbOverlay').classList.remove('hidden'); audioPause();
 }
 function closeZombie() {
   if (!zbOpen) return; zbOpen = false; zbRun = null; if (zbPort) { zbPort.close(); zbPort = null; }

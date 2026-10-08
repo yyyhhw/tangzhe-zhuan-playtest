@@ -103,8 +103,14 @@
     }
     return stops;
   }
+  function approachOwner(w,target,done){
+    if(w.noRoom||w.paused||!Geo.planPath(w,w.dog,target,0))return {ok:false,why:'noRoute'};
+    clearGame(w);if(!route(w,target,'attention','走到你身边'))return {ok:false,why:'noRoute'};
+    w.intent.ownerDone=done;return {ok:true};
+  }
+  function cancelOwner(w){clearGame(w);begin(w,'attention',1.2,'你换了位置，再叫我一声吧');w.captionUntil=w.t+1.2;}
   function call(w){if(w.noRoom)return {ok:false,why:'waiting'};if(w.paused)return {ok:false,why:'paused'};
-    clearGame(w);const ok=route(w,{x:w.front.x,y:w.front.y-.65},'attention','听到呼唤，向你走来');if(!ok){begin(w,'attention',1.2,'回来的路被挡住了');w.captionUntil=w.t+1.2;return {ok:false,why:'noRoute'};}w.calling=true;return {ok};}
+    clearGame(w);const ok=route(w,w.ownerTarget||{x:w.front.x,y:w.front.y-.65},'attention','听到呼唤，向你走来');if(!ok){begin(w,'attention',1.2,'回来的路被挡住了');w.captionUntil=w.t+1.2;return {ok:false,why:'noRoute'};}w.calling=true;return {ok};}
   function pet(w){if(w.noRoom)return {ok:false,why:'waiting'};if(w.paused)return {ok:false,why:'paused'};
     clearGame(w);begin(w,'petted',1.6,w.profile.pet);gain(w);w.fx.push({type:'heart',t:w.t});w.captionUntil=w.t+1.6;return {ok:true};}
   function throwBall(w,target){ // Host compatibility name; no companion uses the dog's fetch plan.
@@ -125,7 +131,7 @@
     const d=w.dog;d.z=0;w.fx=w.fx.filter(f=>w.t-f.t<1.4);w.spatialFx=w.spatialFx.filter(f=>w.t-f.t<f.life);if(w.toy&&w.t>w.toy.until)w.toy=null;
     if(w.game?.phase==='action'&&w.t>=w.game.until){w.game.index++;nextLeg(w);}
     if(w.intent){
-      const q=w.intent.path[0];if(!q){if(w.game)gameArrival(w);else {const i=w.intent,called=w.calling;begin(w,i.kind,i.kind==='play'?3:i.kind==='rest'?HABITS[w.species].rest:1.2,called?'来到你身边了':i.label);if(called){w.calling=false;w.captionUntil=w.t+2;}if(i.kind==='play')gain(w);}}
+      const q=w.intent.path[0];if(!q){if(w.game)gameArrival(w);else {const i=w.intent,called=w.calling;begin(w,i.kind,i.kind==='play'?3:i.kind==='rest'?HABITS[w.species].rest:1.2,called?'来到你身边了':i.label);if(called){w.calling=false;w.captionUntil=w.t+2;}if(i.kind==='play')gain(w);if(i.ownerDone)i.ownerDone();}}
       else {const dx=q.x-d.x,dy=q.y-d.y,dist=Math.hypot(dx,dy);
         const dir=Math.abs(dx)>Math.abs(dy)?dx>0?'E':'W':dy>0?'S':'N',moveClip=(w.intent.kind==='play'||w.game)&&w.manifest.clips['run_'+(dir==='W'?'E':dir)]?'run':'walk';
         const step=Math.min(dist,(w.manifest.runtime.walkSpeed||w.profile.speed)*(w.game?GAMES[w.species].speed:moveClip==='run'?(w.manifest.runtime.runMultiplier||1.45):1)*dt),x=dist?d.x+dx/dist*step:d.x,y=dist?d.y+dy/dist*step:d.y;
@@ -209,5 +215,5 @@
     function hit(w,floor,x,y){return !!(w&&floor&&!w.noRoom&&els&&Art.canvasHit(els.cv,x,y));}
     return {draw,hit,detach,get els(){return els;},get artMode(){return atlas?'atlas':'unavailable';}};
   }
-  return {CONFIG,GAMES,HABITS,CAT_FURNITURE,createWorld,update,step,call,pet,throwBall,serialize,sanitizeSave,restore,setLayout,setRearrange,snapshot,createView};
+  return {CONFIG,GAMES,HABITS,CAT_FURNITURE,createWorld,update,step,call,pet,throwBall,approachOwner,cancelOwner,serialize,sanitizeSave,restore,setLayout,setRearrange,snapshot,createView};
 });

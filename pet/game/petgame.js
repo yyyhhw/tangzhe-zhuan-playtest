@@ -4,9 +4,9 @@
    调配与购买通过 E.transact，保存失败整档回滚；各物种成长存档原样随实例保留。
    小狗运行时按 uid 独立恢复 / 模拟 / 持久化，待命不运行。 */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory(require('../engine.js'), require('../room.js'), require('../companions.js'), require('../art.js'));
-  else root.PetGame = factory(root.PetEngine, root.PetRoom, root.PetCompanions, root.PetArt);
-})(typeof self !== 'undefined' ? self : this, function (PE, PR, PC, PA) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('../engine.js'), require('../room.js'), require('../companions.js'), require('../art.js'), require('../../home-interaction.js'));
+  else root.PetGame = factory(root.PetEngine, root.PetRoom, root.PetCompanions, root.PetArt, root.HomeInteraction);
+})(typeof self !== 'undefined' ? self : this, function (PE, PR, PC, PA, HI) {
   'use strict';
   const PET = { id: 'pet_dog', name: '暖棕白小狗', emoji: '🐶', price: 3000, desc: '会自己在家里逛、闻家具、回窝睡觉；能呼唤、摸摸、抛球。只陪玩，不加产速。' };
   // Only species with their own shipped runtime/art are available for purchase.
@@ -340,6 +340,7 @@
     let w = null, homeId = null, petUid = null, key = '', decor = false, lastEvent = '', simAt = 0, restored = null;
     let generation = '', sourceEng = '', sourceState = null, berth = 0, unsupported = false;
     const stagedEngs = new Set();
+    let ownerAction=null, ownerSequence=0;
     const token = (v) => { try { return JSON.stringify(v); } catch (e) { return ''; } };
     function record(st) {
       const list = storedList(st);
@@ -349,7 +350,7 @@
     const roomOf = (p) => p && ('room' in p ? p.room : p.home);
     const uidOf = (p) => p && (p.uid || 'pet-dog-legacy');
     const generationOf = (p) => token([uidOf(p), p && (p.species || 'dog'), p && p.boughtAt]);
-    function reset() { w = null; homeId = petUid = null; key = generation = sourceEng = ''; sourceState = null; stagedEngs.clear(); restored = null; }
+    function reset() { ownerAction=null;ownerSequence++;w = null; homeId = petUid = null; key = generation = sourceEng = ''; sourceState = null; stagedEngs.clear(); restored = null; }
     const berthOf = (st, uid, room) => Math.max(0, storedList(st).filter(p => isObj(p) && p.room === room).findIndex(p => p.uid === uid)) % MAX_PER_ROOM;
     const runtimeBed = (prev) => pickBed(w, prev, berth ? [pickBed(w, null)] : null);
     const canonicalBed = () => runtimeBed(berth ? { x: w.cols - BED.w, y: w.rows - BED.h, w: BED.w, h: BED.h } : null);
@@ -399,8 +400,40 @@
       }
       return w;
     }
+    function ownerPosition(){return typeof opt.owner==='function'?opt.owner(homeId,petUid):null;}
+    function checkOwner(){
+      if(!ownerAction||!w)return;
+      const p=ownerPosition(),a=ownerAction;
+      if(!p||p.active===false||p.revision!==a.owner.revision||key!==a.layout||Math.hypot(p.x-a.owner.x,p.y-a.owner.y)>.2){
+        ownerSequence++;ownerAction=null;Engine.cancelOwner(w);delete w.ownerTarget;
+        if(typeof opt.feedback==='function')opt.feedback('主人换了位置，互动先停下；到位后再叫它吧');
+      }else if(a.pending && (species==='dog'?w.dog.activity!=='ownerApproach':!w.intent)){
+        ownerSequence++;ownerAction=null;Engine.cancelOwner(w);delete w.ownerTarget;
+        if(typeof opt.feedback==='function')opt.feedback('这条路暂时走不通，换块空地再叫它吧');
+      }else if(!a.pending && (species==='dog'?!['called','petted','fetch'].includes(w.dog.activity):!w.game&&!w.intent&&w.t>a.started+2))ownerAction=null;
+    }
+    function ownerAct(st,kind,arg){
+      if(typeof opt.owner!=='function')return act(st,ww=>kind==='call'?Engine.call(ww):kind==='pet'?Engine.pet(ww,arg||'button'):Engine.throwBall(ww,arg));
+      if(!sync(st))return {ok:false,why:unsupported?'unsupported':'none'};
+      if(w.noRoom)return {ok:false,why:'waiting'};if(w.paused)return {ok:false,why:'rearrange'};
+      const owner=ownerPosition();if(!owner||owner.active===false)return {ok:false,why:'noRoute'};
+      const target=HI.reachableOwnerPoint(PE,w,owner,owner.avoid);if(!target)return {ok:false,why:'noRoute'};
+      const seq=++ownerSequence;
+      if(ownerAction)Engine.cancelOwner(w);
+      w.ownerTarget={...target};w.front={x:owner.x,y:owner.y};
+      const current=ownerAction={kind,owner:{...owner},layout:key,pending:true,started:w.t,target};
+      const result=Engine.approachOwner(w,target,()=>{
+        if(seq!==ownerSequence||ownerAction!==current)return;
+        current.pending=false;current.started=w.t;
+        const result=kind==='call'?Engine.call(w):kind==='pet'?Engine.pet(w,'button'):Engine.throwBall(w,arg);
+        if(!result.ok){ownerAction=null;if(typeof opt.feedback==='function')opt.feedback('这附近没有合适的玩耍路线，换块空地试试吧');}
+      });
+      if(!result.ok)ownerAction=null;
+      return result;
+    }
     function frame(dt, st, ctx) {
       if (!sync(st)) return null;
+      checkOwner();
       const dec = !!(ctx && ctx.decorHere);
       if (dec !== decor) { decor = dec; Engine.setRearrange(w, dec); }
       let left = Math.min(0.1, Math.max(0, dt || 0));
@@ -441,8 +474,8 @@
       get w() { return w; }, get uid() { return petUid || opt.uid || null; }, get homeId() { return homeId; }, get lastEvent() { return lastEvent; }, get restored() { return restored; },
       get waiting() { return !!(w && w.noRoom); }, get unsupported() { return unsupported; },
       sync, frame, snapshot, beforePersist, acknowledgePersist, resume, reset,
-      step: seconds => w && Engine.step(w,seconds), debug: () => w && Engine.snapshot(w),
-      call: (st) => act(st, Engine.call), pet: (st, how) => act(st, (w) => Engine.pet(w, how || 'button')), throwBall: (st, t) => act(st, (w) => Engine.throwBall(w, t)),
+      step: seconds => {if(!w)return;checkOwner();return Engine.step(w,seconds);}, get ownerAction(){return ownerAction;}, debug: () => w && Engine.snapshot(w),
+      call: (st) => ownerAct(st,'call'), pet: (st, how) => ownerAct(st,'pet',how), throwBall: (st, t) => ownerAct(st,'play',t),
     };
   }
 

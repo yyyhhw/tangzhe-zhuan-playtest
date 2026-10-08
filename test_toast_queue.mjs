@@ -1,0 +1,31 @@
+// Exact production toast blocks with deterministic DOM/timers. node test_toast_queue.mjs
+import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';
+const files=['app.js','pet/game/app.js','preview/app.js','preview/pet/game/app.js'],rows=[];
+let reference;
+function harness(file){const src=fs.readFileSync(new URL(file,import.meta.url),'utf8');const body=src.slice(src.indexOf('let toastTimer ='),src.indexOf('function shakeEl',src.indexOf('let toastTimer =')));if(reference)assert.equal(body,reference);else reference=body;let time=0,wall=0,id=0;const timers=new Map(),classes=new Set(['hidden']),events={},seen=[];const el={textContent:'',style:{},offsetWidth:1,setAttribute(k,v){this[k]=v;},classList:{add:c=>classes.add(c),remove:c=>classes.delete(c),toggle:(c,b)=>b?classes.add(c):classes.delete(c)}};
+const doc={hidden:false,addEventListener:(n,f)=>events[n]=f};const ctx={toastEl:el,document:doc,window:{addEventListener:(n,f)=>events[n]=f},Date:{now:()=>wall},performance:{now:()=>time},setTimeout:(f,ms)=>{timers.set(++id,{f,t:time+ms});return id;},clearTimeout:i=>timers.delete(i)};vm.createContext(ctx);vm.runInContext(body,ctx);
+const snap=()=>({text:el.textContent,visible:!classes.has('hidden')});
+return {toast:(m,ms=1900,placement='',kind='feedback')=>ctx.toast(m,ms,placement,kind),snap,el,jump(ms){time+=ms;wall+=ms;},wallJump:ms=>wall+=ms,hide(){doc.hidden=true;events.visibilitychange();},show(){doc.hidden=false;events.visibilitychange();},pagehide:()=>events.pagehide(),pageshow:persisted=>events.pageshow({persisted:!!persisted}),run(ms){const end=time+ms;while(true){const next=[...timers].filter(([,v])=>v.t<=end).sort((a,b)=>a[1].t-b[1].t)[0];if(!next)break;const t=Math.max(time,next[1].t);wall+=t-time;time=t;timers.delete(next[0]);next[1].f();seen.push({...snap(),time});}wall+=end-time;time=end;return seen;}};}
+for(const file of files){const test=(name,fn)=>{try{fn(harness(file));rows.push({file,name,ok:true});}catch(e){rows.push({file,name,ok:false,error:e.message});}};
+ test('error holds over delayed feedback',h=>{h.toast('保存失败',2800);h.run(1000);h.toast('反馈');assert.equal(h.snap().text,'保存失败');h.run(1800);assert.equal(h.snap().text,'反馈');});
+ test('latest error cancels old timer',h=>{h.toast('保存失败A',2800);h.run(1000);h.toast('保存失败B',2800);h.run(1850);assert.deepEqual(h.snap(),{text:'保存失败B',visible:true});h.run(950);assert.equal(h.snap().visible,false);});
+ test('ambient capacity one under burst',h=>{h.toast('保存失败',2800);for(let i=0;i<100;i++)h.toast('N'+i,1900,'','ambient');h.run(2800);assert.equal(h.snap().text,'N99');h.run(1900);assert.equal(h.snap().visible,false);});
+ test('feedback capacity three FIFO; ambient cannot evict',h=>{h.toast('保存失败',2800);for(let i=0;i<5;i++)h.toast('F'+i);for(let i=0;i<100;i++)h.toast('N'+i,1900,'','ambient');h.run(2800);assert.equal(h.snap().text,'F2');h.run(1900);assert.equal(h.snap().text,'F3');h.run(1900);assert.equal(h.snap().text,'F4');h.run(1900);assert.equal(h.snap().visible,false);});
+ test('operation feedback survives ambient and preserves header',h=>{h.toast('保存失败',2800);h.toast('金币不够',1900,'header');h.toast('太阳',1900,'','ambient');h.run(2800);assert.equal(h.snap().text,'金币不够');assert.equal(h.el.role,'status');});
+ test('active operation feedback is not interrupted by ambient',h=>{h.toast('操作完成');h.toast('太阳',1900,'','ambient');assert.equal(h.snap().text,'操作完成');h.run(1900);assert.equal(h.snap().text,'太阳');});
+ test('consecutive errors expire old feedback after eight seconds',h=>{h.toast('保存失败',2800);h.toast('旧操作');for(let i=0;i<9;i++){h.run(1000);h.toast('保存失败',2800);}h.run(2800);assert.equal(h.snap().visible,false);});
+ test('ambient expires after three seconds',h=>{h.toast('保存失败',4000);h.toast('太阳',1900,'','ambient');h.run(4000);assert.equal(h.snap().visible,false);});
+ test('late timer cannot resurrect queue after fresh operation',h=>{h.toast('保存失败',2800);h.toast('旧提示');h.jump(60000);h.toast('新操作');h.run(1900);assert.equal(h.snap().visible,false);assert.notEqual(h.snap().text,'旧提示');});
+ test('late error timer drops expired queue',h=>{h.toast('保存失败',2800);h.toast('旧提示');h.jump(60000);h.run(0);assert.equal(h.snap().visible,false);});
+ test('wall clock advances while monotonic clock paused',h=>{h.toast('保存失败',2800);h.toast('旧提示');h.wallJump(60000);h.toast('新操作');h.run(1900);assert.equal(h.snap().visible,false);});
+ test('backward wall clock cannot extend monotonic expiry',h=>{h.toast('保存失败',10000);h.toast('旧提示');h.wallJump(-60000);h.run(10000);assert.equal(h.snap().visible,false);});
+ test('hide/show clears queue and ignores hidden ordinary events',h=>{h.toast('保存失败',2800);h.toast('旧提示');h.hide();h.toast('隐藏期间');h.jump(60000);h.show();assert.equal(h.snap().visible,false);h.toast('恢复');h.run(1900);assert.equal(h.snap().visible,false);});
+ test('pagehide/pageshow clears queue',h=>{h.toast('保存失败',2800);h.toast('旧提示');h.pagehide();h.jump(60000);h.pageshow();h.run(0);assert.equal(h.snap().visible,false);});
+ test('short suspension retains current error only',h=>{h.toast('保存失败',2800);h.toast('旧提示');h.hide();h.run(1000);h.show();assert.equal(h.snap().text,'保存失败');h.run(1800);assert.equal(h.snap().visible,false);});
+ test('error substring and explicit error priority',h=>{h.toast('声音已切换，但保存失败',2600);h.toast('太阳',1900,'','ambient');assert.equal(h.el.role,'alert');h.toast('只读保护',2800,'','error');h.toast('普通');assert.equal(h.snap().text,'只读保护');});
+ test('initial pageshow preserves boot queue',h=>{h.toast('保存失败',2800);h.toast('开局迁移');h.pageshow(false);h.run(2800);assert.deepEqual(h.snap(),{text:'开局迁移',visible:true});});
+ test('BFCache pageshow clears queue even without recorded hide',h=>{h.toast('保存失败',2800);h.toast('旧提示');h.pageshow(true);h.run(2800);assert.equal(h.snap().visible,false);});
+ test('unpaired visible event does not discard boot feedback',h=>{h.toast('保存失败',2800);h.toast('开局迁移');h.show();h.run(2800);assert.equal(h.snap().text,'开局迁移');assert.equal(h.snap().visible,true);});
+ test('fresh normal works after error with no queue',h=>{h.toast('保存失败',2800);h.run(2800);h.toast('恢复');assert.equal(h.snap().text,'恢复');h.run(1900);assert.equal(h.snap().visible,false);});
+}
+console.log(JSON.stringify({passed:rows.filter(x=>x.ok).length,failed:rows.filter(x=>!x.ok).length,rows},null,2));if(rows.some(x=>!x.ok))process.exitCode=1;

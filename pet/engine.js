@@ -680,7 +680,7 @@
   function step(w, seconds, h) { h = h || 1 / 60; let n = Math.round(seconds / h); while (n-- > 0) update(w, h); }
 
   /* ---------- 三个操作 ---------- */
-  const callSpot = (w) => ({ x: w.front.x, y: w.front.y - 0.55 });
+  const callSpot = (w) => w.ownerTarget ? {...w.ownerTarget} : ({ x: w.front.x, y: w.front.y - 0.55 });
   function dropBallSteps() {
     return [faceStep(null), { k: 'anim', action: 'drop_ball', label: '把球放你面前', onEvent: (w, e) => { if (e === 'ball_drop') dropBall(w); } }];
   }
@@ -696,6 +696,18 @@
     if (dist(b, callSpot(w)) < 1.2) { w.stats.fetches++; gainAffinity(w, 'fetch'); }
   }
   const sleeping = (w) => !!(w.dog.step && (w.dog.step.k === 'sleep' || (w.dog.step.k === 'anim' && w.dog.step.clip === 'liedown')));
+  // Owner interactions use the same checked movement steps as ordinary walking.
+  function approachOwner(w, target, done) {
+    if(w.noRoom || w.paused || !planPath(w,w.dog,target,0)) return {ok:false,why:'noRoute'};
+    const steps=[];
+    if(sleeping(w)) steps.push({k:'anim',clip:'getup',label:'起来陪你'});
+    steps.push({k:'goto',to:{...target},speed:'walk',label:'走到你身边'}, {k:'fn',fn:()=>{if(dist(w.dog,target)<.15)done();}});
+    setPlan(w,'ownerApproach',steps);return {ok:true};
+  }
+  function cancelOwner(w) {
+    if(w.ball.state==='carried') { w.ball.state='floor';w.ball.x=w.dog.x;w.ball.y=w.dog.y;w.ball.z=0;w.ball.vx=w.ball.vy=0;w.dog.carrying=false; }
+    setPlan(w,'idle',[{k:'wait',dur:1.2,label:'你换了位置，再叫我一声吧'}]);
+  }
   function call(w) {
     const d = w.dog;
     if (w.noRoom) return { ok: false, why: 'noRoom' };
@@ -957,7 +969,7 @@
   function overlapsFurniture(w, x, y) { return !circleFree(w, x, y, CFG.R - 1e-6) && x >= CFG.R - 1e-6 && y >= CFG.R - 1e-6 && x <= w.cols - CFG.R + 1e-6 && y <= w.rows - CFG.R + 1e-6; }
   function minClearance(w) { let m = Infinity; for (const o of obstacles(w)) m = Math.min(m, rectDist(w.dog.x, w.dog.y, o)); return m; }
 
-  return { CFG, createWorld, update, step, call, pet, throwBall, setRearrange, moveItem, canPlace, serialize, restore, restoreLayout, setLayout, snapshot, drawOrder, visit, nearestDogPoint,
+  return { CFG, createWorld, update, step, call, pet, throwBall, approachOwner, cancelOwner, setRearrange, moveItem, canPlace, serialize, restore, restoreLayout, setLayout, snapshot, drawOrder, visit, nearestDogPoint,
     safeSpot, hasRoom, sanitizeSave, ballSpot,
     planPath, reachable, circleFree, segClear, obstacles, itemRect, sizeOf, isSolid, isRug, interactSpot, minClearance, overlapsFurniture, rectDist, callSpot, grid,
     bodyFree, bodyOverlap, boxAt, visDir, segOK };

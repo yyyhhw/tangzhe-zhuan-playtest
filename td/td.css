@@ -68,3 +68,7 @@ button:focus-visible{outline:3px solid #1e6ea2;outline-offset:2px}
 .hud-top .vitals-pill{display:flex;flex-direction:column;justify-content:center;flex:.7;min-width:40px;font-size:11px;line-height:15px;padding:2px}.hud-top #cashTxt{flex:1.4;min-width:0;display:flex;align-items:center;justify-content:center;font-size:12px}.hud-top .skill-btn{font-size:10px;line-height:15px;height:44px;overflow:hidden}
 
 .hud-top .skill-btn{white-space:pre-line;padding:3px 1px}
+
+.speed-btn{flex:0 0 44px;width:44px;height:44px;padding:2px;pointer-events:auto;border:2px solid var(--ink);border-radius:8px;background:var(--paper);font-size:11px;font-weight:900;line-height:16px}.speed-btn[aria-pressed="true"]{background:var(--yellow)}
+@media(max-width:400px){.hud-top{gap:4px}.hud-top .skill-btn{flex-basis:70px}.hud-top #cashTxt{font-size:11px;padding:2px}.hud-top .vitals-pill{min-width:36px}}
+@media(max-width:340px){.hud-top #cashTxt{font-size:10px}}

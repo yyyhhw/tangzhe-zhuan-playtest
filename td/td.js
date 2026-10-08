@@ -50,8 +50,18 @@ const EN = { walk: { hp: 30, sp: 1.0, r: 0.28, cash: 5, col: '#7cb342' }, fast: 
   mini: { hp: 600, sp: 0.5, r: 0.42, cash: 50, col: '#ad1457', lives: 3 }, boss: { hp: 2200, sp: 0.42, r: 0.5, cash: 100, col: '#8e24aa', lives: 10 } };
 const hpMul = w => 1.17 ** w;
 const LIVES = 20, START_PTS = 120;
-const ENERGY = Object.freeze({ cap:400, towers:8, baseRate:.5, waveSeconds:30, start77:60, rocketRate:.5, burstSeconds:10, burstCooldown:15, burstMax:.30, frostSeconds:5, frostCooldown:30, frostMax:.45 });
-function gainEnergy(value) { const before=G.cash; G.cash=Math.min(ENERGY.cap,Math.max(0,G.cash+value)); return G.cash-before; }
+const ENERGY = Object.freeze({ cap:400, endlessTowers:Math.floor(COLS*ROWS/3), baseRate:.5, waveSeconds:30, start77:60, rocketRate:.5, burstSeconds:10, burstCooldown:15, burstMax:.30, frostSeconds:5, frostCooldown:30, frostMax:.45 });
+const towerLimit = () => G?.endless ? ENERGY.endlessTowers : Infinity;
+// Provisional measured budgets: finite zero-upgrade strategies, not a global optimum.
+const NORMAL_BUDGET = Object.freeze({c77:1616,pearl:1627,otaku:1510,rocket:1615});
+function gainEnergy(value, refund = false) {
+  if (!G || !Number.isFinite(value) || value <= 0) return 0;
+  const remaining = G.endless || refund ? Infinity : Math.max(0, G.normalBudget-G.energyEarned);
+  const credited = Math.max(0, Math.min(value, remaining, ENERGY.cap-G.cash));
+  G.cash += credited;
+  if (!G.endless && !refund) G.energyEarned = Math.min(G.normalBudget,G.energyEarned+credited);
+  return credited;
+}
 const energyRatio = () => Math.min(1,Math.max(0,G.cash/ENERGY.cap));
 const burstMultiplier = () => 1+(G.cmd==='otaku' && G.skillLeft>0 ? ENERGY.burstMax*energyRatio():0);
 const frostMultiplier = () => G.cmd==='pearl' && G.skillLeft>0 ? 1-ENERGY.frostMax*energyRatio():1;
@@ -94,7 +104,7 @@ function towerDetail(id, lv = 1) {
   const s = TW[id], g = gl(), syn = T.TOWERS[id].ceo === G.cmd;
   const dmg = s.dmg * tDmg(id) * (1 + .5 * (lv - 1)) * (g.dmg || 1) * burstMultiplier();
   const extra = {cone:`70°扇形；燃烧 ${num(dmg*s.burn)}/秒 ×${s.burnT}秒`,aura:`范围内全体；基础减速 ${num(Math.min(.75,s.slow+.01*proto.lv.tea)*100)}% ×${s.slowT}秒；与技能乘算后普通怪总减速最多75%，小Boss/Boss最多50%`,pierce:`直线最多 ${s.pierce} 只；半宽 ${s.width} 格，线长为射程 +0.5 格`,chain:`首击 +${s.chain} 次跳跃；跳距 ${s.jump} 格；逐跳伤害 ×${s.fall}`,burn:`燃烧 ${num(dmg*(s.burn*(syn?s.synBurn:1)+(g.burn||0)))}/秒 ×${syn?s.synBurnT:s.burnT}秒`,bounce:`首击 +${s.bounce+(syn?s.synBounce:0)} 次弹跳；跳距 ${s.jump} 格；逐跳伤害 ×${s.fall}`,boomerang:`去程 ${num(dmg)} + 回程 ${num(dmg*(syn?s.synBack:s.back))}；半宽 ${syn?s.synWidth:s.width} 格；沿线全部`,splash:`命中点半径 ${syn?s.synRad:s.rad} 格内全体`}[s.kind];
-  return `<b>${T.TOWERS[id].name} · Lv${lv}</b><br>目标：地面敌人（含 Boss），优先最前方<br>伤害 ${num(dmg)} · 间隔 ${num(s.rate*(g.rate||1))}秒 · 范围 ${num(towerRange({id,lv}))}格<br>${extra}${g.burn && !['burn','cone'].includes(s.kind)?`；命中燃烧 ${num(dmg*g.burn)}/秒 ×${g.burnT}秒（回程除外）`:''}${g.crit?`；${g.crit*100}% 暴击 ×${g.critX}（以上为非暴击）`:''}${syn?'<br>★ '+s.syn.split('：')[1]:''}`;
+  return `<b>${T.TOWERS[id].name} · Lv${lv}</b><br>${T.TOWERS[id].ceo?'CEO塔：每种最多1座，四种可共存':'店铺塔：可重复建造'}（普通无总数限制；无尽最多25）<br>目标：地面敌人（含 Boss），优先最前方<br>伤害 ${num(dmg)} · 间隔 ${num(s.rate*(g.rate||1))}秒 · 范围 ${num(towerRange({id,lv}))}格<br>${extra}${g.burn && !['burn','cone'].includes(s.kind)?`；命中燃烧 ${num(dmg*g.burn)}/秒 ×${g.burnT}秒（回程除外）`:''}${g.crit?`；${g.crit*100}% 暴击 ×${g.critX}（以上为非暴击）`:''}${syn?'<br>★ '+s.syn.split('：')[1]:''}`;
 }
 
 // ---- 金币 / 存档（原型）----
@@ -158,7 +168,7 @@ function renderMenu() {
   const h = T.HEROES[cmdSel];
   $('#heroImg').src = `../art/face_${cmdSel}.webp`; $('#heroImg').alt = h.name;
   $('#heroName').textContent = `统帅：${h.name}`;
-  $('#heroDesc').innerHTML = `${cmdDetail(cmdSel)}<br>统帅不上地图、不参与攻击；作战单位只有 8 种防御塔。局内建设点上限400，最多同时8座；战斗每秒恢复0.5、每波最多30秒，倒计时及暂停不恢复。选塔查看属性，点格子预览后确认建造。`;
+  $('#heroDesc').innerHTML = `${cmdDetail(cmdSel)}<br>统帅不上地图、不参与攻击；作战单位只有 8 种防御塔。建设点持有上限400，本局累计收入预算${NORMAL_BUDGET[cmdSel]}（含初始；退款不恢复额度），普通无总塔数限制，无尽最多25座；CEO每种1座，共4种；战斗每秒恢复0.5、每波最多30秒，倒计时及暂停不恢复。选塔查看属性，点格子预览后确认建造。`;
   $('#cmdPick').innerHTML = T.CEO_IDS.map(id => `<button type="button" data-cmd="${id}" class="${id === cmdSel ? 'on' : ''}"><img src="../art/face_${id}.webp" alt="">${T.HEROES[id].name}</button>`).join('');
   $('#lvTxt').textContent = `第 ${lvSel} 关`;
   $('#lvTxt').textContent = T.MAX_LV > 1 ? `第 ${lvSel} 关` : '科技园区';
@@ -199,7 +209,21 @@ $('#lvNext').onclick = () => { lvSel = Math.min(T.MAX_LV, proto.cleared + 1, lvS
 $('#exitBtn').onclick = () => host({ td: 'close' });
 
 // ---- 一局 ----
-let G = null, paused = false, raf = 0, last = 0, sel = null;
+let G = null, paused = false, raf = 0, last = 0, sel = null, clockRemainder = 0;
+const FIXED_DT = 1/60;
+function setSpeed(value){if(!G)return false;G.speed=value===2?2:1;hud();return true;}
+// Real-time preparation; combat alone consumes two identical simulation steps at ×2.
+function advanceClock(seconds){
+ if(!G||G.over||G.pendStart||paused||document.hidden){clockRemainder=0;return;}
+ if(!Number.isFinite(seconds))return;
+  clockRemainder+=Math.max(0,seconds);
+ while(clockRemainder+1e-10>=FIXED_DT){
+  clockRemainder=Math.max(0,clockRemainder-FIXED_DT);
+  const count=(G.q.length||alive().length)?G.speed:1;
+  for(let i=0;i<count;i++){if(G.over||paused||document.hidden)break;step(FIXED_DT);if(!G.q.length&&!alive().length)break;}
+  if(G.over){clockRemainder=0;break;}
+ }
+}
 const tDmg = id => 1.15 ** proto.lv[id];
 const gl = () => CMD[G.cmd].g;
 function start(n) {
@@ -207,9 +231,9 @@ function start(n) {
   n = Math.max(1, Math.min(T.MAX_LV, proto.cleared + 1, Math.floor(fin(n, lvSel))));
   if (!proto.ready) return false;
   SFX.unlock();
-  G = { n, cmd: cmdSel, W: T.WAVES, wave: 0, q: [], spawnT: 0, breakT: 5, es: [], tw: new Map(), fx: [], lives: LIVES, cash: START_PTS+(cmdSel==='c77'?ENERGY.start77:0), interestSeconds:0, skillLeft:0, skillCooldown:0, kills: 0, t: 0, damageByTower: {}, over: false, win: false, runId: Date.now().toString(36) + Math.random().toString(36).slice(2, 7), pendStart: EMBED };
+  G = { n, cmd: cmdSel, W: T.WAVES, wave: 0, q: [], spawnT: 0, breakT: 20, speed:1, es: [], tw: new Map(), fx: [], lives: LIVES, cash: START_PTS+(cmdSel==='c77'?ENERGY.start77:0), normalBudget:NORMAL_BUDGET[cmdSel], energyEarned:START_PTS+(cmdSel==='c77'?ENERGY.start77:0), interestSeconds:0, skillLeft:0, skillCooldown:0, kills: 0, t: 0, damageByTower: {}, over: false, win: false, runId: Date.now().toString(36) + Math.random().toString(36).slice(2, 7), pendStart: EMBED };
   if (EMBED) { const game = G; host({ td: 'start', runId: G.runId, n, cmd: G.cmd }); G.startTO = setTimeout(() => { if (G === game && G.pendStart) abortStart('开局登记超时'); }, 4000); }
-  paused = false; SFX.setPaused(false); sel = {k:'build',id:null,x:null,y:null}; show(null); bar(); resize(); hud(); last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop); bgmTry();
+  paused = false; clockRemainder=0; SFX.newTrack(); SFX.setPaused(false); sel = {k:'build',id:null,x:null,y:null}; show(null); bar(); resize(); hud(); last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop); bgmTry();
   return true;
 }
 function abortStart(why) { SFX.stopBgm(); G = null; show('#menu'); renderMenu(); toast(why); }
@@ -273,9 +297,11 @@ function towerFire(tw) {
   }
   return true;
 }
+const ceoBlocked = id => !!T.TOWERS[id]?.ceo && !!G && [...G.tw.values()].some(t=>t.id===id);
 function build(id, x, y) {
   if (!G || G.over || G.pendStart || paused || !Number.isInteger(x) || !Number.isInteger(y) || !TW[id] || x < 0 || y < 0 || x >= COLS || y >= ROWS || isPath(x, y) || G.tw.has(x + ',' + y)) return false;
-  const cost = T.TOWERS[id].cost; if (G.tw.size>=ENERGY.towers) { toast('最多同时8座塔，拆除后可补建'); return false; } if (G.cash < cost) { toast('建设点不足'); return false; }
+  if(ceoBlocked(id)){toast('同种CEO塔最多1座，拆除后可重建');return false;}
+  const cost = T.TOWERS[id].cost; if (G.tw.size>=towerLimit()) { toast('无尽最多25座塔，低于上限后可补建'); return false; } if (G.cash < cost) { toast('建设点不足'); return false; }
   SFX.cue('build'); G.cash -= cost; G.tw.set(x + ',' + y, { id, x, y, lv: 1, cd: 0, spent: cost }); sel = null; bar(); return true;
 }
 function upTower(x, y) {
@@ -284,13 +310,13 @@ function upTower(x, y) {
   const c = upCost(tw); if (G.cash < c) return false;
   G.cash -= c; tw.spent += c; tw.lv++; bar(); return true;
 }
-function sell(x, y) { if (!G || G.over || paused || G.pendStart) return false; const tw = G && G.tw.get(x + ',' + y); if (!tw) return false; const refunded=gainEnergy(sellBack(tw)); toast(`拆除返还 ${num(refunded)} 建设点（上限${ENERGY.cap}）`); G.tw.delete(x + ',' + y); sel = null; bar(); return true; }
+function sell(x, y) { if (!G || G.over || paused || G.pendStart) return false; const tw = G && G.tw.get(x + ',' + y); if (!tw) return false; const refunded=gainEnergy(sellBack(tw),true); toast(`拆除返还 ${num(refunded)} 建设点（上限${ENERGY.cap}）`); G.tw.delete(x + ',' + y); sel = null; bar(); return true; }
 
 function step(dt) {
   if (!G || G.over || G.pendStart || paused || document.hidden) return;
   dt=Math.max(0,dt); G.t += dt; const combat=G.q.length>0||alive().length>0;
   if(combat){const interest=Math.min(dt,Math.max(0,ENERGY.waveSeconds-G.interestSeconds));G.interestSeconds+=interest;gainEnergy(interest*(ENERGY.baseRate+(G.cmd==='rocket'?ENERGY.rocketRate:0)));}
-  if (!G.q.length && (G.endless || G.wave < G.W) && !alive().length) { if (G.breakT <= 0 && G.wave > 0) { G.breakT = 5; gainEnergy(G.endless?50:20 + 5 * G.wave); } const before = Math.ceil(G.breakT); G.breakT = Math.max(0, G.breakT - dt); if (Math.ceil(G.breakT) !== before && G.breakT > 0) SFX.cue('tick'); if (G.breakT <= 0) nextWave(); }
+  if (!G.q.length && (G.endless || G.wave < G.W) && !alive().length) { if (G.breakT <= 0 && G.wave > 0) { G.breakT = 5; gainEnergy(G.endless?50:20 + 5 * G.wave); } const before = Math.ceil(G.breakT); G.breakT = Math.max(0, G.breakT - dt); if (Math.ceil(G.breakT) !== before && G.breakT > 0) SFX.cue('tick'); if (G.breakT <= 1e-9) {G.breakT=0;nextWave();} }
   if (G.q.length) { G.spawnT -= dt; if (G.spawnT <= 0) { const ty = G.q.shift(); spawn(ty); G.spawnT = ty === 'fast' ? 0.5 : ty === 'boss' ? 2 : 0.8; } }
   for (const e of G.es) {
     if (e.hp <= 0) continue;
@@ -349,7 +375,7 @@ function renderResult() {
 $('#retryBtn').onclick = () => { if (G && G.over && !G.wait && G.resMsg) { sendResult(); renderResult(); } };
 $('#againBtn').onclick = () => { if (!G || G.wait) return; const n = G.win && (!EMBED || G.saveOk) ? G.n + 1 : G.n; G = null; lvSel = Math.min(T.MAX_LV, proto.cleared + 1, n); start(lvSel); };
 $('#menuBtn').onclick = () => { if (G && G.wait) return; G = null; SFX.stopBgm(); show('#menu'); renderMenu(); };
-function setPause(on) { if (!G || G.over) return; paused = on; if (on) SFX.stopBgm(); else { SFX.unlock(); bgmTry(); } SFX.setPaused(on); show(on ? '#pause' : null); if (!on) last = performance.now(); hud(); }
+function setPause(on) { if (!G || G.over) return; paused = on; clockRemainder=0; if (on) SFX.stopBgm(); else { SFX.unlock(); bgmTry(); } SFX.setPaused(on); show(on ? '#pause' : null); if (!on) last = performance.now(); hud(); }
 $('#pauseBtn').onclick = () => setPause(true);
 $('#resumeBtn').onclick = () => setPause(false);
 $('#sndBtn').onclick = () => { userMute = !userMute; SFX.unlock(); applyMute(); };
@@ -363,8 +389,10 @@ function toast(s) { const t = $('#toast'); t.textContent = s; t.classList.add('o
 function show(id) { for (const s of ['#menu', '#pause', '#result']) $(s).classList.toggle('hidden', s !== id); $('#hud').classList.toggle('hidden', id === '#menu'); }
 function hud() {
   if (!G) return;
+  $('#budgetInfo').textContent = G.endless ? '无尽：累计收入不限；持有上限400' : `累计收入 ${Math.ceil(G.energyEarned)}/${G.normalBudget} · 退款不恢复额度`;
   $('#lifeTxt').textContent = `❤ ${G.lives}`; $('#cashTxt').textContent = `建设点 ${Math.floor(G.cash)}/${ENERGY.cap}`; $('#waveTxt').textContent = G.endless?`无尽 ${G.wave-10}`:`波 ${G.wave}/${G.W}`;
-  $('#passiveStatus').textContent = `塔 ${G.tw.size}/${ENERGY.towers} · `+(G.interestSeconds<ENERGY.waveSeconds && (G.q.length||alive().length)?`+${ENERGY.baseRate+(G.cmd==='rocket'?ENERGY.rocketRate:0)}/秒`:'恢复暂停');
+  $('#passiveStatus').textContent = `塔 ${G.tw.size}/${G.endless?ENERGY.endlessTowers:"∞"} · `+(!G.endless && G.energyEarned>=G.normalBudget?'预算已用尽':G.interestSeconds<ENERGY.waveSeconds && (G.q.length||alive().length)?`+${ENERGY.baseRate+(G.cmd==='rocket'?ENERGY.rocketRate:0)}/秒`:'恢复暂停');
+  for(const id of ['#speedBtn','#pauseSpeedBtn']){const b=$(id);b.textContent=`速度 ×${G.speed}`;b.setAttribute('aria-label',`游戏速度 ${G.speed} 倍，点击切换`);b.setAttribute('aria-pressed',String(G.speed===2));}
   const skill=$('#skillBtn'),hasSkill=['otaku','pearl'].includes(G.cmd);skill.classList.toggle('hidden',!hasSkill);
   skill.disabled=paused||document.hidden||G.over||G.pendStart||G.cash<=0||G.skillCooldown>0||(!G.q.length&&!alive().length);
   skill.textContent=hasSkill?`${skillName()}\n${G.skillLeft>0?`${Math.ceil(G.skillLeft)}秒 · ${num((G.cmd==='otaku'?ENERGY.burstMax:ENERGY.frostMax)*energyRatio()*100)}%`:G.skillCooldown>0?`冷却 ${Math.ceil(G.skillCooldown)}秒`:!G.q.length&&!alive().length?'战斗开始可用':G.cash<=0?'需建设点':'可用'}`:'';
@@ -376,18 +404,18 @@ function hud() {
   $('#waveBtn').classList.toggle('hidden', canWave); $('#waveBtn').textContent = canWave ? `第 ${G.wave + 1} 波 · ${Math.max(1, Math.ceil(G.breakT))} 秒` : G.pendStart ? '登记中' : '进攻中';
   $('#countdown').classList.toggle('hidden', !canWave || paused || G.over);
   $('#countdown').textContent = `第 ${G.wave + 1} 波即将来临 · ${Math.max(1, Math.ceil(G.breakT))}`;
-  if (sel && sel.k === 'build' && sel.id) $('#buildConfirm').disabled = sel.x === null || isPath(sel.x,sel.y) || G.tw.has(sel.x+','+sel.y) || G.cash < T.TOWERS[sel.id].cost || G.tw.size>=ENERGY.towers || G.pendStart;
+  if (sel && sel.k === 'build' && sel.id) $('#buildConfirm').disabled = sel.x === null || isPath(sel.x,sel.y) || G.tw.has(sel.x+','+sel.y) || G.cash < T.TOWERS[sel.id].cost || G.tw.size>=towerLimit() || ceoBlocked(sel.id) || G.pendStart;
   if (sel && sel.k === 'tower') { const tw = G.tw.get(sel.x + ',' + sel.y); if (tw) $('#twUp').disabled = tw.lv >= MAX_TLV || G.cash < upCost(tw); }
 }
 function bar() {
   $('#barMain').classList.toggle('hidden', !!sel && sel.k === 'tower'); $('#barBuild').classList.toggle('hidden', !!sel && sel.k === 'tower'); $('#barTower').classList.toggle('hidden', !sel || sel.k !== 'tower');
   if (!G) return;
-  if (!sel || sel.k === 'build') { const choice = sel || {}, scroll = $('#twGrid').scrollLeft || 0; $('#twGrid').innerHTML = TIDS.map(id => `<button type="button" data-tw="${id}" class="${T.TOWERS[id].ceo === G.cmd ? 'syn' : ''} ${choice.id === id ? 'chosen' : ''}">${T.TOWERS[id].ceo === G.cmd ? '★' : ''}${T.TOWERS[id].name}<small>${T.TOWERS[id].cost}</small></button>`).join('');
+  if (!sel || sel.k === 'build') { const choice = sel || {}, scroll = $('#twGrid').scrollLeft || 0; $('#twGrid').innerHTML = TIDS.map(id => `<button type="button" data-tw="${id}" class="${T.TOWERS[id].ceo === G.cmd ? 'syn' : ''} ${choice.id === id ? 'chosen' : ''}">${T.TOWERS[id].ceo === G.cmd ? '★' : ''}${T.TOWERS[id].name}<small>${T.TOWERS[id].ceo?'CEO·每种1':'店铺·可重复'} ${T.TOWERS[id].cost}</small></button>`).join('');
     $('#twGrid').scrollLeft = scroll;
     $('#buildInfo').innerHTML = choice.id ? towerSummary(choice.id) : '';
     $('#buildInspector').classList.toggle('hidden', !choice.id);
-    $('#buildConfirm').disabled = !choice.id || choice.x === null || isPath(choice.x, choice.y) || G.tw.has(choice.x+','+choice.y) || G.cash < T.TOWERS[choice.id].cost || G.tw.size>=ENERGY.towers;
-    $('#buildConfirm').textContent = choice.id ? `建造 · ${T.TOWERS[choice.id].cost}` : '请选择塔';
+    $('#buildConfirm').disabled = !choice.id || choice.x === null || isPath(choice.x, choice.y) || G.tw.has(choice.x+','+choice.y) || G.cash < T.TOWERS[choice.id].cost || G.tw.size>=towerLimit() || ceoBlocked(choice.id);
+    $('#buildConfirm').textContent = choice.id ? (ceoBlocked(choice.id)?'此CEO已有1座':`建造 · ${T.TOWERS[choice.id].cost}`) : '请选择塔';
   }
   if (sel && sel.k === 'tower') {
     const tw = G.tw.get(sel.x + ',' + sel.y); if (!tw) { sel = null; return bar(); }
@@ -402,6 +430,7 @@ $('#buildConfirm').onclick = () => { if (sel && sel.id && sel.x !== null) build(
 $('#buildX').onclick = $('#cancelChoice').onclick = $('#twX').onclick = () => { sel = null; bar(); };
 $('#twUp').onclick = () => { if (sel) upTower(sel.x, sel.y); };
 $('#skillBtn').onclick = activateSkill;
+$('#speedBtn').onclick=$('#pauseSpeedBtn').onclick=()=>setSpeed(G?.speed===2?1:2);
 $('#twSell').onclick = () => { if (sel) sell(sel.x, sel.y); };
 
 function openTowerDetails() {
@@ -474,7 +503,7 @@ function draw() {
   // Placement ghost is visual only: the map/cash mutate only in build().
   if (sel?.k === 'build' && sel.id && sel.x !== null) {
     const p = TW[sel.id], x = px(sel.x), y = py(sel.y);
-    const blocked = isPath(sel.x,sel.y) || G.tw.has(sel.x+','+sel.y);
+    const blocked = isPath(sel.x,sel.y) || G.tw.has(sel.x+','+sel.y) || ceoBlocked(sel.id) || G.tw.size>=towerLimit();
     cx.save(); cx.globalAlpha = blocked ? .4 : .65;
     cx.fillStyle = p.col; cx.strokeStyle = blocked ? RED : INK; cx.lineWidth = 2;
     cx.setLineDash([3,2]); cx.beginPath();
@@ -518,14 +547,14 @@ cv.addEventListener('pointerdown', e => {
   bar();
 });
 function loop(now) {
-  const dt = Math.max(0, Math.min(0.05, (now - last) / 1000)); last = now;
-  if (G && !paused && !G.over) step(dt);
+  const dt = Math.max(0, (now - last) / 1000); last = now;
+  advanceClock(dt);
   draw(); hud(); positionBuildActions();
   raf = requestAnimationFrame(loop);
 }
-window.render_game_to_text = () => JSON.stringify({mode:!G?'menu':G.over?'result':paused?'paused':'playing',coordinates:'grid origin top-left, x right, y down',wave:G?.wave,countdown:G?.breakT,cash:G?.cash,lives:G?.lives,passiveCommander:G?.cmd,damageByTower:G?.damageByTower,energyCap:ENERGY.cap,towerLimit:ENERGY.towers,interestSeconds:G?.interestSeconds,skillLeft:G?.skillLeft,skillCooldown:G?.skillCooldown,selection:sel,towers:G?[...G.tw.values()]:[],enemies:G?.es});
-window.advanceTime = ms => { for (let left=ms;left>0;left-=1000/60) step(Math.min(left,1000/60)/1000); draw(); hud(); };
+window.render_game_to_text = () => JSON.stringify({mode:!G?'menu':G.over?'result':paused?'paused':'playing',coordinates:'grid origin top-left, x right, y down',wave:G?.wave,countdown:G?.breakT,speed:G?.speed,cash:G?.cash,lives:G?.lives,passiveCommander:G?.cmd,damageByTower:G?.damageByTower,energyCap:ENERGY.cap,energyEarned:G?.energyEarned,normalBudget:G?.endless?null:G?.normalBudget,towerLimit:G?.endless?ENERGY.endlessTowers:null,interestSeconds:G?.interestSeconds,skillLeft:G?.skillLeft,skillCooldown:G?.skillCooldown,selection:sel,towers:G?[...G.tw.values()]:[],enemies:G?.es});
+window.advanceTime = ms => { advanceClock(Math.max(0,ms)/1000); draw(); hud(); };
 resize(); renderMenu(); show('#menu'); raf = requestAnimationFrame(loop);
-window.__td = { EMBED, proto, protoStore, selectProto, P, ENERGY, continueEndless, end, spawn, activateSkill, burstMultiplier, frostMultiplier, gainEnergy, hit, towerFire, towerRange, start, step, build, upTower, sell, nextWave, buyUp, onState, setPause, renderMenu, isPath, waveList, PLEN, TW, CMD,
+window.__td = { EMBED, proto, protoStore, selectProto, setSpeed, advanceClock, P, ENERGY, NORMAL_BUDGET, towerLimit, ceoBlocked, continueEndless, end, spawn, activateSkill, burstMultiplier, frostMultiplier, gainEnergy, hit, towerFire, towerRange, start, step, build, upTower, sell, nextWave, buyUp, onState, setPause, renderMenu, isPath, waveList, PLEN, TW, CMD,
   get protoPending(){return protoPending;}, get protoTask(){return protoTask;}, get G() { return G; }, get geo() { return { S, OX, OY, COLS, ROWS }; }, get lastSent() { return lastSent; }, get pend() { return pend; }, get paused() { return paused; }, get cmdSel() { return cmdSel; }, set cmdSel(v) { if (T.CEO_IDS.includes(v)) { cmdSel = v; renderMenu(); } } };
 })();

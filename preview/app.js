@@ -752,8 +752,72 @@ function earn(v) { const r = E.addCoins(state, v); if (r.capped) capNote(); retu
 function capNote() { if (capWarned) return; capWarned = true; toast('金币到上限 ' + fmt(CFG.COIN_CAP) + '：先花掉一些，收益才会继续进账', 3200); }
 function popWord(w) { sfxWord.textContent = w; sfxWord.classList.remove('pop'); void sfxWord.offsetWidth; sfxWord.classList.add('pop'); }
 function bumpCoins() { coinsEl.classList.remove('bump'); void coinsEl.offsetWidth; coinsEl.classList.add('bump'); }
-let toastTimer = 0;
-function toast(msg, ms = 1900, placement = '') { toastEl.classList.toggle('toast-header', placement === 'header'); toastEl.setAttribute('role','status'); toastEl.textContent = msg; toastEl.classList.remove('hidden'); toastEl.style.animation = 'none'; void toastEl.offsetWidth; toastEl.style.animation = ''; clearTimeout(toastTimer); toastTimer = setTimeout(() => toastEl.classList.add('hidden'), ms); }
+let toastTimer = 0, toastGeneration = 0, toastActive = null, toastQueue = [], toastSuspended = false;
+// Error > operation feedback (default) > explicitly marked ambient events.
+// Pending feedback: newest 3, FIFO, 8s TTL. Ambient: latest 1, 3s TTL.
+// Expiry uses both clocks so suspension or a wall-clock adjustment cannot replay old events.
+const TOAST_ERROR = /保存失败|存档异常|数据异常|没有生效/;
+function toastExpired(item) { return performance.now() >= item.until || Date.now() >= item.wallUntil; }
+function toastStop() {
+  clearTimeout(toastTimer); toastTimer = 0; toastGeneration++;
+  toastActive = null; toastEl.classList.add('hidden');
+}
+function toastPrune() { toastQueue = toastQueue.filter(item => !toastExpired(item)); }
+function toastEnqueue(item) {
+  toastQueue = toastQueue.filter(old => !(old.priority === item.priority && (item.priority === 0 || old.msg === item.msg)));
+  const peers = toastQueue.filter(old => old.priority === item.priority);
+  if (peers.length >= 3) toastQueue.splice(toastQueue.indexOf(peers[0]), 1);
+  toastQueue.push(item);
+}
+function toastShow(item) {
+  toastStop();
+  toastActive = { ...item, until:performance.now() + item.ms, wallUntil:Date.now() + item.ms };
+  toastEl.classList.toggle('toast-header', item.placement === 'header');
+  toastEl.setAttribute('role', item.priority === 2 ? 'alert' : 'status');
+  toastEl.textContent = item.msg; toastEl.classList.remove('hidden');
+  toastEl.style.animation = 'none'; void toastEl.offsetWidth; toastEl.style.animation = '';
+  const generation = toastGeneration;
+  toastTimer = setTimeout(() => {
+    if (generation !== toastGeneration) return;
+    toastStop(); toastDrain();
+  }, item.ms);
+}
+function toastDrain() {
+  toastPrune();
+  if (document.hidden || toastActive || !toastQueue.length) return;
+  const index = toastQueue.findIndex(item => item.priority === 1);
+  const item = toastQueue.splice(index < 0 ? 0 : index, 1)[0];
+  toastShow(item);
+}
+function toast(msg, ms = 1900, placement = '', kind = 'feedback') {
+  const priority = kind === 'error' || TOAST_ERROR.test(msg) ? 2 : kind === 'ambient' ? 0 : 1;
+  toastPrune();
+  // Synchronize expired active state before handling fresh input, even if its timer is late.
+  if (toastActive && toastExpired(toastActive)) toastStop();
+  if (document.hidden && priority < 2) return;
+  const ttl = priority === 0 ? 3000 : 8000;
+  const item = { msg, ms, placement, priority, until:performance.now() + ttl, wallUntil:Date.now() + ttl };
+  if (toastActive && toastActive.priority > priority) { toastEnqueue(item); return; }
+  // A new operation supersedes older pending feedback; ambient events never evict it.
+  if (priority === 1) toastQueue = toastQueue.filter(old => old.priority !== 1);
+  if (priority === 0 && toastQueue.some(old => old.priority === 1)) { toastEnqueue(item); toastDrain(); return; }
+  if (priority === 0) toastQueue = toastQueue.filter(old => old.priority !== 0);
+  toastShow(item);
+}
+function toastSuspend() {
+  toastSuspended = true; toastQueue = [];
+  if (toastActive && toastActive.priority < 2) toastStop();
+}
+function toastResume(event) {
+  // Initial pageshow is not a resume: boot may already have queued important feedback.
+  if (!toastSuspended && !(event && event.persisted)) return;
+  toastSuspended = false; toastQueue = [];
+  if (toastActive && toastExpired(toastActive)) toastStop();
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden) toastSuspend(); else toastResume(); });
+window.addEventListener('pagehide', toastSuspend);
+window.addEventListener('pageshow', toastResume);
+
 function shakeEl(el) { if (!el) return; el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); }
 function sayLine(who, txt, sec = 2.6) { bubble = { who, txt, until:clock + sec }; }
 
@@ -982,7 +1046,7 @@ function startOrder(shop) {
   if (state.cur === shop && tab === 'shop') {
     sayLine('e', meta.line, 2.8);
     addText(meta.name, W / 2, H * 0.38, { size:18 * U, color:RED, life:1.4 });
-  } else toast(E.SHOPS[shop].short + '来了「' + meta.name + '」');
+  } else toast(E.SHOPS[shop].short + '来了「' + meta.name + '」', 1900, '', 'ambient');
 }
 
 function finishOrder() {
@@ -1035,7 +1099,7 @@ function updateBig() {
       special = { shop, t0:clock, meta, x:0, y:0, r:48 * U };
       sfx('big'); popWord('特殊客人！');
       if (state.cur === shop) addText(meta.name, W / 2, H * 0.36, { size:16 * U, color:'#ff4f9a', life:1.5 });
-      else toast(E.SHOPS[shop].short + '来了特殊客人「' + meta.name + '」');
+      else toast(E.SHOPS[shop].short + '来了特殊客人「' + meta.name + '」', 1900, '', 'ambient');
     }
     scheduleSpecial();
   }
@@ -1081,7 +1145,7 @@ function showSpecialComic(meta, paid) {
 const superNext = { tea:null, book:null, tech:null };
 function superAnnounce(i, word, msg, amt) {
   if (state.cur === i && tab !== 'col') { popWord(word); focusT = 0.5; shake = 0.3; addText(msg, W / 2, H * 0.42, { size:16 * U, color:'#ff4f9a', life:1.8, rot:-0.04 }); if (amt) burstCoins(W * 0.585, H * 0.7, 14); }
-  else toast(msg, 2400);
+  else toast(msg, 2400, '', 'ambient');
   sfx('mile');
 }
 function updateSupers() {
@@ -1995,7 +2059,7 @@ function petFrame(dt) {
     for (const b of document.querySelectorAll('.pet-bar[data-uid="'+q+'"] button')) b.disabled = p.room !== homeWho || p.compatibility || homeMode === 'decor' || st === 'waiting' || st === 'unsupported';
     const hint = document.querySelector('[data-pet-wait="'+q+'"]');
     if (hint) { hint.hidden = st !== 'waiting' && st !== 'unsupported'; hint.textContent = st === 'unsupported' ? PET_UNSUP : PET_WAIT; }
-    if (a.was === 'waiting' && st === 'live' && show) toast('宠物跑出来了：屋里有空地了');
+    if (a.was === 'waiting' && st === 'live' && show) toast('宠物跑出来了：屋里有空地了', 1900, '', 'ambient');
     if (st) a.was = st;
   }
 }
@@ -2406,7 +2470,7 @@ function boot() {
   scheduleBig(); scheduleSpecial(); renderTabs(); setTab(TEST_MODE ? 'home' : 'shop');
   if (TEST_MODE) { const b = document.createElement('div'); b.id = 'testBadge'; b.textContent = '测试房间 · ' + (TEST_LV === 3 ? '豪宅' : '公寓') + ' · 不存档，刷新重置'; document.body.appendChild(b);
     const place = () => { const n = $('#bottomNav'); if (n) b.style.bottom = Math.max(8, innerHeight - n.getBoundingClientRect().top + 6) + 'px'; }; place(); addEventListener('resize', place); }
-  if (loadInfo.source === 'bak') toast(loadInfo.mainMissing ? '主存档不见了，已从完整备份恢复' : '存档里的金币 / 等级数据坏了（' + loadInfo.bad.slice(0, 3).join('、') + '），已从完整备份恢复', 3600);
+  if (loadInfo.source === 'bak') toast(loadInfo.mainMissing ? '主存档不见了，已从完整备份恢复' : '存档里的金币 / 等级数据坏了（' + loadInfo.bad.slice(0, 3).join('、') + '），已从完整备份恢复', 3600, '', 'error');
   if (saveBlocked && loadInfo.unsafe) { const sb = document.createElement('div'); sb.id = 'saveBadge'; sb.textContent = '存档余额异常（超出安全整数）：交易已暂停、不保存，原存档未覆盖'; sb.style.cssText = 'position:fixed;left:8px;right:8px;top:calc(env(safe-area-inset-top) + 6px);z-index:60;padding:6px 10px;border:2px solid #141414;border-radius:10px;background:#ffd6d6;font-size:12px;font-weight:700;text-align:center;pointer-events:none';
     document.body.appendChild(sb); queueModal(() => { openModal(`<div class="mbubble">存档余额异常</div><div class="mtitle">余额超出能精确计算的范围</div><div class="mnote">存档里的余额是 <b>${String(loadInfo.rawCoins)}</b>，超过了 ${fmt(E.SAFE_COINS)}（安全整数上限），加减会算不准，不能当正常钱包用。为了不出错：<b>所有买卖和收入都已暂停，这次不会自动保存</b>，原存档原样保留、没有被覆盖。${loadInfo.bakOk ? `备份里有一份正常存档（余额 ${fmt(loadInfo.bakCoins)}），没有自动替换，请联系熊二 / 熊大确认后再恢复。` : '没有找到可用的备份，请联系熊二 / 熊大。'}</div><div class="mbtns"><button class="buy" id="mOk">知道了</button></div>`, false); $('#mOk').addEventListener('click', closeModal, { once:true }); }); }
   else if (saveBlocked) { const sb = document.createElement('div'); sb.id = 'saveBadge'; sb.textContent = (loadInfo.mainMissing ? '主存档不见了、备份读不出来' : '存档损坏、没有可用备份') + '：只读模式，买卖暂停、不保存，原存档未覆盖'; sb.style.cssText = 'position:fixed;left:8px;right:8px;top:calc(env(safe-area-inset-top) + 6px);z-index:60;padding:6px 10px;border:2px solid #141414;border-radius:10px;background:#ffd6d6;font-size:12px;font-weight:700;text-align:center;pointer-events:none';

@@ -62,9 +62,10 @@ with sync_playwright() as p:
         d = S(pg, """(()=>{const G=__zb.G; G.zs.length=0; G.p.inv=0; G.p.hp=5; G.zs.push({type:'tank',x:G.p.x,y:G.p.y,r:21,hp:1e9,maxHp:1e9,sp:0,dmg:16,col:'#7f8fb8',flash:0,kx:0,ky:0,wob:0}); __zb.step(0.016);
           return {over:G.over, win:G.win, hp:G.p.hp, res:!document.getElementById('result').classList.contains('hidden'), txt:document.getElementById('resTitle').textContent};})()""")
         check(d['over'] and not d['win'] and d['hp'] == 0 and d['res'], f'{dn} 血量归零：结束、显示失败结算 {d}')
-        RUN = """((n)=>{const G=__zb.G; let boss=false, bad=false, maxZ=0, t0=performance.now();
+        RUN = """(async (n)=>{const G=__zb.G; let boss=false, bad=false, maxZ=0, t0=performance.now();
           for(let i=0;i<n*60 && !G.over;i++){ G.p.hp=G.p.maxHp; if(G.ult>=100) __zb.castUlt(); __zb.step(1/60); maxZ=Math.max(maxZ,G.zs.filter(z=>z.type!=='boss').length); if(G.zs.some(z=>z.type==='boss')) boss=true;
             if(!isFinite(G.p.x)||!isFinite(G.p.y)||G.zs.some(z=>!isFinite(z.x)||!isFinite(z.y)||!isFinite(z.hp))) {bad=true;break;} }
+          for(let k=0;k<150&&G.over&&G.wait;k++) await new Promise(r=>setTimeout(r,20));
           return {mode:G.mode, n:G.n, over:G.over, win:G.win, t:G.t, kills:G.kills, boss, bad, maxZ, cleared:__zb.proto.cleared, again:document.getElementById('againBtn').textContent, title:document.getElementById('resTitle').textContent};})"""
         # 关卡：第 1 关 60 秒判胜，解锁第 2 关，「下一关」进入第 2 关
         pg.locator('#againBtn').tap(); pg.wait_for_timeout(100); pg.locator('#pauseBtn').tap()
@@ -88,7 +89,7 @@ with sync_playwright() as p:
         check(en['mode'] == 'endless' and not en['over'] and en['t'] > 399 and not en['bad'] and en2['nb'] == 420 and en2['clock'] == '6:40' and en2['lvl'] == '无尽 难度 63', f'{dn} 无尽 400 秒：不结束、Boss 每 60 秒、计时正数、难度 63 {en} {en2}')
         pg.locator('#pauseBtn').tap(); pg.locator('#quitBtn').tap(); pg.wait_for_timeout(100)
         q = S(pg, "({title:document.getElementById('resTitle').textContent, best:JSON.parse(localStorage.getItem(__zb.PROTO_KEY)).endBest})")
-        check(q['title'] == '无尽新纪录！' and q['best']['t'] > 399, f'{dn} 无尽手动退出：结算并保存最好成绩 {q}')
+        check(q['title'].startswith('无尽新纪录！') and q['best']['t'] > 399, f'{dn} 无尽手动退出：结算并保存最好成绩 {q}')
         # 性能：120 只同屏时单步模拟耗时
         pg.locator('#againBtn').tap(); pg.wait_for_timeout(100); pg.locator('#pauseBtn').tap()
         pf = S(pg, """(()=>{const G=__zb.G; G.t=120; for(let i=0;i<120;i++) G.zs.push({type:'walker',x:Math.random()*innerWidth,y:Math.random()*innerHeight,r:13,hp:1e9,maxHp:1e9,sp:30,dmg:0,col:'#8fbf7a',flash:0,kx:0,ky:0,wob:0});
@@ -97,8 +98,8 @@ with sync_playwright() as p:
         S(pg, "__zb.setPause(false)"); pg.wait_for_timeout(300); pg.screenshot(path=f'{OUT}/{tag}_crowd.png')
         # 存档隔离 + 坏档
         iso = S(pg, "({a:localStorage.getItem('tangzhe-preview-save'), b:localStorage.getItem('tangzhe-save'), keys:Object.keys(localStorage).sort()})")
-        check(iso['a'] == 'SENTINEL' and iso['b'] == 'SENTINEL2' and iso['keys'] == sorted(['tangzhe-save', 'tangzhe-preview-save', 'tangzhe-zombie-proto']), f'{dn} 存档隔离：经营正式 / 预览存档原样，只新增原型键 {iso}')
-        pg.evaluate("localStorage.setItem('tangzhe-zombie-proto', JSON.stringify({coins:'abc', lv:{atk:-3, rate:1e9, hp:NaN, ult:'x'}, best:Infinity, cleared:1e9, endBest:{t:'x', kills:-5}}))"); pg.reload(); pg.wait_for_timeout(400)
+        check(iso['a'] == 'SENTINEL' and iso['b'] == 'SENTINEL2' and iso['keys'] == sorted(['tangzhe-save', 'tangzhe-preview-save', 'tangzhe-zombie-proto', 'tangzhe-zombie-proto-top']), f'{dn} 存档隔离：经营正式 / 预览存档原样，只新增原型键 {iso}')
+        pg.evaluate("localStorage.setItem('tangzhe-zombie-proto', JSON.stringify({coins:'abc', lv:{atk:-3, rate:1e9, hp:NaN, ult:'x'}, best:Infinity, cleared:1e9, endBest:{t:'x', kills:-5}})); localStorage.setItem('tangzhe-zombie-proto-top', JSON.stringify([{t:'x', id:'<b>'}, 5, null]))"); pg.reload(); pg.wait_for_timeout(400)
         bad = S(pg, "({c:__zb.proto.coins, lv:__zb.proto.lv, best:__zb.proto.best, cl:__zb.proto.cleared, eb:__zb.proto.endBest, w:document.getElementById('walletTxt').textContent})")
         check(bad['c'] == 5e10 and bad['lv'] == {'atk': 0, 'rate': 30, 'hp': 0, 'ult': 0} and bad['best'] == 0 and bad['cl'] == 50 and bad['eb'] == {'t': 0, 'kills': 0}, f'{dn} 坏档：非法字段回默认 / 截到范围，不报错 {bad}')
         # 上场角色：?ceo= 模拟烧烤店在任 CEO；技能没做的显示即将开放，没人在任提示去派人，两种都开不了局

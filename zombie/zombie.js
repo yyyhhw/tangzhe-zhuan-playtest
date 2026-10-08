@@ -22,16 +22,57 @@ const TRAIN = [
 const MAX_TRAIN = ZB.MAX_TRAIN;
 const price = (t, lv) => ZB.price(t.id, lv);
 function fireInterval(lv) { return Math.max(0.2, 0.55 * 0.95 ** lv); }
+// 原型页无尽榜单单独存 TOP_KEY：旧版页面只认 PROTO_KEY，存档时清不掉榜单。
+// 每次保存先读回两份存档、和内存合并（训练 / 进度取大、榜单按局并集）再写，多开标签页不会互相覆盖成绩。
+const TOP_KEY = 'tangzhe-zombie-proto-top';
+function readLocal() {
+  let raw = null, top = null;
+  try { raw = JSON.parse(localStorage.getItem(PROTO_KEY) || 'null'); } catch (e) { raw = null; }
+  try { top = JSON.parse(localStorage.getItem(TOP_KEY) || 'null'); } catch (e) { top = null; }
+  const r = raw && typeof raw === 'object' ? raw : {};
+  return { raw, z: ZB.norm(Object.assign({}, r, { endTop: Array.isArray(top) ? top : r.endTop })) };
+}
+function mergeScores(a, b) {
+  const lv = {}; ZB.IDS.forEach(k => { lv[k] = Math.max(a.lv[k] || 0, b.lv[k] || 0); });
+  const eb = a.endBest.t >= b.endBest.t ? a.endBest : b.endBest;
+  return ZB.norm({ lv, cleared: Math.max(a.cleared, b.cleared), best: Math.max(a.best, b.best), endBest: { t: eb.t, kills: eb.kills }, endTop: (a.endTop || []).concat(b.endTop || []) });
+}
 function loadProto() {
   if (EMBED) return Object.assign({ coins: 0, ready: false, blocked: false, ceo: null }, ZB.norm(null));
-  let raw = null; try { raw = JSON.parse(localStorage.getItem(PROTO_KEY) || 'null'); } catch (e) { raw = null; }
+  const { raw, z } = readLocal();
   const q = new URLSearchParams(location.search).get('ceo');
-  const p = Object.assign({ coins: 5e10, ready: true, blocked: false, ceo: ZB.heroOf(q === null ? undefined : q) }, ZB.norm(raw));
+  const p = Object.assign({ coins: 5e10, ready: true, blocked: false, ceo: ZB.heroOf(q === null ? undefined : q) }, z);
   if (raw && typeof raw === 'object') p.coins = Math.max(0, Math.min(1e15, fin(raw.coins, 5e10)));
   return p;
 }
 const proto = loadProto();
-const saveProto = () => { if (EMBED) return; try { localStorage.setItem(PROTO_KEY, JSON.stringify(proto)); } catch (e) {} };
+// apply：本局结果，作用在合并后的副本上；两份都写成功才并回内存，失败返回 false、内存不变，可原样重试
+function writeLocal(apply) {
+  const next = mergeScores(proto, readLocal().z);
+  if (apply) apply(next);
+  const keep = Object.assign({}, proto, next); delete keep.endTop;
+  try { localStorage.setItem(TOP_KEY, JSON.stringify(next.endTop)); localStorage.setItem(PROTO_KEY, JSON.stringify(keep)); } catch (e) { return false; }
+  Object.assign(proto, next); return true;
+}
+// 读—合并—写整段放进跨标签页锁（Web Locks），多页同时结算按顺序写；等锁超过 3 秒算保存失败（可重试）。
+// 浏览器没有 Web Locks 时无法保证不互相覆盖：什么都不写，结算页提示无法安全保存，本局结果留着可重试。
+const LOCK = 'tangzhe-zombie-proto-save';
+const hasLock = () => !!(navigator.locks && navigator.locks.request);
+function saveProto(apply) {
+  if (EMBED) return Promise.resolve(true);
+  if (!hasLock()) return Promise.resolve(false);
+  const ac = typeof AbortController === 'function' ? new AbortController() : null, tm = ac && setTimeout(() => ac.abort(), 3000);
+  let p; try { p = navigator.locks.request(LOCK, ac ? { signal: ac.signal } : {}, () => writeLocal(apply)); } catch (e) { p = Promise.reject(e); }
+  return p.then(ok => ok === true, () => false).finally(() => clearTimeout(tm));
+}
+const SAVE_FAIL = '存档失败：这局成绩没存上，可以点「重试保存」';
+const NO_LOCK = '当前浏览器无法安全保存：这局成绩没存上，先留着，可以点「重试保存」';
+if (!EMBED) window.addEventListener('storage', e => {
+  if (e.key !== null && e.key !== PROTO_KEY && e.key !== TOP_KEY) return;
+  Object.assign(proto, mergeScores(proto, readLocal().z));
+  if (!$('#board').classList.contains('hidden')) renderBoard();
+  if (!$('#menu').classList.contains('hidden')) renderTrain();
+});
 let pend = false, firstSync = true;
 let port = null;
 let lastSent = null;
@@ -585,6 +626,7 @@ function renderHero() {
 }
 function renderTrain() {
   renderLv(); renderHero();
+  $('#protoSaveNote').classList.toggle('hidden', EMBED || hasLock());
   $('#walletTxt').textContent = proto.ready ? fmt(Wallet.balance()) : '读取中…';
   $('#train').innerHTML = TRAIN.map(t => {
     const lv = proto.lv[t.id], max = lv >= MAX_TRAIN, c = price(t, lv);
@@ -600,7 +642,7 @@ $('#train').addEventListener('click', e => {
   else if (Wallet.spend(price(t, lv))) { proto.lv[t.id] = lv + 1; saveProto(); }
   renderTrain();
 });
-function show(id) { for (const s of ['#menu', '#pause', '#result']) $(s).classList.toggle('hidden', s !== id); $('#hud').classList.toggle('hidden', id === '#menu'); }
+function show(id) { for (const s of ['#menu', '#pause', '#result', '#board']) $(s).classList.toggle('hidden', s !== id); $('#hud').classList.toggle('hidden', id === '#menu'); }
 function newRunId() {
   try { if (crypto && crypto.getRandomValues) return Array.from(crypto.getRandomValues(new Uint32Array(3))).map(x => x.toString(36).padStart(7, '0')).join(''); } catch (e) {}
   return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2);
@@ -635,27 +677,43 @@ function end(win) {
     // 经营页是唯一写档方：等它回执（ack:'result'）后再按权威进度显示通关 / 解锁，存档失败不报喜；带上开局 runId 供父页对照
     G.wait = true; G.resMsg = { zb: 'result', mode: G.mode, n: G.n, win, t: G.t, kills: G.kills, ceo: G.ceo, runId: G.runId }; host(G.resMsg);
   } else {
-    proto.best = Math.max(proto.best, G.kills);
-    if (G.mode === 'endless') { if (G.t > proto.endBest.t) proto.endBest = { t: G.t, kills: G.kills }; }
-    else if (win) proto.cleared = Math.max(proto.cleared, G.n);
-    saveProto();
+    const g = G, res = { mode: 'endless', t: g.t, kills: g.kills, runId: g.runId };
+    g.resApply = g.mode === 'endless' ? z => ZB.applyResult(z, res) : z => { z.best = Math.max(z.best, g.kills); if (win) z.cleared = Math.max(z.cleared, g.n); };
+    g.wait = true; settleLocal(g);
   }
   renderResult(); show('#result');
+}
+// 无尽 TOP10：本局那行高亮；没上榜时榜单下面单列本局分数
+const runTxt = e => `坚持 ${Math.floor(e.t)} 秒 · 击倒 ${e.kills}`;
+function boardHtml(runId) {
+  const top = proto.endTop || [];
+  if (!top.length) return '<p class="note">还没有无尽记录</p>';
+  return '<ol class="board">' + top.map((e, k) => `<li class="${e.id === runId ? 'me' : ''}"><b>第 ${k + 1} 名</b><span>${runTxt(e)}</span>${e.id === runId ? '<em>本局</em>' : ''}</li>`).join('') + '</ol>';
+}
+function renderBoard() { $('#boardList').innerHTML = boardHtml(null); }
+function settleLocal(g) {
+  saveProto(g.resApply).then(ok => { if (G !== g) return; g.wait = false; g.why = ok ? '' : hasLock() ? SAVE_FAIL : NO_LOCK; renderResult(); });
 }
 function renderResult() {
   if (!G || !G.over) return;
   let title, again = '再来一局';
   const saved = G.mode === 'endless' ? proto.endBest.t >= G.t - 1e-6 : proto.cleared >= G.n;
   if (G.wait) title = '结算中…';
-  else if (G.mode === 'endless') title = G.why ? '无尽结算（没存上）' : saved && G.t > G.prevBest ? '无尽新纪录！' : '无尽结算';
+  else if (G.mode === 'endless') { const rk = ZB.rankOf(proto, G.runId); title = G.why ? '无尽结算（没存上）' : rk === 1 ? '无尽新纪录！第 1 名' : rk ? `无尽结算 · 第 ${rk} 名` : '无尽结算 · 未上榜'; }
   else if (G.win && saved) { title = G.n >= MAX_LV ? `第 ${G.n} 关通关！无尽模式开放` : `第 ${G.n} 关通关！`; again = G.n >= MAX_LV ? '进入无尽' : '下一关'; }
   else if (G.win) { title = `第 ${G.n} 关没存上`; again = '再打一次'; }
   else title = `第 ${G.n} 关失败…`;
   $('#resTitle').textContent = title; $('#againBtn').textContent = again; $('#againBtn').disabled = !!G.wait;
   $('#resNote').textContent = G.wait ? '正在存档…' : G.why;
-  $('#retryBtn').classList.toggle('hidden', !(EMBED && !G.wait && G.resMsg && /^存档失败/.test(G.why)));
-  $('#resStats').textContent = G.mode === 'endless' ? `坚持 ${Math.floor(G.t)} 秒 · 击倒 ${G.kills} · 最好 ${Math.floor(proto.endBest.t)} 秒`
+  $('#retryBtn').classList.toggle('hidden', !(!G.wait && (EMBED ? G.resMsg : G.resApply) && /^(存档失败|当前浏览器无法安全保存)/.test(G.why)));
+  $('#resStats').textContent = G.mode === 'endless' ? `本局${runTxt(G)} · 最好 ${Math.floor(proto.endBest.t)} 秒`
     : `坚持 ${Math.floor(G.t)} / ${G.dur} 秒 · 击倒 ${G.kills}`;
+  const rb = $('#resBoard'), showBoard = G.mode === 'endless' && !G.wait;
+  rb.classList.toggle('hidden', !showBoard);
+  if (showBoard) {
+    const rk = ZB.rankOf(proto, G.runId);
+    rb.innerHTML = '<h3>无尽排行榜 TOP10</h3>' + boardHtml(G.runId) + (rk ? '' : `<p class="board-me"><b>本局</b><span>${runTxt(G)}</span><em>${G.why ? '没存上' : '未上榜'}</em></p>`);
+  }
 }
 function setPause(on) { if (!G || G.over) return; paused = on; if (on) SFX.stopBgm(); else bgmTry(); joy.on = false; show(on ? '#pause' : null); if (!on) last = performance.now(); }
 function loop(now) {
@@ -666,6 +724,8 @@ function loop(now) {
 }
 $('#startBtn').addEventListener('click', () => start('level', selLv));
 $('#endlessBtn').addEventListener('click', () => start('endless'));
+$('#boardBtn').addEventListener('click', () => { renderBoard(); show('#board'); });
+$('#boardBack').addEventListener('click', () => { renderTrain(); show('#menu'); draw(); });
 $('#againBtn').addEventListener('click', () => {
   if (G && G.wait) return;
   if (!canPlay()) { G = null; renderTrain(); show('#menu'); draw(); return; }
@@ -682,7 +742,10 @@ $('#sndBtn').addEventListener('click', () => { userMute = !userMute; applyMute()
 for (const ev of ['pointerdown', 'touchend', 'click']) document.addEventListener(ev, () => SFX.unlock(), true);
 $('#resumeBtn').addEventListener('click', () => setPause(false));
 // 存档失败时用同一份结算消息（同 runId）重试，父页按权威进度回执后结算页刷新
-$('#retryBtn').addEventListener('click', () => { if (!G || !G.over || G.wait || !G.resMsg) return; G.wait = true; G.why = ''; renderResult(); host(G.resMsg); });
+$('#retryBtn').addEventListener('click', () => {
+  if (!G || !G.over || G.wait) return;
+  if (!EMBED) { if (G.resApply) { G.wait = true; G.why = ''; renderResult(); settleLocal(G); } return; }
+  if (!G.resMsg) return; G.wait = true; G.why = ''; renderResult(); host(G.resMsg); });
 $('#quitBtn').addEventListener('click', () => { paused = false; end(false); });
 $('#ultBtn').addEventListener('click', () => { castUlt(); hud(); });
 document.addEventListener('visibilitychange', () => { if (document.hidden) setPause(true); });
@@ -694,5 +757,5 @@ if (EMBED) {
 selLv = Math.min(MAX_LV, proto.cleared + 1);
 resize(); renderTrain(); draw();
 // 测试钩子：只读状态 + 固定步长推进
-window.__zb = { EMBED, get ceo() { return proto.ceo; }, renderResult, send: host, onState, canPlay, get lastSent() { return lastSent; }, get pend() { return pend; }, get G() { return G; }, proto, Wallet, step, castUlt, start, setPause, joy, PROTO_KEY, price, TRAIN, levelDur, renderTrain, saveProto, MAX_LV };
+window.__zb = { EMBED, get ceo() { return proto.ceo; }, renderResult, send: host, onState, canPlay, get lastSent() { return lastSent; }, get pend() { return pend; }, get G() { return G; }, proto, Wallet, step, renderBoard, castUlt, start, setPause, joy, PROTO_KEY, TOP_KEY, LOCK, hasLock, price, TRAIN, levelDur, renderTrain, saveProto, MAX_LV };
 })();

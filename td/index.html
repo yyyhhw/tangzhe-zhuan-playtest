@@ -9,7 +9,7 @@
 <meta name="format-detection" content="telephone=no">
 <title>科技公司塔防</title>
 <link rel="icon" href="../icon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="td.css?v=15-td-balance1">
+<link rel="stylesheet" href="td.css?v=15c">
 </head>
 <body>
 <canvas id="cv"></canvas>
@@ -19,6 +19,7 @@
     <div class="pill vitals-pill"><span id="lifeTxt">❤ 20</span><span id="waveTxt">波 0/10</span></div>
     <div class="pill" id="cashTxt">建设点 120/400</div>
     <button id="skillBtn" class="skill-btn hidden" type="button">技能</button>
+    <button class="speed-btn" id="speedBtn" type="button" aria-pressed="false">速度 ×1</button>
     <button class="icon-btn" id="pauseBtn" type="button" aria-label="暂停">II</button>
   </div>
   <div class="status-strip"><span id="countdown" class="countdown hidden" role="status"></span><span id="waveBtn" class="combat-status" role="status">准备中</span><span id="passiveStatus" class="passive-status" role="status">统帅被动</span></div>
@@ -65,8 +66,9 @@
 
 <section id="pause" class="screen dim hidden">
   <div class="card center">
-    <h2>暂停中</h2><p>波次倒计时、敌人与建设点均冻结。<br>切到后台会暂停，返回后点继续。</p>
+    <h2>暂停中</h2><p class="note" id="budgetInfo"></p><p>波次倒计时、敌人与建设点均冻结。<br>切到后台会暂停，返回后点继续。</p>
     <button class="buy big" id="resumeBtn" type="button">继续</button>
+    <button class="buy" id="pauseSpeedBtn" type="button" aria-pressed="false">速度 ×1</button>
     <button class="buy" id="sndBtn" type="button">声音：开</button>
     <button class="buy" id="quitBtn" type="button">退出本局</button>
   </div>
@@ -85,9 +87,9 @@
   </div>
 </section>
 
-<script src="tdcore.js?v=15-td-balance1"></script>
-<script src="tdsfx.js?v=15-td-balance1"></script>
-<script src="tdproto.js?v=15-td-balance1"></script>
-<script src="td.js?v=15-td-balance1"></script>
+<script src="tdcore.js?v=15c"></script>
+<script src="tdsfx.js?v=15c"></script>
+<script src="tdproto.js?v=15c"></script>
+<script src="td.js?v=15c"></script>
 </body>
 </html>
