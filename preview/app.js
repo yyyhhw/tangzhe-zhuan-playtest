@@ -745,7 +745,7 @@ function burstCoins(x, y, n) { for (let k = 0; k < n; k++) coinsP.push({ x, y, v
 /* ================= 游戏逻辑 ================= */
 let clock = 0; // 秒（performance）
 const coinsEl = $('#coins'), cpsEl = $('#cps'), tabBody = $('#tabBody'), toastEl = $('#toast'), sfxWord = $('#sfxWord');
-let tab = 'shop', buyAmt = 1, dirty = true;
+let tab = 'shop', buyAmt = 1, dirty = true, renderedColHtml = null;
 // 12d：所有入账走 E.addCoins（坏值拒绝、到上限停住、旧档超上限不再增长）；返回实际到账
 let capWarned = false;
 function earn(v) { const r = E.addCoins(state, v); if (r.capped) capNote(); return r.ok ? r.added : 0; }
@@ -1358,7 +1358,17 @@ function renderCol() {
 function renderTab() {
   if (tab === 'home' && homeDrag) return; // 家宅拖动中不重画（dirty 留着，松手后再画）
   const html = tab === 'shop' ? renderShop() : tab === 'ceo' ? renderCeo() : tab === 'gacha' ? renderGacha() : tab === 'home' ? renderHome() : renderCol();
-  tabBody.innerHTML = html; dirty = false; updateCompactHead(); refreshDynamic(true); // 顶部「谁在管哪家店」跟着一起刷新（调任/交换/新 CEO 后两处同步）
+  // Resource readiness may mark the page dirty without changing the collection.
+  // Keep its existing nodes (including focus and decoded images) in that case.
+  if (tab !== 'col' || renderedColHtml !== html) {
+    const panel = $('#panel'), scroll = tab === 'col' ? {top:panel.scrollTop, x:window.scrollX, y:window.scrollY} : null;
+    const focused = tab === 'col' && tabBody.contains(document.activeElement) ? document.activeElement.closest('.story-open')?.dataset.arg : null;
+    tabBody.innerHTML = html;
+    if (focused) tabBody.querySelector(`.story-open[data-arg="${focused}"]`)?.focus({preventScroll:true});
+    if (scroll) { panel.scrollTop = scroll.top; window.scrollTo(scroll.x, scroll.y); }
+  }
+  renderedColHtml = tab === 'col' ? html : null;
+  dirty = false; updateCompactHead(); refreshDynamic(true); // 顶部「谁在管哪家店」跟着一起刷新（调任/交换/新 CEO 后两处同步）
 }
 function setTab(t) {
   const prev = tab;
@@ -1606,7 +1616,7 @@ const STORY_ART = Object.freeze({k_1:'story_k_1.webp',k_2:'story_k_2.webp',k_3:'
 function storyArt(id, large = false) {
   const item = E.ITEM_BY_ID[id], file = STORY_ART[id];
   if (!file || !item || item.type !== 'card' || !state.gacha.owned.includes(id)) return '';
-  return `<span class="story-art${large ? ' story-art-large' : ''}" data-story-state="loading"><img data-story-art="${id}" src="art/storycards/${file}?v=13k-story1" alt="故事插图：${item.name}" width="1024" height="768" loading="${large ? 'eager' : 'lazy'}" decoding="async"><span class="story-art-status" role="status">插图加载中…</span></span>`;
+  return `<span class="story-art${large ? ' story-art-large' : ''}" data-story-state="loading"><img data-story-art="${id}" src="art/storycards/${file}?v=13k-story2" alt="故事插图：${item.name}" width="1024" height="768" loading="${large ? 'eager' : 'lazy'}" decoding="async"><span class="story-art-status" role="status">插图加载中…</span></span>`;
 }
 for (const event of ['load','error']) document.addEventListener(event, e => {
   const img = e.target;
@@ -1620,9 +1630,18 @@ function showCard(id) {
   const it = E.ITEM_BY_ID[id];
   // Replaying is read-only: ownership comes from the existing collection IDs.
   if (!it || it.type !== 'card' || !state.gacha.owned.includes(id)) return;
-  const opener = document.activeElement;
+  const opener = document.activeElement, panel = $('#panel');
+  const scroll = {top:panel.scrollTop, x:window.scrollX, y:window.scrollY};
   openModal(`<section id="storyReplay" aria-labelledby="storyReplayTitle"><div class="mtitle" id="storyReplayTitle">${it.name}</div>${storyArt(id, true)}<div class="mnote">${it.text}</div><button type="button" class="buy big" id="mOk">返回收藏</button></section>`, false);
-  $('#mOk').addEventListener('click', () => { closeModal(); if (opener && opener.isConnected) opener.focus({preventScroll:true}); }, {once:true});
+  $('#mOk').addEventListener('click', () => {
+    closeModal();
+    // A legitimate collection update can replace the opener while the dialog is
+    // open. Resolve by story ID rather than depending on the old DOM instance.
+    if (tab === 'col') {
+      const target = tabBody.querySelector(`.story-open[data-arg="${id}"]`) || (opener?.isConnected ? opener : null);
+      target?.focus({preventScroll:true}); panel.scrollTop = scroll.top; window.scrollTo(scroll.x, scroll.y);
+    }
+  }, {once:true});
   $('#mOk').focus({preventScroll:true});
 }
 function confirmReset() {
@@ -1872,12 +1891,12 @@ function petInit(tryN) {
 }
 async function petLoadSpecies() {
   try {
-    const response=await fetch('pet/art/species.json?v=13k-story1'); if(!response.ok)throw Error('species catalog');
+    const response=await fetch('pet/art/species.json?v=13k-story2'); if(!response.ok)throw Error('species catalog');
     const entries=await response.json();
     for(const entry of entries) {
       if(!PG.SPECIES[entry.species] || entry.species==='dog' || !/^[a-z_]+$/.test(entry.species))continue;
       try {
-        const base='pet/art/'+entry.species+'/', r=await fetch(base+'manifest.json?v=13k-story1');if(!r.ok)throw Error('manifest');
+        const base='pet/art/'+entry.species+'/', r=await fetch(base+'manifest.json?v=13k-story2');if(!r.ok)throw Error('manifest');
         const m=await r.json(), check=window.PetArt.validateManifest(m);if(!check.ok)throw Error(check.errors.join(';'));
         const image=new Image();image.src=base+m.atlas.image;await image.decode();
         image.companionAtlases={};await Promise.all(Object.entries(m.atlases||{}).map(async([key,a])=>{const im=new Image();im.src=base+a.image;await im.decode();image.companionAtlases[key]=im;}));
@@ -2424,7 +2443,7 @@ function openZombie() {
     const ch = new MessageChannel(); zbPort = ch.port1; zbPort.onmessage = e => zbMsg(e.data);
     f.contentWindow.postMessage({ zb:'port' }, location.origin, [ch.port2]); zbReply();
   };
-  f.src = 'zombie/?embed=1&v=13k-story1'; $('#zbOverlay').classList.remove('hidden'); audioPause();
+  f.src = 'zombie/?embed=1&v=13k-story2'; $('#zbOverlay').classList.remove('hidden'); audioPause();
 }
 function closeZombie() {
   if (!zbOpen) return; zbOpen = false; zbRun = null; if (zbPort) { zbPort.close(); zbPort = null; }
