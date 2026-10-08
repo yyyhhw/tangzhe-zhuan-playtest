@@ -1,0 +1,26 @@
+// 打僵尸无尽 TOP10 规则：node preview/zombie/test_zbtop.js
+const assert = require('assert'), Z = require('./zbcore.js');
+let n = 0; const ok = (c, m) => { assert(c, m); n++; };
+const z0 = Z.norm(null); ok(Array.isArray(z0.endTop) && z0.endTop.length === 0, '新档榜单为空');
+const leg = Z.norm({ cleared: 50, endBest: { t: 321.5, kills: 77 } });
+ok(leg.endTop.length === 1 && /^legacy/.test(leg.endTop[0].id) && leg.endTop[0].t === 321.5, '老档只把已有最好成绩作为一条记录');
+ok(Z.norm({ endBest: { t: 0 } }).endTop.length === 0, '老档没打过无尽不补造');
+const z = Z.norm({ cleared: 50 });
+ok(!Z.applyResult(Z.norm({ cleared: 49 }), { mode: 'endless', t: 99, kills: 1, runId: 'aa' }), '未通 50 关不能上榜');
+for (let i = 1; i <= 12; i++) ok(Z.applyResult(z, { mode: 'endless', t: i * 10, kills: i, runId: 'r' + i }), '记一局');
+ok(z.endTop.length === 10 && z.endTop[0].id === 'r12' && z.endTop[9].id === 'r3', '只留前 10，按秒数从高到低');
+ok(Z.rankOf(z, 'r12') === 1 && Z.rankOf(z, 'r3') === 10 && Z.rankOf(z, 'r2') === 0, '名次 / 未上榜');
+const snap = JSON.stringify(z); ok(Z.applyResult(z, { mode: 'endless', t: 999, kills: 9, runId: 'r12' }) && JSON.stringify(z) === snap, '同一局重发不重复上榜、不改成绩');
+Z.applyResult(z, { mode: 'endless', t: 5, kills: 0, runId: 'low' }); ok(Z.rankOf(z, 'low') === 0 && z.endTop.length === 10, '低分不挤掉榜单');
+const tie = Z.norm({ cleared: 50 }); Z.applyResult(tie, { mode: 'endless', t: 50, kills: 3, runId: 'a1' }); Z.applyResult(tie, { mode: 'endless', t: 50, kills: 9, runId: 'a2' });
+ok(Z.rankOf(tie, 'a2') === 1, '同秒按击倒排');
+const dirty = Z.norm({ cleared: 50, endTop: [{ t: 'x', id: 'q' }, { t: 1e9, kills: -5, id: 'big' }, { t: 3, id: 'big' }, { t: 2, id: '<b>' }, null, 7] });
+ok(dirty.endTop.length === 2 && dirty.endTop[0].t === 86400 && dirty.endTop[0].kills === 0 && !dirty.endTop.some(e => e.id === '<b>'), '脏数据清洗、去重、拒绝非法 id');
+ok(JSON.stringify(Z.norm(JSON.parse(JSON.stringify(z)))) === JSON.stringify(Z.norm(z)), '存读一致');
+const lvl = Z.norm({ cleared: 3 }); Z.applyResult(lvl, { mode: 'level', n: 4, win: true, t: 999, kills: 5 }); ok(lvl.cleared === 4 && lvl.endTop.length === 0, '关卡模式不影响榜单');
+const rec = Z.norm({ cleared: 50, endBest: { t: 900, kills: 4 }, endTop: [{ t: 300, kills: 1, id: 'legacy', at: 0 }, { t: 500, kills: 2, id: 'n1', at: 1 }] });
+ok(rec.endTop.length === 3 && /^legacy/.test(rec.endTop[0].id) && rec.endTop[0].t === 900 && rec.endTop[2].t === 300, '旧页面把最好成绩刷高后补一条，原来的旧成绩也留着');
+ok(JSON.stringify(Z.norm(rec)) === JSON.stringify(rec), '补出的 legacy 重复读档不会再多');
+const up = Z.norm({ cleared: 50, endBest: { t: 10, kills: 0 }, endTop: [{ t: 700, kills: 3, id: 'n2', at: 1 }] });
+ok(up.endBest.t === 700 && up.endTop.length === 1, '最好成绩不低于榜首');
+console.log(`zombie TOP10 rules: ${n} checks passed`);

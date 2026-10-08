@@ -9,7 +9,7 @@
 <meta name="format-detection" content="telephone=no">
 <title>77 打僵尸</title>
 <link rel="icon" href="../icon.svg" type="image/svg+xml">
-<link rel="stylesheet" href="zombie.css?v=z10">
+<link rel="stylesheet" href="zombie.css?v=z11-top10">
 </head>
 <body>
 <canvas id="cv"></canvas>
@@ -35,10 +35,12 @@
       <p class="note" id="heroNote"></p>
     </div>
   </div>
+  <p class="note hidden" id="protoSaveNote" role="status">当前浏览器无法安全保存：训练与成绩仅在本页临时有效，不能保存；刷新或关闭后不会保留。</p>
   <div class="card">
     <div class="row"><h2>选关</h2><span class="wallet" id="lvProg"></span></div>
     <div class="lvsel"><button class="buy" id="lvPrev" type="button" aria-label="上一关">‹</button><div><b id="lvTxt">第 1 关</b><small id="lvInfo"></small></div><button class="buy" id="lvNext" type="button" aria-label="下一关">›</button></div>
     <button class="buy" id="endlessBtn" type="button" disabled>无尽模式</button>
+    <button class="buy" id="boardBtn" type="button">无尽排行榜 TOP10</button>
   </div>
   <div class="card">
     <div class="row"><h2>战斗训练</h2><span class="wallet"><span id="walletLbl">模拟余额</span> <b id="walletTxt">0</b></span></div>
@@ -62,6 +64,7 @@
   <div class="card center">
     <h2 id="resTitle">撑住了！</h2>
     <p id="resStats"></p>
+    <div id="resBoard" class="hidden"></div>
     <p class="note" id="resNote"></p>
     <button class="buy hidden" id="retryBtn" type="button">重试保存</button>
     <button class="buy big red" id="againBtn" type="button">再来一局</button>
@@ -69,8 +72,16 @@
   </div>
 </section>
 
-<script src="zbcore.js?v=z10"></script>
+<section id="board" class="screen dim hidden">
+  <div class="card center">
+    <h2>无尽排行榜 TOP10</h2>
+    <div id="boardList"></div>
+    <button class="buy big" id="boardBack" type="button">回训练</button>
+  </div>
+</section>
+
+<script src="zbcore.js?v=z12-top10"></script>
 <script src="zbsfx.js?v=z10"></script>
-<script src="zombie.js?v=13k-story2"></script>
+<script src="zombie.js?v=13k-zbtop1"></script>
 </body>
 </html>

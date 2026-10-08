@@ -48,3 +48,13 @@ p{margin:0;font-size:14px;line-height:1.5}
 #endlessBtn{width:100%;background:#fff}
 #endlessBtn:not([disabled]){background:var(--ink);color:var(--yellow)}
 #exitBtn{align-self:flex-start;flex:none;background:#fff}
+#boardBtn{width:100%;margin-top:8px;background:#fff}
+#resBoard,#boardList{text-align:left}#resBoard h3{margin:4px 0 6px;font-size:15px;text-align:center}
+.board{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px}
+.board li,.board-me{display:flex;gap:8px;align-items:center;padding:4px 8px;border:2px solid var(--ink);border-radius:8px;background:#fff;font-size:13px;line-height:1.3}
+.board li b,.board-me b{flex:none;width:4.2em}.board li span,.board-me span{flex:1;min-width:0}
+.board li em,.board-me em{flex:none;font-style:normal;font-weight:900;color:var(--red,#e63946)}
+.board li.me{background:var(--yellow,#ffd23f)}
+.board-me{margin:8px 0 0;border-style:dashed}
+#board .card,#result .card{max-height:calc(100vh - 32px);overflow-y:auto}
+@media(max-height:600px){.board li,.board-me{padding:2px 8px;font-size:12px}.board{gap:2px}#resBoard h3{margin:2px 0 4px}}
