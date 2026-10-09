@@ -111,10 +111,12 @@ with sync_playwright() as p:
     check(d['saveFailure']['kind'] == 'rollback-failed' and '主档状态不确定' in t and '已验证的备份可以恢复' in t and '存档仍是第' not in t and '已保存' not in t, f'B16c 回读异常：提示主档不确定、备份可恢复，不报旧步数 「{t}」')
     check(pg.evaluate("document.getElementById('save-retry').hidden") and pg.inner_text('#save-restore') == '从备份恢复', 'B16c 只给「从备份恢复」，不给重试')
     newer = pg.evaluate("window.__rbArm=false;window.__rb=false;JSON.parse(localStorage.getItem('tangzhe-preview-card-save')).meta.revision")
-    pg.click('#save-restore'); pg.click('#save-restore'); pg.wait_for_function("document.getElementById('resume-dialog').open", timeout=10000)
+    pg.click('#save-restore'); pg.click('#save-restore'); pg.wait_for_timeout(500)
     d = diag(pg); main = pg.evaluate("JSON.parse(localStorage.getItem('tangzhe-preview-card-save')).meta.revision")
-    check(newer > good and d['revision'] == good and main == good and '已从备份恢复' in pg.inner_text('#resume-text'), f'B16c 从备份恢复到第 {good} 步（主档里的 r{newer} 不用），并写回主档')
-    pg.click('#resume-continue'); human_end(pg); check(diag(pg)['saveFailure'] is None, 'B16c 恢复后继续打、正常保存')
+    check(newer > good and d['saveFailure']['kind'] == 'conflict' and main == newer and '主档已能读取' in pg.inner_text('#save-text'), f'B16c 主档当时读不出：恢复不写，主档已可读且有效时提示重新读取（主档 r{newer} 不被备份 r{good} 覆盖）')
+    pg.click('#save-restore'); pg.wait_for_function("document.getElementById('resume-dialog').open", timeout=10000)
+    check(diag(pg)['revision'] == newer, f'B16c 重新读取得到 r{newer}')
+    pg.click('#resume-continue'); human_end(pg); check(diag(pg)['saveFailure'] is None, 'B16c 读回后继续打、正常保存')
     s = pg.evaluate("[localStorage.getItem('tangzhe-save'),localStorage.getItem('tangzhe-preview-save'),localStorage.getItem('tangzhe-card-save')]")
     check(s == ['SENT', 'PSENT', 'FSENT'], 'A10 浏览器端经营主档 / preview 主档 / 正式卡牌键逐字节不变')
     c.close()
@@ -139,6 +141,28 @@ with sync_playwright() as p:
     check(d['saveFailure'] and d['saveFailure']['kind'] == 'conflict' and a.evaluate("localStorage.getItem('tangzhe-preview-card-save')") == mainB, f'B18b A 提交恢复报冲突，B 的新档 r{revB} 没被覆盖')
     a.click('#save-restore'); a.wait_for_function("document.getElementById('resume-dialog').open", timeout=10000)
     check(diag(a)['revision'] == revB, f'B18b A 重新读取存档后拿到 B 的 r{revB}')
+    # B18c A 主档写入失败且之后读失败（主档/备份都没变）→ B 保存 r2（备份仍是同一份）→ A 恢复：B 的新档始终保留
+    a.click('#resume-continue')
+    a.evaluate("""(()=>{window.__f2=true;const os=Storage.prototype.setItem,og=Storage.prototype.getItem;
+      Object.defineProperty(Storage.prototype,'setItem',{configurable:true,writable:true,value:function(k,v){if(window.__f2&&k==='tangzhe-preview-card-save'){window.__arm2=true;throw new Error('Quota');}return os.call(this,k,v);}});
+      Object.defineProperty(Storage.prototype,'getItem',{configurable:true,writable:true,value:function(k){if(window.__arm2&&k==='tangzhe-preview-card-save')throw new Error('read fail');return og.call(this,k);}});})()""")
+    a.click('#end-turn'); a.wait_for_function("document.getElementById('save-dialog').open", timeout=10000)
+    check(diag(a)['saveFailure']['kind'] == 'rollback-failed', 'B18c A 写失败且读失败 → 主档不确定')
+    a.click('#save-restore'); a.click('#save-restore'); a.wait_for_timeout(400)
+    check(diag(a)['saveFailure']['kind'] == 'unreadable', 'B18c 主档还读不出：恢复不写，保持暂停')
+    bakA = a.evaluate("window.__f2=false;window.__arm2=false;localStorage.getItem('tangzhe-preview-card-save-bak')")
+    # B 只保存一次（结束回合），写完主档立刻切后台暂停，AI 不再继续保存
+    bpg.evaluate("""(()=>{window.__once=true;const os=Storage.prototype.setItem;
+      Object.defineProperty(Storage.prototype,'setItem',{configurable:true,writable:true,value:function(k,v){const r=os.call(this,k,v);if(window.__once&&k==='tangzhe-preview-card-save'){window.__once=false;Object.defineProperty(document,'visibilityState',{configurable:true,get:()=>'hidden'});document.dispatchEvent(new Event('visibilitychange'));}return r;}});})()""")
+    bpg.click('#end-turn'); until(bpg, lambda d: d['revision'] > revB and not d['saveBusy']); bpg.wait_for_timeout(800)
+    mainB2 = bpg.evaluate("localStorage.getItem('tangzhe-preview-card-save')"); revB2 = diag(bpg)['revision']
+    check(bpg.evaluate("localStorage.getItem('tangzhe-preview-card-save-bak')") == bakA, 'B18c 场景成立：B 保存后备份原文没变')
+    for i in range(2):
+        a.click('#save-restore'); a.wait_for_timeout(400)
+        if diag(a)['saveFailure'] and diag(a)['saveFailure']['kind'] != 'conflict' and not a.evaluate("document.getElementById('save-dialog').open"): break
+    check(a.evaluate("localStorage.getItem('tangzhe-preview-card-save')") == mainB2 and diag(a)['saveFailure']['kind'] == 'conflict', f'B18c A 再点恢复：报重新读取，B 的 r{revB2} 始终保留')
+    a.click('#save-restore'); a.wait_for_function("document.getElementById('resume-dialog').open", timeout=10000)
+    check(diag(a)['revision'] == revB2, f'B18c A 重新读取拿到 B 的 r{revB2}')
     c.close()
     # C 入口和父子页
     c = b.new_context(**p.devices['iPhone 15']); pg = c.new_page(); errs = []

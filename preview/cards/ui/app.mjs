@@ -347,7 +347,9 @@ document.addEventListener('keydown',(event) => {
 });
 function failText(r) {
   if (r.kind === 'rollback-failed') return '存档异常：主档状态不确定' + (r.backupVerified ? '。已验证的备份可以恢复' : '，也没有可用的备份');
-  if (r.kind === 'conflict') return '另一个页面更新了这局，请重新读取存档';
+  if (r.kind === 'conflict') return r.step === 'main-readable' ? '主档已能读取，是有效存档，请重新读取存档' : '另一个页面更新了这局，请重新读取存档';
+  if (r.kind === 'unreadable') return '主档仍然读不出来，本页保持暂停、不写任何存档，请稍后再试';
+  if (r.kind === 'reconfirm') return '主档已能读取但已损坏' + (r.backupVerified ? '。确认后用已验证的备份覆盖主档' : '，也没有可用的备份');
   const last = store.lastSaved;
   return '保存失败，进度还在本页' + (last ? `；存档仍是第 ${last.revision} 步` : '；还没有成功的存档');
 }
@@ -370,10 +372,11 @@ function showSaveFail(exiting = closing) {
   const last = store.lastSaved;
   restoreArmed = false;
   $('save-text').textContent = failText(r) + (exiting ? '。仍要退出的话，本页没存上的进度会丢失。' : '。');
-  $('save-retry').hidden = r.kind === 'conflict' || r.kind === 'rollback-failed';
-  const canRestore = r.kind === 'conflict' || (r.kind === 'rollback-failed' ? r.backupVerified : !!last);
+  const viaBackup = r.kind === 'rollback-failed' || r.kind === 'unreadable' || r.kind === 'reconfirm';
+  $('save-retry').hidden = r.kind === 'conflict' || viaBackup;
+  const canRestore = r.kind === 'conflict' || r.kind === 'unreadable' || (viaBackup ? r.backupVerified : !!last);
   $('save-restore').hidden = !canRestore;
-  $('save-restore').textContent = r.kind === 'conflict' ? '重新读取存档' : r.kind === 'rollback-failed' ? '从备份恢复' : `回到最后成功档（第 ${last?.revision ?? 0} 步）`;
+  $('save-restore').textContent = r.kind === 'conflict' ? '重新读取存档' : r.kind === 'rollback-failed' ? '从备份恢复' : r.kind === 'unreadable' ? '再试一次' : r.kind === 'reconfirm' ? '用备份覆盖主档' : `回到最后成功档（第 ${last?.revision ?? 0} 步）`;
   $('save-exit').hidden = !exiting;
   if (!$('save-dialog').open) $('save-dialog').showModal();
 }
@@ -383,7 +386,7 @@ $('save-restore').addEventListener('click',() => {
   if (!restoreArmed && saveFailure?.kind !== 'conflict') { restoreArmed = true; $('save-restore').textContent = '确定？本页没存上的步数会丢失'; return; }
   $('save-dialog').close();
   if (closing) { closing = false; parentPort?.postMessage({card:'stay'}); }
-  if (saveFailure?.kind === 'rollback-failed') restoreFromBackup(); else boot();
+  if (['rollback-failed','unreadable','reconfirm'].includes(saveFailure?.kind)) restoreFromBackup(); else boot();
 });
 async function restoreFromBackup() {
   saveBusy = true; cancelAITimer();

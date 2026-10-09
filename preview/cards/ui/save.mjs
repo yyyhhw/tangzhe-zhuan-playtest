@@ -19,6 +19,7 @@ export function createCardSave({storage, locks, core, now = () => Date.now()}) {
   let slotRev = 0;
   let readOnly = false;
   let failMain, failBak;     // main / bak text observed when the main became uncertain
+  let pendingRestore = false, mainObserved = false;
   let lastSaved = null;     // {revision, turn} of the last verified successful save
 
   const get = (k) => storage.getItem(k);
@@ -69,6 +70,7 @@ export function createCardSave({storage, locks, core, now = () => Date.now()}) {
 
   /** Reads without the lock. Only the quarantine copy is written (inside the lock). */
   async function load() {
+    pendingRestore = false;
     readOnly = false; lastSaved = null;
     let raw;
     try { raw = get(SAVE_KEY); } catch (e) { return {status: 'unrecoverable', why: '无法读取存档', quarantine: null}; }
@@ -111,7 +113,8 @@ export function createCardSave({storage, locks, core, now = () => Date.now()}) {
   function uncertain() {
     knownMain = undefined; knownMainValid = false;
     try { storage.removeItem(TMP_KEY); } catch { /* ignored */ }
-    try { failMain = get(SAVE_KEY); } catch { failMain = undefined; }
+    pendingRestore = true;
+    try { failMain = get(SAVE_KEY); mainObserved = true; } catch { failMain = undefined; mainObserved = false; }
     try { failBak = get(BAK_KEY); } catch { failBak = undefined; }
     return {ok: false, kind: 'rollback-failed', step: 'main-rollback', backupVerified: failBak != null && parse(failBak).state === 'ok'};
   }
@@ -120,22 +123,29 @@ export function createCardSave({storage, locks, core, now = () => Date.now()}) {
    * main happen in one locked transaction; if the main or the backup changed since the failure was
    * observed (another tab saved), it is a conflict and nothing is written. */
   async function restoreBackup() {
-    if (failBak === undefined) return {ok: false, kind: 'conflict', step: 'no-failure'};
+    if (!pendingRestore) return {ok: false, kind: 'conflict', step: 'no-failure'};
     if (!lockAvailable()) return {ok: false, kind: 'before-commit', step: 'no-lock'};
     mainTouched = false;
     try {
       return await withLock(() => {
         let bakRaw, cur;
         try { bakRaw = get(BAK_KEY); } catch { return {ok: false, kind: 'before-commit', step: 'bak-read'}; }
-        try { cur = get(SAVE_KEY); } catch { return {ok: false, kind: 'before-commit', step: 'main-read'}; }
-        if (bakRaw !== failBak || (failMain !== undefined && cur !== failMain)) return {ok: false, kind: 'conflict', step: 'restore-cas', lastSaved};
+        try { cur = get(SAVE_KEY); } catch { return {ok: false, kind: 'unreadable', step: 'main-read'}; }
+        if (!mainObserved) {
+          // The main could not be observed at failure time, so the bak alone proves nothing
+          // (another tab may have saved on top of an identical bak). Re-snapshot, write nothing.
+          failMain = cur; failBak = bakRaw; mainObserved = true;
+          if (parse(cur).state === 'ok') { pendingRestore = false; return {ok: false, kind: 'conflict', step: 'main-readable', lastSaved}; }
+          return {ok: false, kind: 'reconfirm', step: 'resnapshot', backupVerified: parse(bakRaw).state === 'ok'};
+        }
+        if (bakRaw !== failBak || cur !== failMain) return {ok: false, kind: 'conflict', step: 'restore-cas', lastSaved};
         const bak = parse(bakRaw);
         if (bak.state !== 'ok') return {ok: false, kind: 'rollback-failed', step: 'bak-invalid', backupVerified: false};
         knownMain = cur; knownMainValid = false;   // never copy the uncertain main into bak
         slotRev = Math.max(slotRev, bak.env.slotRev);
         const r = commit(bak.game);
         if (!r.ok) return r;
-        failMain = failBak = undefined;
+        failMain = failBak = undefined; pendingRestore = false;
         return {ok: true, game: bak.game, revision: bak.game.revision, turn: bak.game.turn};
       });
     } catch (e) {

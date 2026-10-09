@@ -115,14 +115,13 @@ test('A2d read-back throws after main write: rollback-failed (main really update
   assert.equal(JSON.parse(s.m.get(SAVE_KEY)).meta.revision, g2.revision, 'main was in fact updated');
   s.faults.set = null; const before = new Map(s.m);
   const b0 = await st.restoreBackup();         // main still unreadable: refuse, write nothing
-  assert.equal(b0.ok, false); assert.deepEqual([...s.m], [...before]);
-  s.faults.readThrow = null; const bakBefore = s.m.get(BAK_KEY);
-  const b = await st.restoreBackup();
-  assert.equal(b.ok, true); assert.equal(b.revision, g.revision, 'explicit backup path ignores the valid-looking main');
-  assert.equal(st.lastSaved.revision, g.revision);
-  assert.equal(s.m.get(BAK_KEY), bakBefore, 'uncertain main never copied over the verified backup');
-  assert.equal(JSON.parse(s.m.get(SAVE_KEY)).meta.revision, g.revision, 'backup committed to main in the same transaction');
-  assert.equal((await st.save(play(b.game, 1))).ok, true, 'normal saving resumes');
+  assert.equal(b0.kind, 'unreadable'); assert.deepEqual([...s.m], [...before]);
+  s.faults.readThrow = null;
+  const b = await st.restoreBackup();          // readable again and a valid save: reread, never overwrite
+  assert.equal(b.ok, false); assert.equal(b.step, 'main-readable'); assert.deepEqual([...s.m], [...before]);
+  assert.equal((await st.restoreBackup()).ok, false, 'a second confirm is refused too'); assert.deepEqual([...s.m], [...before]);
+  const l = await st.load(); assert.equal(l.game.revision, g2.revision);
+  assert.equal((await st.save(play(l.game, 1))).ok, true, 'normal saving resumes');
 });
 
 test('A2e two tabs: A rollback-failed -> B loads and saves newer -> A restore = conflict, B progress kept', async () => {
@@ -137,6 +136,33 @@ test('A2e two tabs: A rollback-failed -> B loads and saves newer -> A restore = 
   assert.equal(r.ok, false); assert.equal(r.kind, 'conflict');
   assert.equal(s.m.get(SAVE_KEY), mainB, 'B newer save not overwritten'); assert.equal(s.m.get(BAK_KEY), bakB);
   assert.equal(JSON.parse(s.m.get(SAVE_KEY)).meta.revision, g3.revision);
+});
+
+test('A2h A main write throws + reads fail, B saves r2 with identical bak, A restore never overwrites r2', async () => {
+  const {s, st, g} = await saved(2); const g2 = play(g, 1);
+  s.faults.set = (k) => { if (k === SAVE_KEY) { s.faults.readThrow = (kk) => kk === SAVE_KEY; return 'throw'; } return null; };
+  assert.equal((await st.save(g2)).kind, 'rollback-failed');
+  s.faults.set = null; s.faults.readThrow = null; const bakA = s.m.get(BAK_KEY);
+  const B = createCardSave({storage: s, locks, core}); const lb = await B.load();
+  const g3 = play(lb.game, 2); assert.equal((await B.save(g3)).ok, true);
+  assert.equal(s.m.get(BAK_KEY), bakA, 'scenario: bak text is identical after B saved');
+  const mainB = s.m.get(SAVE_KEY);
+  for (let i = 0; i < 3; i++) { const r = await st.restoreBackup(); assert.equal(r.ok, false); assert.equal(s.m.get(SAVE_KEY), mainB, `B r${g3.revision} kept (try ${i})`); }
+  assert.equal(s.m.get(BAK_KEY), bakA);
+});
+
+test('A2i main readable but corrupt after recovery: re-snapshot, confirm, then commit; B save in between = conflict', async () => {
+  const mk = async () => { const o = await saved(2); const {s, st, g} = o;
+    s.faults.set = (k) => { if (k === SAVE_KEY) { s.faults.readThrow = (kk) => kk === SAVE_KEY; return 'throw'; } return null; };
+    assert.equal((await st.save(play(g, 1))).kind, 'rollback-failed'); s.faults.set = null; s.faults.readThrow = null;
+    s.m.set(SAVE_KEY, 'garbled-main'); return o; };
+  { const {s, st} = await mk(); const before = new Map(s.m);
+    const r1 = await st.restoreBackup(); assert.equal(r1.kind, 'reconfirm'); assert.equal(r1.backupVerified, true); assert.deepEqual([...s.m], [...before]);
+    const r2 = await st.restoreBackup(); assert.equal(r2.ok, true); assert.equal(JSON.parse(s.m.get(SAVE_KEY)).meta.revision, r2.revision); }
+  { const {s, st} = await mk();
+    assert.equal((await st.restoreBackup()).kind, 'reconfirm');
+    s.m.set(SAVE_KEY, 'other-tab-text');
+    assert.equal((await st.restoreBackup()).kind, 'conflict'); assert.equal(s.m.get(SAVE_KEY), 'other-tab-text'); }
 });
 
 test('A2e2 only the main changed after failure (bak same): still conflict', async () => {
