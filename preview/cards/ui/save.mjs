@@ -1,0 +1,153 @@
+/** Preview-only card save slot. One resumable game, a verified backup and a quarantine copy.
+ * Never touches business saves or the formal card key. Writes only inside the Web Lock.
+ */
+export const SAVE_KEY = 'tangzhe-preview-card-save';
+export const TMP_KEY = SAVE_KEY + '-tmp';
+export const BAK_KEY = SAVE_KEY + '-bak';
+export const QUARANTINE_KEY = SAVE_KEY + '-quarantine';
+export const CARD_KEYS = Object.freeze([SAVE_KEY, TMP_KEY, BAK_KEY, QUARANTINE_KEY]);
+/** Web Lock name, not a localStorage key. */
+export const LOCK_NAME = SAVE_KEY + ':write';
+export const ENVELOPE_NS = 'tangzhe-card-save';
+export const DATA_VERSION = 1;
+const VERSION_FIELDS = ['rulesVersion', 'cardPoolVersion', 'deckRulesVersion', 'cardDefinitionSchemaVersion'];
+
+export function createCardSave({storage, locks, core, now = () => Date.now()}) {
+  const {serialize, deserialize} = core;
+  let knownMain;            // raw main text this page last read or wrote (CAS)
+  let knownMainValid = false;
+  let slotRev = 0;
+  let readOnly = false;
+  let lastSaved = null;     // {revision, turn} of the last verified successful save
+
+  const get = (k) => storage.getItem(k);
+  const lockAvailable = () => !!(locks && typeof locks.request === 'function');
+
+  function parse(text) {
+    if (text === null || text === undefined) return {state: 'missing'};
+    let env;
+    try { env = JSON.parse(text); } catch { return {state: 'corrupt', why: 'JSON 解析失败'}; }
+    if (!env || typeof env !== 'object' || env.ns !== ENVELOPE_NS) return {state: 'corrupt', why: '命名空间不符'};
+    if (!Number.isInteger(env.dataVersion)) return {state: 'corrupt', why: '缺少数据版本'};
+    if (env.dataVersion > DATA_VERSION) return {state: 'future', why: `存档数据版本 ${env.dataVersion} 比当前页面新`};
+    if (env.dataVersion !== DATA_VERSION) return {state: 'corrupt', why: '数据版本不认识'};
+    if (!Number.isInteger(env.slotRev) || env.slotRev < 1 || typeof env.game !== 'string') return {state: 'corrupt', why: '存档结构不完整'};
+    let game;
+    try { game = deserialize(env.game); } catch (e) { return {state: 'corrupt', why: `对局校验失败：${e.message}`}; }
+    for (const f of VERSION_FIELDS) if (env[f] !== game[f]) return {state: 'corrupt', why: '版本号与对局不一致'};
+    if (!env.meta || env.meta.revision !== game.revision) return {state: 'corrupt', why: '进度信息与对局不一致'};
+    return {state: 'ok', env, game};
+  }
+
+  function envelope(game, rev) {
+    const env = {ns: ENVELOPE_NS, dataVersion: DATA_VERSION, slotRev: rev, savedAt: now()};
+    for (const f of VERSION_FIELDS) env[f] = game[f];
+    env.game = serialize(game);
+    env.meta = {revision: game.revision, turn: game.turn, heroes: game.players.map((p) => p.classId)};
+    return JSON.stringify(env);
+  }
+
+  function withLock(fn) {
+    return locks.request(LOCK_NAME, {mode: 'exclusive'}, async () => fn());
+  }
+
+  function backupVerified() {
+    try { return parse(get(BAK_KEY)).state === 'ok'; } catch { return false; }
+  }
+
+  async function quarantine(raw) {
+    if (!lockAvailable()) return 'no-lock';
+    try {
+      return await withLock(() => {
+        if (get(QUARANTINE_KEY) !== null) return 'occupied';
+        storage.setItem(QUARANTINE_KEY, raw);
+        return get(QUARANTINE_KEY) === raw ? 'saved' : 'failed';
+      });
+    } catch { return 'failed'; }
+  }
+
+  /** Reads without the lock. Only the quarantine copy is written (inside the lock). */
+  async function load() {
+    readOnly = false; lastSaved = null;
+    let raw;
+    try { raw = get(SAVE_KEY); } catch (e) { return {status: 'unrecoverable', why: '无法读取存档', quarantine: null}; }
+    knownMain = raw; knownMainValid = false; slotRev = 0;
+    const main = parse(raw);
+    if (main.state === 'ok') {
+      knownMainValid = true; slotRev = main.env.slotRev;
+      lastSaved = {revision: main.game.revision, turn: main.game.turn};
+      return {status: 'ok', game: main.game, revision: main.game.revision, turn: main.game.turn, writable: lockAvailable()};
+    }
+    if (main.state === 'future') { readOnly = true; return {status: 'future', why: main.why}; }
+    let q = null;
+    if (main.state === 'corrupt') q = await quarantine(raw);
+    let bakRaw = null;
+    try { bakRaw = get(BAK_KEY); } catch { /* treated as missing */ }
+    const bak = parse(bakRaw);
+    if (main.state === 'missing' && bak.state === 'missing') return {status: 'empty', writable: lockAvailable()};
+    if (bak.state === 'ok') {
+      slotRev = Math.max(slotRev, bak.env.slotRev);
+      lastSaved = {revision: bak.game.revision, turn: bak.game.turn};
+      return {status: 'recovered', game: bak.game, revision: bak.game.revision, turn: bak.game.turn, why: main.why || '主存档缺失', quarantine: q, writable: lockAvailable()};
+    }
+    if (bak.state === 'future') { readOnly = true; return {status: 'future', why: bak.why}; }
+    return {status: 'unrecoverable', why: main.why || '主存档缺失', quarantine: q, writable: lockAvailable()};
+  }
+
+  async function save(game) {
+    if (readOnly) return {ok: false, kind: 'readonly', step: 'readonly'};
+    if (!lockAvailable()) return {ok: false, kind: 'before-commit', step: 'no-lock'};
+    try {
+      return await withLock(() => commit(game));
+    } catch (e) {
+      return {ok: false, kind: 'before-commit', step: 'lock', why: String(e?.message ?? e)};
+    }
+  }
+
+  function commit(game) {
+    const fail = (step, why) => {
+      try { storage.removeItem(TMP_KEY); } catch { /* stale tmp is ignored by load */ }
+      return {ok: false, kind: 'before-commit', step, why, lastSaved};
+    };
+    // 1. CAS against what this page last saw.
+    if (get(SAVE_KEY) !== knownMain) return {ok: false, kind: 'conflict', step: 'cas', lastSaved};
+    const oldMain = knownMain;
+    const text = envelope(game, slotRev + 1);
+    // 2-3. Temporary write, read back, full replay check.
+    try { storage.setItem(TMP_KEY, text); } catch (e) { return fail('tmp-write', e.message); }
+    let check;
+    try { check = get(TMP_KEY) === text ? parse(text) : {state: 'mismatch'}; } catch (e) { check = {state: 'error'}; }
+    if (check.state !== 'ok') return fail('tmp-verify', check.why || check.state);
+    // 4. Keep the previous successful save.
+    if (knownMainValid) {
+      try { storage.setItem(BAK_KEY, oldMain); } catch (e) { return fail('bak-write', e.message); }
+      if (get(BAK_KEY) !== oldMain) return fail('bak-verify');
+    }
+    // 5. Replace main; roll back on a bad read-back.
+    try { storage.setItem(SAVE_KEY, text); } catch (e) { return fail('main-write', e.message); }
+    if (get(SAVE_KEY) !== text) {
+      let restored = false;
+      try {
+        if (oldMain === null) storage.removeItem(SAVE_KEY); else storage.setItem(SAVE_KEY, oldMain);
+        restored = get(SAVE_KEY) === oldMain;
+      } catch { restored = false; }
+      if (restored) return fail('main-verify');
+      knownMain = undefined; knownMainValid = false;
+      try { storage.removeItem(TMP_KEY); } catch { /* ignored */ }
+      return {ok: false, kind: 'rollback-failed', step: 'main-rollback', backupVerified: backupVerified()};
+    }
+    knownMain = text; knownMainValid = true; slotRev += 1;
+    lastSaved = {revision: game.revision, turn: game.turn};
+    // 6. Clean tmp. Failure here is still a successful save.
+    let tmpLeft = false;
+    try { storage.removeItem(TMP_KEY); tmpLeft = get(TMP_KEY) !== null; } catch { tmpLeft = true; }
+    return {ok: true, revision: game.revision, slotRev, tmpLeft};
+  }
+
+  return {
+    load, save,
+    get readOnly() { return readOnly; },
+    get lastSaved() { return lastSaved ? {...lastSaved} : null; },
+    get writable() { return lockAvailable() && !readOnly; },
+  };
+}

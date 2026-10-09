@@ -1,10 +1,12 @@
 import {
   createGame, legalActions, apply, serialize, deserialize,
   chooseAIAction, getReplay, hashState, CARDS, CARD_METADATA, nextRandom, actionsThisTurn, spellDamageBonus, effectiveSpellDamage,
-} from '../cardcore.mjs';
+} from '../cardcore.mjs?v=card-s1';
+import * as cardcore from '../cardcore.mjs?v=card-s1';
+import {createCardSave} from './save.mjs?v=card-s1';
 
-import {artForSource, presentationClass} from './presentation.mjs';
-import {createActionInputGuard} from './action-input-guard.mjs';
+import {artForSource, presentationClass} from './presentation.mjs?v=card-s1';
+import {createActionInputGuard} from './action-input-guard.mjs?v=card-s1';
 const actionInputGuard = createActionInputGuard();
 
 const $ = (id) => document.getElementById(id);
@@ -27,6 +29,12 @@ let notice = '';
 let uiLog = [];
 let importGeneration = 0;
 let importBusy = false;
+const store = createCardSave({storage:localStorage,locks:navigator.locks,core:cardcore});
+let saveBusy = false, saveFailure = null, saveNote = '', lastSave = null, tmpLeftCount = 0;
+let restoreArmed = false, abandonArmed = false;
+const embed = new URLSearchParams(location.search).get('embed') === '1' && window.parent !== window;
+let parentPort = null, muted = false, closing = false;
+const freshGame = () => createGame({rulesSeed:123,aiSeed:456,heroes:['warrior','mage']});
 
 function actions() { return game.phase === 'main' ? legalActions(game) : []; }
 function humanTurn() { return game.phase === 'main' && game.active === 0 && !paused; }
@@ -90,7 +98,8 @@ function invalidatePendingImport() {
   $('import-file').value = '';
 }
 function resume() {
-  if (document.visibilityState === 'hidden') return;
+  if (document.visibilityState === 'hidden' || saveBusy) return;
+  if (saveFailure) { showSaveFail(); return; }
   invalidatePendingImport();
   paused = false;
   pauseReason = '';
@@ -109,7 +118,7 @@ function recordEvent(action, events) {
   if (uiLog.length > 100) uiLog.shift();
 }
 function commitAction(action, fromAI=false, inputEvent=null) {
-  if (paused || game.phase !== 'main') return false;
+  if (paused || saveBusy || saveFailure || game.phase !== 'main') return false;
   if (fromAI ? game.active !== 1 : game.active !== 0) return false;
   let command = action;
   if (!fromAI) command = {...action,commandId:`ui-${game.revision}-${++commandSerial}`,expectedRevision:game.revision};
@@ -135,11 +144,11 @@ function commitAction(action, fromAI=false, inputEvent=null) {
   selected = null;
   notice = result.duplicate ? '重复操作已忽略。' : '';
   render();
-  scheduleAI();
+  if (game.revision !== before.revision) persist(); else scheduleAI();
   return true;
 }
 function scheduleAI() {
-  if (aiTimer !== null || paused || document.visibilityState === 'hidden' || game.phase !== 'main' || game.active !== 1) return;
+  if (aiTimer !== null || paused || saveBusy || saveFailure || document.visibilityState === 'hidden' || game.phase !== 'main' || game.active !== 1) return;
   const generation = aiGeneration;
   const revision = game.revision;
   aiTimer = setTimeout(() => {
@@ -242,7 +251,7 @@ function render() {
   renderPlayer(1); renderBoard(1); renderBoard(0); renderPlayer(0); renderHand(); renderSelection();
   for (const [id,left] of scrollPositions) $(id).scrollLeft = left;
   if (focusMarker) document.querySelector(`[${focusMarker[0]}="${CSS.escape(focusMarker[1])}"]`)?.focus({preventScroll:true});
-  $('notice').textContent = notice;
+  $('notice').textContent = [notice, saveNote].filter(Boolean).join(' · ');
   $('revision-label').textContent = `状态 #${game.revision} · ${game.rulesVersion} · 卡池 ${game.cardPoolVersion}`;
   $('log').innerHTML = uiLog.length ? uiLog.slice().reverse().map((l) => `<li>#${l.revision} · ${esc(l.text)}${l.eventCount ? ` · ${l.eventCount} 个规则事件` : ''}</li>`).join('') : '<li>新对局已准备好。完整动作记录见「下载回放」。</li>';
 }
@@ -294,7 +303,7 @@ $('setup-form').addEventListener('submit',(event) => {
     cancelAITimer(); invalidatePendingImport();
     actionInputGuard.reset();
     game = nextGame; paused = false; pauseReason = ''; selected = null; uiLog = []; notice = '';
-    $('setup-dialog').close(); render(); scheduleAI();
+    $('setup-dialog').close(); render(); persist();
   } catch (err) { $('setup-error').textContent = `无法开始：${err.message || '实验参数无效'}`; }
 });
 function download(filename,text) {
@@ -309,7 +318,7 @@ function importSnapshot(text) {
   try {
     const candidate = deserialize(text);
     cancelAITimer(); actionInputGuard.reset(); game = candidate; selected = null; paused = true; pauseReason = '快照已导入'; uiLog = []; notice = '快照已导入。关闭窗口后点击「继续」恢复。';
-    $('import-result').textContent = notice; render(); return true;
+    $('import-result').textContent = notice; render(); persist(); return true;
   } catch (err) {
     $('import-result').textContent = `导入失败，当前对局已保留：${err.message || '快照无效'}`; return false;
   }
@@ -336,9 +345,104 @@ document.addEventListener('keydown',(event) => {
   if (event.repeat && ['Enter',' ','Spacebar'].includes(event.key) && event.target?.closest?.('#confirm,#cancel,#end-turn,[data-card],[data-entity],#hero-power')) { event.preventDefault(); return; }
   if (event.key === 'Escape' && selected) { selected = null; render(); }
 });
-render(); scheduleAI();
+function failText(r) {
+  if (r.kind === 'rollback-failed') return '存档异常：主档状态不确定' + (r.backupVerified ? '。已验证的备份可以恢复' : '，也没有可用的备份');
+  if (r.kind === 'conflict') return '另一个页面更新了这局，请重新读取存档';
+  const last = store.lastSaved;
+  return '保存失败，进度还在本页' + (last ? `；存档仍是第 ${last.revision} 步` : '；还没有成功的存档');
+}
+async function persist() {
+  if (!store.writable) {
+    saveNote = store.readOnly ? '只读：存档来自更新版本，本页不会保存' : '当前浏览器无法安全保存，本局不会存档';
+    render(); scheduleAI(); flushClose(); return false;
+  }
+  saveBusy = true; cancelAITimer();
+  const r = await store.save(game);
+  saveBusy = false; lastSave = r;
+  if (r.ok) {
+    if (r.tmpLeft) tmpLeftCount += 1;
+    saveNote = ''; render(); scheduleAI(); flushClose(); return true;
+  }
+  saveFailure = r; pause(failText(r)); showSaveFail(); return false;
+}
+function showSaveFail(exiting = closing) {
+  const r = saveFailure; if (!r) return;
+  const last = store.lastSaved;
+  restoreArmed = false;
+  $('save-text').textContent = failText(r) + (exiting ? '。仍要退出的话，本页没存上的进度会丢失。' : '。');
+  $('save-retry').hidden = r.kind === 'conflict';
+  const canRestore = r.kind === 'conflict' || (r.kind === 'rollback-failed' ? r.backupVerified : !!last);
+  $('save-restore').hidden = !canRestore;
+  $('save-restore').textContent = r.kind === 'conflict' ? '重新读取存档' : r.kind === 'rollback-failed' ? '从备份恢复' : `回到最后成功档（第 ${last?.revision ?? 0} 步）`;
+  $('save-exit').hidden = !exiting;
+  if (!$('save-dialog').open) $('save-dialog').showModal();
+}
+$('save-dialog').addEventListener('cancel',(e) => e.preventDefault());
+$('save-retry').addEventListener('click',async () => { saveFailure = null; $('save-dialog').close(); if (!(await persist()) && !saveFailure) flushClose(); });
+$('save-restore').addEventListener('click',() => {
+  if (!restoreArmed && saveFailure?.kind !== 'conflict') { restoreArmed = true; $('save-restore').textContent = '确定？本页没存上的步数会丢失'; return; }
+  $('save-dialog').close(); boot();
+});
+$('save-download').addEventListener('click',() => download(`bookcard-snapshot-r${game.revision}.json`,serialize(game)));
+$('save-exit').addEventListener('click',() => { $('save-dialog').close(); sendClose(); });
+function showResume(text, {resume=false, abandon=false, fresh=false}) {
+  abandonArmed = false;
+  $('resume-text').textContent = text;
+  $('resume-continue').hidden = !resume; $('resume-abandon').hidden = !abandon; $('resume-new').hidden = !fresh;
+  $('resume-abandon').textContent = '放弃';
+  if (!$('resume-dialog').open) $('resume-dialog').showModal();
+}
+$('resume-dialog').addEventListener('cancel',(e) => e.preventDefault());
+$('resume-continue').addEventListener('click',() => { $('resume-dialog').close(); resume(); });
+function startFresh() {
+  $('resume-dialog').close(); cancelAITimer(); actionInputGuard.reset();
+  game = freshGame(); uiLog = []; selected = null; notice = '';
+  paused = document.visibilityState === 'hidden'; pauseReason = paused ? '页面不可见，点击继续后恢复' : '';
+  render(); persist();
+}
+$('resume-abandon').addEventListener('click',() => {
+  if (!abandonArmed) { abandonArmed = true; $('resume-abandon').textContent = '确定放弃上一局？'; return; }
+  startFresh();
+});
+$('resume-new').addEventListener('click',startFresh);
+async function boot() {
+  cancelAITimer(); saveFailure = null; paused = true; pauseReason = '正在读取存档'; render();
+  const r = await store.load();
+  const q = r.quarantine === 'saved' ? '原数据已另存。' : r.quarantine === 'occupied' ? '原数据未另存（隔离区已占用）。' : r.quarantine ? '原数据未能备份。' : '';
+  const noWrite = r.writable === false ? ' 当前浏览器无法写存档。' : '';
+  if (r.status === 'empty') { startFresh(); return; }
+  if (r.status === 'ok' || r.status === 'recovered') {
+    actionInputGuard.reset(); game = r.game; uiLog = []; selected = null; notice = '';
+    pause('上一局已恢复，点击继续');
+    const head = r.status === 'recovered' ? `存档损坏，已回到最后一次成功存档（第 ${r.revision} 步）。${q}` : '';
+    showResume(`${head}继续上一局：第 ${r.turn} 回合 / 第 ${r.revision} 步。${noWrite}`, {resume:true, abandon:true});
+    return;
+  }
+  if (r.status === 'future') { pause('只读'); showResume(`${r.why}，请刷新到新版。本页不会写存档。`, {fresh:true}); return; }
+  pause('存档无法恢复');
+  showResume(`存档无法恢复（${r.why}）。${q}${noWrite}`, {fresh:true});
+}
+// Embedded in the business page: the parent only opens, closes and syncs mute. It never reads card saves.
+function onParent(d) {
+  if (!d || typeof d !== 'object') return;
+  if ((d.card === 'hello' || d.card === 'mute') && typeof d.muted === 'boolean') { muted = d.muted; document.body.dataset.muted = String(muted); }
+  if (d.card === 'requestClose') requestExit();
+}
+function sendClose() { closing = false; parentPort?.postMessage({card:'close'}); }
+function flushClose() { if (!closing || saveBusy) return; if (saveFailure) { showSaveFail(true); return; } sendClose(); }
+function requestExit() { if (closing) return; closing = true; pause('正在返回书店'); flushClose(); }
+if (embed) {
+  document.body.classList.add('embedded'); $('exit-embed').hidden = false;
+  $('exit-embed').addEventListener('click',requestExit);
+  window.addEventListener('message',(e) => {
+    if (e.origin !== location.origin || e.source !== window.parent || e.data?.card !== 'port' || !e.ports?.[0]) return;
+    parentPort?.close(); parentPort = e.ports[0]; parentPort.onmessage = (ev) => onParent(ev.data); parentPort.postMessage({card:'ready'});
+  });
+}
+matchMedia('(orientation: portrait)').addEventListener('change',() => { if (selected) { selected = null; actionInputGuard.reset(); render(); } });
+render(); boot();
 
 // Read-only diagnostics for local browser regression checks. No global state hooks.
 export function getDiagnostics() {
-  return {revision:game.revision,hash:hashState(game),active:game.active,phase:game.phase,paused,aiScheduled:aiTimer !== null,aiSteps:game.active === 1 ? actionsThisTurn(game,1) : 0,selected:selected ? {...selected} : null,turn:game.turn,config:JSON.parse(JSON.stringify(game.config))};
+  return {revision:game.revision,hash:hashState(game),active:game.active,phase:game.phase,paused,aiScheduled:aiTimer !== null,aiSteps:game.active === 1 ? actionsThisTurn(game,1) : 0,selected:selected ? {...selected} : null,turn:game.turn,saveBusy,saveFailure:saveFailure ? {...saveFailure} : null,lastSaved:store.lastSaved,readOnly:store.readOnly,tmpLeftCount,muted,embed,closing,ported:!!parentPort,config:JSON.parse(JSON.stringify(game.config))};
 }

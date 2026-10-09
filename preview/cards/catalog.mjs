@@ -1,5 +1,5 @@
 /** Version-pinned catalogue admission; no dynamic definitions or partial fallback. */
-import source from './catalog-data.mjs';
+import source from './catalog-data.mjs?v=card-s1';
 const clone=x=>JSON.parse(JSON.stringify(x));
 const freeze=o=>{if(o&&typeof o==='object'){Object.freeze(o);Object.values(o).forEach(freeze);}return o;};
 // Reject non-JSON objects before reading values: no toJSON, getters, prototypes or cycles.

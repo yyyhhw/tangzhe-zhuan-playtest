@@ -7,16 +7,16 @@
   <meta name="theme-color" content="#433425">
   <meta name="color-scheme" content="light">
   <title>书店卡牌 · 风格试玩</title>
-  <link rel="stylesheet" href="./styles.css">
-  <link rel="stylesheet" href="./bookspine.css">
+  <link rel="stylesheet" href="./styles.css?v=card-s1">
+  <link rel="stylesheet" href="./bookspine.css?v=card-s1">
 </head>
 <body>
   <main id="app">
     <header class="topbar">
       <div class="brand"><span class="brand-mark" aria-hidden="true">册</span><div><h1>书店卡牌 <span>风格试玩</span></h1><p>用一张牌，翻开下一页。</p></div></div>
-      <div class="top-actions"><button id="pause" class="quiet">暂停</button><button id="new-game" class="quiet">新对局</button><button id="snapshot-open" class="quiet">存档</button></div>
+      <div class="top-actions"><button id="exit-embed" class="quiet" hidden>返回书店</button><button id="pause" class="quiet">暂停</button><button id="new-game" class="quiet">新对局</button><button id="snapshot-open" class="quiet">存档</button></div>
     </header>
-    <p class="prototype-note">风格试玩 · 4 张原创插画已接入，其余仍为待补占位 · 固定 30 张实验牌组，每张最多 2 张 · 非正式游戏，仅在内存运行。横屏更宽敞，竖屏也可操作。</p>
+    <p class="prototype-note">风格试玩 · 4 张原创插画已接入，其余仍为待补占位 · 固定 30 张实验牌组，每张最多 2 张 · 非正式游戏，进度每步自动存在本机（仅此预览，不影响经营）。横屏更宽敞，竖屏也可操作。</p>
     <section class="table" aria-label="卡牌对局">
       <div id="turn-bar" class="turn-bar" aria-live="polite"></div>
       <div id="opponent" class="player-bar opponent"></div>
@@ -38,7 +38,7 @@
   <dialog id="setup-dialog" aria-labelledby="setup-title">
     <form id="setup-form">
       <div class="dialog-heading"><div><small>开始一段新篇章</small><h2 id="setup-title">新对局</h2></div><button type="button" data-close="setup-dialog" class="icon-button" aria-label="关闭新对局设置">×</button></div>
-      <p class="dialog-note">这会替换当前内存中的对局。需要保留进度时，请先下载快照。固定 30 张实验牌组，每张最多 2 张，仅中立及本职业牌。沿用四副已验的固定 30 张牌组；已支持 38 张目录卡，不代表默认牌组包含所有已支持卡。本试玩没有组牌界面，尚未完成完整规则与职业平衡验收。</p>
+      <p class="dialog-note">这会替换当前对局和自动存档（上一份存档保留为备份）。需要保留进度时，请先下载快照。固定 30 张实验牌组，每张最多 2 张，仅中立及本职业牌。沿用四副已验的固定 30 张牌组；已支持 38 张目录卡，不代表默认牌组包含所有已支持卡。本试玩没有组牌界面，尚未完成完整规则与职业平衡验收。</p>
       <fieldset><legend>你的角色</legend><div id="hero-options" class="hero-options"></div></fieldset>
       <label>对手角色<select name="opponentHero"><option value="mage">阿宅 · 法师</option><option value="warrior">77 · 战士</option><option value="paladin">珍珠姐 · 圣骑士</option><option value="warlock">火箭 · 术士</option></select></label>
       <details class="settings-details"><summary>实验规则与随机种子</summary><div class="settings-grid">
@@ -55,15 +55,25 @@
     </form>
   </dialog>
   <dialog id="snapshot-dialog" aria-labelledby="snapshot-title">
-    <div class="dialog-heading"><div><small>本地 JSON · 无自动保存</small><h2 id="snapshot-title">对局快照</h2></div><button type="button" data-close="snapshot-dialog" class="icon-button" aria-label="关闭快照">×</button></div>
-    <p class="dialog-note">刷新页面会丢失进度。快照包含完整技术状态，包括双方牌库、手牌和随机状态，请仅用于测试。导入时会暂停 AI；导入失败不会替换当前对局。</p>
+    <div class="dialog-heading"><div><small>本地 JSON · 另有每步自动存档</small><h2 id="snapshot-title">对局快照</h2></div><button type="button" data-close="snapshot-dialog" class="icon-button" aria-label="关闭快照">×</button></div>
+    <p class="dialog-note">对局每步自动存档，刷新后可继续上一局。快照包含完整技术状态，包括双方牌库、手牌和随机状态，请仅用于测试。导入时会暂停 AI；导入失败不会替换当前对局。</p>
     <div class="snapshot-actions"><button id="download" class="primary">下载 JSON 快照</button><button id="download-replay" class="quiet">下载回放</button></div>
     <label class="file-label">从文件导入<input id="import-file" type="file" accept="application/json,.json"></label>
     <label>或粘贴快照 JSON<textarea id="import-text" rows="6" spellcheck="false" placeholder="粘贴已下载的完整 JSON 快照"></textarea></label>
     <button id="import-button" class="quiet wide">导入粘贴的快照</button>
     <p id="import-result" class="error-text" role="status"></p>
   </dialog>
+  <dialog id="resume-dialog" aria-labelledby="resume-title">
+    <div class="dialog-heading"><div><small>本机存档</small><h2 id="resume-title">上一局</h2></div></div>
+    <p id="resume-text" class="dialog-note" role="status"></p>
+    <div class="snapshot-actions"><button id="resume-continue" class="primary">继续上一局</button><button id="resume-abandon" class="quiet">放弃</button><button id="resume-new" class="primary" hidden>新开一局</button></div>
+  </dialog>
+  <dialog id="save-dialog" aria-labelledby="save-title">
+    <div class="dialog-heading"><div><small>对局已暂停</small><h2 id="save-title">保存没有成功</h2></div></div>
+    <p id="save-text" class="dialog-note" role="alert"></p>
+    <div class="snapshot-actions"><button id="save-retry" class="primary">重试保存</button><button id="save-restore" class="quiet">回到最后成功档</button><button id="save-download" class="quiet">下载快照</button><button id="save-exit" class="quiet" hidden>仍要退出</button></div>
+  </dialog>
   <noscript><p>此技术原型需要启用 JavaScript。</p></noscript>
-  <script type="module" src="./app.mjs"></script>
+  <script type="module" src="./app.mjs?v=card-s1"></script>
 </body>
 </html>
