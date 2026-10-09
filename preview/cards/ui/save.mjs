@@ -131,6 +131,10 @@ export function createCardSave({storage, locks, core, now = () => Date.now()}) {
         let bakRaw, cur;
         try { bakRaw = get(BAK_KEY); } catch { return {ok: false, kind: 'before-commit', step: 'bak-read'}; }
         try { cur = get(SAVE_KEY); } catch { return {ok: false, kind: 'unreadable', step: 'main-read'}; }
+        for (const p of [parse(cur), parse(bakRaw)]) if (p.state === 'future') {
+          readOnly = true; pendingRestore = false;   // newer data version: never overwrite, page becomes read-only
+          return {ok: false, kind: 'readonly', step: 'future', why: p.why};
+        }
         if (!mainObserved) {
           // The main could not be observed at failure time, so the bak alone proves nothing
           // (another tab may have saved on top of an identical bak). Re-snapshot, write nothing.

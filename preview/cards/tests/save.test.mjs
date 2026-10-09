@@ -151,6 +151,23 @@ test('A2h A main write throws + reads fail, B saves r2 with identical bak, A res
   assert.equal(s.m.get(BAK_KEY), bakA);
 });
 
+test('A2j main readable again but holds a future dataVersion: read-only, never overwritten by backup', async () => {
+  const {s, st, g} = await saved(2);
+  s.faults.set = (k) => { if (k === SAVE_KEY) { s.faults.readThrow = (kk) => kk === SAVE_KEY; return 'throw'; } return null; };
+  assert.equal((await st.save(play(g, 1))).kind, 'rollback-failed'); s.faults.set = null; s.faults.readThrow = null;
+  const future = JSON.stringify({ns: 'tangzhe-card-save', dataVersion: 2, slotRev: 9, game: 'from-newer-build'});
+  s.m.set(SAVE_KEY, future); const before = new Map(s.m);
+  for (let i = 0; i < 3; i++) { const r = await st.restoreBackup(); assert.equal(r.ok, false); assert.equal(r.kind, i ? 'conflict' : 'readonly'); }
+  assert.deepEqual([...s.m], [...before]); assert.equal(st.readOnly, true);
+  assert.equal((await st.save(g)).kind, 'readonly'); assert.equal(s.m.get(SAVE_KEY), future);
+  // future bak is protected the same way
+  const o = await saved(2);
+  o.s.faults.set = (k) => { if (k === SAVE_KEY) { o.s.faults.readThrow = (kk) => kk === SAVE_KEY; return 'throw'; } return null; };
+  await o.st.save(play(o.g, 1)); o.s.faults.set = null; o.s.faults.readThrow = null;
+  o.s.m.set(SAVE_KEY, 'garbled'); o.s.m.set(BAK_KEY, future); const b2 = new Map(o.s.m);
+  assert.equal((await o.st.restoreBackup()).kind, 'readonly'); assert.deepEqual([...o.s.m], [...b2]);
+});
+
 test('A2i main readable but corrupt after recovery: re-snapshot, confirm, then commit; B save in between = conflict', async () => {
   const mk = async () => { const o = await saved(2); const {s, st, g} = o;
     s.faults.set = (k) => { if (k === SAVE_KEY) { s.faults.readThrow = (kk) => kk === SAVE_KEY; return 'throw'; } return null; };

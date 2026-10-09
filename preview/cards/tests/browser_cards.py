@@ -163,6 +163,20 @@ with sync_playwright() as p:
     check(a.evaluate("localStorage.getItem('tangzhe-preview-card-save')") == mainB2 and diag(a)['saveFailure']['kind'] == 'conflict', f'B18c A 再点恢复：报重新读取，B 的 r{revB2} 始终保留')
     a.click('#save-restore'); a.wait_for_function("document.getElementById('resume-dialog').open", timeout=10000)
     check(diag(a)['revision'] == revB2, f'B18c A 重新读取拿到 B 的 r{revB2}')
+    # B18d 主档恢复可读但是更高 dataVersion：只读、提示不兼容，不走备份覆盖确认
+    a.click('#resume-continue'); until(a, lambda d: d['active'] == 0 and not d['saveBusy'] and not d['aiScheduled'])
+    a.evaluate("""(()=>{window.__f3=true;const os=Storage.prototype.setItem,og=Storage.prototype.getItem;
+      Object.defineProperty(Storage.prototype,'setItem',{configurable:true,writable:true,value:function(k,v){if(window.__f3&&k==='tangzhe-preview-card-save'){window.__arm3=true;throw new Error('Quota');}return os.call(this,k,v);}});
+      Object.defineProperty(Storage.prototype,'getItem',{configurable:true,writable:true,value:function(k){if(window.__arm3&&k==='tangzhe-preview-card-save')throw new Error('read fail');return og.call(this,k);}});})()""")
+    a.click('#end-turn'); a.wait_for_function("document.getElementById('save-dialog').open", timeout=10000)
+    fut = '{"ns":"tangzhe-card-save","dataVersion":2,"slotRev":99,"game":"newer"}'
+    a.evaluate("f=>{window.__f3=false;window.__arm3=false;localStorage.setItem('tangzhe-preview-card-save',f)}", fut)
+    a.click('#save-restore'); a.click('#save-restore'); a.wait_for_timeout(400)
+    d = diag(a); t = a.inner_text('#save-text')
+    check(d['saveFailure']['kind'] == 'readonly' and d['readOnly'] and '版本不兼容' in t and a.inner_text('#save-restore') == '重新读取存档', f'B18d future 主档：只读、提示版本不兼容，不出「用备份覆盖主档」 「{t}」')
+    a.click('#save-restore'); a.click('#save-restore'); a.wait_for_function("document.getElementById('resume-dialog').open", timeout=10000)
+    check(a.evaluate("localStorage.getItem('tangzhe-preview-card-save')") == fut and '本页不会写存档' in a.inner_text('#resume-text'), 'B18d future 主档原样保留（dataVersion=2 没被改成 1），重新读取仍只读')
+    a.evaluate("m=>localStorage.setItem('tangzhe-preview-card-save',m)", mainB2)
     c.close()
     # C 入口和父子页
     c = b.new_context(**p.devices['iPhone 15']); pg = c.new_page(); errs = []
