@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#433425">
+  <meta name="color-scheme" content="light">
+  <title>书店卡牌 · 风格试玩</title>
+  <link rel="stylesheet" href="./styles.css">
+  <link rel="stylesheet" href="./bookspine.css">
+</head>
+<body>
+  <main id="app">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">册</span><div><h1>书店卡牌 <span>风格试玩</span></h1><p>用一张牌，翻开下一页。</p></div></div>
+      <div class="top-actions"><button id="pause" class="quiet">暂停</button><button id="new-game" class="quiet">新对局</button><button id="snapshot-open" class="quiet">存档</button></div>
+    </header>
+    <p class="prototype-note">风格试玩 · 4 张原创插画已接入，其余仍为待补占位 · 固定 30 张实验牌组，每张最多 2 张 · 非正式游戏，仅在内存运行。横屏更宽敞，竖屏也可操作。</p>
+    <section class="table" aria-label="卡牌对局">
+      <div id="turn-bar" class="turn-bar" aria-live="polite"></div>
+      <div id="opponent" class="player-bar opponent"></div>
+      <div id="enemy-board" class="board enemy-board" aria-label="对手随从"></div>
+      <div class="table-divider"><span>书 页 之 间</span><span id="rules-label"></span></div>
+      <div id="friendly-board" class="board friendly-board" aria-label="我的随从"></div>
+      <div id="player" class="player-bar player"></div>
+      <div class="hand-label"><span>我的手牌 <b id="hand-count"></b></span><span>点选卡牌 → 选择目标 / 确认出牌</span></div>
+      <div id="hand" class="hand" aria-label="我的手牌"></div>
+    </section>
+    <section class="interaction" aria-label="当前选择与操作">
+      <div id="selection" class="selection" aria-live="polite" aria-atomic="true"></div>
+      <div class="interaction-actions"><span class="action-slot"><button id="confirm" class="primary" hidden>确认出牌</button></span><span class="action-slot"><button id="cancel" class="quiet" hidden>取消选择</button></span><span class="action-slot"><button id="end-turn" class="primary">结束回合</button></span></div>
+    </section>
+    <div id="notice" class="notice" role="status" aria-live="polite"></div>
+    <details class="event-log"><summary>对局记录 <span id="revision-label"></span></summary><ol id="log"></ol></details>
+    <footer>已接入 38 / 83 张目录卡：中立 25、战士 4、法师 4、圣骑士 3、术士 2。另有既存实验硬币/衍生随从，不能加入牌组。其余 45 张保留完整目录，未接入。卡名仍为候选；未验证完整规则或职业平衡。</footer>
+  </main>
+  <dialog id="setup-dialog" aria-labelledby="setup-title">
+    <form id="setup-form">
+      <div class="dialog-heading"><div><small>开始一段新篇章</small><h2 id="setup-title">新对局</h2></div><button type="button" data-close="setup-dialog" class="icon-button" aria-label="关闭新对局设置">×</button></div>
+      <p class="dialog-note">这会替换当前内存中的对局。需要保留进度时，请先下载快照。固定 30 张实验牌组，每张最多 2 张，仅中立及本职业牌。沿用四副已验的固定 30 张牌组；已支持 38 张目录卡，不代表默认牌组包含所有已支持卡。本试玩没有组牌界面，尚未完成完整规则与职业平衡验收。</p>
+      <fieldset><legend>你的角色</legend><div id="hero-options" class="hero-options"></div></fieldset>
+      <label>对手角色<select name="opponentHero"><option value="mage">阿宅 · 法师</option><option value="warrior">77 · 战士</option><option value="paladin">珍珠姐 · 圣骑士</option><option value="warlock">火箭 · 术士</option></select></label>
+      <details class="settings-details"><summary>实验规则与随机种子</summary><div class="settings-grid">
+        <label>英雄生命<input name="heroHealth" type="number" value="30" min="1" max="99" required></label>
+        <label>牌库张数<input name="deckSize" type="number" value="30" min="30" max="30" readonly required></label>
+        <label>场上上限<input name="boardLimit" type="number" value="7" min="1" max="12" required></label>
+        <label>手牌上限<input name="handLimit" type="number" value="10" min="4" max="20" required></label>
+        <label>法力上限<input name="maxMana" type="number" value="10" min="1" max="20" required></label>
+        <label>规则种子<input name="rulesSeed" type="number" value="123" min="1" max="4294967295" required></label>
+        <label>AI 种子<input name="aiSeed" type="number" value="456" min="1" max="4294967295" required></label>
+      </div></details>
+      <p id="setup-error" class="error-text" role="alert"></p>
+      <button type="submit" class="primary wide">开始新对局</button>
+    </form>
+  </dialog>
+  <dialog id="snapshot-dialog" aria-labelledby="snapshot-title">
+    <div class="dialog-heading"><div><small>本地 JSON · 无自动保存</small><h2 id="snapshot-title">对局快照</h2></div><button type="button" data-close="snapshot-dialog" class="icon-button" aria-label="关闭快照">×</button></div>
+    <p class="dialog-note">刷新页面会丢失进度。快照包含完整技术状态，包括双方牌库、手牌和随机状态，请仅用于测试。导入时会暂停 AI；导入失败不会替换当前对局。</p>
+    <div class="snapshot-actions"><button id="download" class="primary">下载 JSON 快照</button><button id="download-replay" class="quiet">下载回放</button></div>
+    <label class="file-label">从文件导入<input id="import-file" type="file" accept="application/json,.json"></label>
+    <label>或粘贴快照 JSON<textarea id="import-text" rows="6" spellcheck="false" placeholder="粘贴已下载的完整 JSON 快照"></textarea></label>
+    <button id="import-button" class="quiet wide">导入粘贴的快照</button>
+    <p id="import-result" class="error-text" role="status"></p>
+  </dialog>
+  <noscript><p>此技术原型需要启用 JavaScript。</p></noscript>
+  <script type="module" src="./app.mjs"></script>
+</body>
+</html>
