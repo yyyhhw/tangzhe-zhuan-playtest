@@ -9,7 +9,7 @@
   <title>书店卡牌 · 风格试玩</title>
   <link rel="stylesheet" href="./styles.css?v=card-s1">
   <link rel="stylesheet" href="./bookspine.css?v=card-s1">
-  <link rel="stylesheet" href="./battlefield.css?v=card-feedback-5h">
+  <link rel="stylesheet" href="./battlefield.css?v=card-feedback-6a">
 </head>
 <body>
   <main id="app">
@@ -18,6 +18,7 @@
       <div id="turn-bar" class="turn-bar" aria-live="polite"></div>
       <div class="top-actions"><button id="exit-embed" class="quiet" hidden>返回</button><button id="pause" class="quiet">暂停</button><button id="menu-open" class="quiet" aria-haspopup="dialog">菜单</button></div>
     </header>
+    <div id="last-action-status" class="last-action-status" role="status" aria-live="polite" aria-atomic="true" hidden></div>
     <section class="table" aria-label="横屏卡牌战场">
       <div id="opponent" class="player-bar opponent"></div>
       <div id="enemy-board" class="board enemy-board" aria-label="对手随从"></div>
@@ -92,7 +93,7 @@
     <div class="snapshot-actions"><button id="save-retry" class="primary">重试保存</button><button id="save-restore" class="quiet">回到最后成功档</button><button id="save-download" class="quiet">下载快照</button><button id="save-exit" class="quiet" hidden>仍要退出</button></div>
   </dialog>
   <noscript><p>此技术原型需要启用 JavaScript。</p></noscript>
-  <script type="module" src="./app.mjs?v=card-feedback-5h"></script>
+  <script type="module" src="./app.mjs?v=card-feedback-6a"></script>
 </body>
 </html>
 
