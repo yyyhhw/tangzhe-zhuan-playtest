@@ -132,3 +132,49 @@ button{min-width:44px;min-height:44px;touch-action:manipulation}
 .hand-count{position:absolute;right:calc(var(--stage-left) + 3px);bottom:2px;z-index:36;min-width:76px;min-height:44px;height:44px;padding:4px 8px;font-size:11px;line-height:15px;color:#fff0cf;background:#413225e8!important;border:1px solid #b19a70;pointer-events:auto;box-shadow:0 2px 4px #0005}
 [data-gesture-dragging="true"] .hand,[data-gesture-dragging="true"] .hand.is-expanded{left:calc(var(--stage-left) + var(--stage)*.64);width:calc(var(--stage)*.32);bottom:-24dvh;z-index:10}
 [data-gesture-dragging="true"] .hand-card.selected{opacity:0;pointer-events:none}
+
+/* v6: compact opposing hero frees space for a raised, full-size portrait fan.
+   Attack/health live in each exposed upper-left strip, never below the viewport. */
+.opponent{top:7.8dvh}
+.opponent .hero-button{width:154px;min-width:154px;max-width:154px;height:48px;min-height:48px;border-radius:13px;padding:3px 7px;display:flex;align-items:center;gap:8px}
+.opponent .hero-avatar{width:31px;height:34px;font-size:25px;border-radius:8px;flex:none}
+.opponent .hero-title{display:block;max-width:98px;overflow:hidden;text-overflow:ellipsis;font-size:10px;line-height:12px}
+.opponent .hero-stats{display:flex;gap:5px;margin-top:3px;align-items:center}
+.opponent .hero-stats .hp,.opponent .hero-stats .armor{position:static;display:inline-flex;align-items:center;justify-content:center;min-width:37px;width:auto;height:23px;font-size:18px;line-height:21px;border-width:1px;border-radius:6px;letter-spacing:0;padding:0 3px}
+.opponent .hero-stats .hp:before{content:'♥';font-size:11px;margin-right:3px}.opponent .hero-stats .armor:before{content:'⬡';font-size:12px;margin-right:3px}
+.opponent-power-status{position:absolute;left:calc(50% + 87px);top:-14px;min-height:28px;display:flex;align-items:center;border:1px solid #ab925c;border-radius:7px;background:#433425;color:#ffe6a1;padding:4px 6px;font-size:10px;white-space:nowrap}
+.opponent-power-status.is-used{background:#303936;color:#d4ded8;border-color:#708078}
+.opponent .player-metadata{left:calc(50% - 158px);top:-22px;width:74px;max-width:74px;padding:4px}.opponent .player-metadata .mana-label{font-size:10px}.opponent .resource-line{font-size:8px}
+.enemy-board{top:calc(33.5dvh - var(--unit-h)/2)}.friendly-board{top:calc(57dvh - var(--unit-h)/2)}.table-divider{top:45dvh}
+.player{top:80dvh}.player .hero-button{left:calc(var(--stage-left) + var(--stage)*.065);width:14dvh;min-width:14dvh;max-width:14dvh;height:17dvh;min-height:17dvh}.player .hero-avatar{font-size:7dvh}
+.player .hero-stats .hp,.player .hero-stats .armor{height:22px;min-width:22px;font-size:16px;line-height:19px;bottom:-3px}.player .hero-stats .hp{right:-4px}.player .hero-stats .armor{left:-4px}
+.player .power-button{left:calc(var(--stage-left) + 4px);top:8dvh;transform:none;width:calc(var(--stage)*.12);max-width:none;height:44px;min-height:44px;border-radius:9px;border-width:2px;font-size:10px;padding:2px}.player .power-button small{font-size:9px}
+/* Preserve portrait card scale and overlap; numeric strips stay exposed. */
+.hand,.hand:has(.hand-card.selected),[data-gesture-dragging="true"] .hand,[data-gesture-dragging="true"] .hand.is-expanded{left:calc(var(--stage-left) + var(--stage)*.21);width:calc(var(--stage)*.73);bottom:calc(max(22dvh,86px) - 42dvh);height:42dvh;display:block;padding:0;z-index:10;transition:none}
+.hand.is-expanded{left:calc(var(--stage-left) + var(--stage)*.04);width:calc(var(--stage)*.92);bottom:-8dvh;height:42dvh;z-index:20}
+.hand-card,.hand-card.selected{position:absolute;left:calc((100% - 29dvh)*var(--hand-index)/var(--fan-divisor));bottom:0;width:29dvh;max-width:none;min-width:0;height:42dvh;min-height:42dvh;max-height:42dvh;padding:5px 5px 5px 6px;gap:2px;transform:rotate(calc(var(--fan-angle,0)*.35deg));rotate:none;border-width:2px;border-left-width:4px;border-radius:8px 10px 5px 5px;overflow:hidden;z-index:calc(var(--hand-index) + 1)}
+.hand-card.selected{bottom:5dvh;transform:none;outline:2px solid #ffe58e!important;outline-offset:1px!important;box-shadow:0 0 9px #fff0ab;z-index:30}
+.hand-card .card-heading{grid-template-columns:25px minmax(0,1fr);grid-template-rows:25px 25px;min-height:78px;align-content:space-between;gap:1px}
+.hand-card .card-heading .cost{height:25px;width:25px;font-size:21px;line-height:22px;border-width:1px}
+.hand-card .card-heading strong,.hand-card.selected .card-heading strong{font-size:12px;line-height:12px;text-align:left;word-break:break-all;padding-left:32px}
+.hand-card .hand-readiness{font-size:9px;line-height:12px;padding:1px 2px;max-width:100%;overflow:hidden}
+.hand-card .card-art,.hand-card.selected .card-art{height:auto;min-height:30px;flex:1;border-radius:38% 38% 6px 6px}.hand-card .art-fallback{font-size:10px}
+.hand-card .card-bottom{position:absolute;top:33px;left:4px;width:29px;display:flex;flex-direction:column;align-items:stretch;justify-content:center;gap:2px;min-height:43px;margin:0;background:#2d241e;border-radius:5px;padding:2px;z-index:4}
+.hand-card .hand-stat,.hand-card.selected .hand-stat{display:flex;align-items:center;justify-content:center;gap:1px;flex:1;min-width:0;font-size:17px;line-height:19px;font-weight:900;padding:0 1px;border-radius:3px;color:#fff3ca;background:#66563d;white-space:nowrap}.hand-card .hand-stat small{font-size:8px;font-weight:700;line-height:12px}
+.hand-card .attack-stat{color:#35260d;background:#f8d469}.hand-card .health-stat{color:#fff;background:#a12d29}.hand-card .durability-stat{color:#fff;background:#275e75}
+.hand.is-expanded .hand-card .card-bottom{width:49px;flex-direction:row;min-height:24px;gap:2px}.hand.is-expanded .hand-card .card-heading strong{padding-left:0}
+.hand-card .card-preview,.hand-card.selected .card-preview{display:none}
+.hand-count{top:54px;bottom:auto;right:calc(var(--stage-left) + 4px);min-width:72px;height:44px;padding:3px 5px;font-size:10px}
+.interaction-actions #detail-open{left:calc(var(--stage-left) + 5px);bottom:30dvh;width:72px}.interaction-actions #cancel{left:calc(var(--stage-left) + 5px);bottom:calc(30dvh + 48px);width:72px}.interaction-actions #confirm{left:calc(var(--stage-left) + 5px);bottom:calc(30dvh + 96px);width:72px}
+.last-action-status{position:absolute;left:calc(var(--stage-left) + var(--stage)*.23);top:16dvh;width:calc(var(--stage)*.54);height:7.5dvh;z-index:30;pointer-events:none;text-align:center;color:#fff3d1;text-shadow:0 1px #231a12;background:#3a2b20e8;border:1px solid #b79861;border-radius:6px;padding:2px 5px;overflow:hidden;font-size:10px;line-height:12px}.last-action-status[hidden]{display:none}.last-action-label,.last-action-detail{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.last-action-label{font-weight:800}.last-action-detail{color:#f7cf7d;font-size:9px}
+@media(min-height:500px) and (orientation:landscape){.last-action-status{font-size:13px;line-height:17px}.last-action-detail{font-size:11px}}
+@media(orientation:portrait){.last-action-status{display:none}}
+@media(forced-colors:active){.hand-card .card-bottom,.hand-card .hand-stat,.opponent-power-status,.last-action-status{background:Canvas;color:CanvasText;border:1px solid CanvasText}}
+/* Keep small-screen status copy clear of the compact opponent resource panel. */
+.battle-status{left:calc(var(--stage-left) + 8px);width:calc(var(--stage)*.22)}
+.last-action-status{top:15.5dvh;height:7dvh}
+.player{top:78dvh}.player .power-button{top:10dvh}
+/* Selected cards retain the same semantic attack/health colours. */
+.hand-card .hand-stat.attack-stat{color:#35260d;background:#f8d469}.hand-card .hand-stat.health-stat{color:#fff;background:#a12d29}.hand-card .hand-stat.durability-stat{color:#fff;background:#275e75}
+.hand-card .hand-stat:only-child{font-size:12px}
+@media(max-width:600px) and (orientation:landscape){.hand.is-expanded .hand-card .card-bottom{width:29px;flex-direction:column;min-height:43px}}
