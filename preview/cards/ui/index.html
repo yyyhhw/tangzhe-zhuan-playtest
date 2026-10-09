@@ -9,32 +9,50 @@
   <title>书店卡牌 · 风格试玩</title>
   <link rel="stylesheet" href="./styles.css?v=card-s1">
   <link rel="stylesheet" href="./bookspine.css?v=card-s1">
+  <link rel="stylesheet" href="./battlefield.css?v=card-landscape-4">
 </head>
 <body>
   <main id="app">
     <header class="topbar">
-      <div class="brand"><span class="brand-mark" aria-hidden="true">册</span><div><h1>书店卡牌 <span>风格试玩</span></h1><p>用一张牌，翻开下一页。</p></div></div>
-      <div class="top-actions"><button id="exit-embed" class="quiet" hidden>返回书店</button><button id="pause" class="quiet">暂停</button><button id="new-game" class="quiet">新对局</button><button id="snapshot-open" class="quiet">存档</button></div>
-    </header>
-    <p class="prototype-note">风格试玩 · 4 张原创插画已接入，其余仍为待补占位 · 固定 30 张实验牌组，每张最多 2 张 · 非正式游戏，进度每步自动存在本机（仅此预览，不影响经营）。横屏更宽敞，竖屏也可操作。</p>
-    <section class="table" aria-label="卡牌对局">
+      <div class="brand"><h1>书页之间 <span>卡牌试玩</span></h1></div>
       <div id="turn-bar" class="turn-bar" aria-live="polite"></div>
+      <div class="top-actions"><button id="exit-embed" class="quiet" hidden>返回</button><button id="pause" class="quiet">暂停</button><button id="menu-open" class="quiet" aria-haspopup="dialog">菜单</button></div>
+    </header>
+    <section class="table" aria-label="横屏卡牌战场">
       <div id="opponent" class="player-bar opponent"></div>
       <div id="enemy-board" class="board enemy-board" aria-label="对手随从"></div>
-      <div class="table-divider"><span>书 页 之 间</span><span id="rules-label"></span></div>
-      <div id="friendly-board" class="board friendly-board" aria-label="我的随从"></div>
+      <div class="table-divider" aria-hidden="true"><span>书 页 之 间</span></div>
+      <div id="friendly-board" data-gesture-target class="board friendly-board" role="group" tabindex="0" aria-label="我的战场：选牌后点击此处或按回车出牌"></div>
       <div id="player" class="player-bar player"></div>
-      <div class="hand-label"><span>我的手牌 <b id="hand-count"></b></span><span>点选卡牌 → 选择目标 / 确认出牌</span></div>
       <div id="hand" class="hand" aria-label="我的手牌"></div>
+      <aside class="battle-rail" aria-label="法力与回合操作">
+        <div id="mana-rail" class="mana-rail" aria-live="polite"></div>
+        <span id="hand-count" class="hand-count"></span>
+        <div class="interaction-actions">
+          <span class="action-slot"><button id="end-turn" class="primary">结束回合</button></span>
+          <span class="action-slot"><button id="confirm" class="primary" hidden>确认出牌</button></span>
+          <span class="action-slot"><button id="cancel" class="quiet" hidden>取消选择</button></span>
+          <span class="action-slot"><button id="detail-open" class="quiet" aria-haspopup="dialog">牌面详情</button></span>
+        </div>
+      </aside>
     </section>
-    <section class="interaction" aria-label="当前选择与操作">
-      <div id="selection" class="selection" aria-live="polite" aria-atomic="true"></div>
-      <div class="interaction-actions"><span class="action-slot"><button id="confirm" class="primary" hidden>确认出牌</button></span><span class="action-slot"><button id="cancel" class="quiet" hidden>取消选择</button></span><span class="action-slot"><button id="end-turn" class="primary">结束回合</button></span></div>
-    </section>
-    <div id="notice" class="notice" role="status" aria-live="polite"></div>
-    <details class="event-log"><summary>对局记录 <span id="revision-label"></span></summary><ol id="log"></ol></details>
-    <footer>已接入 38 / 83 张目录卡：中立 25、战士 4、法师 4、圣骑士 3、术士 2。另有既存实验硬币/衍生随从，不能加入牌组。其余 45 张保留完整目录，未接入。卡名仍为候选；未验证完整规则或职业平衡。</footer>
+    <div class="battle-status"><span id="battle-hint" aria-live="polite">拖动手牌到战场，或点选后点目标</span><span id="notice" class="notice" role="status" aria-live="polite"></span></div>
+    <div class="rotate-prompt" role="status"><span aria-hidden="true">↻</span><strong>横过手机，展开战场</strong><p>菜单、存档和返回仍可使用。对局已暂停。</p></div>
   </main>
+  <dialog id="menu-dialog" aria-labelledby="menu-title">
+    <div class="dialog-heading"><h2 id="menu-title">对局菜单</h2><button data-close="menu-dialog" class="icon-button" aria-label="关闭菜单">×</button></div>
+    <div class="snapshot-actions"><button id="new-game" class="primary">新对局</button><button id="snapshot-open" class="quiet">存档与回放</button></div>
+    <p class="prototype-note">4 张原创插画已接入，其余为待补占位。固定 30 张实验牌组，每张最多 2 张。进度每步存在本机，仅此预览，不影响经营。</p>
+    <p id="rules-label"></p>
+    <p class="dialog-note">拖动手牌到发亮的己方战场，或拖到金色目标上使用；拖动可攻击的角色到合法目标上攻击。拖回手牌、松开在无效位置或旋转屏幕均取消。也可点选卡牌，再点战场、目标或确认按钮。选牌本身不会出牌。</p>
+    <details class="event-log"><summary>对局记录 <span id="revision-label"></span></summary><ol id="log"></ol></details>
+    <footer>已接入 38 / 83 张目录卡：中立 25、战士 4、法师 4、圣骑士 3、术士 2。未验证完整规则或职业平衡。</footer>
+  </dialog>
+  <dialog id="detail-dialog" aria-labelledby="detail-title">
+    <div class="dialog-heading"><h2 id="detail-title">牌面详情</h2><button data-close="detail-dialog" class="icon-button" aria-label="关闭牌面详情">×</button></div>
+    <div id="selection" class="selection" aria-live="polite" aria-atomic="true"></div>
+    <p class="dialog-note">关闭后，原选择仍保留。点击战场或目标执行；也可取消选择。</p>
+  </dialog>
   <dialog id="setup-dialog" aria-labelledby="setup-title">
     <form id="setup-form">
       <div class="dialog-heading"><div><small>开始一段新篇章</small><h2 id="setup-title">新对局</h2></div><button type="button" data-close="setup-dialog" class="icon-button" aria-label="关闭新对局设置">×</button></div>
@@ -74,6 +92,7 @@
     <div class="snapshot-actions"><button id="save-retry" class="primary">重试保存</button><button id="save-restore" class="quiet">回到最后成功档</button><button id="save-download" class="quiet">下载快照</button><button id="save-exit" class="quiet" hidden>仍要退出</button></div>
   </dialog>
   <noscript><p>此技术原型需要启用 JavaScript。</p></noscript>
-  <script type="module" src="./app.mjs?v=card-s1"></script>
+  <script type="module" src="./app.mjs?v=card-landscape-4"></script>
 </body>
 </html>
+
