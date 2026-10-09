@@ -2,7 +2,7 @@
  * UI-only battle gestures. This module never imports or writes game/save state.
  *
  * attachBattleGestures({ root, getIntent, begin, getDropAction, commit, cancel,
- *   onDrag, document, threshold = 10, clickSuppressionMs = 750 })
+ *   onDrag, allowRevealedTarget, document, threshold = 10, clickSuppressionMs = 750 })
  *
  * getIntent(element, event) returns null or an opaque intent. Optional
  * intent.sourceElement identifies the entire source card/unit; intent.label
@@ -12,6 +12,8 @@
  * commit(action, event, intent) is called once, only for a legal pointerup.
  * cancel(intent, reason, event) runs only if begin was called.
  * onDrag(active, intent) brackets an actual drag, never a tap.
+ * allowRevealedTarget(intent, hit, legalAction, event) may opt in to a legal
+ * entity revealed where a collapsed hand used to be; defaults false.
  *
  * Keep root stable when rendering. Draggable elements must have touch-action:
  * none in CSS before pointerdown. Mark intended hover outlines with
@@ -47,6 +49,7 @@ export function attachBattleGestures(options) {
   const {
     root, getIntent, getDropAction, commit,
     begin = () => {}, cancel: onCancel = () => {}, onDrag = () => {},
+    allowRevealedTarget = () => false,
     threshold = 10, clickSuppressionMs = 750,
   } = options;
   const doc = options.document ?? root?.ownerDocument ?? globalThis.document;
@@ -143,11 +146,16 @@ export function attachBattleGestures(options) {
       g.ghost.style.transform = `translate3d(${event.clientX + 14}px, ${event.clientY - 42}px, 0) scale(.9)`;
     }
     const hit = doc.elementFromPoint?.(event.clientX, event.clientY) ?? null;
-    if (!withinRoot(hit) || isPointInRect(event, g.sourceRect)) {
+    if (!withinRoot(hit)) {
       setHover(g, null);
       return null;
     }
     const action = getDropAction(g.intent, hit, event);
+    // Layout can reveal a distinct legal target underneath an expanded hand.
+    // Default behavior still cancels returning to the old source rectangle.
+    if (isPointInRect(event, g.sourceRect) && !(isLegalDropAction(action) && allowRevealedTarget(g.intent,hit,action,event))) {
+      setHover(g,null); return null;
+    }
     const marked = hit.closest?.('[data-gesture-target], [data-drop-target], [data-drop-zone]');
     setHover(g, isLegalDropAction(action) ? (withinRoot(marked) ? marked : hit) : null);
     return action;

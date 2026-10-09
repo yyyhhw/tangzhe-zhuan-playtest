@@ -9,7 +9,7 @@
   <title>书店卡牌 · 风格试玩</title>
   <link rel="stylesheet" href="./styles.css?v=card-s1">
   <link rel="stylesheet" href="./bookspine.css?v=card-s1">
-  <link rel="stylesheet" href="./battlefield.css?v=card-landscape-4">
+  <link rel="stylesheet" href="./battlefield.css?v=card-feedback-5h">
 </head>
 <body>
   <main id="app">
@@ -27,7 +27,7 @@
       <div id="hand" class="hand" aria-label="我的手牌"></div>
       <aside class="battle-rail" aria-label="法力与回合操作">
         <div id="mana-rail" class="mana-rail" aria-live="polite"></div>
-        <span id="hand-count" class="hand-count"></span>
+        <button id="hand-count" class="hand-count quiet" aria-expanded="false" aria-controls="hand">手牌 ↑</button>
         <div class="interaction-actions">
           <span class="action-slot"><button id="end-turn" class="primary">结束回合</button></span>
           <span class="action-slot"><button id="confirm" class="primary" hidden>确认出牌</button></span>
@@ -92,7 +92,7 @@
     <div class="snapshot-actions"><button id="save-retry" class="primary">重试保存</button><button id="save-restore" class="quiet">回到最后成功档</button><button id="save-download" class="quiet">下载快照</button><button id="save-exit" class="quiet" hidden>仍要退出</button></div>
   </dialog>
   <noscript><p>此技术原型需要启用 JavaScript。</p></noscript>
-  <script type="module" src="./app.mjs?v=card-landscape-4"></script>
+  <script type="module" src="./app.mjs?v=card-feedback-5h"></script>
 </body>
 </html>
 
