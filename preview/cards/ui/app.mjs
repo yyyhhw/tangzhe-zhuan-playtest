@@ -30,6 +30,7 @@ let aiTimer = null;
 let aiGeneration = 0;
 let commandSerial = 0;
 let notice = '';
+let resultRecoveryNote = '';
 let uiLog = [];
 let importGeneration = 0;
 let importBusy = false;
@@ -37,7 +38,7 @@ const store = createCardSave({storage:localStorage,locks:navigator.locks,core:ca
 let saveBusy = false, saveFailure = null, saveNote = '', lastSave = null, tmpLeftCount = 0;
 let restoreArmed = false, abandonArmed = false;
 const embed = new URLSearchParams(location.search).get('embed') === '1' && window.parent !== window;
-let parentPort = null, muted = false, closing = false;
+let parentPort = null, muted = false, closing = false, closeSent = false;
 const freshGame = () => createGame({rulesSeed:123,aiSeed:456,heroes:['warrior','mage']});
 
 function actions() { return game.phase === 'main' ? legalActions(game) : []; }
@@ -419,6 +420,17 @@ function renderSelection() {
   $('cancel').hidden = !selected;
   $('end-turn').disabled = !humanTurn() || !actions().some((a) => a.player === 0 && a.type === 'end');
 }
+function renderResult() {
+  const ended = game.phase === 'ended';
+  $('result-panel').hidden = !ended;
+  if (!ended) return;
+  $('result-title').textContent = resultText();
+  $('result-note').textContent = saveFailure ? '结果尚未保存，请先处理保存提示。' : saveBusy ? '正在保存本局结果…' : !store.writable ? '本局未存档；返回将离开当前结果。' : '本局已结束，可返回书店，或设置下一局。';
+  if (resultRecoveryNote) $('result-note').textContent += ` ${resultRecoveryNote}`;
+  $('result-finish').disabled = closeSent;
+  $('result-finish').textContent = closing ? '正在返回…' : '结束游戏 · 返回书店';
+  $('result-replay').disabled = saveBusy || !!saveFailure || closing || closeSent;
+}
 function render() {
   $('app').classList.toggle('blocked-aim',notice.startsWith('先处理嘲讽'));
   $('app').dataset.interactionMode = handExpanded ? 'inspect-hand' : selected ? 'aim' : 'battle';
@@ -444,7 +456,7 @@ function render() {
   if (focusMarker) document.querySelector(`[${focusMarker[0]}="${CSS.escape(focusMarker[1])}"]`)?.focus({preventScroll:true});
   $('notice').textContent = [notice, saveNote].filter(Boolean).join(' · ');
   $('revision-label').textContent = `状态 #${game.revision} · ${game.rulesVersion} · 卡池 ${game.cardPoolVersion}`;
-  renderCombatStatus();
+  renderCombatStatus(); renderResult();
   $('log').innerHTML = uiLog.length ? uiLog.slice().reverse().map((l) => `<li>#${l.revision} · ${esc(l.text)}${l.eventCount ? ` · ${l.eventCount} 个规则事件` : ''}</li>`).join('') : '<li>新对局已准备好。完整动作记录见「下载回放」。</li>';
 }
 function onEntityClick(uid,index,event) {
@@ -515,7 +527,15 @@ $('end-turn').addEventListener('click',(event) => {
   if (humanTurn() && end) { selected = null; commitAction(end,false,event); }
 });
 $('hero-options').innerHTML = Object.entries(HEROES).map(([id,h],index) => `<label class="hero-option"><input type="radio" name="hero" value="${id}" ${index === 0 ? 'checked' : ''}><span>${h.name}<small>${h.role}</small></span></label>`).join('');
-$('new-game').addEventListener('click',() => { $('menu-dialog').close(); invalidatePendingImport(); pause('设置已打开'); $('setup-error').textContent = ''; $('setup-dialog').showModal(); });
+function openSetup() {
+  if (saveBusy || saveFailure || closing || closeSent || $('setup-dialog').open) return;
+  $('menu-dialog').close(); invalidatePendingImport(); pause('设置已打开');
+  $('setup-error').textContent = ''; $('setup-dialog').showModal();
+}
+$('new-game').addEventListener('click',openSetup);
+$('result-replay').addEventListener('click',openSetup);
+$('result-finish').addEventListener('click',requestExit);
+$('save-finish').addEventListener('click',requestExit);
 $('snapshot-open').addEventListener('click',() => { $('menu-dialog').close(); pause('快照窗口已打开'); $('import-result').textContent = ''; $('snapshot-dialog').showModal(); });
 document.querySelectorAll('[data-close]').forEach((button) => button.addEventListener('click',() => {
   if (button.dataset.close === 'snapshot-dialog') invalidatePendingImport();
@@ -528,13 +548,14 @@ $('snapshot-dialog').addEventListener('close',() => {
 });
 $('setup-form').addEventListener('submit',(event) => {
   event.preventDefault();
+  if (!$('setup-dialog').open || saveBusy || saveFailure || closing || closeSent) return;
   const data = new FormData(event.currentTarget);
   const config = Object.fromEntries(['heroHealth','deckSize','boardLimit','handLimit','maxMana'].map((key) => [key, Number(data.get(key))]));
   try {
     const nextGame = createGame({rulesSeed:Number(data.get('rulesSeed')),aiSeed:Number(data.get('aiSeed')),heroes:[data.get('hero'),data.get('opponentHero')],config});
     clearCombatFX(); cancelAITimer(); invalidatePendingImport();
     actionInputGuard.reset();
-    game = nextGame; paused = portrait.matches; pauseReason = paused ? '请横过手机再继续' : ''; selected = null; uiLog = []; notice = '';
+    resultRecoveryNote = ''; game = nextGame; paused = portrait.matches; pauseReason = paused ? '请横过手机再继续' : ''; selected = null; uiLog = []; notice = '';
     $('setup-dialog').close(); render(); persist();
   } catch (err) { $('setup-error').textContent = `无法开始：${err.message || '实验参数无效'}`; }
 });
@@ -549,7 +570,7 @@ $('download-replay').addEventListener('click',() => { download(`bookcard-replay-
 function importSnapshot(text) {
   try {
     const candidate = deserialize(text);
-    clearCombatFX(); cancelAITimer(); actionInputGuard.reset(); game = candidate; selected = null; paused = true; pauseReason = '快照已导入'; uiLog = []; notice = '快照已导入。关闭窗口后点击「继续」恢复。';
+    clearCombatFX(); cancelAITimer(); actionInputGuard.reset(); resultRecoveryNote = ''; game = candidate; selected = null; paused = true; pauseReason = '快照已导入'; uiLog = []; notice = '快照已导入。关闭窗口后点击「继续」恢复。';
     $('import-result').textContent = notice; render(); persist(); return true;
   } catch (err) {
     $('import-result').textContent = `导入失败，当前对局已保留：${err.message || '快照无效'}`; return false;
@@ -611,6 +632,7 @@ function showSaveFail(exiting = closing) {
   $('save-restore').hidden = !canRestore;
   $('save-restore').textContent = r.kind === 'conflict' || r.kind === 'readonly' ? '重新读取存档' : r.kind === 'rollback-failed' ? '从备份恢复' : r.kind === 'unreadable' ? '再试一次' : r.kind === 'reconfirm' ? '用备份覆盖主档' : `回到最后成功档（第 ${last?.revision ?? 0} 步）`;
   $('save-exit').hidden = !exiting;
+  $('save-finish').hidden = exiting || game.phase !== 'ended';
   if (!$('save-dialog').open) $('save-dialog').showModal();
 }
 $('save-dialog').addEventListener('cancel',(e) => e.preventDefault());
@@ -645,7 +667,7 @@ async function restoreFromBackup() {
   showResume(`已从备份恢复：第 ${r.turn} 回合 / 第 ${r.revision} 步。`, {resume:true});
 }
 $('save-download').addEventListener('click',() => download(`bookcard-snapshot-r${game.revision}.json`,serialize(game)));
-$('save-exit').addEventListener('click',() => { $('save-dialog').close(); sendClose(); });
+$('save-exit').addEventListener('click',() => { if (!closing) return; $('save-dialog').close(); sendClose(); });
 function showResume(text, {resume=false, abandon=false, fresh=false}) {
   abandonArmed = false;
   $('resume-text').textContent = text;
@@ -657,7 +679,7 @@ $('resume-dialog').addEventListener('cancel',(e) => e.preventDefault());
 $('resume-continue').addEventListener('click',() => { $('resume-dialog').close(); resume(); });
 function startFresh() {
   clearCombatFX(); $('resume-dialog').close(); cancelAITimer(); actionInputGuard.reset();
-  game = freshGame(); uiLog = []; selected = null; notice = '';
+  resultRecoveryNote = ''; game = freshGame(); uiLog = []; selected = null; notice = '';
   paused = document.visibilityState === 'hidden' || portrait.matches; pauseReason = paused ? portrait.matches ? '请横过手机再继续' : '页面不可见，点击继续后恢复' : '';
   render(); persist();
 }
@@ -667,7 +689,7 @@ $('resume-abandon').addEventListener('click',() => {
 });
 $('resume-new').addEventListener('click',startFresh);
 async function boot() {
-  clearCombatFX(); cancelAITimer(); saveFailure = null; closing = false; paused = true; pauseReason = '正在读取存档'; render();
+  clearCombatFX(); resultRecoveryNote = ''; cancelAITimer(); saveFailure = null; closing = false; closeSent = false; paused = true; pauseReason = '正在读取存档'; render();
   const r = await store.load();
   const q = r.quarantine === 'saved' ? '原数据已另存。' : r.quarantine === 'occupied' ? '原数据未另存（隔离区已占用）。' : r.quarantine ? '原数据未能备份。' : '';
   const noWrite = r.writable === false ? ' 当前浏览器无法写存档。' : '';
@@ -676,6 +698,7 @@ async function boot() {
     actionInputGuard.reset(); game = r.game; uiLog = []; selected = null; notice = '';
     pause('上一局已恢复，点击继续');
     const head = r.status === 'recovered' ? `存档损坏，已回到最后一次成功存档（第 ${r.revision} 步）。${q}` : '';
+    if (game.phase === 'ended') { resultRecoveryNote = `${head}${noWrite}`; pause('上一局已结束'); return; }
     showResume(`${head}继续上一局：第 ${r.turn} 回合 / 第 ${r.revision} 步。${noWrite}`, {resume:true, abandon:true});
     return;
   }
@@ -689,15 +712,25 @@ function onParent(d) {
   if ((d.card === 'hello' || d.card === 'mute') && typeof d.muted === 'boolean') { muted = d.muted; document.body.dataset.muted = String(muted); }
   if (d.card === 'requestClose') requestExit();
 }
-function sendClose() { closing = false; parentPort?.postMessage({card:'close'}); }
+function sendClose() {
+  if (closeSent) return;
+  if (embed && !parentPort) {
+    notice = '正在连接书店，请稍候；也可使用书店的返回按钮。'; render(); return;
+  }
+  closeSent = true; closing = false;
+  clearCombatFX(); cancelAITimer(); invalidatePendingImport();
+  if (embed) parentPort.postMessage({card:'close'});
+  else location.assign(new URL('../../',location.href).href);
+  render();
+}
 function flushClose() { if (!closing || saveBusy) return; if (saveFailure) { showSaveFail(true); return; } sendClose(); }
-function requestExit() { if (closing) return; closing = true; pause('正在返回书店'); flushClose(); }
+function requestExit() { if (closing || closeSent) return; closing = true; pause('正在返回书店'); flushClose(); }
 if (embed) {
   document.body.classList.add('embedded'); $('exit-embed').hidden = false;
   $('exit-embed').addEventListener('click',requestExit);
   window.addEventListener('message',(e) => {
     if (e.origin !== location.origin || e.source !== window.parent || e.data?.card !== 'port' || !e.ports?.[0]) return;
-    parentPort?.close(); parentPort = e.ports[0]; parentPort.onmessage = (ev) => onParent(ev.data); parentPort.postMessage({card:'ready'});
+    parentPort?.close(); parentPort = e.ports[0]; parentPort.onmessage = (ev) => onParent(ev.data); parentPort.postMessage({card:'ready'}); flushClose();
   });
 }
 // Every drop is resolved against current legal actions, never against a cached rule guess.
