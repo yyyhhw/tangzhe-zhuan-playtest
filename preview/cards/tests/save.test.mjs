@@ -113,25 +113,50 @@ test('A2d read-back throws after main write: rollback-failed (main really update
   const r = await st.save(g2);
   assert.equal(r.kind, 'rollback-failed'); assert.equal(r.backupVerified, true); assert.ok(!('lastSaved' in r));
   assert.equal(JSON.parse(s.m.get(SAVE_KEY)).meta.revision, g2.revision, 'main was in fact updated');
-  s.faults.set = null;
-  const b = await st.restoreBackup();          // read of main still throws here
+  s.faults.set = null; const before = new Map(s.m);
+  const b0 = await st.restoreBackup();         // main still unreadable: refuse, write nothing
+  assert.equal(b0.ok, false); assert.deepEqual([...s.m], [...before]);
+  s.faults.readThrow = null; const bakBefore = s.m.get(BAK_KEY);
+  const b = await st.restoreBackup();
   assert.equal(b.ok, true); assert.equal(b.revision, g.revision, 'explicit backup path ignores the valid-looking main');
   assert.equal(st.lastSaved.revision, g.revision);
-  s.faults.readThrow = null; const bakBefore = s.m.get(BAK_KEY);
-  const r2 = await st.save(b.game); assert.equal(r2.ok, true);
   assert.equal(s.m.get(BAK_KEY), bakBefore, 'uncertain main never copied over the verified backup');
-  assert.equal(JSON.parse(s.m.get(SAVE_KEY)).meta.revision, g.revision);
+  assert.equal(JSON.parse(s.m.get(SAVE_KEY)).meta.revision, g.revision, 'backup committed to main in the same transaction');
   assert.equal((await st.save(play(b.game, 1))).ok, true, 'normal saving resumes');
 });
 
-test('A2e restoreBackup with readable main also returns bak, then overwrites main', async () => {
-  const {s, st, g} = await saved(2); const g2 = play(g, 1); await st.save(g2);
-  const b = await st.restoreBackup(); assert.equal(b.revision, g.revision);
-  assert.equal((await st.save(b.game)).ok, true); assert.equal(JSON.parse(s.m.get(SAVE_KEY)).meta.revision, g.revision);
+test('A2e two tabs: A rollback-failed -> B loads and saves newer -> A restore = conflict, B progress kept', async () => {
+  const {s, st, g} = await saved(2); const g2 = play(g, 1);
+  s.faults.set = (k) => { if (k === SAVE_KEY) s.faults.readThrow = (kk) => kk === SAVE_KEY; return null; };
+  assert.equal((await st.save(g2)).kind, 'rollback-failed');
+  s.faults.set = null; s.faults.readThrow = null;
+  const B = createCardSave({storage: s, locks, core}); const lb = await B.load();
+  const g3 = play(lb.game, 2); assert.equal((await B.save(g3)).ok, true);
+  const mainB = s.m.get(SAVE_KEY), bakB = s.m.get(BAK_KEY);
+  const r = await st.restoreBackup();
+  assert.equal(r.ok, false); assert.equal(r.kind, 'conflict');
+  assert.equal(s.m.get(SAVE_KEY), mainB, 'B newer save not overwritten'); assert.equal(s.m.get(BAK_KEY), bakB);
+  assert.equal(JSON.parse(s.m.get(SAVE_KEY)).meta.revision, g3.revision);
+});
+
+test('A2e2 only the main changed after failure (bak same): still conflict', async () => {
+  const {s, st, g} = await saved(2);
+  s.faults.set = (k) => { if (k === SAVE_KEY) { s.faults.readBad = (kk) => kk === SAVE_KEY; return 'drop'; } return null; };
+  assert.equal((await st.save(play(g, 1))).kind, 'rollback-failed');
+  s.faults.set = null; s.faults.readBad = null; s.m.set(SAVE_KEY, 'other-tab-text');
+  const r = await st.restoreBackup(); assert.equal(r.kind, 'conflict'); assert.equal(s.m.get(SAVE_KEY), 'other-tab-text');
+});
+
+test('A2e3 restoreBackup without a prior rollback failure is refused', async () => {
+  const {s, st} = await saved(2); const before = new Map(s.m);
+  assert.equal((await st.restoreBackup()).ok, false); assert.deepEqual([...s.m], [...before]);
 });
 
 test('A2f bak unusable: restoreBackup refuses, writes nothing', async () => {
-  const {s, st} = await saved(2); s.m.set(BAK_KEY, 'bad'); const before = new Map(s.m);
+  const {s, st, g} = await saved(2);
+  s.faults.set = (k) => { if (k === SAVE_KEY) { s.m.set(BAK_KEY, 'bad'); s.faults.readThrow = (kk) => kk === SAVE_KEY; } return null; };
+  const rf = await st.save(play(g, 1)); assert.equal(rf.kind, 'rollback-failed'); assert.equal(rf.backupVerified, false);
+  s.faults.set = null; s.faults.readThrow = null; const before = new Map(s.m);
   const b = await st.restoreBackup(); assert.equal(b.ok, false); assert.deepEqual([...s.m], [...before]);
 });
 

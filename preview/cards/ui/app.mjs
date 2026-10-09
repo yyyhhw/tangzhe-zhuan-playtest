@@ -386,12 +386,14 @@ $('save-restore').addEventListener('click',() => {
   if (saveFailure?.kind === 'rollback-failed') restoreFromBackup(); else boot();
 });
 async function restoreFromBackup() {
+  saveBusy = true; cancelAITimer();
   const r = await store.restoreBackup();
-  if (!r.ok) { saveFailure = {ok:false,kind:'rollback-failed',backupVerified:false}; showSaveFail(); return; }
-  saveFailure = null; cancelAITimer(); actionInputGuard.reset();
-  game = r.game; uiLog = []; selected = null; notice = '';
+  saveBusy = false;
+  if (!r.ok) { saveFailure = r; pause(failText(r)); showSaveFail(); return; }
+  saveFailure = null; actionInputGuard.reset();
+  game = r.game; uiLog = []; selected = null; notice = ''; saveNote = '';
   pause('已从备份恢复，点击继续');
-  if (await persist()) showResume(`已从备份恢复：第 ${r.turn} 回合 / 第 ${r.revision} 步。`, {resume:true});
+  showResume(`已从备份恢复：第 ${r.turn} 回合 / 第 ${r.revision} 步。`, {resume:true});
 }
 $('save-download').addEventListener('click',() => download(`bookcard-snapshot-r${game.revision}.json`,serialize(game)));
 $('save-exit').addEventListener('click',() => { $('save-dialog').close(); sendClose(); });

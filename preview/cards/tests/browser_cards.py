@@ -124,6 +124,21 @@ with sync_playwright() as p:
     a.reload(); booted(a); a.click('#resume-continue'); human_end(a)
     bpg.click('#end-turn'); bpg.wait_for_function("document.getElementById('save-dialog').open", timeout=10000)
     check(bpg.evaluate("(async()=>{const d=(await import('/preview/cards/ui/app.mjs?v=card-s1')).getDiagnostics();return d.saveFailure&&d.saveFailure.kind;})()") == 'conflict', 'B18 两个标签页：后写的一方被拒并提示')
+    # B18b A 回滚失败选备份 → B 保存新进度 → A 提交恢复：必须报冲突，B 的新档保留
+    a.reload(); booted(a); a.click('#resume-continue')
+    a.evaluate("""(()=>{window.__rb=true;const os=Storage.prototype.setItem,og=Storage.prototype.getItem;
+      Object.defineProperty(Storage.prototype,'setItem',{configurable:true,writable:true,value:function(k,v){const r=os.call(this,k,v);if(window.__rb&&k==='tangzhe-preview-card-save')window.__rbArm=true;return r;}});
+      Object.defineProperty(Storage.prototype,'getItem',{configurable:true,writable:true,value:function(k){if(window.__rbArm&&k==='tangzhe-preview-card-save')throw new Error('read fail');return og.call(this,k);}});})()""")
+    a.click('#end-turn'); a.wait_for_function("document.getElementById('save-dialog').open", timeout=10000)
+    check(diag(a)['saveFailure']['kind'] == 'rollback-failed', 'B18b A 回滚失败')
+    a.evaluate("window.__rbArm=false;window.__rb=false"); a.click('#save-restore')   # A 选了备份（第一下）
+    bpg.reload(); booted(bpg); bpg.click('#resume-continue'); human_end(bpg)
+    mainB = a.evaluate("localStorage.getItem('tangzhe-preview-card-save')"); revB = diag(bpg)['revision']
+    a.click('#save-restore'); a.wait_for_timeout(600)
+    d = diag(a)
+    check(d['saveFailure'] and d['saveFailure']['kind'] == 'conflict' and a.evaluate("localStorage.getItem('tangzhe-preview-card-save')") == mainB, f'B18b A 提交恢复报冲突，B 的新档 r{revB} 没被覆盖')
+    a.click('#save-restore'); a.wait_for_function("document.getElementById('resume-dialog').open", timeout=10000)
+    check(diag(a)['revision'] == revB, f'B18b A 重新读取存档后拿到 B 的 r{revB}')
     c.close()
     # C 入口和父子页
     c = b.new_context(**p.devices['iPhone 15']); pg = c.new_page(); errs = []

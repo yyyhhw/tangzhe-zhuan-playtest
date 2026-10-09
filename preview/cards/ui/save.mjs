@@ -18,7 +18,7 @@ export function createCardSave({storage, locks, core, now = () => Date.now()}) {
   let knownMainValid = false;
   let slotRev = 0;
   let readOnly = false;
-  let overwriteMain = false; // set by an explicit backup restore: next commit replaces whatever the main holds
+  let failMain, failBak;     // main / bak text observed when the main became uncertain
   let lastSaved = null;     // {revision, turn} of the last verified successful save
 
   const get = (k) => storage.getItem(k);
@@ -111,21 +111,36 @@ export function createCardSave({storage, locks, core, now = () => Date.now()}) {
   function uncertain() {
     knownMain = undefined; knownMainValid = false;
     try { storage.removeItem(TMP_KEY); } catch { /* ignored */ }
-    return {ok: false, kind: 'rollback-failed', step: 'main-rollback', backupVerified: backupVerified()};
+    try { failMain = get(SAVE_KEY); } catch { failMain = undefined; }
+    try { failBak = get(BAK_KEY); } catch { failBak = undefined; }
+    return {ok: false, kind: 'rollback-failed', step: 'main-rollback', backupVerified: failBak != null && parse(failBak).state === 'ok'};
   }
 
-  /** Explicit backup path: never prefers the main save, writes nothing. */
+  /** Explicit backup path after a rollback failure. Choosing the backup and writing it back to the
+   * main happen in one locked transaction; if the main or the backup changed since the failure was
+   * observed (another tab saved), it is a conflict and nothing is written. */
   async function restoreBackup() {
-    let raw;
-    try { raw = get(BAK_KEY); } catch { return {ok: false, why: '无法读取备份'}; }
-    const bak = parse(raw);
-    if (bak.state !== 'ok') return {ok: false, why: bak.why || '没有备份'};
-    let cur;
-    try { cur = get(SAVE_KEY); } catch { cur = undefined; }
-    knownMain = cur; knownMainValid = false; readOnly = false; overwriteMain = true;
-    slotRev = Math.max(slotRev, bak.env.slotRev);
-    lastSaved = {revision: bak.game.revision, turn: bak.game.turn};
-    return {ok: true, game: bak.game, revision: bak.game.revision, turn: bak.game.turn};
+    if (failBak === undefined) return {ok: false, kind: 'conflict', step: 'no-failure'};
+    if (!lockAvailable()) return {ok: false, kind: 'before-commit', step: 'no-lock'};
+    mainTouched = false;
+    try {
+      return await withLock(() => {
+        let bakRaw, cur;
+        try { bakRaw = get(BAK_KEY); } catch { return {ok: false, kind: 'before-commit', step: 'bak-read'}; }
+        try { cur = get(SAVE_KEY); } catch { return {ok: false, kind: 'before-commit', step: 'main-read'}; }
+        if (bakRaw !== failBak || (failMain !== undefined && cur !== failMain)) return {ok: false, kind: 'conflict', step: 'restore-cas', lastSaved};
+        const bak = parse(bakRaw);
+        if (bak.state !== 'ok') return {ok: false, kind: 'rollback-failed', step: 'bak-invalid', backupVerified: false};
+        knownMain = cur; knownMainValid = false;   // never copy the uncertain main into bak
+        slotRev = Math.max(slotRev, bak.env.slotRev);
+        const r = commit(bak.game);
+        if (!r.ok) return r;
+        failMain = failBak = undefined;
+        return {ok: true, game: bak.game, revision: bak.game.revision, turn: bak.game.turn};
+      });
+    } catch (e) {
+      return mainTouched ? uncertain() : {ok: false, kind: 'before-commit', step: 'lock', why: String(e?.message ?? e)};
+    }
   }
 
   function commit(game) {
@@ -135,7 +150,7 @@ export function createCardSave({storage, locks, core, now = () => Date.now()}) {
     };
     // 1. CAS against what this page last saw.
     const current = get(SAVE_KEY);
-    if (!overwriteMain && current !== knownMain) return {ok: false, kind: 'conflict', step: 'cas', lastSaved};
+    if (current !== knownMain) return {ok: false, kind: 'conflict', step: 'cas', lastSaved};
     const oldMain = current;
     const text = envelope(game, slotRev + 1);
     // 2-3. Temporary write, read back, full replay check.
@@ -167,7 +182,7 @@ export function createCardSave({storage, locks, core, now = () => Date.now()}) {
     let back;
     try { back = get(SAVE_KEY); } catch { return uncertain(); }
     if (back !== text) return settle('main-verify');
-    knownMain = text; knownMainValid = true; overwriteMain = false; slotRev += 1;
+    knownMain = text; knownMainValid = true; slotRev += 1;
     lastSaved = {revision: game.revision, turn: game.turn};
     // 6. Clean tmp. Failure here is still a successful save.
     let tmpLeft = false;
