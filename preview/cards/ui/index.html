@@ -9,7 +9,7 @@
   <title>书店卡牌 · 风格试玩</title>
   <link rel="stylesheet" href="./styles.css?v=card-s1">
   <link rel="stylesheet" href="./bookspine.css?v=card-s1">
-  <link rel="stylesheet" href="./battlefield.css?v=card-feedback-6a">
+  <link rel="stylesheet" href="./battlefield.css?v=card-end-7">
 </head>
 <body>
   <main id="app">
@@ -38,6 +38,11 @@
       </aside>
     </section>
     <div class="battle-status"><span id="battle-hint" aria-live="polite">拖动手牌到战场，或点选后点目标</span><span id="notice" class="notice" role="status" aria-live="polite"></span></div>
+    <section id="result-panel" class="result-panel" aria-labelledby="result-title" hidden>
+      <h2 id="result-title" aria-live="polite"></h2>
+      <p id="result-note" role="status"></p>
+      <div class="result-actions"><button id="result-finish" class="primary">结束游戏 · 返回书店</button><button id="result-replay" class="quiet" aria-haspopup="dialog">再来一局</button></div>
+    </section>
     <div class="rotate-prompt" role="status"><span aria-hidden="true">↻</span><strong>横过手机，展开战场</strong><p>菜单、存档和返回仍可使用。对局已暂停。</p></div>
   </main>
   <dialog id="menu-dialog" aria-labelledby="menu-title">
@@ -90,10 +95,10 @@
   <dialog id="save-dialog" aria-labelledby="save-title">
     <div class="dialog-heading"><div><small>对局已暂停</small><h2 id="save-title">保存没有成功</h2></div></div>
     <p id="save-text" class="dialog-note" role="alert"></p>
-    <div class="snapshot-actions"><button id="save-retry" class="primary">重试保存</button><button id="save-restore" class="quiet">回到最后成功档</button><button id="save-download" class="quiet">下载快照</button><button id="save-exit" class="quiet" hidden>仍要退出</button></div>
+    <div class="snapshot-actions"><button id="save-retry" class="primary">重试保存</button><button id="save-restore" class="quiet">回到最后成功档</button><button id="save-download" class="quiet">下载快照</button><button id="save-finish" class="quiet" hidden>结束游戏…</button><button id="save-exit" class="quiet" hidden>仍要退出</button></div>
   </dialog>
   <noscript><p>此技术原型需要启用 JavaScript。</p></noscript>
-  <script type="module" src="./app.mjs?v=card-feedback-6a"></script>
+  <script type="module" src="./app.mjs?v=card-end-7"></script>
 </body>
 </html>
 

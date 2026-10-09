@@ -178,3 +178,14 @@ button{min-width:44px;min-height:44px;touch-action:manipulation}
 .hand-card .hand-stat.attack-stat{color:#35260d;background:#f8d469}.hand-card .hand-stat.health-stat{color:#fff;background:#a12d29}.hand-card .hand-stat.durability-stat{color:#fff;background:#275e75}
 .hand-card .hand-stat:only-child{font-size:12px}
 @media(max-width:600px) and (orientation:landscape){.hand.is-expanded .hand-card .card-bottom{width:29px;flex-direction:column;min-height:43px}}
+
+/* Result controls remain visible in landscape and portrait; native save/setup
+   dialogs retain the top layer and existing explicit failure confirmation. */
+.result-panel{position:fixed;z-index:100;left:50%;top:50%;transform:translate(-50%,-50%);width:min(420px,calc(100% - 32px));max-height:calc(100dvh - 100px);overflow:auto;padding:20px;border:2px solid #c8a668;border-radius:16px;background:#fff4da;color:#392c20;box-shadow:0 10px 40px #20170dc0;text-align:center}
+.result-panel[hidden]{display:none}
+.result-panel h2{margin:0 0 10px;font-size:24px;color:#62421e}
+.result-panel p{margin:0 0 16px;font-size:13px;line-height:1.6}
+.result-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:10px}
+.result-actions button{min-height:48px;padding:10px 16px}
+.result-actions .quiet{color:#594123;border-color:#9c8055;background:#fffaf0}
+@media(max-height:360px){.result-panel{padding:12px}.result-panel h2{font-size:20px}.result-panel p{margin-bottom:10px}}
