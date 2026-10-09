@@ -1,7 +1,7 @@
 /** Isolated, experimental rules kernel. Not a complete Basic-compatible game. */
-import {RUNTIME_CARDS, CARD_METADATA, CATALOG, CATALOG_VERSION, CARD_SCHEMA_VERSION, RUNTIME_CLASSIFICATION} from './catalog.mjs';
+import {RUNTIME_CARDS, CARD_METADATA, CATALOG, CATALOG_VERSION, CARD_SCHEMA_VERSION, RUNTIME_CLASSIFICATION} from './catalog.mjs?v=card-s1';
 export {CARD_METADATA, CATALOG, CATALOG_VERSION, CARD_SCHEMA_VERSION, RUNTIME_CLASSIFICATION};
-import frozenDefaultDecks from './default-decks.mjs';
+import frozenDefaultDecks from './default-decks.mjs?v=card-s1';
 export const RULES_VERSION = 'bookstore-tech-0.6.0';
 export const CARD_POOL_VERSION = 'bk-supported38-spell-damage-v6-lab-system-v1';
 export const DECK_RULES_VERSION = 'fixed30-class-max2-v4-frozen-charge-defaults';
