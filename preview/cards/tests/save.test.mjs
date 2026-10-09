@@ -9,7 +9,7 @@ function fakeStorage(faults = {}) {
   const m = new Map(Object.entries(SENTINELS));
   return {
     m, faults,
-    getItem(k) { if (faults.readBad?.(k)) return 'garbled'; return m.has(k) ? m.get(k) : null; },
+    getItem(k) { if (faults.readThrow?.(k)) throw new Error('read failed'); if (faults.readBad?.(k)) return 'garbled'; return m.has(k) ? m.get(k) : null; },
     setItem(k, v) {
       const f = faults.set?.(k, v);
       if (f === 'throw') throw new Error('QuotaExceededError');
@@ -105,6 +105,34 @@ test('A2c rollback fails: rollback-failed, never claims saved; bak intact and re
   s.faults.set = null; s.faults.readBad = null; s.m.set(SAVE_KEY, '{broken');
   const st2 = createCardSave({storage: s, locks, core}); const l = await st2.load();
   assert.equal(l.status, 'recovered'); assert.equal(l.revision, g.revision);
+});
+
+test('A2d read-back throws after main write: rollback-failed (main really updated), never old step', async () => {
+  const {s, st, g} = await saved(2); const g2 = play(g, 1);
+  s.faults.set = (k) => { if (k === SAVE_KEY) s.faults.readThrow = (kk) => kk === SAVE_KEY; return null; };
+  const r = await st.save(g2);
+  assert.equal(r.kind, 'rollback-failed'); assert.equal(r.backupVerified, true); assert.ok(!('lastSaved' in r));
+  assert.equal(JSON.parse(s.m.get(SAVE_KEY)).meta.revision, g2.revision, 'main was in fact updated');
+  s.faults.set = null;
+  const b = await st.restoreBackup();          // read of main still throws here
+  assert.equal(b.ok, true); assert.equal(b.revision, g.revision, 'explicit backup path ignores the valid-looking main');
+  assert.equal(st.lastSaved.revision, g.revision);
+  s.faults.readThrow = null; const bakBefore = s.m.get(BAK_KEY);
+  const r2 = await st.save(b.game); assert.equal(r2.ok, true);
+  assert.equal(s.m.get(BAK_KEY), bakBefore, 'uncertain main never copied over the verified backup');
+  assert.equal(JSON.parse(s.m.get(SAVE_KEY)).meta.revision, g.revision);
+  assert.equal((await st.save(play(b.game, 1))).ok, true, 'normal saving resumes');
+});
+
+test('A2e restoreBackup with readable main also returns bak, then overwrites main', async () => {
+  const {s, st, g} = await saved(2); const g2 = play(g, 1); await st.save(g2);
+  const b = await st.restoreBackup(); assert.equal(b.revision, g.revision);
+  assert.equal((await st.save(b.game)).ok, true); assert.equal(JSON.parse(s.m.get(SAVE_KEY)).meta.revision, g.revision);
+});
+
+test('A2f bak unusable: restoreBackup refuses, writes nothing', async () => {
+  const {s, st} = await saved(2); s.m.set(BAK_KEY, 'bad'); const before = new Map(s.m);
+  const b = await st.restoreBackup(); assert.equal(b.ok, false); assert.deepEqual([...s.m], [...before]);
 });
 
 test('A3 failures leave game hash untouched (diagnostics outside game)', async () => {

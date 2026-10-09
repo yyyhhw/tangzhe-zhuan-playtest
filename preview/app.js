@@ -5,6 +5,7 @@ const E = window.Economy, CFG = E.CFG;
 const TD = window.TDCore; let tdOpen = false, tdPort = null, tdGeneration = 0;
 const ZB = window.ZBCore; var zbOpen = false, zbPort = null;
 let cardsOpen = false, cardsPort = null, cardsGeneration = 0, cardsCloseTimer = null;
+const CARDS_SHOP = 2, CARDS_V = 'card-s1';   // 要在 boot() 渲染店铺页之前初始化
 const ZB_SHOP = 0; var zbLastCeo = null, zbRun = null; const zbUsedRuns = new Set();   // 13d：用过的 runId（本页内存），重复 / 过期的 start 不能把旧局重新激活   // 13a：打僵尸 = 烧烤摊（店 0）；zbLastCeo = 最近一次成功结算的上场 CEO（只在内存）
 // 13c：zbRun = 父页开局登记 { runId, ceoId, startedAt, settled }——结算只认这份记录、同一局只结一次；中途调岗不要求仍在任
 const SAVE_KEY = 'tangzhe-preview-save', BAK_KEY = 'tangzhe-preview-save-bak', LOCK_KEY = 'tangzhe-preview-tab-lock';
@@ -2540,8 +2541,7 @@ function closeTD() {
 Object.defineProperties(window.__tzz, {openTD:{value:openTD}, closeTD:{value:closeTD}, tdOpen:{get:() => tdOpen}, tdRun:{get:() => tdController.run}, tdReply:{value:() => tdController.reply()}});
 
 /* ================= 书店卡牌（cards/ui/?embed=1，全屏 iframe，preview 试玩）=================
-   父页只放进入按钮、开关浮层、同步静音；不读也不解析卡牌存档，不碰钱包，不发奖励。端口只认 ready / close。 */
-const CARDS_SHOP = 2, CARDS_V = 'card-s1';
+   父页只放进入按钮、开关浮层、同步静音；不读也不解析卡牌存档，不碰钱包，不发奖励。端口只认 ready / close / stay。 */
 function cardsCard() {
   return `<div class="card cards-card"><div class="ava">🃏</div><div class="info"><div class="name">卡牌对战<span class="tag">试玩</span></div><div class="desc">风格试玩 · 不影响经营<br>进度在卡牌页里查看</div></div><button class="buy" data-act="cards">进入</button></div>`;
 }
@@ -2565,6 +2565,7 @@ function cardsMsg(d) {
   if (!d || typeof d !== 'object') return;
   if (d.card === 'close') return closeCards();
   if (d.card === 'ready') cardsSend({ card:'hello', muted: !!state.muted });
+  if (d.card === 'stay') { clearTimeout(cardsCloseTimer); cardsCloseTimer = null; }   // 子页保存失败后玩家选了留下
 }
 // 请卡牌页先存档再关；3 秒没回应就问是否强制关闭
 function requestCloseCards() {

@@ -101,6 +101,20 @@ with sync_playwright() as p:
     check(diag(pg)['revision'] == 0 and diag(pg)['lastSaved']['revision'] == 0 and pg.evaluate("localStorage.getItem('tangzhe-preview-card-save-bak')") == oldbak, 'B20 二次确认后新开并存第 0 步；坏主档不覆盖有效 -bak')
     pg.click('#end-turn'); until(pg, lambda d: d['active'] == 0 and d['revision'] > 0 and not d['saveBusy']); rb = pg.evaluate("[JSON.parse(localStorage.getItem('tangzhe-preview-card-save-bak')).meta.revision, JSON.parse(localStorage.getItem('tangzhe-preview-card-save')).meta.revision]")
     check(rb[0] == rb[1] - 1, f'B20 新局继续后 -bak 跟着变成上一步 {rb}（只有一个存档位）')
+    # B16c 主档写入后回读异常 → 主档不确定 → 明确从备份恢复
+    good = diag(pg)['lastSaved']['revision']
+    pg.evaluate("""(()=>{window.__rb=true;const os=Storage.prototype.setItem,og=Storage.prototype.getItem;
+      Object.defineProperty(Storage.prototype,'setItem',{configurable:true,writable:true,value:function(k,v){const r=os.call(this,k,v);if(window.__rb&&k==='tangzhe-preview-card-save')window.__rbArm=true;return r;}});
+      Object.defineProperty(Storage.prototype,'getItem',{configurable:true,writable:true,value:function(k){if(window.__rbArm&&k==='tangzhe-preview-card-save')throw new Error('read fail');return og.call(this,k);}});})()""")
+    pg.click('#end-turn'); pg.wait_for_function("document.getElementById('save-dialog').open", timeout=10000)
+    t = pg.inner_text('#save-text'); d = diag(pg)
+    check(d['saveFailure']['kind'] == 'rollback-failed' and '主档状态不确定' in t and '已验证的备份可以恢复' in t and '存档仍是第' not in t and '已保存' not in t, f'B16c 回读异常：提示主档不确定、备份可恢复，不报旧步数 「{t}」')
+    check(pg.evaluate("document.getElementById('save-retry').hidden") and pg.inner_text('#save-restore') == '从备份恢复', 'B16c 只给「从备份恢复」，不给重试')
+    newer = pg.evaluate("window.__rbArm=false;window.__rb=false;JSON.parse(localStorage.getItem('tangzhe-preview-card-save')).meta.revision")
+    pg.click('#save-restore'); pg.click('#save-restore'); pg.wait_for_function("document.getElementById('resume-dialog').open", timeout=10000)
+    d = diag(pg); main = pg.evaluate("JSON.parse(localStorage.getItem('tangzhe-preview-card-save')).meta.revision")
+    check(newer > good and d['revision'] == good and main == good and '已从备份恢复' in pg.inner_text('#resume-text'), f'B16c 从备份恢复到第 {good} 步（主档里的 r{newer} 不用），并写回主档')
+    pg.click('#resume-continue'); human_end(pg); check(diag(pg)['saveFailure'] is None, 'B16c 恢复后继续打、正常保存')
     s = pg.evaluate("[localStorage.getItem('tangzhe-save'),localStorage.getItem('tangzhe-preview-save'),localStorage.getItem('tangzhe-card-save')]")
     check(s == ['SENT', 'PSENT', 'FSENT'], 'A10 浏览器端经营主档 / preview 主档 / 正式卡牌键逐字节不变')
     c.close()
@@ -148,6 +162,17 @@ with sync_playwright() as p:
     rv = diag(f)['revision']
     w = f.evaluate("window.__writes")
     check(w and all(k.startswith('tangzhe-preview-card-save') for k in w), f'C23 卡牌页只写卡牌键 {sorted(set(w))}')
+    # C25b 退出时保存失败 → 选「回到最后成功档」→ 继续打，下一次保存不能把 iframe 关掉
+    f.evaluate("(()=>{window.__f=true;const o=Storage.prototype.setItem;Object.defineProperty(Storage.prototype,'setItem',{configurable:true,writable:true,value:function(k,v){if(window.__f&&k==='tangzhe-preview-card-save')throw new Error('Quota');return o.call(this,k,v);}});})()")
+    f.click('#end-turn'); f.wait_for_function("document.getElementById('save-dialog').open", timeout=10000)
+    pg.evaluate("__tzz.requestCloseCards()"); pg.wait_for_timeout(300)
+    check(diag(f)['closing'] and not f.evaluate("document.getElementById('save-exit').hidden") and pg.evaluate("__tzz.cardsOpen"), 'C25b 退出时保存失败：弹窗给「仍要退出」，浮层还开着')
+    f.evaluate("window.__f=false"); f.click('#save-restore'); f.click('#save-restore'); f.wait_for_function("document.getElementById('resume-dialog').open", timeout=10000)
+    check(not diag(f)['closing'] and not pg.evaluate("__tzz.cardsCloseTimer"), 'C25b 选恢复后 closing 清掉，父页关闭计时器也清掉')
+    f.click('#resume-continue'); r1 = diag(f)['revision']; f.click('#end-turn')
+    until(f, lambda d: d['active'] == 0 and d['revision'] > r1 and not d['saveBusy']); pg.wait_for_timeout(3300)
+    check(pg.evaluate("__tzz.cardsOpen") and diag(f)['saveFailure'] is None, 'C25b 继续打并保存成功后 iframe 仍开着（3 秒后也没被强制关）')
+    rv = diag(f)['revision']
     f.click('#exit-embed'); pg.wait_for_timeout(500)
     check(pg.evaluate("document.getElementById('cardsOverlay').classList.contains('hidden') && !__tzz.cardsOpen"), 'C23 返回书店：浮层关闭')
     pr = pg.evaluate("window.__parentReads.filter(k=>k.startsWith('tangzhe-preview-card-save')||k.startsWith('tangzhe-card-save'))")
@@ -160,5 +185,9 @@ with sync_playwright() as p:
         tapCards(); frame(); pg.wait_for_timeout(200); pg.evaluate("__tzz.closeCards()"); pg.wait_for_timeout(150)
     check(not pg.evaluate("__tzz.cardsOpen") and not pg.evaluate("__tzz.cardsCloseTimer") and pg.evaluate("document.getElementById('cardsFrame').src") == 'about:blank' and not [x for x in pg.frames if '/cards/ui/' in x.url], 'C 重复进入 / 关闭 5 次：没有残留 iframe 或计时器')
     check(not errs, f'C 无页面错误 {errs[:2]}')
+    # C26 当前店是书店 → 刷新恢复：主页面正常启动、入口在
+    pg.evaluate("__tzz.switchShop(2); __tzz.setTab('shop'); __tzz.persist()"); pg.wait_for_timeout(300)
+    pg.reload(); pg.wait_for_function("window.__tzz && __tzz.state", timeout=20000); pg.wait_for_timeout(800)
+    check(not errs and pg.locator('.cards-card [data-act=cards]').count() == 1, f'C26 当前店为书店时刷新：无 ReferenceError、入口在 {errs[:2]}')
     c.close(); b.close()
 print(f'\n{passes[0]} passed, {len(fails)} failed'); sys.exit(1 if fails else 0)

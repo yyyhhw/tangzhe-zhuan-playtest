@@ -370,7 +370,7 @@ function showSaveFail(exiting = closing) {
   const last = store.lastSaved;
   restoreArmed = false;
   $('save-text').textContent = failText(r) + (exiting ? '。仍要退出的话，本页没存上的进度会丢失。' : '。');
-  $('save-retry').hidden = r.kind === 'conflict';
+  $('save-retry').hidden = r.kind === 'conflict' || r.kind === 'rollback-failed';
   const canRestore = r.kind === 'conflict' || (r.kind === 'rollback-failed' ? r.backupVerified : !!last);
   $('save-restore').hidden = !canRestore;
   $('save-restore').textContent = r.kind === 'conflict' ? '重新读取存档' : r.kind === 'rollback-failed' ? '从备份恢复' : `回到最后成功档（第 ${last?.revision ?? 0} 步）`;
@@ -381,8 +381,18 @@ $('save-dialog').addEventListener('cancel',(e) => e.preventDefault());
 $('save-retry').addEventListener('click',async () => { saveFailure = null; $('save-dialog').close(); if (!(await persist()) && !saveFailure) flushClose(); });
 $('save-restore').addEventListener('click',() => {
   if (!restoreArmed && saveFailure?.kind !== 'conflict') { restoreArmed = true; $('save-restore').textContent = '确定？本页没存上的步数会丢失'; return; }
-  $('save-dialog').close(); boot();
+  $('save-dialog').close();
+  if (closing) { closing = false; parentPort?.postMessage({card:'stay'}); }
+  if (saveFailure?.kind === 'rollback-failed') restoreFromBackup(); else boot();
 });
+async function restoreFromBackup() {
+  const r = await store.restoreBackup();
+  if (!r.ok) { saveFailure = {ok:false,kind:'rollback-failed',backupVerified:false}; showSaveFail(); return; }
+  saveFailure = null; cancelAITimer(); actionInputGuard.reset();
+  game = r.game; uiLog = []; selected = null; notice = '';
+  pause('已从备份恢复，点击继续');
+  if (await persist()) showResume(`已从备份恢复：第 ${r.turn} 回合 / 第 ${r.revision} 步。`, {resume:true});
+}
 $('save-download').addEventListener('click',() => download(`bookcard-snapshot-r${game.revision}.json`,serialize(game)));
 $('save-exit').addEventListener('click',() => { $('save-dialog').close(); sendClose(); });
 function showResume(text, {resume=false, abandon=false, fresh=false}) {
@@ -406,7 +416,7 @@ $('resume-abandon').addEventListener('click',() => {
 });
 $('resume-new').addEventListener('click',startFresh);
 async function boot() {
-  cancelAITimer(); saveFailure = null; paused = true; pauseReason = '正在读取存档'; render();
+  cancelAITimer(); saveFailure = null; closing = false; paused = true; pauseReason = '正在读取存档'; render();
   const r = await store.load();
   const q = r.quarantine === 'saved' ? '原数据已另存。' : r.quarantine === 'occupied' ? '原数据未另存（隔离区已占用）。' : r.quarantine ? '原数据未能备份。' : '';
   const noWrite = r.writable === false ? ' 当前浏览器无法写存档。' : '';

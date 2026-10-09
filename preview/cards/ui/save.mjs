@@ -18,6 +18,7 @@ export function createCardSave({storage, locks, core, now = () => Date.now()}) {
   let knownMainValid = false;
   let slotRev = 0;
   let readOnly = false;
+  let overwriteMain = false; // set by an explicit backup restore: next commit replaces whatever the main holds
   let lastSaved = null;     // {revision, turn} of the last verified successful save
 
   const get = (k) => storage.getItem(k);
@@ -94,14 +95,37 @@ export function createCardSave({storage, locks, core, now = () => Date.now()}) {
     return {status: 'unrecoverable', why: main.why || '主存档缺失', quarantine: q, writable: lockAvailable()};
   }
 
+  let mainTouched = false;
   async function save(game) {
     if (readOnly) return {ok: false, kind: 'readonly', step: 'readonly'};
     if (!lockAvailable()) return {ok: false, kind: 'before-commit', step: 'no-lock'};
+    mainTouched = false;
     try {
       return await withLock(() => commit(game));
     } catch (e) {
+      if (mainTouched) return uncertain();
       return {ok: false, kind: 'before-commit', step: 'lock', why: String(e?.message ?? e)};
     }
+  }
+
+  function uncertain() {
+    knownMain = undefined; knownMainValid = false;
+    try { storage.removeItem(TMP_KEY); } catch { /* ignored */ }
+    return {ok: false, kind: 'rollback-failed', step: 'main-rollback', backupVerified: backupVerified()};
+  }
+
+  /** Explicit backup path: never prefers the main save, writes nothing. */
+  async function restoreBackup() {
+    let raw;
+    try { raw = get(BAK_KEY); } catch { return {ok: false, why: '无法读取备份'}; }
+    const bak = parse(raw);
+    if (bak.state !== 'ok') return {ok: false, why: bak.why || '没有备份'};
+    let cur;
+    try { cur = get(SAVE_KEY); } catch { cur = undefined; }
+    knownMain = cur; knownMainValid = false; readOnly = false; overwriteMain = true;
+    slotRev = Math.max(slotRev, bak.env.slotRev);
+    lastSaved = {revision: bak.game.revision, turn: bak.game.turn};
+    return {ok: true, game: bak.game, revision: bak.game.revision, turn: bak.game.turn};
   }
 
   function commit(game) {
@@ -110,8 +134,9 @@ export function createCardSave({storage, locks, core, now = () => Date.now()}) {
       return {ok: false, kind: 'before-commit', step, why, lastSaved};
     };
     // 1. CAS against what this page last saw.
-    if (get(SAVE_KEY) !== knownMain) return {ok: false, kind: 'conflict', step: 'cas', lastSaved};
-    const oldMain = knownMain;
+    const current = get(SAVE_KEY);
+    if (!overwriteMain && current !== knownMain) return {ok: false, kind: 'conflict', step: 'cas', lastSaved};
+    const oldMain = current;
     const text = envelope(game, slotRev + 1);
     // 2-3. Temporary write, read back, full replay check.
     try { storage.setItem(TMP_KEY, text); } catch (e) { return fail('tmp-write', e.message); }
@@ -123,20 +148,26 @@ export function createCardSave({storage, locks, core, now = () => Date.now()}) {
       try { storage.setItem(BAK_KEY, oldMain); } catch (e) { return fail('bak-write', e.message); }
       if (get(BAK_KEY) !== oldMain) return fail('bak-verify');
     }
-    // 5. Replace main; roll back on a bad read-back.
-    try { storage.setItem(SAVE_KEY, text); } catch (e) { return fail('main-write', e.message); }
-    if (get(SAVE_KEY) !== text) {
+    // 5. Replace main. From here on the main may already hold the new text: it only counts as
+    // "before commit" if the old text is proven back in place, otherwise the main is uncertain.
+    const settle = (step) => {
       let restored = false;
       try {
-        if (oldMain === null) storage.removeItem(SAVE_KEY); else storage.setItem(SAVE_KEY, oldMain);
-        restored = get(SAVE_KEY) === oldMain;
+        if (oldMain === undefined) restored = false;
+        else if (get(SAVE_KEY) === oldMain) restored = true;
+        else {
+          if (oldMain === null) storage.removeItem(SAVE_KEY); else storage.setItem(SAVE_KEY, oldMain);
+          restored = get(SAVE_KEY) === oldMain;
+        }
       } catch { restored = false; }
-      if (restored) return fail('main-verify');
-      knownMain = undefined; knownMainValid = false;
-      try { storage.removeItem(TMP_KEY); } catch { /* ignored */ }
-      return {ok: false, kind: 'rollback-failed', step: 'main-rollback', backupVerified: backupVerified()};
-    }
-    knownMain = text; knownMainValid = true; slotRev += 1;
+      return restored ? fail(step) : uncertain();
+    };
+    mainTouched = true;
+    try { storage.setItem(SAVE_KEY, text); } catch (e) { return settle('main-write'); }
+    let back;
+    try { back = get(SAVE_KEY); } catch { return uncertain(); }
+    if (back !== text) return settle('main-verify');
+    knownMain = text; knownMainValid = true; overwriteMain = false; slotRev += 1;
     lastSaved = {revision: game.revision, turn: game.turn};
     // 6. Clean tmp. Failure here is still a successful save.
     let tmpLeft = false;
@@ -145,7 +176,7 @@ export function createCardSave({storage, locks, core, now = () => Date.now()}) {
   }
 
   return {
-    load, save,
+    load, save, restoreBackup,
     get readOnly() { return readOnly; },
     get lastSaved() { return lastSaved ? {...lastSaved} : null; },
     get writable() { return lockAvailable() && !readOnly; },
