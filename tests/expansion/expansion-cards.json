@@ -1,6 +1,6 @@
 {
  "source": "扩卡清单-v1.md",
- "sourceSha256": "8d262504aa6f066bd3551d92fbaa4bf8f12872fbc387a0770f032dbe113c046e",
+ "sourceSha256": "04c06f29d8c1fb4bd404f21f13374f47c2af607e3b5d66cb788baed5061e2e69",
  "cards": [
   {
    "key": "neutral-01",
@@ -40,7 +40,7 @@
    ],
    "targetText": "无",
    "target": "none",
-   "artBrief": "叠成一人高的纸箱堵在店门口，上面贴着「暂停营业」"
+   "artBrief": "胖胖的快递柜立在巷口，柜门全锁着挡住去路"
   },
   {
    "key": "neutral-03",
@@ -60,7 +60,7 @@
    ],
    "targetText": "无（亡语自动打敌方英雄）",
    "target": "none",
-   "artBrief": "背着鞭炮的小个子快递员，一脸坏笑地点着引线"
+   "artBrief": "推着一车鞭炮的小个子摊主，一脸坏笑地点着引线"
   },
   {
    "key": "neutral-04",
@@ -141,7 +141,7 @@
    ],
    "targetText": "无",
    "target": "none",
-   "artBrief": "领头的流浪犬站在巷口，两边的小狗跟着龇牙"
+   "artBrief": "领头的胖鸽子站在电线上，两边的鸽子跟着鼓起胸"
   },
   {
    "key": "neutral-08",
@@ -202,7 +202,7 @@
    ],
    "targetText": "无",
    "target": "none",
-   "artBrief": "穿反光背心的骑车外卖员，车把上挂着亮闪闪的护罩"
+   "artBrief": "穿反光背心的交通协管员，举着一块发光的停车牌"
   },
   {
    "key": "neutral-11",
@@ -242,7 +242,7 @@
    ],
    "targetText": "无",
    "target": "none",
-   "artBrief": "双手各拎一杯奶茶的跑腿小哥，一次跑两单"
+   "artBrief": "双手各拎一袋外卖的跑腿小哥，一次跑两单"
   },
   {
    "key": "neutral-13",
@@ -405,7 +405,7 @@
    ],
    "targetText": "无",
    "target": "none",
-   "artBrief": "骑着发光电动车冲进店里的骑手，车头罩着护盾"
+   "artBrief": "骑着发光平衡车冲进店的巡逻员，车头罩着护盾"
   },
   {
    "key": "warrior-01",
