@@ -130,23 +130,24 @@ for (const [id, st, card] of [['N2-3', state({ dust: 49, owned: { 'c-b': { norma
   ok(n === 0 && sv.n === 0 && JSON.stringify(st) === before, id, `不可镀金：成功 ${n} 次、写档 ${sv.n} 次`); });
 
 console.log('== N3 粉尘溢出确认');
+// 风险口径（熊大定）：按当前收藏×实际卡池确实可能产生的最大重复粉尘判断；N3-1/2/5/6 前置样本都含已满 2 张的传说 l-x，可能化尘上界 = 400。
 T('N3-1', () => { ok(M.maxDupGain(CFG) === 400, 'N3-1', 'MAX_DUP_GAIN 应含金传重复粉尘 400，实际 ' + M.maxDupGain(CFG));
-  const st = state({ dust: 600 }); ok(!M.overflowRisk(st, CFG), 'N3-1', '剩余 = MAX_DUP_GAIN 边界不弹'); const { r } = draw(st, () => true); ok(r.ok, 'N3-1', '无风险直接抽'); });
-T('N3-2', () => { for (const d0 of [601, 1000]) { const st = state({ dust: d0 }), before = JSON.stringify(st), d = find(st, () => true), sv = rec();
+  const st = state({ dust: 600, owned: { 'l-x': { normal: 2 } } }); ok(!M.overflowRisk(st, CFG), 'N3-1', '剩余 = MAX_DUP_GAIN 边界不弹'); const { r } = draw(st, () => true); ok(r.ok, 'N3-1', '无风险直接抽'); });
+T('N3-2', () => { for (const d0 of [601, 1000]) { const st = state({ dust: d0, owned: { 'l-x': { normal: 2 } } }), before = JSON.stringify(st), d = find(st, () => true), sv = rec();
   ok(M.overflowRisk(st, CFG), 'N3-2', `粉尘 ${d0} 应有溢出风险`); ok(JSON.stringify(st) === before, 'N3-2', 'prepareDraw 不改状态');
   const r = M.commitDraw(st, CFG, d, { save: sv }); ok(!r.ok && r.code === ADAPT.CODES.confirm && sv.n === 0 && JSON.stringify(st) === before, 'N3-2', `未确认不能提交、零写入：${r.code} 写 ${sv.n}`);
   wrong(r.ok, 'N3-2', '未确认就提交'); } });
 T('N3-3/4', () => { const st = state({ dust: 900 }), before = JSON.stringify(st); M.prepareDraw(st, CFG, { txId: 'cancel', seed: 7 });
   ok(JSON.stringify(st) === before && !ADAPT.suppress(st) && !ADAPT.ledger(st).cancel, 'N3-3', '取消：不扣费、无 txId、偏好不变'); });
-T('N3-5', () => { const { r } = draw(state({ dust: 900 }), () => true, { confirmOverflow: true });
+T('N3-5', () => { const { r } = draw(state({ dust: 900, owned: { 'l-x': { normal: 2 } } }), () => true, { confirmOverflow: true });
   ok(r.ok && ADAPT.coins(r.state) === 45_000_000 && !ADAPT.suppress(r.state), 'N3-5', '不勾选继续：扣 1 次、偏好仍为提醒');
   const d2 = find(r.state, () => true, CFG, 30000), r2 = M.commitDraw(r.state, CFG, d2, { save: rec() }); ok(!r2.ok && r2.code === ADAPT.CODES.confirm, 'N3-5', '下次仍要确认'); });
-T('N3-6', () => { const st = state({ dust: 900 }), d = find(st, () => true), sv = rec(); const r = M.commitDraw(st, CFG, d, { save: sv, confirmOverflow: true, suppressOverflowWarn: true });
+T('N3-6', () => { const st = state({ dust: 900, owned: { 'l-x': { normal: 2 } } }), d = find(st, () => true), sv = rec(); const r = M.commitDraw(st, CFG, d, { save: sv, confirmOverflow: true, suppressOverflowWarn: true });
   ok(r.ok && ADAPT.suppress(r.state) && sv.n >= 1 && ADAPT.suppress(JSON.parse(sv.last)), 'N3-6', '勾选继续：偏好和抽卡同一次写档');
   const re = JSON.parse(sv.last), d2 = find(re, () => true, CFG, 30000), r2 = M.commitDraw(re, CFG, d2, { save: rec() }); ok(r2.ok, 'N3-6', '重读存档后有风险直接抽');
-  const st3 = state({ dust: 900 }), r3 = M.commitDraw(st3, CFG, find(st3, () => true), { save: () => { throw new Error('quota'); }, confirmOverflow: true, suppressOverflowWarn: true });
+  const st3 = state({ dust: 900, owned: { 'l-x': { normal: 2 } } }), r3 = M.commitDraw(st3, CFG, find(st3, () => true), { save: () => { throw new Error('quota'); }, confirmOverflow: true, suppressOverflowWarn: true });
   ok(!r3.ok && !ADAPT.suppress(st3), 'N3-6', '写档失败不留偏好'); });
-T('N3-7', () => { const st = state({ dust: 900, prefs: { suppressOverflowWarn: true } }), r = M.setOverflowReminder(st, true, { save: rec() });
+T('N3-7', () => { const st = state({ dust: 900, owned: { 'l-x': { normal: 2 } }, prefs: { suppressOverflowWarn: true } }), r = M.setOverflowReminder(st, true, { save: rec() });
   ok(r.ok && !ADAPT.suppress(r.state) && ADAPT.coins(r.state) === ADAPT.coins(st) && ADAPT.dust(r.state) === 900, 'N3-7', '恢复提醒不扣费不改粉尘');
   const r2 = M.commitDraw(r.state, CFG, find(r.state, () => true), { save: rec() }); ok(!r2.ok && r2.code === ADAPT.CODES.confirm, 'N3-7', '恢复后再弹'); });
 T('N3-9', () => { const st = state({ dust: 900, owned: { 'l-x': { normal: 2 } } }); const { r } = draw(st, is('l-x', 'normal'), { confirmOverflow: true }); const rc = ADAPT.rc(r.receipt);
