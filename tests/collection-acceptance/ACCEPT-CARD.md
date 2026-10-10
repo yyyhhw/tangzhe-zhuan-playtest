@@ -34,8 +34,8 @@ bash tests/collection-acceptance/accept.sh
 ```bash
 S=/path/to/card-collection-model-v1          # 解压目录
 COLLECTION_IMPL=$S/src/model.mjs node tests/collection-acceptance/rules.test.mjs; echo rc=$?
-# 等测试侧适配层 adapters/skeleton-v1.mjs 写好以后，改成：
-COLLECTION_IMPL=tests/collection-acceptance/adapters/skeleton-v1.mjs bash tests/collection-acceptance/accept.sh
+# 经测试侧适配层跑（SKELETON_DIR 指到解压目录）：
+SKELETON_DIR=$S COLLECTION_IMPL=tests/collection-acceptance/adapters/skeleton-v1.mjs node tests/collection-acceptance/rules.test.mjs; echo rc=$?
 ```
 
 当前实测结果：`✗ 缺接口：validateConfig / initCollection / … / setOverflowReminder`，`passed 0, failed 0, 未跑`，rc=1。
@@ -49,3 +49,10 @@ COLLECTION_IMPL=tests/collection-acceptance/adapters/skeleton-v1.mjs bash tests/
 - 测试卡池要换成骨架目录里真实的 cardId，因为骨架会拒绝不在目录里的 ID
 
 UI 两行：骨架包里没有页面，仍按「缺接口，未跑」处理。
+
+### 经适配层的实测（SHA256 `39ab6d46…684b45`）
+- 规则层：`passed 116, failed 10`，rc=1
+- ACCEPT_CONTROL=1：`passed 111, failed 15`，rc=1（门禁有效）
+- 缺接口：N9-10（`probabilities`）、N3-7（骨架没有「恢复提醒」命令）
+- 口径差异：N3-2、N3-5、N3-6。骨架只在有卡已满 2 张时才弹溢出确认，v3.3 是按 MAX_DUP_GAIN 判断。实测有卡满 2 张时，骨架能正确拦下未确认的提交
+- 真失败：0
