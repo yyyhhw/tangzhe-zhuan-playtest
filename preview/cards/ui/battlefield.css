@@ -189,3 +189,149 @@ button{min-width:44px;min-height:44px;touch-action:manipulation}
 .result-actions button{min-height:48px;padding:10px 16px}
 .result-actions .quiet{color:#594123;border-color:#9c8055;background:#fffaf0}
 @media(max-height:360px){.result-panel{padding:12px}.result-panel h2{font-size:20px}.result-panel p{margin-bottom:10px}}
+
+/* v8: artwork is on the exposed card face, never below a 78px empty header.
+   Preserve all fan widths, legal-target geometry and the visible numeric strip. */
+.hand-card .card-heading{min-height:26px;grid-template-rows:25px;align-content:start;position:relative;z-index:3}
+.hand-card .card-heading strong,.hand-card.selected .card-heading strong,.hand.is-expanded .hand-card .card-heading strong{position:absolute;left:32px;right:0;top:27px;grid-row:auto;padding:2px 3px;font-size:10px;line-height:11px;border-radius:3px;background:#241c16df;color:#fff2d5;text-shadow:none;max-height:26px}
+.hand-card .card-art,.hand-card.selected .card-art{position:absolute;left:3px;right:3px;top:31px;bottom:3px;width:auto;height:auto;min-height:0;flex:none;border-radius:5px;z-index:0}
+.hand-card .card-art.original-art img{object-fit:cover;object-position:50% 45%}
+.minion-art.original-art img{object-position:50% 45%}
+/* Pixel-reviewed focal framing. Full illustrations remain available in detail. */
+.minion-art[data-art-source="VAN_CS2_065"] img{transform:scale(1.28);transform-origin:50% 57%}
+.minion-art[data-art-source="VAN_NEW1_011"] img{transform:scale(1.4);transform-origin:51% 34%}
+.hand-card .card-art[data-art-source="VAN_NEW1_011"] img{object-position:50% 28%}
+.hand-card .card-art[data-art-source="VAN_CS2_106"] img{object-position:50% 58%}
+/* Review is a deliberate pause. Its button sits in the unused upper-left rail,
+   outside every hero/board/hand hit area. Auto reveal is inert and AI-only. */
+.recent-open{position:absolute;left:calc(var(--stage-left) + 5px);top:54px;z-index:36;width:72px;height:44px;min-height:44px;padding:3px;display:flex;align-items:center;gap:3px;background:#413225f0;color:#fff0cf;border:1px solid #b19a70;border-radius:7px;font-size:10px;line-height:12px;box-shadow:0 2px 4px #0005}
+.recent-open:disabled{opacity:.6}.recent-thumb{display:block;flex:0 0 25px;height:34px;overflow:hidden;border-radius:3px}.recent-thumb img{object-fit:cover}
+.played-reveal{position:absolute;left:50%;top:25dvh;transform:translateX(-50%);width:252px;max-width:70vw;height:43dvh;max-height:190px;z-index:32;display:flex;gap:10px;padding:8px;background:#2d241df5;color:#fff2d1;border:2px solid #e5be6e;border-radius:12px;box-shadow:0 5px 22px #20170c99;pointer-events:none}
+.played-reveal[hidden]{display:none}.reveal-art{display:block;flex:0 0 47%;height:100%;min-height:0;border-radius:6px;overflow:hidden;background:#614d33}.reveal-art img{object-fit:contain}
+.revealed-copy{display:flex;flex-direction:column;gap:5px;min-width:0;overflow:auto;font-size:11px;line-height:1.45}.revealed-copy small{font-size:10px;color:#f2cb7c}.revealed-copy strong{font-size:16px;line-height:1.3}.revealed-copy span{font-size:10px}.revealed-copy p{margin:0;font-size:11px}
+#recent-dialog{width:min(610px,calc(100% - 24px))}.recent-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.recent-card{display:flex;gap:10px;padding:8px;min-height:180px;background:#f0e2c6;border:1px solid #b69a65;border-radius:8px;color:#362a1e}.recent-card .reveal-art{height:160px;flex-basis:44%}.recent-card small{color:#72511e}.recent-card .revealed-copy{overflow:visible}.recent-card .revealed-copy strong{font-size:15px}
+@media(max-width:500px){.recent-cards{grid-template-columns:1fr}}
+@media(orientation:portrait){.recent-open,.played-reveal{display:none}}
+@media(forced-colors:active){.recent-open,.played-reveal,.recent-card{background:Canvas;color:CanvasText;border:2px solid CanvasText}}
+.recent-open[hidden]{display:none}
+/* Generated portrait subjects: emphasize their identifying face/object rather
+   than the surrounding shelves. These affect pixels only, not hit regions. */
+.minion-art.original-art img{transform:scale(1.16);transform-origin:50% 45%}
+.minion-art[data-art-source="VAN_CS1_042"] img{transform:scale(1.22);transform-origin:50% 62%}
+.minion-art[data-art-source="VAN_CS2_119"] img{transform:scale(1.2);transform-origin:45% 65%}
+.minion-art[data-art-source="VAN_CS2_179"] img{transform:scale(1.2);transform-origin:50% 38%}
+.minion-art[data-art-source="VAN_CS2_131"] img{transform:scale(1.15);transform-origin:50% 40%}
+.minion-art[data-art-source="VAN_CS2_187"] img{transform:scale(1.2);transform-origin:50% 32%}
+.minion-art[data-art-source="VAN_CS2_200"] img{transform:scale(1.13);transform-origin:50% 25%}
+.minion-art[data-art-source="VAN_CS2_162"] img{transform:scale(1.14);transform-origin:50% 12%}
+.minion-art[data-art-source="VAN_CS2_201"] img{transform:scale(1.06);transform-origin:50% 0%}
+.minion-art[data-art-source="VAN_CS2_186"] img{transform:scale(1.16);transform-origin:50% 35%}
+.minion-art[data-art-source="VAN_CS2_213"] img{transform:scale(1.12);transform-origin:50% 45%}
+
+/* v8a: reserve the left rail for public reveal; the battle and damage targets
+   are never behind a centre card. Full illustration/text stays in paused history. */
+.played-reveal{left:calc(var(--stage-left) + 5px);top:54px;transform:none;width:72px;max-width:none;height:calc(70dvh - 108px);max-height:164px;display:grid;grid-template-rows:minmax(0,1fr) auto;gap:4px;padding:4px;border-radius:7px;border-width:1px;z-index:32;pointer-events:none}
+.played-reveal .reveal-art{width:100%;height:100%;min-height:0;border-radius:4px}
+.played-reveal .revealed-copy{gap:2px;overflow:hidden;text-align:center}
+.played-reveal .revealed-copy strong{font-size:10px;line-height:12px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.played-reveal .revealed-copy span{font-size:9px;line-height:11px;white-space:nowrap}
+@media(max-width:600px) and (orientation:landscape){.played-reveal{width:64px}}
+
+/* Every crowded exposed slot gets a complete, distinct image tile. Cost sits
+   above it; labelled attack/health sit below. Full-size selected art is retained. */
+.hand-peek{display:none}
+.hand{--hand-step:calc((var(--stage)*.73 - 29dvh)/var(--fan-divisor));--peek-w:clamp(26px,calc(var(--hand-step) - 5px),38px)}
+.hand.is-crowded .hand-card:not(.selected){transform:none}
+.hand.is-crowded .hand-card:not(.selected) .card-heading strong,.hand.is-crowded .hand-card:not(.selected) .hand-readiness{display:none}
+.hand.is-crowded .hand-card:not(.selected) .card-art{display:none}
+.hand.is-crowded .hand-card:not(.selected) .hand-peek{display:block;position:absolute;left:3px;top:29px;width:var(--peek-w);height:var(--peek-w);border:1px solid #f0d49c;border-radius:4px;overflow:hidden;background:#f2dfbd;z-index:1}
+.hand-peek.original-art img{object-fit:cover;object-position:50% 40%}
+.hand.is-crowded .hand-card:not(.selected) .card-bottom{top:calc(31px + var(--peek-w));left:3px;width:var(--peek-w);min-height:15px;height:15px;padding:0;gap:1px;flex-direction:row;border-radius:2px}
+.hand.is-crowded .hand-card:not(.selected) .hand-stat{min-width:0;padding:0;font-size:12px;line-height:15px}
+.hand.is-crowded .hand-card:not(.selected) .hand-stat small{font-size:6px;line-height:9px}
+.hand.is-crowded .hand-card:not(.selected) .hand-stat:only-child{font-size:9px}
+/* Expanded browsing is below the friendly stat row, with separate name,
+   cost/stats and portrait areas in every exposed slot. Selecting still folds it. */
+.hand.is-expanded{bottom:-13dvh;--hand-step:calc((var(--stage)*.92 - 29dvh)/var(--fan-divisor));--peek-w:clamp(26px,calc(var(--hand-step) - 5px),56px)}
+.hand.is-expanded .hand-card:not(.selected){transform:none}
+.hand.is-expanded .hand-card:not(.selected) .card-art,.hand.is-expanded .hand-card:not(.selected) .hand-readiness{display:none}
+.hand.is-expanded .hand-card:not(.selected) .card-heading{position:static;min-height:0}
+.hand.is-expanded .hand-card:not(.selected) .card-heading strong{display:-webkit-box;position:absolute;left:3px;right:auto;top:3px;width:var(--peek-w);height:23px;max-height:23px;margin:0;padding:0 1px;background:#32261be8;color:#fff4da;text-align:left;font-size:10px;line-height:11px;-webkit-line-clamp:2;word-break:break-all}
+.hand.is-expanded .hand-card:not(.selected) .cost{position:absolute;left:3px;top:29px;width:22px;height:23px;font-size:18px;line-height:21px}
+.hand.is-expanded .hand-card:not(.selected) .card-bottom{position:absolute;left:29px;top:28px;width:calc(var(--peek-w) - 26px);height:27px;min-height:27px;padding:0;gap:1px;flex-direction:column;z-index:4}
+.hand.is-expanded .hand-card:not(.selected) .hand-stat{font-size:12px;line-height:13px;padding:0;min-width:0}
+.hand.is-expanded .hand-card:not(.selected) .hand-stat small{font-size:7px;line-height:9px}
+.hand.is-expanded .hand-card:not(.selected) .hand-stat:only-child{font-size:9px}
+.hand.is-expanded .hand-card:not(.selected) .hand-peek{display:block;position:absolute;left:3px;top:57px;width:var(--peek-w);height:min(var(--peek-w),calc(29dvh - 61px));border:1px solid #f0d49c;border-radius:4px;overflow:hidden;background:#f2dfbd;z-index:1}
+.hand-count{white-space:pre-line;font-size:9px;line-height:12px}
+/* These image-mat colours are identity cues, never availability/rule borders. */
+.minion-art[data-art-source="VAN_CS2_131"],.hand-peek[data-art-source="VAN_CS2_131"]{border:2px solid #277d91}
+.minion-art[data-art-source="VAN_CS2_124"],.hand-peek[data-art-source="VAN_CS2_124"]{border:2px solid #975fc0}
+.minion-art[data-art-source="VAN_CS2_213"],.hand-peek[data-art-source="VAN_CS2_213"]{border:2px solid #c36428}
+.minion-art[data-art-source="VAN_CS2_187"],.hand-peek[data-art-source="VAN_CS2_187"]{border:2px solid #418269}
+.minion-art[data-art-source="VAN_CS2_162"],.hand-peek[data-art-source="VAN_CS2_162"]{border:2px solid #507cbd}
+.minion-art[data-art-source="VAN_EX1_582"],.hand-peek[data-art-source="VAN_EX1_582"]{border:2px solid #9c678f}
+.minion-art[data-art-source="VAN_CS2_155"],.hand-peek[data-art-source="VAN_CS2_155"]{border:2px solid #c1923d}
+.minion-art[data-art-source="VAN_CS1_042"],.hand-peek[data-art-source="VAN_CS1_042"]{border:3px solid #263f57;background:#deedf2}
+.hand-peek[data-art-source="VAN_CS2_131"] img{object-position:50% 55%}
+.hand-peek[data-art-source="VAN_CS2_124"] img{object-position:50% 65%}
+.hand-peek[data-art-source="VAN_CS2_213"] img{object-position:50% 58%}
+.hand-peek[data-art-source="VAN_CS1_042"] img{object-position:50% 68%}
+@media(orientation:portrait){.played-reveal{display:none}}
+/* Keep the full illustration behind each exposed identity tile, so the last
+   card and wider low-count fans do not acquire blank unused card faces. */
+.hand.is-crowded .hand-card:not(.selected) .card-art,.hand.is-expanded .hand-card:not(.selected) .card-art{display:block}
+.minion-art[data-art-source="VAN_CS2_131"] img{transform:scale(1);object-position:50% 55%}
+.minion-art[data-art-source="VAN_CS2_124"] img{transform:scale(1);object-position:50% 65%}
+.minion-art[data-art-source="VAN_CS2_213"] img{transform:scale(1);object-position:50% 58%}
+.minion-art[data-art-source="VAN_CS2_187"] img{transform:scale(1.08);transform-origin:50% 45%}
+.minion-art[data-art-source="VAN_CS2_162"] img{transform:scale(1);object-position:50% 25%}
+/* A 4:3 landscape board reaches the side edges. Use the free top-left band,
+   ending above the first row, instead of assuming phone-width side space. */
+@media(max-aspect-ratio:3/2) and (orientation:landscape){.played-reveal{width:calc(var(--stage)*.22 - 12px);height:calc(22.75dvh - 60px);max-height:164px;grid-template-columns:min(60px,8vw) minmax(0,1fr);grid-template-rows:minmax(0,1fr)}.played-reveal .revealed-copy{justify-content:center}}
+.hand.is-crowded:not(.is-expanded) .hand-card:not(.selected) .card-heading{position:static}
+.hand.is-crowded:not(.is-expanded) .hand-card:not(.selected) .cost{position:absolute;left:3px;top:3px;width:22px;height:23px;font-size:18px;line-height:21px}
+[data-art-source="VAN_CS2_131"]{--art-mat:#277d91}[data-art-source="VAN_CS2_124"]{--art-mat:#975fc0}[data-art-source="VAN_CS2_213"]{--art-mat:#c36428}[data-art-source="VAN_CS2_187"]{--art-mat:#418269}[data-art-source="VAN_CS2_162"]{--art-mat:#507cbd}[data-art-source="VAN_EX1_582"]{--art-mat:#9c678f}[data-art-source="VAN_CS2_155"]{--art-mat:#c1923d}[data-art-source="VAN_CS1_042"]{--art-mat:#263f57}
+.hand.is-crowded .hand-card:not(.selected) .hand-peek,.hand.is-expanded .hand-card:not(.selected) .hand-peek{border:2px solid var(--art-mat,#e6c88c)}
+
+/* v8b: lay out a real board rectangle between the control rails. Tablet rows
+   shrink uniformly to this rectangle; controls never cover a seventh minion. */
+#app{--right-rail:max(84px,calc(var(--stage)*.15));--row-width:calc(var(--stage) - 84px - var(--right-rail));--unit-w:min(17dvh,calc((var(--row-width) - 9dvh)/7));--unit-h:calc(var(--unit-w)*1.265);--stat-size:min(6.5dvh,calc(var(--unit-w)*.42))}
+.board,.board:has(.minion:nth-child(6)){left:calc(var(--stage-left) + 84px);width:var(--row-width)}
+.minion-stats .attack-stat,.minion-stats .health-stat{width:var(--stat-size);min-width:var(--stat-size);height:var(--stat-size);font-size:min(5.5dvh,calc(var(--unit-w)*.36));line-height:1}
+/* Detached, bounded death feedback occupies the existing public action band,
+   never an old battlefield coordinate. Surviving damage stays on surviving UID. */
+.combat-death-lane{position:fixed;display:flex;align-items:stretch;gap:4px;padding:1px 3px;overflow:hidden;background:#30241af5;color:#fff1d2;border:1px solid #c2945e;border-radius:6px;pointer-events:none!important}
+.combat-death-badge{display:flex;flex:1;align-items:center;gap:4px;min-width:0;overflow:hidden;font-size:10px;line-height:12px}
+.combat-death-badge>span:last-child{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.combat-death-art{display:block;position:static;flex:0 0 22px;width:22px;height:22px;max-height:100%;overflow:hidden;border-radius:3px}
+.combat-death-art img{display:block;width:100%;height:100%;object-fit:cover;transform:none}
+/* Explicit dimensions avoid WebKit's percentage image in auto-height flex art
+   collapsing. Every resting hand count also has the proven exposed square tile. */
+.hand-card .card-art,.hand-card.selected .card-art{position:absolute;left:3px;right:auto;top:31px;bottom:auto;width:calc(100% - 6px);height:calc(42dvh - 36px);min-height:0}
+.hand:not(.is-expanded) .hand-card:not(.selected) .card-heading{position:static}
+.hand:not(.is-expanded) .hand-card:not(.selected) .cost{position:absolute;left:3px;top:3px;width:22px;height:23px;font-size:18px;line-height:21px}
+.hand:not(.is-expanded) .hand-card:not(.selected) .hand-peek{display:block;position:absolute;left:3px;top:29px;width:var(--peek-w);height:var(--peek-w);border:2px solid var(--art-mat,#e6c88c);border-radius:4px;overflow:hidden;background:#f2dfbd;z-index:1}
+.hand:not(.is-expanded) .hand-card:not(.selected) .card-bottom{top:calc(31px + var(--peek-w));left:3px;width:var(--peek-w);min-height:15px;height:15px;padding:0;gap:1px;flex-direction:row;border-radius:2px}
+.hand:not(.is-expanded) .hand-card:not(.selected) .hand-stat{min-width:0;padding:0;font-size:12px;line-height:15px;gap:0}
+.hand:not(.is-expanded) .hand-card:not(.selected) .hand-stat small{font-size:6px;line-height:9px}
+.hand:not(.is-expanded) .hand-card:not(.selected) .hand-stat:only-child{font-size:9px}
+.hand:not(.is-expanded):not(.is-crowded) .hand-card:not(.selected) .card-heading strong{left:46px;right:3px;top:29px;max-height:26px;font-size:10px;line-height:11px}
+/* At568px the old 16.75px stat lane clipped digit ink. Smaller cost + a20.75px
+   explicit two-cell lane give label and number their own nonshrinking columns. */
+.hand.is-expanded .hand-card:not(.selected) .cost{width:20px;height:23px;font-size:16px}
+.hand.is-expanded .hand-card:not(.selected) .card-bottom{left:25px;width:calc(var(--peek-w) - 22px)}
+.hand.is-expanded .hand-card:not(.selected) .hand-stat{display:grid;grid-template-columns:6px minmax(0,1fr);gap:0;align-items:center;padding:0;font-size:11px;line-height:13px;min-width:0}
+.hand.is-expanded .hand-card:not(.selected) .hand-stat small{display:block;font-size:6px;line-height:10px;min-width:0}
+.hand.is-expanded .hand-card:not(.selected) .hand-value{display:block;font-size:11px;line-height:13px;font-variant-numeric:tabular-nums;text-align:center;white-space:nowrap}
+.hand.is-expanded .hand-card:not(.selected) .hand-stat:only-child{display:flex;font-size:9px}
+/* Both controls use the same rail boundary as the board, rather than unrelated
+   percentages inherited from earlier layouts. Seven-pixel stat overhang leaves
+   another seven pixels before the first control. */
+.interaction-actions #end-turn{left:calc(var(--stage-left) + var(--stage) - var(--right-rail) + 14px);width:calc(var(--right-rail) - 20px)}
+.mana-rail{left:calc(var(--stage-left) + var(--stage) - var(--right-rail) + 18px);top:60dvh;width:calc(var(--right-rail) - 24px)}
+
+/* v8c: stable high-contrast hit information for its complete1250ms lifetime.
+   Only the attacker's decorative motion uses WAAPI; hit opacity is never animated. */
+.combat-impact{opacity:1;z-index:1}
+.combat-damage{opacity:1;z-index:2;transform:translate(-50%,-100%);padding:2px 5px;border:2px solid #fff1c4;border-radius:7px;background:#74291f;color:#fffbe7;text-shadow:0 1px #301009;box-shadow:0 2px 3px #231309aa}
