@@ -41,3 +41,35 @@ SKELETON_DIR=$S COLLECTION_IMPL=tests/collection-acceptance/adapters/skeleton-v1
 - N3-11 批量抽首版不做，打印「跳过」，不计入 130，也不算通过。
 - 通过数 + 失败数必须等于 130。小于 130，就是有断言没执行（被前面的缺接口或报错提前退出），要列出编号，不能算全部通过。
 - 规则层 130/130 只说明 G3 过了。用的是模拟钱包，不代表经营扣款验收通过，经营扣款要看 G4。
+
+---
+
+# smoke_g7 跳过项 → 解锁对照（G7 冒烟，16 过 / 0 挂 / 10 跳过）
+
+10 条跳过 = 下面 5 项 × WebKit、Chromium 两个引擎。每个引擎 13 条，两个引擎共 26 条，目标是 26/0/0、rc=0。
+
+| # | 跳过项 | 缺口（函数/依赖） | 谁补 | 补上后期望 |
+|---|---|---|---|---|
+| 1 | S1b 只写主档根 key | `CollectionQA.walletMode === 'real'`，也就是 G4 的 CardHost 已经接上主档 | 熊大（G4） | localStorage 的根 key 都在 {`tangzhe-save`, `-bak`, `-tab-lock`} 里，没有新增 |
+| 2 | S1e 带零头 | `exportState()` 返回 `coinFrac`（主档里的零头） | 熊大（G4） | 余额 500 万加零头 0.75，抽一次后金币是 0，零头还是 0.75 |
+| 3 | S4b 同一 txId 重放 | `CollectionQA.replayTx(txId)` | 熊大 | 重放后金币和凭据都不变：不重新抽，也不再扣费 |
+| 4 | S5b 普通经营写档并发 | `CollectionQA.economyWrite()` 和 G4 父页的锁 | 熊大（G4）；断言由板砖等桥接定稿后补 | B 标签做一次普通经营写档，不覆盖 A 标签的抽卡结果；扣款次数等于凭据数 |
+| 5 | S5c 正式站与 preview 隔离 | 环境变量 `PROD_URL`（正式站页面） | 杨总批准发布 + G4 | 在 preview 导入存档并抽一次，正式站的 `tangzhe-save` / `-bak` 原文不变 |
+
+复跑口令（补上一项就跑一次，跳过数应该减 2）：
+```bash
+python3 -m http.server 8790 &          # 仓库根目录
+COLLECTION_URL='http://127.0.0.1:8790/preview/cards/collection/index.html?collectionTest=1' \
+PROD_URL='<正式站页面，可选>' \
+  python3 tests/collection-acceptance/smoke_g7.py; echo rc=$?
+```
+
+退出码：
+- rc=1：有失败，按失败行里的期望和实际值修。
+- rc=3：没有失败，但还有跳过，或者用的还是模拟钱包。这时不算 G7 通过。
+- rc=0：26/0/0，钱包一栏显示「真实经营」。
+
+规则：
+- 跳过和模拟钱包都不算通过。
+- 钩子补上之后，如果某条从「跳过」变成「失败」，那是真失败，不能退回去标跳过。
+- iPhone Safari 实机仍然按 G6-G7.md 手工测，脚本盖不到。
