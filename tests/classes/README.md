@@ -109,7 +109,7 @@ defaultDeck('priest') / deckCapacity('priest') -> Error: Invalid hero class
 
 ## 6. 跑法（等实现后）
 
-- 规则层：建议做成 `tests/classes/classes.test.mjs`，用 node:test，一条用例对应一个 `test()`，ID 用上面的。
+- 规则层骨架已交：`tests/classes/classes.test.mjs`（node:test，78 条 = H0 自检 + 77 条用例）。跑法：`node --test tests/classes/classes.test.mjs`。卡牌 id 用 `CLASS_CARD_IDS=ids.json` 登记。
 - 前置不满足时调用 `assert.fail('FAIL 未实现：<classId>/<机制>')`，不要用 `test.skip`。
 - UI（C7、C8、S9 的锁住水晶）：等熊大交 UI 后，用 Playwright 在 Chromium 和 WebKit 下各跑一次。截图另存诊断副本，不算验收。
 
