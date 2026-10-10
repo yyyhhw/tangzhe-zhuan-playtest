@@ -1,0 +1,59 @@
+/* v9 is an isolated presentation layer. Keep accepted v8c geometry unchanged. */
+.spell-fx{--spell-light:#fff4c5;--spell-core:#ffdc63;--spell-color:#f57b20;--spell-dark:#852512}
+.spell-fx.effect-arcane{--spell-light:#fff1ff;--spell-core:#e3b9ff;--spell-color:#a574ef;--spell-dark:#56308a}
+.spell-fx.effect-lightning{--spell-light:#fff;--spell-core:#d6f5ff;--spell-color:#63c8f4;--spell-dark:#224594}
+.spell-bolt{height:4px;background:var(--spell-light);box-shadow:0 0 3px var(--spell-core),0 0 9px var(--spell-color);opacity:1}
+.spell-fx.effect-shadow{--spell-light:#ffddf1;--spell-core:#dc86f0;--spell-color:#9342b6;--spell-dark:#461b63}
+.spell-fx.effect-holy{--spell-light:#fffbea;--spell-core:#ffedac;--spell-color:#d1a43c;--spell-dark:#795418}
+.spell-fx.effect-heal{--spell-light:#eaffe8;--spell-core:#bcf5b0;--spell-color:#55b578;--spell-dark:#1e6249}
+.spell-fx.effect-mana{--spell-light:#efffff;--spell-core:#a3edff;--spell-color:#3bb8e5;--spell-dark:#185682}
+.spell-fx.effect-ward,.spell-fx.effect-wind{--spell-light:#f0fdff;--spell-core:#d0eff0;--spell-color:#83b7c2;--spell-dark:#385c70}
+.spell-caster-ring{position:absolute;border:3px solid var(--spell-core);border-radius:40%;box-shadow:0 0 12px var(--spell-color),inset 0 0 7px var(--spell-dark)}
+.spell-charge,.spell-projectile{position:absolute;width:32px;height:32px;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle at 40% 35%,#fff 0 12%,var(--spell-light) 13% 26%,var(--spell-core) 30% 47%,var(--spell-color) 52% 68%,var(--spell-dark) 76%);border:1px solid var(--spell-light);box-shadow:0 0 7px 2px var(--spell-color),0 0 15px 3px var(--spell-dark);z-index:5}
+.spell-charge::before,.spell-projectile::before{content:'';position:absolute;inset:-5px;border:2px solid var(--spell-core);border-left-color:transparent;border-right-color:transparent;border-radius:50%;transform:rotate(-24deg)}
+.effect-fire .spell-charge::after,.effect-fire .spell-projectile::after,.effect-shadow .spell-charge::after,.effect-shadow .spell-projectile::after{content:'';position:absolute;width:19px;height:29px;left:6px;top:-10px;z-index:-1;background:linear-gradient(var(--spell-color),var(--spell-core));border-radius:90% 25% 65% 30%;transform:rotate(30deg);opacity:.95}
+.spell-phase-label{position:absolute;transform:translate(-50%,-50%);padding:2px 6px;border:1px solid var(--spell-core);border-radius:6px;background:#241b19f5;color:#fff4d9;font:700 11px/15px system-ui;white-space:nowrap;z-index:6;box-shadow:0 1px 4px #0007}
+.spell-path{position:absolute;height:5px;transform-origin:0 50%;background:linear-gradient(90deg,var(--spell-color),var(--spell-core),var(--spell-light));border-radius:50%;box-shadow:0 0 6px var(--spell-color);opacity:.7;z-index:3}
+.spell-target-marker{position:absolute;border:2px dashed var(--spell-light);border-radius:35%;box-shadow:0 0 5px var(--spell-dark);z-index:3}
+.spell-impact{border:3px solid var(--spell-light);border-radius:35%;box-shadow:0 0 10px var(--spell-color),inset 0 0 8px var(--spell-core);background:radial-gradient(ellipse,transparent 40%,var(--spell-color));opacity:1}
+.spell-impact-flare{position:absolute;border-radius:35%;border:5px solid var(--spell-light);box-shadow:0 0 12px var(--spell-color);opacity:0;z-index:2}
+.spell-result{font-size:clamp(14px,3.9dvh,22px);max-width:230px;white-space:normal;text-align:center;z-index:6}
+.spell-benefit{background:#23513b;color:#f2ffe5;border-color:#dcfabb}
+.spell-fallen-target{border-bottom:2px solid var(--spell-color);font-weight:700;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
+.spell-fx[data-phase="impact"] .spell-caster-ring{border-width:1px;box-shadow:none}
+.spell-fx[data-reduced-motion="true"] .spell-charge::before,.spell-fx[data-reduced-motion="true"] .spell-charge::after{display:none}
+.spell-fx[data-reduced-motion="true"] .spell-path{height:2px;opacity:1;box-shadow:none}
+/* An explicit name→keyword row, never an aura inferred from border color. */
+.minion:has(.minion-keywords) .minion-name{bottom:34px}
+.minion-keywords{position:absolute;left:0;right:0;bottom:21px;min-height:12px;display:flex;justify-content:center;align-items:center;gap:2px;z-index:3;pointer-events:none;white-space:nowrap}
+.minion-keyword{display:inline-block;padding:0 2px;border-radius:3px;background:#f4dfab;color:#45301c;border:1px solid #8a662e;font:700 8px/10px system-ui;white-space:nowrap}
+.keyword-charge{background:#e9f1c0;color:#345329;border-color:#6d8a3b}.keyword-taunt{background:#d7e4ed;color:#2e495d;border-color:#6b899a}.keyword-divineShield{background:#fff4aa;color:#715716;border-color:#a9842f}.keyword-spell{background:#ebd3fa;color:#653c7f;border-color:#9b75ba}
+/* Public count only: no opponent card names, thumbnails or hand identities. */
+.opponent-hand-count{position:absolute;left:calc(50% + 87px);top:20px;display:flex;align-items:center;gap:4px;min-height:24px;padding:2px 6px;border:1px solid #bdac8d;border-radius:6px;background:#302b25;color:#fff2d2;font:700 10px/16px system-ui;white-space:nowrap;pointer-events:none}
+.opponent-hand-count strong{font-size:15px;color:#fff}
+@media(min-height:500px) and (orientation:landscape){.minion-keyword{font-size:10px;line-height:12px}.minion-keywords{min-height:14px}.minion:has(.minion-keywords) .minion-name{bottom:37px}.opponent-hand-count{font-size:12px}.spell-charge,.spell-projectile{width:38px;height:38px}}
+@media(forced-colors:active){.spell-charge,.spell-projectile,.spell-path,.spell-impact,.spell-caster-ring,.spell-target-marker{background:Canvas;border-color:Highlight}.spell-phase-label,.spell-result,.minion-keyword,.opponent-hand-count{background:Canvas;color:CanvasText;border:2px solid CanvasText}}
+/* A bounded, inert public-board snapshot holds pre-cast geometry. The engine
+   and save have already settled. Live hit targets remain invisible and inert. */
+body[data-spell-scene] #app .board>.minion,body[data-spell-scene] #app .hero-button{visibility:hidden!important;pointer-events:none!important}
+body[data-spell-scene] #app .result-panel{visibility:hidden!important;pointer-events:none!important}
+.spell-scene-character{pointer-events:none!important;user-select:none!important;z-index:0!important;opacity:1}
+.spell-scene-character *{pointer-events:none!important}
+.spell-fx .combat-death-lane{z-index:7}.spell-fx [hidden]{display:none!important}
+.spell-scene-character[data-departing="true"]{filter:grayscale(1)}
+
+/* True one-hit shield: transparent shell leaves portrait, name and values readable. */
+.minion.has-divine-shield{isolation:isolate}
+.divine-shield-shell{position:absolute;inset:3px 2px 17px;z-index:2;pointer-events:none;border:2px solid #fff1a3;border-radius:46% 46% 40% 40%;background:radial-gradient(ellipse at 28% 18%,#fffbea77 0 5%,transparent 14% 59%,#ffd3482b 78%,#f4c14d55 100%);box-shadow:inset 0 0 5px #ffdd6499,0 0 4px #ffdf87;}
+.divine-shield-shell::after{content:'';position:absolute;inset:3px;border-radius:inherit;border-top:2px solid #fffdeb;border-left:1px solid #fffdeb99;pointer-events:none}
+.divine-shield-break{position:absolute;box-sizing:border-box;border:3px dashed #fff1a3;border-radius:43%;box-shadow:0 0 8px #eabe37;pointer-events:none;z-index:5}
+.divine-shield-shard{position:absolute;width:8px;height:12px;clip-path:polygon(20% 0,100% 25%,65% 100%,0 70%);background:#ffe99a;border:1px solid #fffbe1;pointer-events:none;z-index:5;opacity:.8}
+@media(prefers-reduced-motion:reduce){.divine-shield-shard{display:none}.divine-shield-break{box-shadow:none;border-style:dashed}}
+@media(forced-colors:active){.divine-shield-shell,.divine-shield-break{background:transparent;border:2px solid Highlight;box-shadow:none}}
+
+.spell-scene-character[data-attacking="true"]{z-index:4!important}
+
+/* v9a: both opponent readouts fit above the fixed public action band, including
+   568x320. At minimum height: count bottom=46.96px, action band top=49.6px. */
+.opponent-power-status{top:-24px;min-height:24px;height:24px;padding:2px 6px;line-height:16px}
+.opponent-hand-count{top:2px;min-height:20px;height:20px;padding:1px 6px;line-height:16px}

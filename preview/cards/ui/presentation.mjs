@@ -1,7 +1,8 @@
 /** Presentation only. All entries are backed by verified real original illustrations.
  * Never changes a card definition, runtime admission, or snapshot. */
-export const PRESENTATION_VERSION = 'bookspine-art-ui-8c';
+export const PRESENTATION_VERSION = 'bookspine-art-ui-10';
 export const ART_BY_SOURCE_ID = Object.freeze({
+  VAN_EX1_371: Object.freeze({src:"./assets/original/VAN_EX1_371_original_v1.png",width:1122,height:1402,name:"珍珠护套"}),
   VAN_EX1_400: Object.freeze({"src": "./assets/original/VAN_EX1_400_original_v1.webp", "width": 448, "height": 560, "name": "后厨大扫场"}),
   VAN_CS2_106: Object.freeze({"src": "./assets/original/VAN_CS2_106_original_v1.webp", "width": 448, "height": 560, "name": "红柄炭火夹"}),
   VAN_NEW1_011: Object.freeze({"src": "./assets/original/VAN_NEW1_011_original_v1.webp", "width": 448, "height": 560, "name": "街口快送员"}),

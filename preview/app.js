@@ -2,14 +2,17 @@
 (() => {
 'use strict';
 const E = window.Economy, CFG = E.CFG;
+const COLLECTION = window.PreviewCollectionRuntime;
+if (!COLLECTION || !COLLECTION.ownsLock()) throw Error('PREVIEW_WRITER_LEASE_REQUIRED');
+const STORAGE = COLLECTION.storage;
 const TD = window.TDCore; let tdOpen = false, tdPort = null, tdGeneration = 0;
 const ZB = window.ZBCore; var zbOpen = false, zbPort = null;
 let cardsOpen = false, cardsPort = null, cardsGeneration = 0, cardsCloseTimer = null;
-const CARDS_SHOP = 2, CARDS_V = 'card-s1';   // 要在 boot() 渲染店铺页之前初始化
+const CARDS_SHOP = 2, CARDS_V = 'collection-trial-1c';   // 要在 boot() 渲染店铺页之前初始化
 const ZB_SHOP = 0; var zbLastCeo = null, zbRun = null; const zbUsedRuns = new Set();   // 13d：用过的 runId（本页内存），重复 / 过期的 start 不能把旧局重新激活   // 13a：打僵尸 = 烧烤摊（店 0）；zbLastCeo = 最近一次成功结算的上场 CEO（只在内存）
 // 13c：zbRun = 父页开局登记 { runId, ceoId, startedAt, settled }——结算只认这份记录、同一局只结一次；中途调岗不要求仍在任
-const SAVE_KEY = 'tangzhe-preview-save', BAK_KEY = 'tangzhe-preview-save-bak', LOCK_KEY = 'tangzhe-preview-tab-lock';
-// 12b2 测试房间：只有网址带 ?test=homes 才进；整局放在内存里，不读、不写任何 localStorage（真存档 / 备份 / 多标签锁都不碰），刷新就重置
+const SAVE_KEY = COLLECTION.keys.main, BAK_KEY = COLLECTION.keys.backup, LOCK_KEY = COLLECTION.keys.tab;
+// 12b2 测试房间：只有网址带 ?test=homes 才进；整局放在内存里，不读、不写任何 STORAGE（真存档 / 备份 / 多标签锁都不碰），刷新就重置
 // &lv=3 → 四家都是豪宅，默认四家都是公寓
 const TEST_Q = (() => { try { return new URLSearchParams(location.search); } catch (e) { return null; } })();
 const TEST_MODE = !!(TEST_Q && TEST_Q.get('test') === 'homes'), TEST_LV = TEST_Q && TEST_Q.get('lv') === '3' ? 3 : 2;
@@ -24,50 +27,30 @@ const TAB = rid();
 let frozen = false, state, migratedFrom = null, loadWallMig = { moved:0, stored:0 };
 // 12d 金币安全：读档走 E.loadSave（主档坏 → 完整备份 BAK_KEY；都坏 → saveBlocked：只在内存里玩，绝不覆盖原档）；写档前 E.validState 校验
 let loadInfo = { source:'new', bad:[] }, saveBlocked = false, lastGood = null;
-function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function lsGet(k) { try { return STORAGE.getItem(k); } catch (e) { return null; } }
 function loadState() {
-  if (TEST_MODE) { loadWallMig = { moved:0, stored:0 }; migratedFrom = null; return E.testHomesState(now(), TEST_LV); }
-  const m = E.loadSave(lsGet(SAVE_KEY), lsGet(BAK_KEY), now()), raw = m.raw;
-  loadInfo = { source:m.source, bakBad:m.bakBad || [], bad:m.bad || [], badPending:!!m.badPending, unsafe:!!m.unsafe, bakOk:!!m.bakOk, bakCoins:m.bakCoins, rawCoins:m.raw && m.raw.coins, mainMissing:!!m.mainMissing };
-  if (raw && raw.v !== CFG.SAVE_VERSION && m.source !== 'broken' && !m.blocked) { try { localStorage.setItem(BAK_KEY + '-v' + (raw.v || 0), JSON.stringify(raw)); } catch (e) {} }
-  loadWallMig = m.wall || { moved:0, stored:0 };
-  migratedFrom = raw && m.source !== 'broken' && !m.blocked ? (raw.v !== CFG.SAVE_VERSION ? (raw.v || 0) : null) : null;
-  if (m.source === 'bak') m.st.rev = Math.max(m.st.rev || 0, m.mainRev || 0);   // 从备份恢复：rev 不低于坏主档，免得多标签锁误判
-  if (m.blocked) saveBlocked = true;
-  // Roster migration is committed atomically after boot; failed writes keep raw save intact.
-  return m.st;
+  if (TEST_MODE) return E.testHomesState(now(), TEST_LV);
+  const loaded = COLLECTION.coordinator.current();
+  if (!loaded.ok) { saveBlocked=true; loadInfo={source:'protected',bad:[loaded.code]}; return E.markBlocked(E.newState(now())); }
+  loadInfo={source:'main',bad:[]}; return loaded.state;
 }
-function storedRev() { if (TEST_MODE) return -1; try { const r = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); return r ? (r.rev || 0) : -1; } catch (e) { return -1; } }
+
+function storedRev() { if (TEST_MODE) return -1; try { const r = JSON.parse(STORAGE.getItem(SAVE_KEY) || 'null'); return r ? (r.rev || 0) : -1; } catch (e) { return -1; } }
 // 保存 = 先确认没有别的页面写过（rev 比我新就冻结本页），再整份原子写入
 // 12d3（熊大 22:08 第 4 条）：只读模式返回 false（不假装保存成功）；写前 E.validState（含序列化后 E.checkSave）；
 //   备份写失败 → 整次保存放弃，主档不动；跨页写档（宠物 / 打僵尸）用 E.commitSave，同一套规矩
 function persist() {
-  if (frozen) return false;
-  if (TEST_MODE) { state.rev++; return true; }   // 测试房间：只在内存里，永远不写真存档
-  if (saveBlocked) return false;                  // 12d：坏档 / 余额异常且没有可用备份 → 只读，原档一个字节都不改；12d3：如实返回失败（交易据此回滚）
-  const bad = E.validState(state);                // 12d：写档前校验（金币 / 等级 / 待领取收益 + 12d3 整档结构），坏了不写、恢复上一份好档
-  if (bad.length) { restoreGood(bad); return false; }
-  const sr = storedRev();
-  if (sr > state.rev) { freeze(); return false; }
-  const t = now();
-  if (t > state.lastSeen) state.lastSeen = t;
-  state.maxSeen = Math.max(state.maxSeen || 0, state.lastSeen);
-  petBeforePersist();   // 宠物名单 v2：按实例写入 state.pets.list[].eng（同一份存档）
-  state.rev++;
-  const json = JSON.stringify(state);
-  // 完整备份：把当前通过完整校验的主档整份放进 BAK_KEY（README 里已有的 -bak 键，不新增键），再写新主档；坏主档永远不进备份
-  let prev = null;
-  try { prev = localStorage.getItem(SAVE_KEY); } catch (e) { state.rev--; toast('保存失败：读不到浏览器存储'); return false; }
-  if (prev && prev !== json) {
-    let ok = false; try { ok = !E.checkSave(JSON.parse(prev)).length; } catch (e) {}
-    if (ok) {
-      try { localStorage.setItem(BAK_KEY, prev); if (localStorage.getItem(BAK_KEY) !== prev) throw new Error('bak'); }
-      catch (e) { state.rev--; toast('保存失败：备份写不进去，这次没有保存（原存档未改）', 2600); return false; }   // 12d3：备份失败 → 主档不动
-    }
-  }
-  try { localStorage.setItem(SAVE_KEY, json); lastGood = json; return true; }
-  catch (e) { state.rev--; toast('保存失败：浏览器存储不可用（无痕模式？）'); return false; }
+  if (frozen || saveBlocked || !COLLECTION.ownsLock()) return false;
+  if (TEST_MODE) { state.rev++; return true; }
+  const bad=E.validState(state); if (bad.length) { restoreGood(bad); return false; }
+  const t=now(); state.lastSeen=Math.max(state.lastSeen,t); state.maxSeen=Math.max(state.maxSeen||0,state.lastSeen);
+  petBeforePersist();
+  const r=COLLECTION.coordinator.commit(state);
+  if (r.ok) { lastGood=COLLECTION.coordinator.raw; return true; }
+  if (COLLECTION.coordinator.failed) { saveBlocked=true; toast('预览存档已保护：'+r.code,3200); }
+  return false;
 }
+
 // 内存里出现坏值（NaN / ∞ / 负数 / 非数字）：不写盘，整档回到上一次成功写入的样子
 function restoreGood(bad) {
   if (lastGood) { try { state = JSON.parse(lastGood); E.normWallet(state); } catch (e) {} }
@@ -101,8 +84,8 @@ function goPage(url) {
   if (!persist()) { toast('保存失败：没有跳转，请稍后再试', 2800); return false; }
   location.href = url; return true;
 }
-function claimLock() { if (TEST_MODE) return; try { localStorage.setItem(LOCK_KEY, JSON.stringify({ tab:TAB, t:now() })); } catch (e) {} }
-function lockMine() { if (TEST_MODE) return true; try { const v = JSON.parse(localStorage.getItem(LOCK_KEY) || 'null'); return !v || v.tab === TAB; } catch (e) { return true; } }
+function claimLock() { if (TEST_MODE) return; try { STORAGE.setItem(LOCK_KEY, JSON.stringify({ tab:TAB, t:now() })); } catch (e) {} }
+function lockMine() { if (TEST_MODE) return true; try { const v = JSON.parse(STORAGE.getItem(LOCK_KEY) || 'null'); return !v || v.tab === TAB; } catch (e) { return true; } }
 function freeze() {
   if (frozen) return; frozen = true; if (zbOpen) closeZombie(); if (tdOpen) closeTD(); if (cardsOpen) closeCards();
   $('#lockOverlay').classList.remove('hidden'); audioPause();
@@ -110,7 +93,7 @@ function freeze() {
 window.addEventListener('storage', e => {
   if (frozen || TEST_MODE) return;
   if (e.key === LOCK_KEY && e.newValue) { try { if (JSON.parse(e.newValue).tab !== TAB) freeze(); } catch (x) {} }
-  if (e.key === SAVE_KEY && e.newValue) { try { if ((JSON.parse(e.newValue).rev || 0) > state.rev) freeze(); } catch (x) {} }
+  if (e.key === SAVE_KEY && e.newValue !== COLLECTION.coordinator.raw) { saveBlocked=true; freeze(); }
 });
 $('#lockResume').addEventListener('click', () => location.reload());
 
@@ -2044,7 +2027,7 @@ function petPrepare(s) { for (const a of petActors.values()) a.rt.beforePersist(
 function petSave(s) {
   if (saveBlocked || frozen) return false;
   if (TEST_MODE) { s.rev++; return true; }
-  const r = E.commitSave(localStorage, SAVE_KEY, BAK_KEY, s);
+  const r = E.commitSave(STORAGE, SAVE_KEY, BAK_KEY, s);
   if (r.ok) lastGood = JSON.stringify(s);
   else if (r.stage === 'conflict') freeze();
   return r;
@@ -2550,21 +2533,28 @@ function openCards() {
   if (frozen || cardsOpen || tdOpen || zbOpen || !state.shops[CARDS_SHOP].open) return;
   cardsOpen = true; const f = $('#cardsFrame'), generation = ++cardsGeneration;
   const target = new URL('cards/ui/index.html?embed=1&v=' + CARDS_V, location.href);
+  if (COLLECTION.qa) target.searchParams.set('collectionQA','1');
   f.onload = () => {
     if (!cardsOpen || generation !== cardsGeneration) return;
     let loaded; try { loaded = new URL(f.contentWindow.location.href); } catch (e) { return; }
-    if (loaded.origin !== location.origin || loaded.pathname !== target.pathname) return;
+    if (loaded.origin !== location.origin || loaded.pathname !== target.pathname || loaded.searchParams.get('collectionQA') !== target.searchParams.get('collectionQA')) return;
     if (cardsPort) cardsPort.close();
     const ch = new MessageChannel(), port = cardsPort = ch.port1;
     port.onmessage = e => { if (cardsOpen && generation === cardsGeneration && cardsPort === port) cardsMsg(e.data); };
-    f.contentWindow.postMessage({ card:'port' }, location.origin, [ch.port2]);
+    f.contentWindow.postMessage({ card:'port', matchStorageProtocol:1, matchStorageScope:COLLECTION.qa?'qa-collection-trial-v1':'preview' }, location.origin, [ch.port2]);
   };
   f.src = target.href; $('#cardsOverlay').classList.remove('hidden'); audioPause();
 }
 function cardsMsg(d) {
   if (!d || typeof d !== 'object') return;
+  if (d.card === 'collection') {
+    const port=cardsPort, generation=cardsGeneration;
+    const reply=COLLECTION.handle ? COLLECTION.handle(d) : {ok:false,code:'HOST_NOT_READY'};
+    if (cardsOpen && port === cardsPort && generation === cardsGeneration) port.postMessage({card:'collection-result',protocol:1,requestId:d.requestId,...reply});
+    return;
+  }
   if (d.card === 'close') return closeCards();
-  if (d.card === 'ready') cardsSend({ card:'hello', muted: !!state.muted });
+  if (d.card === 'ready') cardsSend({ card:'hello', muted: !!state.muted, collectionProtocol:1 });
   if (d.card === 'stay') { clearTimeout(cardsCloseTimer); cardsCloseTimer = null; }   // 子页保存失败后玩家选了留下
 }
 // 请卡牌页先存档再关；3 秒没回应就问是否强制关闭
@@ -2580,7 +2570,7 @@ function closeCards() {
   const f = $('#cardsFrame'); f.onload = null; f.src = 'about:blank';
   $('#cardsOverlay').classList.add('hidden'); dirty = true; audioResume();
 }
-Object.defineProperties(window.__tzz, { openCards:{ value:openCards }, closeCards:{ value:closeCards }, requestCloseCards:{ value:requestCloseCards }, cardsOpen:{ get:() => cardsOpen }, cardsCloseTimer:{ get:() => cardsCloseTimer !== null } });
+Object.defineProperties(window.__tzz, { collectionReplaceState:{value:s=>{state=s;lastGood=COLLECTION.coordinator.raw;if(!COLLECTION.coordinator.failed&&COLLECTION.ownsLock())saveBlocked=false;dirty=true;}}, collectionReadOnly:{value:code=>{saveBlocked=true;toast('预览存档已保护：'+code,3200);}}, openCards:{ value:openCards }, closeCards:{ value:closeCards }, requestCloseCards:{ value:requestCloseCards }, cardsOpen:{ get:() => cardsOpen }, cardsCloseTimer:{ get:() => cardsCloseTimer !== null } });
 
 /* ================= 打僵尸（zombie/?embed=1，全屏 iframe）=================
    只和经营共用金币：价格、等级上限、进度校验都在这边按 ZBCore 算，训练扣款和结算进度都走 txn → E.transact（扣款 + 改状态 + persist 一起成功，失败整体回滚）。

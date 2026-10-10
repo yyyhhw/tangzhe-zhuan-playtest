@@ -10,6 +10,8 @@
   <link rel="stylesheet" href="./styles.css?v=card-s1">
   <link rel="stylesheet" href="./bookspine.css?v=card-s1">
   <link rel="stylesheet" href="./battlefield.css?v=card-art-8c">
+  <link rel="stylesheet" href="./spell-feedback.css?v=card-shield-10a">
+  <link rel="stylesheet" href="./collection.css?v=collection-trial-1c">
 </head>
 <body>
   <main id="app">
@@ -50,11 +52,11 @@
   <dialog id="menu-dialog" aria-labelledby="menu-title">
     <div class="dialog-heading"><h2 id="menu-title">对局菜单</h2><button data-close="menu-dialog" class="icon-button" aria-label="关闭菜单">×</button></div>
     <div class="snapshot-actions"><button id="new-game" class="primary">新对局</button><button id="snapshot-open" class="quiet">存档与回放</button></div>
-    <p class="prototype-note">38 张目录卡及 2 张现有衍生牌的原创插画已接入。固定 30 张实验牌组，每张最多 2 张。进度每步存在本机，仅此预览，不影响经营。</p>
+    <p class="prototype-note">39 张目录卡及 2 张现有衍生牌的原创插画已接入。固定 30 张实验牌组，每张最多 2 张。进度每步存在本机，仅此预览，不影响经营。</p>
     <p id="rules-label"></p>
     <p class="dialog-note">拖动手牌到发亮的己方战场，或拖到金色目标上使用；拖动可攻击的角色到合法目标上攻击。拖回手牌、松开在无效位置或旋转屏幕均取消。也可点选卡牌，再点战场、目标或确认按钮。选牌本身不会出牌。</p>
     <details class="event-log"><summary>对局记录 <span id="revision-label"></span></summary><ol id="log"></ol></details>
-    <footer>已接入 38 / 83 张目录卡：中立 25、战士 4、法师 4、圣骑士 3、术士 2。未验证完整规则或职业平衡。</footer>
+    <footer>已接入 39 / 83 张目录卡：中立 25、战士 4、法师 4、圣骑士 4、术士 2。未验证完整规则或职业平衡。</footer>
   </dialog>
   <dialog id="recent-dialog" aria-labelledby="recent-title">
     <div class="dialog-heading"><h2 id="recent-title">最近出牌</h2><button data-close="recent-dialog" class="icon-button" aria-label="关闭最近出牌">×</button></div>
@@ -69,7 +71,7 @@
   <dialog id="setup-dialog" aria-labelledby="setup-title">
     <form id="setup-form">
       <div class="dialog-heading"><div><small>开始一段新篇章</small><h2 id="setup-title">新对局</h2></div><button type="button" data-close="setup-dialog" class="icon-button" aria-label="关闭新对局设置">×</button></div>
-      <p class="dialog-note">这会替换当前对局和自动存档（上一份存档保留为备份）。需要保留进度时，请先下载快照。固定 30 张实验牌组，每张最多 2 张，仅中立及本职业牌。沿用四副已验的固定 30 张牌组；已支持 38 张目录卡，不代表默认牌组包含所有已支持卡。本试玩没有组牌界面，尚未完成完整规则与职业平衡验收。</p>
+      <p class="dialog-note">这会替换当前对局和自动存档（上一份存档保留为备份）。需要保留进度时，请先下载快照。固定 30 张实验牌组，每张最多 2 张，仅中立及本职业牌。四副固定 30 张牌组；新圣骑士牌组用两张「珍珠护套」替换两张「折页搬箱客」，旧对局保持原牌组；已支持 39 张目录卡，不代表默认牌组包含所有已支持卡。菜单中的「牌册」可管理收藏和独立组牌草稿；此处仍使用固定实验牌组。尚未完成完整规则与职业平衡验收。</p>
       <fieldset><legend>你的角色</legend><div id="hero-options" class="hero-options"></div></fieldset>
       <label>对手角色<select name="opponentHero"><option value="mage">阿宅 · 法师</option><option value="warrior">77 · 战士</option><option value="paladin">珍珠姐 · 圣骑士</option><option value="warlock">火箭 · 术士</option></select></label>
       <details class="settings-details"><summary>实验规则与随机种子</summary><div class="settings-grid">
@@ -105,7 +107,7 @@
     <div class="snapshot-actions"><button id="save-retry" class="primary">重试保存</button><button id="save-restore" class="quiet">回到最后成功档</button><button id="save-download" class="quiet">下载快照</button><button id="save-finish" class="quiet" hidden>结束游戏…</button><button id="save-exit" class="quiet" hidden>仍要退出</button></div>
   </dialog>
   <noscript><p>此技术原型需要启用 JavaScript。</p></noscript>
-  <script type="module" src="./app.mjs?v=card-art-8c"></script>
+  <script type="module" src="./app.mjs?v=collection-trial-1b"></script>
 </body>
 </html>
 

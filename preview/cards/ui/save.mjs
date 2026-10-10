@@ -9,7 +9,7 @@ export const CARD_KEYS = Object.freeze([SAVE_KEY, TMP_KEY, BAK_KEY, QUARANTINE_K
 /** Web Lock name, not a localStorage key. */
 export const LOCK_NAME = SAVE_KEY + ':write';
 export const ENVELOPE_NS = 'tangzhe-card-save';
-export const DATA_VERSION = 1;
+export const DATA_VERSION = 2;
 const VERSION_FIELDS = ['rulesVersion', 'cardPoolVersion', 'deckRulesVersion', 'cardDefinitionSchemaVersion'];
 
 export function createCardSave({storage, locks, core, now = () => Date.now()}) {
@@ -32,10 +32,11 @@ export function createCardSave({storage, locks, core, now = () => Date.now()}) {
     if (!env || typeof env !== 'object' || env.ns !== ENVELOPE_NS) return {state: 'corrupt', why: '命名空间不符'};
     if (!Number.isInteger(env.dataVersion)) return {state: 'corrupt', why: '缺少数据版本'};
     if (env.dataVersion > DATA_VERSION) return {state: 'future', why: `存档数据版本 ${env.dataVersion} 比当前页面新`};
-    if (env.dataVersion !== DATA_VERSION) return {state: 'corrupt', why: '数据版本不认识'};
+    if (![1, DATA_VERSION].includes(env.dataVersion)) return {state: 'corrupt', why: '数据版本不认识'};
     if (!Number.isInteger(env.slotRev) || env.slotRev < 1 || typeof env.game !== 'string') return {state: 'corrupt', why: '存档结构不完整'};
     let game;
     try { game = deserialize(env.game); } catch (e) { return {state: 'corrupt', why: `对局校验失败：${e.message}`}; }
+    if (env.dataVersion === 1 && !core.isLegacyVersion?.(game)) return {state: 'corrupt', why: '旧数据信封不可包含新规则对局'};
     for (const f of VERSION_FIELDS) if (env[f] !== game[f]) return {state: 'corrupt', why: '版本号与对局不一致'};
     if (!env.meta || env.meta.revision !== game.revision) return {state: 'corrupt', why: '进度信息与对局不一致'};
     return {state: 'ok', env, game};
@@ -61,6 +62,7 @@ export function createCardSave({storage, locks, core, now = () => Date.now()}) {
     if (!lockAvailable()) return 'no-lock';
     try {
       return await withLock(() => {
+        if ([get(SAVE_KEY), get(BAK_KEY)].some(text => parse(text).state === 'future')) { readOnly = true; return 'future'; }
         if (get(QUARANTINE_KEY) !== null) return 'occupied';
         storage.setItem(QUARANTINE_KEY, raw);
         return get(QUARANTINE_KEY) === raw ? 'saved' : 'failed';
@@ -71,11 +73,17 @@ export function createCardSave({storage, locks, core, now = () => Date.now()}) {
   /** Reads without the lock. Only the quarantine copy is written (inside the lock). */
   async function load() {
     pendingRestore = false;
-    readOnly = false; lastSaved = null;
+    lastSaved = null; knownMain = undefined; knownMainValid = false; slotRev = 0;
     let raw;
-    try { raw = get(SAVE_KEY); } catch (e) { return {status: 'unrecoverable', why: '无法读取存档', quarantine: null}; }
+    try { raw = get(SAVE_KEY); } catch (e) { readOnly = true; return {status: 'unrecoverable', why: '无法读取存档', quarantine: null, writable: false}; }
+    readOnly = false;
     knownMain = raw; knownMainValid = false; slotRev = 0;
     const main = parse(raw);
+    // A newer envelope in either slot must be protected before any quarantine or write.
+    let bakRaw = null;
+    try { bakRaw = get(BAK_KEY); } catch { /* treated as missing on read-only load */ }
+    const bak = parse(bakRaw);
+    for (const entry of [main, bak]) if (entry.state === 'future') { readOnly = true; return {status: 'future', why: entry.why}; }
     if (main.state === 'ok') {
       knownMainValid = true; slotRev = main.env.slotRev;
       lastSaved = {revision: main.game.revision, turn: main.game.turn};
@@ -84,9 +92,7 @@ export function createCardSave({storage, locks, core, now = () => Date.now()}) {
     if (main.state === 'future') { readOnly = true; return {status: 'future', why: main.why}; }
     let q = null;
     if (main.state === 'corrupt') q = await quarantine(raw);
-    let bakRaw = null;
-    try { bakRaw = get(BAK_KEY); } catch { /* treated as missing */ }
-    const bak = parse(bakRaw);
+    if (readOnly) return {status: 'future', why: '较新版本存档已出现，本页只读'};
     if (main.state === 'missing' && bak.state === 'missing') return {status: 'empty', writable: lockAvailable()};
     if (bak.state === 'ok') {
       slotRev = Math.max(slotRev, bak.env.slotRev);
@@ -112,10 +118,13 @@ export function createCardSave({storage, locks, core, now = () => Date.now()}) {
 
   function uncertain() {
     knownMain = undefined; knownMainValid = false;
-    try { storage.removeItem(TMP_KEY); } catch { /* ignored */ }
     pendingRestore = true;
     try { failMain = get(SAVE_KEY); mainObserved = true; } catch { failMain = undefined; mainObserved = false; }
     try { failBak = get(BAK_KEY); } catch { failBak = undefined; }
+    for (const entry of [parse(failMain), parse(failBak)]) if (entry.state === 'future') {
+      readOnly = true; pendingRestore = false; return {ok: false, kind: 'readonly', step: 'future', why: entry.why};
+    }
+    try { storage.removeItem(TMP_KEY); } catch { /* ignored */ }
     return {ok: false, kind: 'rollback-failed', step: 'main-rollback', backupVerified: failBak != null && parse(failBak).state === 'ok'};
   }
 
@@ -165,6 +174,11 @@ export function createCardSave({storage, locks, core, now = () => Date.now()}) {
     // 1. CAS against what this page last saw.
     const current = get(SAVE_KEY);
     if (current !== knownMain) return {ok: false, kind: 'conflict', step: 'cas', lastSaved};
+    // Recheck inside the lock: another build may have written a newer backup
+    // while leaving the observed main unchanged. No tmp/quarantine write precedes this.
+    for (const entry of [parse(current), parse(get(BAK_KEY))]) if (entry.state === 'future') {
+      readOnly = true; return {ok: false, kind: 'readonly', step: 'future', why: entry.why};
+    }
     const oldMain = current;
     const text = envelope(game, slotRev + 1);
     // 2-3. Temporary write, read back, full replay check.
@@ -182,6 +196,9 @@ export function createCardSave({storage, locks, core, now = () => Date.now()}) {
     const settle = (step) => {
       let restored = false;
       try {
+        for (const entry of [parse(get(SAVE_KEY)), parse(get(BAK_KEY))]) if (entry.state === 'future') {
+          readOnly = true; return {ok: false, kind: 'readonly', step: 'future', why: entry.why};
+        }
         if (oldMain === undefined) restored = false;
         else if (get(SAVE_KEY) === oldMain) restored = true;
         else {

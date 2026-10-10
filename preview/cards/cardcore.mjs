@@ -1,10 +1,15 @@
 /** Isolated, experimental rules kernel. Not a complete Basic-compatible game. */
-import {RUNTIME_CARDS, CARD_METADATA, CATALOG, CATALOG_VERSION, CARD_SCHEMA_VERSION, RUNTIME_CLASSIFICATION} from './catalog.mjs?v=card-s1';
+import {RUNTIME_CARDS, CARD_METADATA, CATALOG, CATALOG_VERSION, CARD_SCHEMA_VERSION, RUNTIME_CLASSIFICATION} from './catalog.mjs?v=card-shield-10';
 export {CARD_METADATA, CATALOG, CATALOG_VERSION, CARD_SCHEMA_VERSION, RUNTIME_CLASSIFICATION};
 import frozenDefaultDecks from './default-decks.mjs?v=card-s1';
-export const RULES_VERSION = 'bookstore-tech-0.6.0';
-export const CARD_POOL_VERSION = 'bk-supported38-spell-damage-v6-lab-system-v1';
-export const DECK_RULES_VERSION = 'fixed30-class-max2-v4-frozen-charge-defaults';
+export const RULES_VERSION = 'bookstore-tech-0.7.0';
+export const CARD_POOL_VERSION = 'bk-supported39-divine-shield-v7-lab-system-v1';
+export const DECK_RULES_VERSION = 'fixed30-class-max2-v7-paladin-shield-pair';
+// Only these two complete tuples are accepted. Legacy replays retain every version
+// field and their embedded decks; no silent conversion or replay rehash is permitted.
+export const LEGACY_VERSIONS = Object.freeze({rulesVersion:'bookstore-tech-0.6.0',cardPoolVersion:'bk-supported38-spell-damage-v6-lab-system-v1',deckRulesVersion:'fixed30-class-max2-v4-frozen-charge-defaults',cardDefinitionSchemaVersion:'urn:bookstore:cardcore:card-definition:0.6.0'});
+export const CURRENT_VERSIONS = Object.freeze({rulesVersion:RULES_VERSION,cardPoolVersion:CARD_POOL_VERSION,deckRulesVersion:DECK_RULES_VERSION,cardDefinitionSchemaVersion:CARD_SCHEMA_VERSION});
+export const isLegacyVersion = value => Object.entries(LEGACY_VERSIONS).every(([key,version])=>value?.[key]===version);
 export const SNAPSHOT_NAMESPACE = 'bookstore-cardcore-lab-v1';
 export const RNG_ALGORITHM = 'xorshift32-v1';
 const clone = x => JSON.parse(JSON.stringify(x));
@@ -18,7 +23,7 @@ export const SYSTEM_CARDS = deepFreeze({
 export const CARDS = deepFreeze({...RUNTIME_CARDS,...SYSTEM_CARDS});
 export const HEROES = deepFreeze({warrior:'77 战士',mage:'阿宅 法师',paladin:'珍珠姐 圣骑士',warlock:'火箭 术士'});
 export const DEFAULT_CONFIG = deepFreeze({heroHealth:30,deckSize:30,boardLimit:7,handLimit:10,maxMana:10,openingHands:[3,4],firstPlayer:0,shuffle:true,coin:true,mulligan:'disabled-pending',powers:{cost:2,warriorArmor:2,mageDamage:1,paladinToken:'paperHelper',warlockDraw:1,warlockDamage:2}});
-export const PENDING_RULES = deepFreeze(['mulligan-order','freeze-release','deathrattle-chains','hero-death-during-advanced-effects','silence-health','aura-health-removal','stealth-taunt-targeting','battlecry-with-no-target','charge-windfury-divine-shield','multi-hit-random-dying-targets']);
+export const PENDING_RULES = deepFreeze(['mulligan-order','freeze-release','deathrattle-chains','hero-death-during-advanced-effects','silence-health','aura-health-removal','stealth-taunt-targeting','battlecry-with-no-target','windfury-and-advanced-keyword-interactions','multi-hit-random-dying-targets']);
 
 export function stableStringify(value) {
   if (value === null || typeof value === 'boolean' || typeof value === 'string') return JSON.stringify(value);
@@ -35,7 +40,7 @@ export function hashState(value) {
 export function nextRandom(state) { let x=state>>>0; x^=x<<13;x^=x>>>17;x^=x<<5;return x>>>0; }
 function randomIndex(g,n) { g.rng.rulesState=nextRandom(g.rng.rulesState);return Math.floor((g.rng.rulesState/4294967296)*n); }
 const requireInt=(x,min,max,name)=>{if(!Number.isInteger(x)||x<min||x>max)throw new Error('Invalid '+name);return x;};
-function checkVersion(r) { if(r.rulesVersion!==RULES_VERSION || r.cardPoolVersion!==CARD_POOL_VERSION || r.deckRulesVersion!==DECK_RULES_VERSION || r.cardDefinitionSchemaVersion!==CARD_SCHEMA_VERSION) throw new Error('Unsupported rulesVersion, cardPoolVersion deckRulesVersion or cardDefinitionSchemaVersion; snapshot kept unchanged.'); }
+function checkVersion(r) { if(!isLegacyVersion(r) && !Object.entries(CURRENT_VERSIONS).every(([key,version])=>r?.[key]===version)) throw new Error('Unsupported rulesVersion, cardPoolVersion deckRulesVersion or cardDefinitionSchemaVersion; snapshot kept unchanged.'); }
 function configFor(input={}) {
   const c={...clone(DEFAULT_CONFIG),...clone(input),powers:{...DEFAULT_CONFIG.powers,...clone(input.powers??{})}};
   for(const [k,min,max] of [['heroHealth',1,200],['deckSize',1,100],['boardLimit',1,20],['handLimit',1,30],['maxMana',1,30]])requireInt(c[k],min,max,k);
@@ -52,13 +57,15 @@ export function deckCapacity(classId) {
   if(!Object.hasOwn(HEROES,classId))throw new Error('Invalid hero class');
   return Object.values(CARD_METADATA).filter(c=>c.class==='neutral'||c.class===classId).length*2;
 }
-export function validateDeck(deck,classId,size=30) {
+export function validateDeck(deck,classId,size=30,versions=CURRENT_VERSIONS) {
   if(!Object.hasOwn(HEROES,classId))throw new Error('Invalid hero class');
   requireInt(size,30,30,'deck size (exactly 30)');
   if(!Array.isArray(deck)||deck.length!==size)throw new Error('Invalid deck: exact configured size required');
+  checkVersion(versions);
   const counts=new Map();
   for(const id of deck) {
     if(typeof id!=='string'||!Object.hasOwn(CARD_METADATA,id))throw new Error('Invalid deck: unsupported, unknown, legacy or generated card '+String(id));
+    if(isLegacyVersion(versions)&&id==='bkVanEx1371')throw new Error('Shield card is not admitted in legacy games');
     const metadata=CARD_METADATA[id];
     if(metadata.class!=='neutral'&&metadata.class!==classId)throw new Error('Invalid deck: wrong class '+id);
     const n=(counts.get(id)??0)+1;counts.set(id,n);
@@ -66,20 +73,22 @@ export function validateDeck(deck,classId,size=30) {
   }
   return true;
 }
-export function defaultDeck(classId,size=30) {
+export function defaultDeck(classId,size=30,versions=CURRENT_VERSIONS) {
   if(!Object.hasOwn(HEROES,classId))throw new Error('Invalid hero class');
   requireInt(size,30,30,'deck size (exactly 30)');
-  // Admission expansion is deliberately decoupled from established fixture order.
-  const deck=clone(frozenDefaultDecks[classId]);validateDeck(deck,classId,size);return deck;
+  checkVersion(versions);
+  // Explicit v7 new-game-only swap; old games and other classes retain all 30 slots.
+  const deck=clone(frozenDefaultDecks[classId]).map(id=>!isLegacyVersion(versions)&&classId==='paladin'&&id==='bkVanCs2168'?'bkVanEx1371':id);
+  validateDeck(deck,classId,size,versions);return deck;
 }
 function normalizeSetup(setup={}) {
-  for(const [key,value] of [['rulesVersion',RULES_VERSION],['cardPoolVersion',CARD_POOL_VERSION],['deckRulesVersion',DECK_RULES_VERSION],['cardDefinitionSchemaVersion',CARD_SCHEMA_VERSION]])if(setup[key]!==undefined&&setup[key]!==value)throw new Error('Unsupported '+key);
+  const versions=Object.fromEntries(Object.entries(CURRENT_VERSIONS).map(([key,value])=>[key,setup[key]===undefined?value:setup[key]]));checkVersion(versions);
   const config=configFor(setup.config);const heroes=clone(setup.heroes??['warrior','mage']);
   if(!Array.isArray(heroes)||heroes.length!==2||heroes.some(h=>!Object.hasOwn(HEROES,h)))throw new Error('Invalid heroes');
-  const decks=clone(setup.decks??heroes.map(h=>defaultDeck(h,config.deckSize)));
+  const decks=clone(setup.decks??heroes.map(h=>defaultDeck(h,config.deckSize,versions)));
   if(!Array.isArray(decks)||decks.length!==2)throw new Error('Invalid deck pair');
-  decks.forEach((deck,i)=>validateDeck(deck,heroes[i],config.deckSize));
-  return {rulesVersion:RULES_VERSION,cardPoolVersion:CARD_POOL_VERSION,deckRulesVersion:DECK_RULES_VERSION,cardDefinitionSchemaVersion:CARD_SCHEMA_VERSION,config,decks,heroes,rng:{algo:RNG_ALGORITHM,rulesSeed:requireInt(setup.rulesSeed??12345,1,4294967295,'rules seed'),aiSeed:requireInt(setup.aiSeed??67890,1,4294967295,'AI seed')}};
+  decks.forEach((deck,i)=>validateDeck(deck,heroes[i],config.deckSize,versions));
+  return {...versions,config,decks,heroes,rng:{algo:RNG_ALGORITHM,rulesSeed:requireInt(setup.rulesSeed??12345,1,4294967295,'rules seed'),aiSeed:requireInt(setup.aiSeed??67890,1,4294967295,'AI seed')}};
 }
 function uid(g,prefix='u') {return prefix+(g.nextUid++);}
 function emit(events,type,fields={}) {events.push({type,...fields});}
@@ -96,6 +105,10 @@ export function effectiveSpellDamage(game,player,card) {
 }
 function hurt(g,entity,n,events) {
   if(n<=0)return;
+  if(entity.keywords?.includes('divineShield')) {
+    entity.keywords=entity.keywords.filter(keyword=>keyword!=='divineShield');
+    emit(events,'shieldBreak',{target:entity.uid,prevented:n,hp:entity.hp});return;
+  }
   const armor=entity.armor===undefined?0:Math.min(entity.armor,n);
   if(entity.armor!==undefined)entity.armor-=armor;
   entity.hp-=n-armor;if(entity.damage!==undefined)entity.damage=entity.maxHp-entity.hp;
@@ -123,7 +136,7 @@ function settle(g,events) {
   if(defeated.some(Boolean)){g.phase='ended';g.result={winner:defeated[0]&&defeated[1]?null:defeated[0]?1:0,reason:'experimental-simple-lethal'};emit(events,'gameEnd',g.result);}
 }
 export function createGame(setup={}) {
-  const initial=normalizeSetup(setup);const g={rulesVersion:RULES_VERSION,cardPoolVersion:CARD_POOL_VERSION,deckRulesVersion:DECK_RULES_VERSION,cardDefinitionSchemaVersion:CARD_SCHEMA_VERSION,config:clone(initial.config),initial,revision:0,rng:{algo:RNG_ALGORITHM,rulesState:initial.rng.rulesSeed,aiState:initial.rng.aiSeed},turn:1,active:initial.config.firstPlayer,phase:'main',players:initial.heroes.map((classId,i)=>({classId,hero:{uid:'h'+i,name:HEROES[classId],hp:initial.config.heroHealth,maxHp:initial.config.heroHealth,armor:0,attack:0,frozen:false,attacksLeft:0,attackedThisTurn:false,powerUsed:false},weapon:null,mana:0,maxMana:0,tempMana:0,deck:clone(initial.decks[i]),hand:[],board:[],fatigue:0,graveyard:[]})),nextUid:1,playCounter:0,log:[],receipts:[],eventQueue:[],eventLog:[],result:null};
+  const initial=normalizeSetup(setup);const g={...Object.fromEntries(Object.keys(CURRENT_VERSIONS).map(key=>[key,initial[key]])),config:clone(initial.config),initial,revision:0,rng:{algo:RNG_ALGORITHM,rulesState:initial.rng.rulesSeed,aiState:initial.rng.aiSeed},turn:1,active:initial.config.firstPlayer,phase:'main',players:initial.heroes.map((classId,i)=>({classId,hero:{uid:'h'+i,name:HEROES[classId],hp:initial.config.heroHealth,maxHp:initial.config.heroHealth,armor:0,attack:0,frozen:false,attacksLeft:0,attackedThisTurn:false,powerUsed:false},weapon:null,mana:0,maxMana:0,tempMana:0,deck:clone(initial.decks[i]),hand:[],board:[],fatigue:0,graveyard:[]})),nextUid:1,playCounter:0,log:[],receipts:[],eventQueue:[],eventLog:[],result:null};
   const events=[];
   if(g.config.shuffle)for(const p of g.players)for(let i=p.deck.length-1;i>0;i--){const j=randomIndex(g,i+1);[p.deck[i],p.deck[j]]=[p.deck[j],p.deck[i]];}
   // openingHands is ordered by role: [first player, second player], not by seat.
@@ -141,7 +154,7 @@ function areaEntities(g,player,scope) {
     (scope==='enemyMinions'&&x.player!==player&&x.entity!==g.players[x.player].hero));
 }
 function entityById(g,id) {return allCharacters(g).find(x=>x.entity.uid===id);}
-function targetIds(g,player,target) {return allCharacters(g).filter(x=>target==='any'||(target==='enemy'&&x.player!==player)||(target==='friendly'&&x.player===player)).map(x=>x.entity.uid);}
+function targetIds(g,player,target) {return allCharacters(g).filter(x=>target==='any'||(target==='minion'&&x.entity!==g.players[x.player].hero&&x.entity.hp>0)||(target==='enemy'&&x.player!==player)||(target==='friendly'&&x.player===player)).map(x=>x.entity.uid);}
 function fail(code,message=code){return {ok:false,error:{code,message}};}
 function actionValidation(g,c) {
   if(g.phase!=='main'||g.result)return fail('NOT_MAIN_PHASE');
@@ -150,7 +163,7 @@ function actionValidation(g,c) {
   if(c.type==='end')return (c.source!==undefined||c.target!==undefined||c.position!==undefined||c.cards!==undefined)?fail('UNEXPECTED_FIELD'):{ok:true};
   if(c.type==='play') {
     const hand=p.hand.find(x=>x.uid===c.source);if(!hand)return fail('SOURCE_NOT_IN_HAND');const card=CARDS[hand.cardId];
-    if(!card || hand.cardId==='paperHelper')return fail('UNSUPPORTED_RUNTIME_CARD');
+    if(!card || hand.cardId==='paperHelper'||(isLegacyVersion(g)&&hand.cardId==='bkVanEx1371'))return fail('UNSUPPORTED_RUNTIME_CARD');
     const metadata=CARD_METADATA[hand.cardId];
     if(metadata&&metadata.class!=='neutral'&&metadata.class!==p.classId)return fail('WRONG_CARD_CLASS');
     if(card.cost>p.mana)return fail('NOT_ENOUGH_MANA');
@@ -175,7 +188,7 @@ function actionValidation(g,c) {
     const e=a.entity;if((e.atk??e.attack)<=0)return fail('ZERO_ATTACK');
     if(e.frozen)return fail('FROZEN');
     // Charge suppresses summoning sickness at action time; it never grants attacks.
-    // No effect that adds/removes keywords, silence or interrupt phase is implemented.
+    // Shield granting/removal is separate from readiness; silence and interrupts remain unsupported.
     if(e.summoningSick&&!e.keywords?.includes('charge'))return fail('SUMMONING_SICK');
     if(e.attacksLeft<=0)return fail('NO_ATTACKS_LEFT');
     const blockers=g.players[1-c.player].board.filter(m=>m.hp>0&&m.keywords?.includes('taunt'));
@@ -237,6 +250,11 @@ function resolve(g,c,events) {
         const affected=e.kind==='damage'?[entityById(g,c.target).entity]:areaEntities(g,c.player,e.scope).map(x=>x.entity);
         for(const entity of affected)hurt(g,entity,n,events);
       }
+      if(e.kind==='grantDivineShield'){
+        const t=entityById(g,c.target).entity,already=t.keywords.includes('divineShield');
+        if(!already)t.keywords.push('divineShield');
+        emit(events,'shieldGrant',{target:c.target,already});
+      }
       if(e.kind==='heal'){const t=entityById(g,c.target).entity;const n=Math.min(e.n,t.maxHp-t.hp);t.hp+=n;if(t.damage!==undefined)t.damage=t.maxHp-t.hp;emit(events,'heal',{target:c.target,amount:n});}
       if(e.kind==='draw')draw(g,c.player,e.n,events);
       if(e.kind==='mana'){const n=Math.min(e.n,g.config.maxMana-p.mana);p.mana+=n;p.tempMana+=n;emit(events,'mana',{player:c.player,amount:n});}
@@ -273,7 +291,7 @@ export function apply(game,command,hooks={}) {
 export function getReplay(game) {return {...clone(game.initial),commands:game.log.map(x=>({command:clone(x.command),aiRng:clone(x.aiRng)}))};}
 export function replay(record) {
   checkVersion(record);if(record.rng?.algo!==RNG_ALGORITHM)throw new Error('Unsupported RNG algorithm');
-  let game=createGame({config:record.config,decks:record.decks,heroes:record.heroes,rulesSeed:record.rng.rulesSeed,aiSeed:record.rng.aiSeed});
+  let game=createGame({...Object.fromEntries(Object.keys(CURRENT_VERSIONS).map(key=>[key,record[key]])),config:record.config,decks:record.decks,heroes:record.heroes,rulesSeed:record.rng.rulesSeed,aiSeed:record.rng.aiSeed});
   if(!Array.isArray(record.commands)||record.commands.length>20000)throw new Error('Invalid replay command list');
   for(const [i,item] of record.commands.entries()) {
     const expected=item.command?._ai?{before:item.command._ai.before,after:item.command._ai.after}:null;
@@ -306,7 +324,7 @@ function scoreAction(view,a) {
   if(a.type==='attack') {
     const atk=me.entity.atk??me.entity.attack;
     if(t.entity.uid===other.hero.uid)return atk>=other.hero.hp+other.hero.armor?10000:20+atk;
-    const retaliation=t.entity.atk??t.entity.attack,kill=atk>=t.entity.hp,survives=me.entity.hp>retaliation;
+    const retaliation=t.entity.atk??t.entity.attack,kill=!t.entity.keywords?.includes('divineShield')&&atk>=t.entity.hp,survives=me.entity.keywords?.includes('divineShield')||me.entity.hp>retaliation;
     return 25+(kill?20:0)+(survives?10:0)+t.entity.atk*2-retaliation;
   }
   if(a.type==='play') {
@@ -321,21 +339,22 @@ function scoreAction(view,a) {
       if(lethal(other.hero))return 10000;
       if(!affected.length)return -120;
       return affected.reduce((score,{entity,player})=>{
-        const hero=entity===view.players[player].hero,damage=Math.min(n,entity.hp+(entity.armor??0));
-        const value=hero?damage*4:damage*3+(n>=entity.hp?18+(entity.atk??0)*3:0);
+        const hero=entity===view.players[player].hero,shield=entity.keywords?.includes('divineShield'),damage=shield?0:Math.min(n,entity.hp+(entity.armor??0));
+        const value=hero?damage*4:damage*3+(shield?10:n>=entity.hp?18+(entity.atk??0)*3:0);
         return score+(player===a.player?-value:value);
       },-card.cost);
     }
+    if(card.effect.kind==='grantDivineShield')return t.player!==a.player||t.entity.keywords.includes('divineShield')?-120:30+t.entity.atk*2;
     if(card.effect.kind==='damage'&&t.player===a.player)return -1000;
     if(card.effect.kind==='heal'&&t.player!==a.player)return -80;
-    if(card.effect.kind==='damage'){const n=effectiveSpellDamage(view,a.player,card);return t.entity.uid===other.hero.uid&&n>=other.hero.hp+other.hero.armor?10000:35+(t.entity.hp<=n?20:0);}
+    if(card.effect.kind==='damage'){const n=effectiveSpellDamage(view,a.player,card);return t.entity.uid===other.hero.uid&&n>=other.hero.hp+other.hero.armor?10000:35+(!t.entity.keywords?.includes('divineShield')&&t.entity.hp<=n?20:0);}
     if(card.effect.kind==='heal')return Math.min(card.effect.n,t.entity.maxHp-t.entity.hp)*6-5;
     if(card.effect.kind==='draw')return p.handCount>7?-10:26;
     if(card.effect.kind==='mana')return p.hand.some(h=>CARDS[h.cardId].cost===p.mana+1)?45:-20;
     return 28;
   }
   if(a.type==='power') {
-    if(p.classId==='mage'){if(t.player===a.player)return -80;return t.entity.uid===other.hero.uid&&view.config.powers.mageDamage>=other.hero.hp+other.hero.armor?10000:12+(t.entity.hp<=view.config.powers.mageDamage?30:0);}
+    if(p.classId==='mage'){if(t.player===a.player)return -80;return t.entity.uid===other.hero.uid&&view.config.powers.mageDamage>=other.hero.hp+other.hero.armor?10000:12+(!t.entity.keywords?.includes('divineShield')&&t.entity.hp<=view.config.powers.mageDamage?30:0);}
     if(p.classId==='warlock')return p.hero.hp<=view.config.powers.warlockDamage||p.handCount>=view.config.handLimit||p.deckCount===0?-120:10;
     return 12;
   }

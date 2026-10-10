@@ -1,5 +1,5 @@
 /** Version-pinned catalogue admission; no dynamic definitions or partial fallback. */
-import source from './catalog-data.mjs?v=card-s1';
+import source from './catalog-data.mjs?v=card-shield-10';
 const clone=x=>JSON.parse(JSON.stringify(x));
 const freeze=o=>{if(o&&typeof o==='object'){Object.freeze(o);Object.values(o).forEach(freeze);}return o;};
 // Reject non-JSON objects before reading values: no toJSON, getters, prototypes or cycles.
@@ -21,7 +21,7 @@ function canonical(value,seen=new Set()) {
 export const CATALOG=freeze(source);
 export const CATALOG_VERSION='bk-cards-static-v2';
 // Admission is an explicit audit, never inferred from requiredMechanisms tags.
-export const CARD_SCHEMA_VERSION='urn:bookstore:cardcore:card-definition:0.6.0';
+export const CARD_SCHEMA_VERSION='urn:bookstore:cardcore:card-definition:0.7.0';
 export const BASE_SOURCE_IDS=freeze(['VAN_CS2_106','VAN_CS2_112','VAN_CS2_023','VAN_CS2_029','VAN_CS2_091','VAN_CS2_089','VAN_CS2_168','VAN_CS2_172','VAN_CS2_120','VAN_CS2_118','VAN_CS2_182','VAN_CS2_119','VAN_CS2_200','VAN_CS2_201','VAN_CS2_186']);
 export const PURE_TAUNT_AUDIT=freeze({
   VAN_CS1_042:{cost:1,attack:1,health:2,class:'neutral',tribe:null},
@@ -58,7 +58,9 @@ export const PURE_SPELL_DAMAGE_AUDIT=freeze({
   VAN_CS2_197:{cost:4,attack:4,health:4,class:'neutral',tribe:null},
   VAN_CS2_155:{cost:6,attack:4,health:7,class:'neutral',tribe:null}
 });
-export const SUPPORTED_SOURCE_IDS=freeze([...BASE_SOURCE_IDS,...Object.keys(PURE_TAUNT_AUDIT),...Object.keys(PURE_CHARGE_AUDIT),...Object.keys(FIXED_AOE_AUDIT),...Object.keys(PURE_SPELL_DAMAGE_AUDIT)]);
+// One exact, source-pinned shield grant. No tag-driven admission.
+export const DIVINE_SHIELD_AUDIT=freeze({VAN_EX1_371:{cost:1,class:'paladin',text:'使一个随从获得圣盾。'}});
+export const SUPPORTED_SOURCE_IDS=freeze([...BASE_SOURCE_IDS,...Object.keys(PURE_TAUNT_AUDIT),...Object.keys(PURE_CHARGE_AUDIT),...Object.keys(FIXED_AOE_AUDIT),...Object.keys(PURE_SPELL_DAMAGE_AUDIT),...Object.keys(DIVINE_SHIELD_AUDIT)]);
 const pinned=new Map(CATALOG.cards.map(c=>[c.sourceId,c]));
 export const runtimeIdFor=entry=>'bk'+entry.sourceId.toLowerCase().split('_').map(p=>p[0].toUpperCase()+p.slice(1)).join('');
 export function assertRuntimeEntry(entry) {
@@ -70,6 +72,11 @@ export function assertRuntimeEntry(entry) {
 function deriveDefinition(entry) {
   assertRuntimeEntry(entry);
   if(BASE_SOURCE_IDS.includes(entry.sourceId))return clone(entry.runtimeDefinition);
+  if(Object.hasOwn(DIVINE_SHIELD_AUDIT,entry.sourceId)) {
+    const audit=DIVINE_SHIELD_AUDIT[entry.sourceId];
+    if(entry.type!=='spell'||entry.cost!==audit.cost||entry.class!==audit.class||entry.sourceEffectText!==audit.text||entry.attack!==null||entry.health!==null||entry.durability!==null||entry.tribe!==null||entry.runtimeDefinition!==null||entry.implementationStatus!=='unsupported'||entry.effects.length!==1||entry.effects[0].clause!==audit.text)throw new Error('Divine shield grant audit mismatch');
+    return {id:runtimeIdFor(entry),name:entry.name,type:'spell',cost:1,text:audit.text,art:'placeholder',effect:{kind:'grantDivineShield',target:'minion'}};
+  }
   if(Object.hasOwn(FIXED_AOE_AUDIT,entry.sourceId)) {
     const audit=FIXED_AOE_AUDIT[entry.sourceId];
     if(entry.type!=='spell'||entry.cost!==audit.cost||entry.class!==audit.class||entry.sourceEffectText!==audit.text||entry.attack!==null||entry.health!==null||entry.durability!==null||entry.tribe!==null||entry.runtimeDefinition!==null||entry.implementationStatus!=='unsupported'||entry.effects.length!==1||entry.effects[0].clause!==audit.text)throw new Error('Fixed area-damage audit mismatch');
@@ -100,13 +107,13 @@ export function compileCatalog(catalog) {
       if(Object.hasOwn(cards,id))throw new Error('Duplicate runtime ID');
       cards[id]=definition;metadata[id]=clone(entry);
       const auditedKeyword=PURE_CHARGE_AUDIT[entry.sourceId]?'charge':PURE_TAUNT_AUDIT[entry.sourceId]?'taunt':null;
-      classification[entry.sourceId]={sourceId:entry.sourceId,implementationStatus:'supported',runtimeDefinition:clone(definition),statusReason:PURE_SPELL_DAMAGE_AUDIT[entry.sourceId]?'Explicit four-card pure spell-damage +1 audit; project per-cast snapshot contract, no official historical-patch guarantee':FIXED_AOE_AUDIT[entry.sourceId]?'Explicit five-card fixed-area-damage audit; community-derived batching, project deterministic event order, no historical-patch guarantee':auditedKeyword?`Explicit ${auditedKeyword==='charge'?'six-card pure-Charge':'eight-card pure-Taunt'} audit; community-derived, unplayed, no historical-patch guarantee`:'Existing version-pinned simple-card definition',expected:PURE_SPELL_DAMAGE_AUDIT[entry.sourceId]?{spellDamage:1,attack:entry.attack,health:entry.health,cost:entry.cost}:FIXED_AOE_AUDIT[entry.sourceId]?clone(definition.effect):auditedKeyword?{keywords:[auditedKeyword],attack:entry.attack,health:entry.health,cost:entry.cost}:clone(entry.expected),schemaVersion:CARD_SCHEMA_VERSION};
+      classification[entry.sourceId]={sourceId:entry.sourceId,implementationStatus:'supported',runtimeDefinition:clone(definition),statusReason:DIVINE_SHIELD_AUDIT[entry.sourceId]?'Explicit one-card shield grant audit; first positive damage consumes one shield; no historical-patch guarantee':PURE_SPELL_DAMAGE_AUDIT[entry.sourceId]?'Explicit four-card pure spell-damage +1 audit; project per-cast snapshot contract, no official historical-patch guarantee':FIXED_AOE_AUDIT[entry.sourceId]?'Explicit five-card fixed-area-damage audit; community-derived batching, project deterministic event order, no historical-patch guarantee':auditedKeyword?`Explicit ${auditedKeyword==='charge'?'six-card pure-Charge':'eight-card pure-Taunt'} audit; community-derived, unplayed, no historical-patch guarantee`:'Existing version-pinned simple-card definition',expected:DIVINE_SHIELD_AUDIT[entry.sourceId]?clone(definition.effect):PURE_SPELL_DAMAGE_AUDIT[entry.sourceId]?{spellDamage:1,attack:entry.attack,health:entry.health,cost:entry.cost}:FIXED_AOE_AUDIT[entry.sourceId]?clone(definition.effect):auditedKeyword?{keywords:[auditedKeyword],attack:entry.attack,health:entry.health,cost:entry.cost}:clone(entry.expected),schemaVersion:CARD_SCHEMA_VERSION};
     } else {
       if(entry.runtimeDefinition!==null||entry.expected!==null)throw new Error('Unsupported card supplied runtime behavior');
       classification[entry.sourceId]={sourceId:entry.sourceId,implementationStatus:'unsupported',runtimeDefinition:null,expected:null,statusReason:entry.statusReason,schemaVersion:CARD_SCHEMA_VERSION};
     }
   }
-  if(Object.keys(cards).length!==38)throw new Error('Expected exactly 38 supported definitions');
+  if(Object.keys(cards).length!==39)throw new Error('Expected exactly 39 supported definitions');
   return freeze({cards,metadata,classification});
 }
 const compiled=compileCatalog(CATALOG);
