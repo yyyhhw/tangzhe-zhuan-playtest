@@ -4,6 +4,7 @@
 #   walletMode   'real' = 经 CardHost 扣经营公用金币；缺省或其他值一律按「模拟」记，不算 G7 通过
 #   replayTx(txId)        同一 txId 重放（S4b），缺则跳过，依赖熊大补
 #   economyWrite()        触发一次普通经营写档（S5b），缺则跳过，依赖 G4 父页
+#   exportState().coinFrac 金币零头（S1e），缺则跳过；PROD_URL 环境变量 = 正式站页面（S5c），缺则跳过
 # 模拟 coins / 固定 seed 只是测试夹具，不进生产钱包桥。
 # 退出码：0 = 全通过且真实经营钱包；1 = 有失败或缺基础接口；3 = 无失败，但有跳过或用的是模拟钱包（不算 G7 通过）。
 import os, sys, json, hashlib
@@ -12,7 +13,8 @@ URL = sys.argv[1] if len(sys.argv) > 1 else os.environ.get('COLLECTION_URL', 'ht
 COST, TEXT = 5_000_000, '超出上限的粉尘会消失，是否继续抽卡？'
 ROOT_KEYS = {'tangzhe-save', 'tangzhe-save-bak', 'tangzhe-tab-lock'}
 CFG = dict(pool=[dict(cardId='l-x', rarity='legendary')], weights=dict(legendary=1), goldRate=0, dustMax=1000, dupDust=dict(legendary=400))
-def fx(coins=50_000_000, dust=0, owned=None): return dict(coins=coins, dust=dust, owned=owned or {}, prefs={}, seed=11, config=CFG)
+def fx(coins=50_000_000, dust=0, owned=None, frac=0): return dict(coins=coins, coinFrac=frac, dust=dust, owned=owned or {}, prefs={}, seed=11, config=CFG)
+PROD = os.environ.get('PROD_URL')   # 正式站页面 URL（S5c），缺则跳过
 FULL = {'l-x': {'normal': 2}}
 INIT = """(()=>{if(window.__w)return;window.__w=[];window.__fail=false;const P=Storage.prototype;
 for(const n of ['setItem','removeItem','clear']){const o=P[n];P[n]=function(...a){if(window.__fail&&n==='setItem')throw new DOMException('QA quota','QuotaExceededError');window.__w.push([n,a[0]]);return o.apply(this,a);};}})(); 0"""
@@ -43,6 +45,17 @@ def run(br):
     keys = set(pg.evaluate('Object.keys(localStorage)'))
     if WALLET[0] == '真实经营': check(eng, 'S1b 只写主档根 key', [(keys <= ROOT_KEYS, f'多出根 key {sorted(keys - ROOT_KEYS)}')])
     else: rec(eng, 'S1b 只写主档根 key', '跳过', '依赖 G4 CardHost 接主档')
+    c.close()
+    # S1c/S1d 余额正好 500 万 / 差 1；S1e 带零头
+    c = ctx(); pg = open_page(c, fx(coins=COST)); pg.locator(T('draw')).click(); wait(pg); a = st(pg)
+    check(eng, 'S1c 余额正好 500 万', [(a['coins'] == 0 and len(a['ledger']) == 1, f'应能抽、抽后 0：金币 {a["coins"]}、凭据 {len(a["ledger"])}')]); c.close()
+    c = ctx(); pg = open_page(c, fx(coins=COST - 1)); h0 = snap(pg); pg.locator(T('draw')).click(); wait(pg); a = st(pg)
+    check(eng, 'S1d 余额差 1', [(a['coins'] == COST - 1 and not a['ledger'], '不该抽成'), (snap(pg) == h0 and not pg.evaluate('window.__w'), '不该写入')]); c.close()
+    c = ctx(); pg = open_page(c, fx(coins=COST, frac=0.75))
+    if 'coinFrac' in (st(pg) or {}):
+        b = st(pg); pg.locator(T('draw')).click(); wait(pg); a = st(pg)
+        check(eng, 'S1e 带零头', [(a['coins'] == 0 and abs(a['coinFrac'] - b['coinFrac']) < 1e-9, f'扣 500 万后零头应保留：{b["coinFrac"]}→{a["coinFrac"]}，金币 {a["coins"]}')])
+    else: rec(eng, 'S1e 带零头', '跳过', '缺 exportState().coinFrac，依赖 G4 接主档 coinFrac')
     c.close()
     # S2 溢出弹窗 + 空收藏反向
     c = ctx(); pg = open_page(c, fx(dust=601, owned=FULL)); b = st(pg); h0 = snap(pg)
@@ -81,6 +94,12 @@ def run(br):
     if has(A, 'economyWrite'): rec(eng, 'S5b 普通经营写档并发', '跳过', '钩子已在，断言待 G4 桥接定稿')
     else: rec(eng, 'S5b 普通经营写档并发', '跳过', '缺 CollectionQA.economyWrite，依赖 G4 父页')
     c.close()
+    # S5c 正式站与 preview 隔离：preview 导入 + 抽卡后，正式站主档原文不变
+    if PROD:
+        c = ctx(); pr = c.new_page(); pr.goto(PROD); pr.wait_for_load_state('load'); k = "JSON.stringify(['tangzhe-save','tangzhe-save-bak'].map(x=>localStorage.getItem(x)))"; h0 = pr.evaluate(k)
+        pg = open_page(c, fx()); pg.locator(T('draw')).click(); wait(pg); pr.reload(); pr.wait_for_load_state('load')
+        check(eng, 'S5c 正式站与 preview 隔离', [(pr.evaluate(k) == h0, 'preview 抽卡改动了正式站的 tangzhe-save / -bak')]); c.close()
+    else: rec(eng, 'S5c 正式站与 preview 隔离', '跳过', '缺 PROD_URL（正式站页面），依赖 G4 发布审批')
 with sync_playwright() as p:
     for name in ('webkit', 'chromium'):
         br = getattr(p, name).launch(); print('==', name); run(br); br.close()
