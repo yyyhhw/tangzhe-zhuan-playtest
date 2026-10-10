@@ -13,7 +13,7 @@
 | 3 | 原断言（分支上 `tests/wallet-bridge/bridge.test.mjs`）跑包内实现 | 23/23 | 用 `accept_candidate.sh` 一键跑：passed 23, failed 0，rc=0。包里的 `bridge.original.test.mjs` 和分支上那份只差文件末尾一个空行 | 过 |
 | 4 | 本地套件 | 32/32 | `node --test test/*.test.mjs`：tests 32, pass 32, fail 0, skipped 0，rc=0 | 过 |
 | 5 | 独立复核 | 15/15 | `evidence/independent/review.mjs`：`{"tests":15,"fails":0}`，rc=0 | 过 |
-| 6 | 两��负控 | 都能检出 | `check-negative-controls.mjs` 分两次跑，结果见下表「负控分列」；两次都 exit 1，都被检出 | 过 |
+| 6 | 两项负控负控 | 都能检出 | `check-negative-controls.mjs` 分两次跑，结果见下表「负控分列」；两次都 exit 1，都被检出 | 过 |
 | 7 | 默认关闭 | 不传 `enabled` 就关闭 | 我自己写的探针：不传 `enabled` 时 commit 返回 `BRIDGE_DISABLED`，存档原文不变；`LIVE_WALLET_BRIDGE_ENABLED = false` | 过 |
 | 8 | 只允许 TEST 键 | 正式键和 preview 键都拒绝 | 探针：`tangzhe-save`、`-bak`、`tangzhe-preview-save`、`tangzhe-tab-lock`、`tangzhe-cards`、`tangzhe-save-preview` 这 6 个键，commit 全部返回 `INVALID_TEST_KEY`，存档不变；`qa-wallet-bridge-test` 可以成交 | 过（差异见下文） |
 | 9 | apply 不能改金币、revision、账本 | 违规就拒绝 | 探针：apply 改 coins、改 rev、改 coinFrac，都返回 `APPLY_AUTHORITY_VIOLATION`；改 ledger 返回 `INVALID_RECEIPT`；这 4 种存档都不变。只改 owned 和 dust 能成交：扣 5,000,000，零头 0.25 保留 | 过 |
