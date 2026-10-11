@@ -41,6 +41,13 @@ export const ART_BY_SOURCE_ID = Object.freeze({
   VAN_CS2_213: Object.freeze({"src": "./assets/original/VAN_CS2_213_original_v1.webp", "width": 373, "height": 560, "name": "坡道弹板手"}),
   VAN_CS2_201: Object.freeze({"src": "./assets/original/VAN_CS2_201_original_v1.webp", "width": 373, "height": 560, "name": "夜巷巨角鹿"}),
   VAN_CS2_186: Object.freeze({"src": "./assets/original/VAN_CS2_186_original_v1.webp", "width": 373, "height": 560, "name": "压纸石像"}),
+  // 首批原创六卡 R2（稳定 ID 表 tzz-original-card-ids-1）：只登记展示图；引擎尚无这些卡定义，不进卡池/牌组。
+  TZZ_ORIGINAL_CARD_000001: Object.freeze({"src": "./assets/original/TZZ_ORIGINAL_CARD_000001_original_v1.webp", "width": 448, "height": 560, "name": "火候正好", "alt": "红柄烤夹夹起一串肉与青椒，下方炭炉燃着火焰，烤网上摆着多串食材。"}),
+  TZZ_ORIGINAL_CARD_000002: Object.freeze({"src": "./assets/original/TZZ_ORIGINAL_CARD_000002_original_v1.webp", "width": 448, "height": 560, "name": "连载催更", "alt": "戴圆框眼镜的短卷发人物在书架前捧着翻开的书、举着钢笔，纸页与金色光线在身旁飘起。"}),
+  TZZ_ORIGINAL_CARD_000003: Object.freeze({"src": "./assets/original/TZZ_ORIGINAL_CARD_000003_original_v1.webp", "width": 448, "height": 560, "name": "双份珍珠", "alt": "短卷发店员笑着端来两杯珍珠奶茶，身穿浅绿衬衫和围裙，周围环着金色光罩。"}),
+  TZZ_ORIGINAL_CARD_000004: Object.freeze({"src": "./assets/original/TZZ_ORIGINAL_CARD_000004_original_v1.webp", "width": 448, "height": 560, "name": "招财坐垫猫", "alt": "戴红项圈和金铃铛的橘白猫坐在红金格纹坐垫上，抬起一只前爪，周围环着金色光罩。"}),
+  TZZ_ORIGINAL_CARD_000005: Object.freeze({"src": "./assets/original/TZZ_ORIGINAL_CARD_000005_original_v1.webp", "width": 448, "height": 560, "name": "超频冷却", "alt": "工作台上的金属电扇对着打开侧板的电脑机箱，蓝绿色气流穿过机箱，纸张在空中翻飞。"}),
+  TZZ_ORIGINAL_CARD_000006: Object.freeze({"src": "./assets/original/TZZ_ORIGINAL_CARD_000006_original_v1.webp", "width": 448, "height": 560, "name": "修车铺老周", "alt": "留胡须的修车师傅穿着蓝衬衫和棕围裙，笑着举起扳手，另一只手扶着绿色自行车的车把。"}),
 });
 export const ART_BY_RUNTIME_ID = Object.freeze({
   spareMinute: Object.freeze({"src": "./assets/original/spareMinute_original_v1.webp", "width": 448, "height": 560, "name": "加班书签 · 测试"}),
@@ -56,3 +63,5 @@ export function artForCard(card) {
 export function presentationClass(metadata) {
   return ['warrior', 'mage', 'paladin', 'warlock'].includes(metadata?.class) ? metadata.class : 'neutral';
 }
+// 首批原创六卡：仅展示/图鉴预览用（cards/ui/art-preview.html）。不是卡定义，不进卡池、不进牌组。
+export const PREVIEW_ONLY_CARDS = Object.freeze([{"sourceId": "TZZ_ORIGINAL_CARD_000001", "cardId": "tzzOriginalCard000001", "name": "火候正好", "classId": "warrior"}, {"sourceId": "TZZ_ORIGINAL_CARD_000002", "cardId": "tzzOriginalCard000002", "name": "连载催更", "classId": "mage"}, {"sourceId": "TZZ_ORIGINAL_CARD_000003", "cardId": "tzzOriginalCard000003", "name": "双份珍珠", "classId": "paladin"}, {"sourceId": "TZZ_ORIGINAL_CARD_000004", "cardId": "tzzOriginalCard000004", "name": "招财坐垫猫", "classId": "paladin"}, {"sourceId": "TZZ_ORIGINAL_CARD_000005", "cardId": "tzzOriginalCard000005", "name": "超频冷却", "classId": "warlock"}, {"sourceId": "TZZ_ORIGINAL_CARD_000006", "cardId": "tzzOriginalCard000006", "name": "修车铺老周", "classId": "neutral"}].map(Object.freeze));

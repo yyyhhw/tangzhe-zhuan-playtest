@@ -1,13 +1,13 @@
 <!doctype html>
 <html lang="zh-CN">
 <head>
-<!-- 塔防正式本地候选（科技公司小游戏）：单独打开 = 原型（模拟余额，只存 tangzhe-formal-td-proto-v1；旧原型键只读迁移）；经营页用 ?embed=1 嵌入 = 共用经营金币，由经营页扣款写档（td:* 消息）。音效由原 WebAudio 合成器派生 tdsfx.js，头像复用 ../art。 -->
+<!-- 塔防正式本地候选（奶茶店小游戏「消灭细菌，保卫奶茶」，玩法与科技公司版相同）：单独打开 = 原型（模拟余额，只存 tangzhe-formal-td-proto-v1；旧原型键只读迁移）；经营页用 ?embed=1 嵌入 = 共用经营金币，由经营页扣款写档（td:* 消息）。音效由原 WebAudio 合成器派生 tdsfx.js，头像复用 ../art。 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#f7f1e3">
 <meta name="format-detection" content="telephone=no">
-<title>科技公司塔防</title>
+<title>消灭细菌，保卫奶茶</title>
 <link rel="icon" href="../icon.svg" type="image/svg+xml">
 <link rel="stylesheet" href="td.css?v=15e-td-campaign-exp1-20261008">
 </head>
@@ -37,9 +37,20 @@
   <div class="card hero">
     <img id="heroImg" src="../art/face_rocket.webp" alt="" width="88" height="88">
     <div>
-      <h1 id="heroName">科技公司塔防</h1>
+      <h1 id="heroName">消灭细菌，保卫奶茶</h1>
       <p id="heroDesc"></p>
     </div>
+  </div>
+  <div class="card milktea-theme" id="themeCard">
+    <div class="row"><h2 id="themeTitle">奶茶店开门啦</h2><span class="note">消灭细菌，保卫奶茶</span></div>
+    <p id="themeIntro">细菌闻着甜味来了，用建设点摆好防线吧。</p>
+    <ul id="enemyLegend" class="enemy-legend">
+      <li data-enemy="walk"><b>黏黏菌</b><small>普通</small>闻着甜味就来，最常见。</li>
+      <li data-enemy="fast"><b>冲冲菌</b><small>快速</small>跑得快，一不留神就到门口了。</li>
+      <li data-enemy="tank"><b>厚皮菌</b><small>耐打</small>皮厚，要多打几下。</li>
+      <li data-enemy="mini"><b>小酸团</b><small>小头目</small>比普通的大一圈，也更难缠。</li>
+      <li data-enemy="boss"><b>酸腐大王</b><small>头目</small>个头大，气势也足。</li>
+    </ul>
   </div>
   <div class="card">
     <div class="row"><h2>选统帅</h2><span class="note">被动与塔增益，部分统帅可手动辅助；不上地图</span></div>
@@ -67,7 +78,7 @@
 
 <section id="pause" class="screen dim hidden">
   <div class="card center">
-    <h2>暂停中</h2><p class="note" id="budgetInfo"></p><p>开局10秒、波间5秒；倍速同时影响战斗与倒计时。<br>暂停时倒计时、敌人与建设点均冻结。<br>切到后台会暂停，返回后点继续。</p>
+    <h2>先歇口气</h2><p id="pauseTheme">点「继续」接着守。退出本局会结束这一局，并进入结算。</p><p class="note" id="budgetInfo"></p><p>开局10秒、波间5秒；倍速同时影响战斗与倒计时。<br>暂停时倒计时、敌人与建设点均冻结。<br>切到后台会暂停，返回后点继续。</p>
     <button id="retryStartBtn" class="buy big hidden" type="button">重试开局确认</button>
     <button class="buy big" id="resumeBtn" type="button">继续</button>
     <button class="buy" id="pauseSpeedBtn" type="button" aria-pressed="false">速度 ×1</button>
@@ -78,7 +89,7 @@
 
 <section id="result" class="screen dim hidden">
   <div class="card center">
-    <h2 id="resTitle">守住了！</h2>
+    <h2 id="resTitle">这一轮守住了，辛苦啦</h2>
     <p id="resStats"></p>
     <p class="note" id="resNote"></p>
     <div id="endlessBoard" class="hidden"></div>

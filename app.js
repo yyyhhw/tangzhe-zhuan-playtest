@@ -14,7 +14,7 @@ const STORAGE = COLLECTION.storage;
 const TD = window.TDCore; let tdOpen = false, tdPort = null, tdGeneration = 0;
 const ZB = window.ZBCore; var zbOpen = false, zbPort = null;
 let cardsOpen=false,cardsPort=null,cardsGeneration=0,cardsCloseTimer=null;
-const CARDS_SHOP=2,CARDS_V='formal-cards-audio-candidate-8-r3';
+const CARDS_SHOP=2,TD_SHOP=1,CARDS_V='formal-cards-audio-candidate-8-r3';
 const ZB_SHOP = 0; var zbLastCeo = null, zbRun = null; const zbUsedRuns = new Set();   // 13d：用过的 runId（本页内存），重复 / 过期的 start 不能把旧局重新激活   // 13a：打僵尸 = 烧烤摊（店 0）；zbLastCeo = 最近一次成功结算的上场 CEO（只在内存）
 // 13c：zbRun = 父页开局登记 { runId, ceoId, startedAt, settled }——结算只认这份记录、同一局只结一次；中途调岗不要求仍在任
 const SAVE_KEY = COLLECTION.keys.main, BAK_KEY = COLLECTION.keys.backup, LOCK_KEY = COLLECTION.keys.tab;
@@ -1288,6 +1288,13 @@ function drawCollectible(c, id) {
     oval(0,-9,23,23,'#ffb638');oval(0,-9,14,14,YELLOW);line([[-8,-9],[0,-18],[7,-9],[0,1]],'#fff8e8',3);box(-19,30,10,4,'#70d5ad',1);box(9,30,10,4,'#70d5ad',1);
   }
 }
+/* 首批盲盒 6+2 图鉴图：纯展示层。不在 E.ITEMS / 盲盒池 / 发奖 / 经济里；itemId 为候选（待熊大确认）。 */
+const COLLECTIBLE_PREVIEW = Object.freeze([{"id": "c_charcoal_vest", "name": "炭灰小马甲", "type": "clothes", "shop": "烧烤摊", "hidden": false, "unlock": null, "src": "art/collectibles/c_charcoal_vest_catalog_v1.webp", "alt": "深灰色V领马甲，正面有四颗棕色纽扣、两个口袋和浅色缝线，口袋下部有深色斑点。"}, {"id": "c_matcha_knit", "name": "抹茶针织背心", "type": "clothes", "shop": "奶茶店", "hidden": false, "unlock": null, "src": "art/collectibles/c_matcha_knit_catalog_v1.webp", "alt": "抹茶绿色V领针织背心，正面织着竖向麻花纹，领口、袖口和下摆带米白色罗纹边。"}, {"id": "h_guokui", "name": "锅盔软帽", "type": "hat", "shop": "烧烤摊", "hidden": false, "unlock": null, "src": "art/collectibles/h_guokui_catalog_v1.webp", "alt": "圆鼓鼓的米金色软帽，带短帽檐和顶部圆扣，帽面有烘烤色斑与芝麻状点缀。"}, {"id": "h_antenna_clip", "name": "天线发卡", "type": "hat", "shop": "科技公司", "hidden": false, "unlock": null, "src": "art/collectibles/h_antenna_clip_catalog_v1.webp", "alt": "一枚金色发卡，蓝绿色椭圆饰面上有橙色电路线纹，上方的弯曲弹簧顶着一颗橙色圆球。"}, {"id": "d_borrow_register", "name": "借阅登记本", "type": "decor", "shop": "漫画书店", "hidden": false, "unlock": null, "src": "art/collectibles/d_borrow_register_catalog_v1.webp", "alt": "一本摊开的绿皮登记本，米色书页上画着空白表格，中央放着绿金色钢笔，下方垂着红色书签带。"}, {"id": "d_rocket_piggy", "name": "迷你火箭存钱罐", "type": "decor", "shop": "科技公司", "hidden": false, "unlock": null, "src": "art/collectibles/d_rocket_piggy_catalog_v1.webp", "alt": "米白色小火箭配橙红色尖顶和尾翼，机身有金边蓝绿色圆窗，上部有狭长投币口。"}, {"id": "d_opening_photo", "name": "开业合影", "type": "decor", "shop": "街区", "hidden": true, "unlock": "四家店全部开张", "src": "art/collectibles/d_opening_photo_catalog_v1.webp", "alt": "木相框中的四人合影，四人分别拿着烤夹、奶茶、书和小火箭，身后亮着烤串、饮料、书本与火箭图案招牌。"}, {"id": "d_ward_charm", "name": "退散护身符", "type": "decor", "shop": "科技公司", "hidden": true, "unlock": "打僵尸通关第10关", "src": "art/collectibles/d_ward_charm_catalog_v1.webp", "alt": "系着红绳的蓝绿色束口布袋，袋面饰有金色枝叶纹和电路纹盾牌，下方挂着金铃铛与红色流苏。"}].map(Object.freeze));
+const COLLECTIBLE_ART = Object.freeze(Object.fromEntries(COLLECTIBLE_PREVIEW.map(x => [x.id, x])));
+function collectiblePreviewHTML() {
+  const TL = { clothes:'衣服', hat:'帽子', decor:'装饰' };
+  return `<div class="sec-title">新品图鉴预览（只展示，暂未放进盲盒）</div><div class="item-grid collectible-preview">${COLLECTIBLE_PREVIEW.map(x => `<div class="item preview-only" data-preview-item="${x.id}"><span class="t">${TL[x.type]}${x.hidden ? ' · 隐藏' : ''}</span><span class="item-art"><img data-item-art="${x.id}" src="${x.src}?v=collectibles-1" alt="${x.alt}" width="512" height="512" loading="lazy"><span class="item-art-status" hidden>图示暂不可用</span></span>${x.name}<small class="preview-note">${x.shop}${x.hidden ? ' · ' + x.unlock + '（条件未接入）' : ''}</small></div>`).join('')}</div><div class="note">外观收藏，不影响收益、概率和战斗。本批 8 件为图鉴预览，尚未加入盲盒、不能抽到。</div>`;
+}
 function itemThumb(id) {
   if (thumbCache[id]) return thumbCache[id];
   const it=E.ITEM_BY_ID[id]||{},source=document.createElement('canvas');source.width=source.height=384;
@@ -1307,6 +1314,7 @@ function itemThumb(id) {
 function itemIcon(id) {
   const it=E.ITEM_BY_ID[id];
   if(it&&it.type==='card')return '<span class="ii">📜</span>';
+  if(Object.hasOwn(COLLECTIBLE_ART,id)){const x=COLLECTIBLE_ART[id];return `<span class="item-art"><img data-item-art="${id}" src="${x.src}?v=collectibles-1" alt="${x.alt}"><span class="item-art-status" hidden>图示暂不可用</span></span>`;}
   const u=itemThumb(id);
   return u?`<span class="item-art"><img data-item-art="${id}" src="${u}" alt=""><span class="item-art-status" hidden>图示暂不可用</span></span>`:'<span class="ii">❓</span>';
 }
@@ -1389,7 +1397,7 @@ function renderShop() {
 }
 // 13h：每家店自己的小游戏入口（只在店铺页最底部）；烧烤摊 = 打僵尸，其余三家以后各有自己的游戏，加在这里
 function shopGameCard(i) {
-  const card = i === ZB_SHOP ? zbCard() : i === CARDS_SHOP && COLLECTION.entryEnabled ? cardsCard() : i === 3 ? tdCard() : '';
+  const card = i === ZB_SHOP ? zbCard() : i === CARDS_SHOP && COLLECTION.entryEnabled ? cardsCard() : i === TD_SHOP ? tdCard() : i === 3 ? techSoonCard() : '';
   return card ? `<div class="sec-title shop-game-title">小游戏</div>${card}` : '';
 }
 function ceoPost(id) { const s = state.ceos[id]; return s.at >= 0 ? E.signOf(state, s.at).name : '休息中（空着）'; }
@@ -1444,6 +1452,7 @@ function renderGacha() {
   h += `<div class="item-grid">${E.REGULAR_ITEMS.map(it => { const has = state.gacha.owned.includes(it.id);
     if (has && it.type === 'card') return `<button type="button" class="item story-open" data-act="card" data-arg="${it.id}" aria-label="重看故事卡：${it.name}"><span class="t">故事卡</span>${storyArt(it.id)}<span>${it.name}</span><span class="story-replay-hint">点击重看 ›</span></button>`;
     return `<div class="item ${has ? '' : 'no'}"><span class="t">${TYPE_LABEL[it.type]}</span>${itemIcon(it.id)}${has ? it.name : '？？？'}</div>`; }).join('')}</div>`;
+  h += collectiblePreviewHTML();
   h += `<div class="note">规则：不重复收藏盒，共 ${total} 件：普通收藏 ${E.REGULAR_ITEMS.length} 件（衣服 8 / 帽子 8 / 装饰 8 / 故事卡 8）+ 超级装饰 ${E.SUPER_ITEMS.length} 件。每抽先定类别：<b>超级装饰 ${P(CFG.SUPER_P)}</b>、普通收藏 ${P(1 - CFG.SUPER_P)}，再从该类<b>还没收集的</b>里等概率抽；连续 ${CFG.SUPER_PITY - 1} 抽没出超级装饰，第 ${CFG.SUPER_PITY} 抽必出。某一类抽完了，就只出另一类。每抽必得新物品，最多 ${total} 抽集齐，集齐后不能再买、不扣金币。普通收藏只是好看，<b>不加产速</b>；超级装饰加本店产量和专属效果，但不抽也能正常开齐店铺。单价 ${fmt(CFG.GACHA_PRICE)}。</div>`;
   return h;
 }
@@ -2565,10 +2574,12 @@ window.__tzz = { upgradeGate, TEST_MODE, TEST_LV, SAVE_KEY, BAK_KEY, get saveBlo
   hitBig, modalOpen, closeModal, get frozen() { return frozen; },
   musicStatus() { return AU.recorded?.status || null; }, audioState() { return AU.ctx ? AU.ctx.state : 'none'; }, showPreview, openAssign, JOB_ART, jobShown, jobURL, showJobArt,
   HOME_ART, FURN_ART, FURN_UP, homeAct, homeAdvanceActor, homeDrawActor, homeOwner, get homeWho() { return homeWho; }, get homeSub() { return homeSub; }, get homeMode() { return homeMode; }, set homeMode(v) { homeMode = v === 'decor' ? 'decor' : 'live'; }, get homeSel() { return homeSel; }, get homeDrag() { return homeDrag; }, homeActor, LIVE_LINES, homeUndo, resize, get canvasSize() { return { W, H }; }, pet: petHooks, pets: petsHooks, lookOf, drawPerson, drawHead, LOOKS, get bubble() { return bubble; } };
-/* ================= 科技公司塔防：与主钱包同一存档、同一原子交易 ================= */
+/* ================= 奶茶店塔防「消灭细菌，保卫奶茶」（原科技公司塔防换皮）：与主钱包同一存档、同一原子交易 =================
+ * 入口从科技公司（3）挪到奶茶店（1）；state.tdCampaign / 存档键 / 经济 / 玩法全部不变，旧进度原样沿用。 */
+function techSoonCard() { return `<div class="card td-soon dim"><div class="ava">🚧</div><div class="info"><div class="name">科技公司小游戏</div><div class="desc">敬请期待</div></div><button class="buy no" type="button" disabled>敬请期待</button></div>`; }
 function tdCard() {
   const z = window.TDStageProgress.check(state.tdCampaign).length ? window.TDStageProgress.fresh() : (state.tdCampaign || window.TDStageProgress.fresh());
-  return `<div class="card td-card"><div class="ava">♜</div><div class="info"><div class="name">机房塔防<span class="tag">无尽挑战</span></div><div class="desc">50 个独立关卡 · 每关 10–14 波 · 第50关巨型 Boss<br>已通关 ${z.highestCleared}/50 关 · 通关后解锁无尽 · 升级共用经营金币</div></div><button class="buy" data-act="td">去守</button></div>`;
+  return `<div class="card td-card"><div class="ava">🧋</div><div class="info"><div class="name">消灭细菌，保卫奶茶<span class="tag">无尽挑战</span></div><div class="desc">50 个独立关卡 · 每关 10–14 波 · 第50关巨型 Boss<br>已通关 ${z.highestCleared}/50 关 · 通关后解锁无尽 · 升级共用经营金币</div></div><button class="buy" data-act="td">去守</button></div>`;
 }
 const tdController = window.TDHost.create({
   reconcile:() => {
@@ -2582,7 +2593,7 @@ const tdController = window.TDHost.create({
   send:d => { if (tdOpen && tdPort) tdPort.postMessage(d); }
 });
 function openTD() {
-  if (frozen || tdOpen || zbOpen || cardsOpen || !state.shops[3].open) return;
+  if (frozen || tdOpen || zbOpen || cardsOpen || !state.shops[TD_SHOP].open) return;
   tdOpen = true; const f = $('#tdFrame'), generation = ++tdGeneration;
   const target = new URL('td/index.html?embed=1&v=formal-cards-candidate-7', location.href);
   f.onload = () => {

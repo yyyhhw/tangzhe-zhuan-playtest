@@ -80,3 +80,7 @@ button:focus-visible{outline:3px solid #1e6ea2;outline-offset:2px}
 
 /* Three short lines keep stage and wave distinct within the 44px mobile HUD. */
 .hud-top .vitals-pill{line-height:11px;font-size:10px;min-height:44px}#stageGrid{width:100%}.stage-grid button{min-height:44px}@media(max-width:420px){.stage-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}.stage-grid button{font-size:14px}}
+/* 奶茶换皮：主题说明与五类细菌名（只展示，不改玩法） */
+.milktea-theme #themeIntro{margin:.2em 0 .4em}
+.enemy-legend{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-size:13px}
+.enemy-legend b{margin-right:6px}.enemy-legend small{display:inline-block;margin-right:6px;padding:0 5px;border-radius:6px;background:#f3e3cf;color:#7a5230}

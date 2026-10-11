@@ -1,5 +1,5 @@
 'use strict';
-// 科技公司塔防：50个独立关卡、6张地图；每关10–14波，通关终极Boss后随机地图无尽。
+// 奶茶店塔防「消灭细菌，保卫奶茶」（原科技公司塔防换皮，玩法不变）：50个独立关卡、6张地图；每关10–14波，通关终极Boss后随机地图无尽。
 // 单独打开 = 原型模式（模拟余额，只存 PROTO_KEY）；?embed=1 嵌在经营页里 = 金币、升级、进度都由经营页管（td:* postMessage），本页不写任何存档。
 (() => {
 const T = window.TDCore, Waves = window.TDWaves, Campaign = window.TDCampaign, Progress = window.TDStageProgress, SFX = window.ZBSfx;
@@ -41,6 +41,8 @@ const TIDS = T.TOWER_IDS;
 const MAX_TLV = 3;
 const upCost = tw => Math.round(T.TOWERS[tw.id].cost * 0.8 * tw.lv);
 const sellBack = tw => Math.round(tw.spent * 0.6);
+const MAP_LABEL = Object.freeze({citadel:'奶茶要塞'});
+const mapLabel = m => (m && MAP_LABEL[m.id]) || (m && m.name) || '';
 const EN = { walk: { hp: 30, sp: 1.0, r: 0.28, cash: 5, col: '#7cb342' }, fast: { hp: 18, sp: 1.8, r: 0.22, cash: 4, col: '#fdd835' }, tank: { hp: 110, sp: 0.6, r: 0.36, cash: 12, col: '#6d4c41' },
   mini: { hp: 600, sp: 0.5, r: 0.42, cash: 50, col: '#ad1457', lives: 3 }, boss: { hp: 2200, sp: 0.42, r: 0.5, cash: 100, col: '#8e24aa', lives: 10 } };
 const LIVES = 20, START_PTS = 120;
@@ -178,7 +180,7 @@ function renderMenu() {
   const stage=Campaign.getStage(lvSel),map=Campaign.getMap(stage.mapId),record=progress().stages[lvSel]||{best:0,cleared:false};
   $('#heroDesc').innerHTML = `${cmdDetail(cmdSel)}<br>统帅不上地图；8种防御塔。开局10秒、波间5秒，倍速同时加快战斗与倒计时。持有建设点上限400，本关累计收入预算${NORMAL_BUDGET(lvSel,cmdSel)}（含初始；退款不恢复额度）。普通无总塔数限制；无尽上限为地图总格数÷3向下取整。CEO每种1座，共4种。`;
   $('#cmdPick').innerHTML = T.CEO_IDS.map(id => `<button type="button" data-cmd="${id}" class="${id === cmdSel ? 'on' : ''}"><img src="../art/face_${id}.webp" alt="">${T.HEROES[id].name}</button>`).join('');
-  $('#lvTxt').textContent=`第 ${lvSel} 关 · ${map.name}`;
+  $('#lvTxt').textContent=`第 ${lvSel} 关 · ${mapLabel(map)}`;
   $('#lvInfo').textContent=`本关 ${stage.waves} 波${stage.ultimate?' · 末波终极Boss（阶段数值实验版）':''} · 重玩不重复解锁`;
   $('#lvProg').textContent=`已通关 ${progress().highestCleared}/50 · 本关${record.cleared?'已通关':`最佳 ${record.best}/${stage.waves} 波`}`;
   $('#lvPrev').disabled=lvSel<=1;$('#lvNext').disabled=lvSel>=progress().unlocked;
@@ -361,7 +363,7 @@ function step(dt) {
     if (e.slowT > 0) { e.slowT -= dt; if (e.slowT <= 0) e.slowK = 1; }
     const frozen=Math.min(dt,Math.max(0,e.stunT));e.stunT=Math.max(0,e.stunT-dt);e.d += e.sp * Math.max(['mini','boss'].includes(e.type)?.5:.25,e.slowK*frostMultiplier()) * (dt-frozen);
     const [x, y] = posAt(e.d); e.x = x; e.y = y;
-    if (e.d >= PLEN) { e.hp = 0; G.lives -= e.leak; SFX.hurt(); toast('机房被闯了！'); if (G.lives <= 0) { G.lives = 0; return end(false); } }
+    if (e.d >= PLEN) { e.hp = 0; G.lives -= e.leak; SFX.hurt(); toast('细菌溜到门口了！'); if (G.lives <= 0) { G.lives = 0; return end(false); } }
   }
   G.es = G.es.filter(e => e.hp > 0);
   for (const tw of G.tw.values()) { if(combat)tw.freezeCD=Math.max(0,(tw.freezeCD||0)-dt);tw.flash = Math.max(0, (tw.flash || 0) - dt); tw.cd -= dt; if (tw.cd <= 0 && towerFire(tw)) tw.cd = TW[tw.id].rate * (gl().rate || 1); }
@@ -390,9 +392,9 @@ function renderResult() {
   if (!G) return;
   const saved = !!G.saveOk;
   $('#endlessBtn').classList.toggle('hidden',!Progress.endUnlocked(progress()));$('#endlessBtn').disabled=!G.saveOk||G.wait||!!G.pendingEndless;
-  $('#resTitle').textContent = G.wait ? '结算中…' : G.win && saved ? '守住了！' : G.win ? '存档失败' : '机房失守';
-  $('#resStats').textContent = `第${G.n}关 · ${Campaign.getMap(G.mapId).name} · 守了 ${G.completedWave}/${G.W} 波 · 击倒 ${G.kills} · 剩余生命 ${G.lives}`;
-  $('#resNote').textContent = G.wait ? '' : !saved ? `这局进度没记上${G.why ? '（' + G.why + '）' : ''}` : G.win ? `第${G.n}关 ${G.W} 波全部守住！${G.n===50?'终极Boss已击败，无尽已解锁。':''}` : `本关最佳 ${progress().stages[G.n]?.best||0}/${G.W} 波 · 调整布阵再来`;
+  $('#resTitle').textContent = G.wait ? '正在记下这一局' : !saved ? '这一局还没记上' : G.win ? '这一轮守住了，辛苦啦' : '这次没守住';
+  $('#resStats').textContent = `第${G.n}关 · ${mapLabel(Campaign.getMap(G.mapId))} · 守了 ${G.completedWave}/${G.W} 波 · 击倒 ${G.kills} · 剩余生命 ${G.lives}`;
+  $('#resNote').textContent = G.wait ? '记好之前，暂时不能开始下一局或回升级。' : !saved ? `结果还没保存成功，请重试。保存好之前，不能开始下一局或回升级。${G.why ? '（' + G.why + '）' : ''}` : G.win ? `第${G.n}关 ${G.W} 波打完了。门口的奶茶还在，歇一下再出发。${G.n===50?'终极Boss已击败，无尽已解锁。':''}` : `本关最佳 ${progress().stages[G.n]?.best||0}/${G.W} 波 · 没关系，换个摆法再来一次。`;
   if(G.endless){$('#resStats').textContent=`无尽守住 ${G.completedWave} 波 · 击倒 ${G.resMsg?.kills||0}`;$('#resNote').textContent=G.wait?'保存无尽纪录中':saved?`无尽最高 ${progress().endless?.best||0} 波；不发经营金币`:G.why||'无尽纪录未保存';}
   else if(G.pendingEndless||G.why)$('#resNote').textContent=G.pendingEndless?'无尽登记中…':G.why;
   const board=$('#endlessBoard');board.classList.toggle('hidden',!G.endless);
@@ -517,7 +519,7 @@ function draw() {
     if (!p) { cx.fillStyle = '#e8dec6'; cx.fillRect(px(x)+5,py(y)+S-5,S-10,2); cx.strokeStyle = '#d9cfb8'; cx.setLineDash([3, 3]); cx.strokeRect(px(x) + 2.5, py(y) + 2.5, S - 5, S - 5); cx.setLineDash([]); }
   }
   cx.fillStyle = INK; cx.font = `900 ${Math.round(S * 0.3)}px sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle';
-  const entry=WAY[0],exit=WAY[WAY.length-1],bound=(v,max)=>Math.max(.3,Math.min(max-.3,v+.5));cx.fillText('入口',px(bound(entry[0],COLS)),py(bound(entry[1],ROWS)));cx.fillText('机房',px(bound(exit[0],COLS)),py(bound(exit[1],ROWS)));
+  const entry=WAY[0],exit=WAY[WAY.length-1],bound=(v,max)=>Math.max(.3,Math.min(max-.3,v+.5));cx.fillText('入口',px(bound(entry[0],COLS)),py(bound(entry[1],ROWS)));cx.fillText('奶茶',px(bound(exit[0],COLS)),py(bound(exit[1],ROWS)));
   if (sel && sel.x !== null) { cx.strokeStyle = RED; cx.lineWidth = 3; cx.strokeRect(px(sel.x) + 1.5, py(sel.y) + 1.5, S - 3, S - 3); cx.lineWidth = 1;
     const tw = sel.k === 'build' && sel.id ? {id:sel.id,x:sel.x,y:sel.y,lv:1} : G.tw.get(sel.x + ',' + sel.y); if (tw) { cx.strokeStyle = 'rgba(230,57,70,.5)'; cx.beginPath(); cx.arc(px(tw.x + 0.5), py(tw.y + 0.5), towerRange(tw) * S, 0, 7); cx.stroke(); } }
   for (const tw of G.tw.values()) {
