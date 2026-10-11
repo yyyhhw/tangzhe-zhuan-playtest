@@ -3,7 +3,7 @@ import {createCombatAudio} from './combat-audio.mjs?v=formal-cards-audio-candida
 import {createCardBgm} from './bgm.mjs?v=formal-cards-candidate-7';
 import {mechanismText, mechanismLabels, powerDescription, createHeavyFeedback} from './readable-effects.mjs?v=formal-cards-candidate-7';
 import {createMatchStorageScope} from './match-storage-scope.mjs?v=formal-cards-candidate-7';
-import {mountCollection} from './collection.mjs?v=formal-cards-candidate-7';
+import {mountCollection} from './collection.mjs?v=saved-decks-1';
 import {
   createGame, legalActions, apply, serialize, deserialize,
   chooseAIAction, getReplay, hashState, CARDS, CARD_METADATA, nextRandom, actionsThisTurn, spellDamageBonus, effectiveSpellDamage,
@@ -535,7 +535,7 @@ function renderAimGuide() {
 }
 function renderHand() {
   const p = game.players[0];
-  $('hand-count').textContent = `手牌 ${p.hand.length} ${handExpanded ? '↓' : '↑'}\n${handExpanded ? '收起浏览' : selected?.type==='play' ? '返回手牌' : '展开看图'}`;
+  $('hand-count').textContent = `手牌 ${p.hand.length} 张 ${handExpanded ? '↓' : '↑'}\n${handExpanded ? '收起浏览' : selected?.type==='play' ? '返回手牌' : '展开看图'}`;
   $('hand-count').setAttribute('aria-expanded',String(handExpanded));
   $('hand-count').setAttribute('aria-label',`${handExpanded ? '收起' : '展开'}手牌，共 ${p.hand.length} 张`);
   $('hand').classList.toggle('is-expanded',handExpanded);

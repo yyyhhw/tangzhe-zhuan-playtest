@@ -26,7 +26,7 @@ export function addToDraft(draft,card,snapshot) {
 }
 export function inspectDraft(draft,catalog,snapshot) {
   const issues = [], counts = new Map(), policy = new Map(catalog.map(card=>[card.cardId,card]));
-  if (draft.cards.length !== 30) issues.push(`还需 ${Math.max(0,30 - draft.cards.length)} 张，必须恰好 30 张。`);
+  if (draft.cards.length !== 30) issues.push(`${draft.cards.length > 30 ? '超出 '+(draft.cards.length-30) : '还需 '+(30-draft.cards.length)} 张，必须恰好 30 张。`);
   for (const id of draft.cards) counts.set(id,(counts.get(id) || 0) + 1);
   for (const [id,count] of counts) {
     const card = policy.get(id), held = copiesFor(snapshot,id);

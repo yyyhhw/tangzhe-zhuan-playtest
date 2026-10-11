@@ -1,5 +1,6 @@
+import {createDeckEditor} from './deck-editor.mjs?v=saved-decks-1';
 import {DISPLAY_CARDS} from './collection-cards.mjs';
-import {RARITY_LABELS,CLASS_LABELS,TYPE_LABELS,escapeHTML as esc,formatCoins,copiesFor,canTransact,addToDraft,inspectDraft,receiptSummary,createCollectionClient} from './collection-state.mjs';
+import {RARITY_LABELS,CLASS_LABELS,TYPE_LABELS,escapeHTML as esc,formatCoins,copiesFor,canTransact,addToDraft,inspectDraft,receiptSummary,createCollectionClient} from './collection-state.mjs?v=saved-decks-1';
 
 /** Collection presentation. The private parent channel is the sole transaction authority. */
 export function mountCollection({document:doc=document,send,pause,getMuted=()=>false,startDeck=null}) {
@@ -12,13 +13,14 @@ export function mountCollection({document:doc=document,send,pause,getMuted=()=>f
   const shell = doc.createElement('dialog');shell.id='collection-dialog';shell.className='cc-shell';shell.setAttribute('aria-labelledby','cc-title');
   shell.innerHTML = `<header class="cc-top"><div class="cc-brand"><span class="cc-mark" aria-hidden="true">册</span><div><small>书页之间 · 收藏试验</small><h2 id="cc-title">街巷牌册</h2></div></div><div class="cc-wallet"><span>经营金币 <strong id="cc-coins">未连接</strong></span><span>星尘 <strong id="cc-dust">— / 3200</strong></span></div><button id="cc-close" aria-label="关闭牌册，返回已暂停的对局">返回对局</button></header>
     <div class="cc-layout"><nav class="cc-nav" aria-label="牌册页面"><button data-cc-tab="draw" aria-current="page"><span aria-hidden="true">✦</span>抽卡</button><button data-cc-tab="collection"><span aria-hidden="true">▤</span>牌册</button><button data-cc-tab="deck"><span aria-hidden="true">▥</span>组牌</button><button data-cc-tab="settings"><span aria-hidden="true">⚙</span>设置</button></nav><main id="cc-content" class="cc-content"></main></div>
-    <footer class="cc-status"><span id="cc-status" role="status" aria-live="polite"></span><button id="cc-refresh">刷新状态</button></footer><div class="cc-rotate"><span aria-hidden="true">↻</span><h3>横过手机，展开牌册</h3><p>对局已暂停。横屏后可抽卡、查看收藏和组牌。</p><button id="cc-portrait-close">返回对局</button></div>`;
+    <footer class="cc-status"><span id="cc-status" role="status" aria-live="polite"></span><button id="cc-refresh">刷新状态</button></footer><div class="cc-rotate"><span aria-hidden="true">↻</span><h3>横过手机，展开牌册</h3><p>对局已暂停。横屏后可抽卡、查看收藏和组牌。</p><button id="cc-portrait-deck">竖屏编辑牌组</button><button id="cc-portrait-close">返回对局</button></div>`;
   const confirm = doc.createElement('dialog');confirm.id='cc-confirm';confirm.className='cc-confirm';confirm.setAttribute('aria-labelledby','cc-confirm-title');
   const reveal = doc.createElement('dialog');reveal.id='cc-reveal';reveal.className='cc-reveal';reveal.setAttribute('aria-labelledby','cc-reveal-title');
   doc.body.append(shell,confirm,reveal);
   const openButton=doc.createElement('button');openButton.id='collection-open';openButton.className='quiet';openButton.textContent='牌册 · 抽卡与收藏';
   doc.querySelector('#menu-dialog .snapshot-actions')?.append(openButton);
   const client=createCollectionClient({send,onSnapshot:acceptSnapshot});
+  const deckEditor=createDeckEditor({document:doc,getSnapshot:()=>snapshot,getCards:policies,confirm:showLocalConfirmation,onStart:prepareDeck,canStart:()=>canTransact(snapshot)&&!!startDeck,getBusy:()=>busy,isVisible:()=>tab==='deck'});
   function policies() {
     const byId=new Map((snapshot?.catalog || []).map(p=>[p.cardId,p]));
     return DISPLAY_CARDS.map(c=>({...c,...byId.get(c.cardId),rarity:byId.get(c.cardId)?.rarity || c.displayRarity}));
@@ -54,13 +56,15 @@ export function mountCollection({document:doc=document,send,pause,getMuted=()=>f
   }
   function render() {
     const usable=canTransact(snapshot)&&!busy;
+    shell.classList.toggle('cc-deck-mode',tab==='deck');
     $('cc-coins').textContent=formatCoins(snapshot?.balance?.coins);
     $('cc-coins').title=Number.isSafeInteger(snapshot?.balance?.coins)?`${snapshot.balance.coins.toLocaleString('zh-CN')} 经营金币`:'';
     $('cc-dust').textContent=Number.isSafeInteger(snapshot?.dust)?`${snapshot.dust} / 3200`:'— / 3200';
     $('cc-status').textContent=status;$('cc-refresh').disabled=busy;
     shell.querySelectorAll('[data-cc-tab]').forEach(b=>b.setAttribute('aria-current',b.dataset.ccTab===tab?'page':'false'));
     if(tab==='draw') renderDraw(usable);
-    if(tab==='collection'||tab==='deck') renderCollection(usable);
+    if(tab==='collection') renderCollection(usable);
+    if(tab==='deck') deckEditor.render($('cc-content'));
     if(tab==='settings') renderSettings();
     if(busy) $('cc-content').querySelectorAll('button,select,input').forEach(el=>el.disabled=true);
     markPending();
@@ -133,8 +137,8 @@ export function mountCollection({document:doc=document,send,pause,getMuted=()=>f
     const p=snapshot.pending;if(p.stage==='awaiting-decision'){quoteState={txId:p.txId,quote:p.quote,request:p.request};showQuote();return;}
     busy=true;render();try{const r=await client.request('resume',{txId:p.txId});if(r.receipt)enqueue(r,true);else setStatus('正在恢复原操作，请稍后刷新状态。');}catch(e){setStatus(errorText(e));}finally{busy=false;render();showNextReceipt();}
   }
-  async function prepareDeck() {
-    if(busy||!startDeck||!canTransact(snapshot))return;const candidate={classId:draft.classId,cards:[...draft.cards]};
+  async function prepareDeck(recipe=draft) {
+    if(busy||!startDeck||!canTransact(snapshot))return;const candidate={classId:recipe.classId,cards:[...recipe.cards]};
     busy=true;render();try{const r=await client.request('validate-deck',candidate);const verdict=r.validation||r.result||r;
       if(!verdict.valid){setStatus('父页面未通过组牌校验，请检查持有数量、职业和 30 张限制。');return;}
       busy=false;showLocalConfirmation('替换当前对局并开局？','这会使用已验证的 30 张收藏牌创建新对局，并替换当前自动存档。上一份存档仍按原机制备份；需要保留当前局，请先下载快照。',async()=>{
@@ -172,6 +176,7 @@ export function mountCollection({document:doc=document,send,pause,getMuted=()=>f
       (legend?(gold?[220,330,440,660,880]:[196,294,392,588]):[330,440]).forEach((hz,i)=>{const osc=audio.createOscillator(),gain=audio.createGain();osc.type='sine';osc.frequency.value=hz;gain.gain.setValueAtTime(0,now+i*.13);gain.gain.linearRampToValueAtTime(.026,now+i*.13+.12);gain.gain.exponentialRampToValueAtTime(.0001,now+i*.13+1.25);osc.connect(gain);gain.connect(audio.destination);osc.start(now+i*.13);osc.stop(now+i*.13+1.3);});
     }catch{stopAudio();}
   }
+  $('cc-portrait-deck').onclick=()=>{tab='deck';render();};
   openButton.onclick=open;$('cc-close').onclick=closeShell;$('cc-portrait-close').onclick=closeShell;$('cc-refresh').onclick=refresh;
   shell.querySelectorAll('[data-cc-tab]').forEach(b=>b.onclick=()=>{tab=b.dataset.ccTab;filter='all';render();});
   confirm.addEventListener('cancel',e=>{if(confirmKind==='transaction'){e.preventDefault();decideQuote(false);}});
