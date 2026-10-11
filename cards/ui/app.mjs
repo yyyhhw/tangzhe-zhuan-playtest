@@ -1,3 +1,5 @@
+import {targetPreview} from './target-preview.mjs?v=formal-cards-audio-candidate-8-r3';
+import {createCombatAudio} from './combat-audio.mjs?v=formal-cards-audio-candidate-8-r3';
 import {createCardBgm} from './bgm.mjs?v=formal-cards-candidate-7';
 import {mechanismText, mechanismLabels, powerDescription, createHeavyFeedback} from './readable-effects.mjs?v=formal-cards-candidate-7';
 import {createMatchStorageScope} from './match-storage-scope.mjs?v=formal-cards-candidate-7';
@@ -12,17 +14,17 @@ import {createCardSave} from './save.mjs?v=formal-cards-candidate-7';
 import {artForCard, presentationClass} from './presentation.mjs?v=card-shield-10';
 import {createSpellFeedback, planSpellFeedback, keywordLabels, clonePublicCharacter, addShieldBreak, SPELL_TIMING, SHIELD_ATTACK_TIMING} from './spell-feedback.mjs?v=card-shield-10a';
 import {createActionInputGuard} from './action-input-guard.mjs?v=card-s1';
-import {attachBattleGestures} from './gesture-input.mjs?v=card-feedback-6a';
+import {attachBattleGestures} from './gesture-input.mjs?v=formal-cards-audio-candidate-8-r3';
 const actionInputGuard = createActionInputGuard();
 let gestures = null;
 const portrait = matchMedia('(orientation: portrait)');
 
 const $ = (id) => document.getElementById(id);
 const HEROES = {
-  warrior: {name:'77',role:'战士',mark:'七',power:'英雄技能'},
-  mage: {name:'阿宅',role:'法师',mark:'宅',power:'英雄技能'},
-  paladin: {name:'珍珠姐',role:'圣骑士',mark:'珠',power:'英雄技能'},
-  warlock: {name:'火箭',role:'术士',mark:'火',power:'英雄技能'},
+  warrior: {portrait:'../../art/face_c77.webp',name:'77',role:'战士',mark:'七',power:'英雄技能'},
+  mage: {portrait:'../../art/face_otaku.webp',name:'阿宅',role:'法师',mark:'宅',power:'英雄技能'},
+  paladin: {portrait:'../../art/face_pearl.webp',name:'珍珠姐',role:'圣骑士',mark:'珠',power:'英雄技能'},
+  warlock: {portrait:'../../art/face_rocket.webp',name:'火箭',role:'术士',mark:'火',power:'英雄技能'},
 };
 const TYPES = {minion:'随从',spell:'法术',weapon:'武器'};
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -31,6 +33,10 @@ let selected = null;
 let handExpanded = false;
 let paused = document.visibilityState === 'hidden';
 let pauseReason = paused ? '页面不可见，点击继续后恢复' : '';
+// Settings is a removable hold; safety holds survive every settings lifecycle.
+const pauseReasons=new Map(paused?[['visibility',pauseReason]]:[]);
+let resumeAfterSettings=false,foregroundPending=false,foregroundTimer=null,foregroundGeneration=0;
+function syncPauseReasons(){paused=pauseReasons.size>0;pauseReason=[...pauseReasons].filter(([key])=>key!=='settings').at(-1)?.[1]??pauseReasons.get('settings')??'';}
 let aiTimer = null;
 let aiGeneration = 0;
 let commandSerial = 0;
@@ -48,8 +54,10 @@ let restoreArmed = false, abandonArmed = false;
 let parentPort = null, muted = false, closing = false, closeSent = false;
 let collection = null;
 const bgm=createCardBgm({url:new URL('./assets/audio/the-old-tower-inn-loop.m4a',import.meta.url)});
-for(const event of ['pointerdown','keydown'])document.addEventListener(event,e=>{if(e.isTrusted)bgm.unlock();},{capture:true});
-window.addEventListener('pagehide',()=>bgm.update({hidden:true}));
+const combatAudio=createCombatAudio();
+for(const event of ['pointerdown','keydown'])document.addEventListener(event,e=>{if(e.isTrusted){bgm.unlock();combatAudio.unlock();}},{capture:true});
+window.addEventListener('pagehide',()=>{bgm.update({hidden:true});combatAudio.update({hidden:true});});
+document.addEventListener('error',event=>{if(event.target?.matches?.('.hero-portrait'))event.target.hidden=true;},true);
 const freshGame = () => createGame({rulesSeed:123,aiSeed:456,heroes:['warrior','mage']});
 
 function actions() { return game.phase === 'main' ? legalActions(game) : []; }
@@ -114,6 +122,8 @@ function showCombat(action,events,captured,actionStartedAt=null) {
   if (!captured || paused || portrait.matches || saveFailure || document.visibilityState === 'hidden') return;
   clearCombatFX();
   const spellPlan = planSpellFeedback(events,captured,cardInfo);
+  const soundTiming=spellPlan ? (spellPlan.kind==='attack' ? SHIELD_ATTACK_TIMING : SPELL_TIMING) : null;
+  combatAudio.play(events,{spell:events.some(e=>e.type==='play'&&CARDS[e.cardId]?.type==='spell'),impactDelay:soundTiming ? (soundTiming.windup+soundTiming.flight)/1000 : events.some(e=>e.type==='attack') ? ATTACK_MOTION_MS*.42/1000 : 0});
   if (spellPlan && spellFX.show(spellPlan,captured,actionStartedAt)) {
     const timing = spellPlan.kind === 'attack' ? SHIELD_ATTACK_TIMING : SPELL_TIMING;
     heavyFX.show(events,captured,timing.windup+timing.flight);
@@ -223,20 +233,22 @@ function selectedInfo() {
   if (selected.source === player.hero.uid) return {name:`${friendlyHero().name} · 英雄攻击`,text:'使用当前攻击力攻击可选目标。',entity:player.hero};
   return null;
 }
+let targetHints={selectable:new Set(),affected:new Set()};
 function selectableClass(uid, base='') {
-  return `${base}${selected?.source === uid ? ' selected' : ''}${targetIsLegal(uid) ? ' valid-target' : ''}`;
+  return `${base}${selected?.source === uid ? ' selected' : ''}${targetHints.selectable.has(uid) ? ' valid-target' : ''}${targetHints.affected.has(uid) ? ' affected-target' : ''}`;
 }
 function cancelAITimer() {
   aiGeneration += 1;
   if (aiTimer !== null) clearTimeout(aiTimer);
   aiTimer = null;
 }
-function pause(reason='对局已暂停') {
+function pause(reason='对局已暂停',owner='system') {
+  pauseReasons.set(owner,reason);if(owner==='settings')resumeAfterSettings=false;
+  clearTimeout(foregroundTimer);foregroundTimer=null;foregroundGeneration++;
   clearCombatFX();
   gestures?.cancel();
   cancelAITimer();
-  paused = true;
-  pauseReason = reason;
+  syncPauseReasons();
   selected = null; handExpanded = false;
   render();
 }
@@ -249,13 +261,13 @@ function invalidatePendingImport() {
   $('import-file').value = '';
 }
 function resume() {
-  if (document.visibilityState === 'hidden' || saveBusy || portrait.matches) return;
+  if (document.visibilityState === 'hidden' || saveBusy || portrait.matches || closing || closeSent || document.querySelector('dialog[open]')) return;
   if (saveFailure) { showSaveFail(); return; }
   invalidatePendingImport();
-  paused = false;
-  pauseReason = '';
+  pauseReasons.clear();resumeAfterSettings=false;foregroundPending=true;syncPauseReasons();
   notice = '';
   render();
+  bgm.unlock();combatAudio.unlock();
   scheduleAI();
 }
 function combatEntityName(state,uid) {
@@ -462,13 +474,13 @@ function renderPlayer(index) {
   const dots = manaDots(p);
   $(index === 0 ? 'player' : 'opponent').innerHTML = `
     <button class="${selectableClass(h.uid,`hero-button${canAttack ? ' can-attack' : ''}`)}" data-class="${esc(p.classId)}" data-gesture-target data-entity-kind="hero" data-entity="${esc(h.uid)}" data-player="${index}" aria-label="${esc(definition.name)} ${esc(definition.role)}，生命 ${h.hp}，护甲 ${h.armor || 0}${index === 0 ? '，'+attackState.label : ''}，${esc(weaponStatus.label)}${targetable ? '，可选目标' : ''}">
-      <span class="hero-avatar" aria-hidden="true">${esc(definition.mark)}</span><span><strong class="hero-title">${esc(definition.name)} · ${esc(definition.role)}</strong><span class="hero-stats"><span class="hp">${h.hp}</span> <span class="armor">${h.armor || 0}</span>${h.attack > 0 ? `<span class="hero-attack-stat">⚔ ${h.attack}</span>` : ''}</span></span>
+      <span class="hero-avatar" aria-hidden="true"><span class="hero-fallback">${esc(definition.mark)}</span>${definition.portrait?`<img class="hero-portrait" src="${definition.portrait}" width="192" height="192" alt="" draggable="false">`:""}</span><span><strong class="hero-title">${esc(definition.name)} · ${esc(definition.role)}</strong><span class="hero-stats"><span class="hp">${h.hp}</span> <span class="armor">${h.armor || 0}</span>${h.attack > 0 ? `<span class="hero-attack-stat">⚔ ${h.attack}</span>` : ''}</span></span>
       ${index === 0 && h.attack > 0 ? `<span class="hero-readiness readiness-${attackState.kind}">${attackState.label}</span>` : ''}
     </button>
     <span class="hero-weapon" data-weapon-player="${index}" data-state="${weaponStatus.state}" data-weapon-attack="${weaponStatus.attack ?? ''}" data-weapon-durability="${weaponStatus.durability ?? ''}" aria-hidden="true">${weaponStatus.markup}</span>
     <div class="player-metadata"><span class="mana-label">法力 ${p.mana}/${p.maxMana}</span><span class="mana-dots" aria-hidden="true">${dots}</span><div class="resource-line"><span>牌库 ${p.deck.length}</span><span>手牌 ${p.hand.length}</span><span>疲劳 ${p.fatigue}</span><span class="spell-damage-total">法伤 +${spellDamageBonus(game,index)}</span>${p.weapon ? `<span class="weapon-status">武器 · ${esc(equipped.name)} · 攻击 ${p.weapon.atk} / 耐久 ${p.weapon.dur}</span>` : ''}</div></div>
     ${index === 1 ? `<span class="opponent-hand-count" aria-label="对手手牌 ${p.hand.length} 张"><span aria-hidden="true">▣</span> 手牌 <strong>${p.hand.length}</strong></span><span class="opponent-power-status${h.powerUsed ? ' is-used' : ''}" aria-label="对方英雄技能${h.powerUsed ? '本回合已使用' : '本回合未使用'}">技能 · ${h.powerUsed ? '已使用' : '未使用'}</span>` : ''}
-    ${index === 0 ? `<button id="hero-power" class="power-button ${selected?.type === 'power' ? 'selected' : ''}" data-available="${canPower}" title="${esc(powerDescription(game,0,CARDS))}"><span>英雄技能</span><small>${h.powerUsed ? '本回合已用' : `${game.config.powers.cost}费 · 说明`}</small></button>` : ''}`;
+    ${index === 0 ? `<button id="hero-power" class="power-button ${selected?.type === 'power' ? 'selected' : ''}" data-available="${canPower}" title="${esc(powerDescription(game,0,CARDS))}"><span>英雄技能</span><small>${h.powerUsed ? '本回合已用' : canPower ? `${game.config.powers.cost}费 · 可使用` : !humanTurn() ? '等待行动' : p.mana<game.config.powers.cost ? '法力不足' : '当前不可用'}</small></button>` : ''}`;
 }
 function renderBoard(index) {
   const p = game.players[index];
@@ -490,6 +502,18 @@ function renderBoard(index) {
     return `<button class="${selectableClass(m.uid,`minion${divineShield ? ' has-divine-shield' : ''}${taunt ? ' taunt' : ''}${canAttack ? ' can-attack' : ''}`)}" data-class="${presentationClass(c.metadata)}" data-gesture-target data-entity="${esc(m.uid)}" data-player="${index}" aria-label="${esc(c.name)}，攻击 ${m.atk}，生命 ${m.hp}，${status}${keywords.map(k=>'，'+k.label).join('')}${spellDamage ? `，法术伤害 +${spellDamage}` : ''}${targetable ? '，可选目标' : ''}"><span class="minion-name">${esc(c.name)}</span>${keywords.length || spellDamage ? `<span class="minion-keywords">${keywords.map(k=>`<span class="minion-keyword keyword-${k.key}">${k.label}</span>`).join('')}${spellDamage ? `<span class="minion-keyword keyword-spell">法伤 +${spellDamage}</span>` : ''}</span>` : ''}${artMarkup(c,'minion-art')}${divineShield ? '<span class="divine-shield-shell" aria-hidden="true"></span>' : ''}<span class="minion-status readiness-${attackState.kind}">${index === 0 ? status : ''}</span><span class="minion-stats"><b class="attack-stat"><span class="stat-label">攻</span> ${m.atk}</b><b class="health-stat"><span class="stat-label">生</span> ${m.hp}</b></span></button>`;
   }).join('');
 }
+function placementIndex(x){const units=[...$('friendly-board').querySelectorAll('[data-entity]')];const i=units.findIndex(el=>{const r=el.getBoundingClientRect();return x<r.left+r.width/2;});return i<0?units.length:i;}
+function placementAction(position){const action=isMinionPlacement()&&currentSelectionActions().find(a=>!a.target);return action&&Number.isInteger(position)&&position>=0&&position<=game.players[0].board.length?{...action,position}:null;}
+function renderTargetBadges(){
+  for(const el of document.querySelectorAll('[data-entity].valid-target,[data-entity].affected-target')){const text=targetHints.labels.get(el.dataset.entity);if(!text)continue;const label=(el.dataset.player==='0'?'我方 ':'敌方 ')+text;const badge=document.createElement('span');badge.className='target-effect';badge.textContent=label;el.append(badge);el.setAttribute('aria-label',el.getAttribute('aria-label')+'，'+label);}
+}
+function renderPlacementSlots(){
+  const box=$('placement-slots');box.innerHTML='';
+  if(!isMinionPlacement()||!currentSelectionActions().some(a=>!a.target))return;
+  const units=[...$('friendly-board').querySelectorAll('[data-entity]')],r=$('friendly-board').getBoundingClientRect();
+  box.innerHTML=Array.from({length:units.length+1},(_,i)=>`<button data-placement="${i}" data-drop-target class="placement-slot" aria-label="${units.length===0?'放到空战场':i===0?'放在最左边':i===units.length?'放在最右边':`放在第${i}和第${i+1}个随从之间`}">${units.length===0?'上场':i===0?'左':i===units.length?'右':i+'|'+(i+1)}</button>`).join('');
+  [...box.children].forEach((el,i)=>{const prev=units[i-1]?.getBoundingClientRect(),next=units[i]?.getBoundingClientRect();const x=prev&&next?(prev.right+next.left)/2:next?next.left-8:prev?prev.right+8:r.left+r.width/2;el.style.left=Math.max(4,Math.min(innerWidth-36,x-16))+'px';el.style.top=(r.top+r.height/2-22)+'px';});
+}
 function isMinionPlacement() { return selected?.type === 'play' && selectedInfo()?.type === 'minion'; }
 function renderAimGuide() {
   const legal=currentSelectionActions(), info=selectedInfo();
@@ -502,10 +526,10 @@ function renderAimGuide() {
   const item=game.players[0].hand.find(c=>c.uid===selected.source);
   const availability=item?handAvailability(item,info,actions()):{label:'不可出'};
   const targeted=legal.some(a=>a.target),placement=isMinionPlacement()&&legal.some(a=>!a.target);
-  const instruction=targeted?'再点绿色箭头目标使用':placement?'再点绿色己方战场上场':legal.some(a=>!a.target)?'再点「确认使用」生效':availability.label+' · 可取消或返回手牌';
+  const instruction=targeted?'再点轮廓目标使用（敌红／我绿）':placement?'再点绿色己方战场上场':legal.some(a=>!a.target)?(targetHints.affected.size?'虚线标记受影响目标 · 确认使用':'再点「确认使用」生效'):availability.label+' · 可取消或返回手牌';
   $('aim-guide').textContent=`${info.name} · ${info.cost}费 · ${instruction}`;
   if(!legal.length)return;
-  const targets=targeted?[...new Set(legal.map(a=>a.target))].map(id=>document.querySelector(`[data-entity="${CSS.escape(id)}"]`)):placement?[$('friendly-board')]:[$('confirm')];
+  const targets=targeted?[]:placement?[$('friendly-board')]:[$('confirm')];
   $('aim-arrows').setAttribute('viewBox',`0 0 ${innerWidth} ${innerHeight}`);
   $('aim-arrows').innerHTML='<defs><marker id="green-tip" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#38ed72"/></marker></defs>'+targets.filter(Boolean).map(el=>{const r=el.getBoundingClientRect(),x=targeted?r.left+5:r.left+r.width/2,y=targeted?r.top+r.height*.35:r.top+5,sx=targeted?Math.max(2,x-28):x,sy=targeted?y:y-22;return `<path d="M ${sx} ${sy} L ${x} ${y}" stroke="#176436" stroke-width="7"/><path d="M ${sx} ${sy} L ${x} ${y}" stroke="#38ed72" stroke-width="3" marker-end="url(#green-tip)"/>`;}).join('');
 }
@@ -563,7 +587,7 @@ function renderSelection() {
   const empty = $('friendly-board').querySelector('.empty-board');
   if (empty && noTargetPlay) empty.textContent = '点击这里让随从上场';
   $('detail-open').disabled = !info;
-  $('battle-hint').textContent = info ? `${info.name} · ${selected?.type === 'inspect' ? '点击牌面详情查看' : legal.some(a => a.target) ? '点击绿色箭头目标' : noTarget ? selected.type === 'power' ? '点击确认使用技能' : isMinionPlacement() ? '点击己方绿色战场出牌' : '点击确认使用后生效' : '当前不可使用，可查看详情'}` : game.phase === 'ended' ? resultText() : paused ? `${pauseReason} · 点击继续` : spellFX.active() ? '正在展示命中 · 反馈结束后可继续行动' : game.active === 1 ? '对手回合' : handExpanded ? '手牌完整浏览 · 左右滑动，点牌进入第二步' : '点「手牌 ↑」完整浏览，选牌后再确认';
+  $('battle-hint').textContent = info ? `${info.name} · ${selected?.type === 'inspect' ? '点击牌面详情查看' : legal.some(a => a.target) ? '点击轮廓目标（敌红／我绿）' : noTarget ? selected.type === 'power' ? '点击确认使用技能' : isMinionPlacement() ? '点击己方绿色战场出牌' : '点击确认使用后生效' : '当前不可使用，可查看详情'}` : game.phase === 'ended' ? resultText() : paused ? `${pauseReason} · 点击继续` : spellFX.active() ? '正在展示命中 · 反馈结束后可继续行动' : game.active === 1 ? '对手回合' : handExpanded ? '手牌完整浏览 · 左右滑动，点牌进入第二步' : '点「手牌 ↑」完整浏览，选牌后再确认';
   $('confirm').hidden = !noTarget || isMinionPlacement();
   $('confirm').textContent = selected?.type === 'power' ? '确认使用技能' : '确认使用';
   $('cancel').hidden = !selected;
@@ -581,19 +605,25 @@ function renderResult() {
   $('result-replay').disabled = saveBusy || !!saveFailure || closing || closeSent;
 }
 function render() {
+  if(resumeAfterSettings&&!saveBusy&&!document.querySelector('dialog[open]')){pauseReasons.delete('settings');resumeAfterSettings=false;syncPauseReasons();if(!paused&&!saveFailure&&!closing&&!closeSent&&!document.hidden&&!portrait.matches)scheduleAI();}
+  syncPauseReasons();
   bgm.update({muted,paused:paused||closing||closeSent,hidden:document.hidden});
+  combatAudio.update({muted,paused:paused||closing||closeSent||portrait.matches||!!saveFailure,hidden:document.hidden});
+  recoverForegroundAudio();
   $('app').classList.toggle('blocked-aim',notice.startsWith('先处理嘲讽'));
   $('app').dataset.interactionMode = handExpanded ? 'inspect-hand' : selected ? 'aim' : 'battle';
   const focus = document.activeElement;
   const focusMarker = focus?.dataset?.card ? ['data-card',focus.dataset.card] : focus?.dataset?.entity ? ['data-entity',focus.dataset.entity] : focus?.id ? ['id',focus.id] : null;
   const scrollPositions = ['hand','enemy-board','friendly-board'].map((id) => [id,$(id).scrollLeft]);
-  $('pause').textContent = paused ? '继续' : '暂停';
+  $('pause').textContent = '继续';
+  $('pause').hidden = !paused;
   $('pause').setAttribute('aria-pressed',String(paused));
   $('pause').disabled = game.phase === 'ended' && !spellFX.active();
   const status = game.phase === 'ended' ? resultText() : paused ? '已暂停' : game.active === 0 ? '你的回合' : '对手回合';
   $('turn-bar').innerHTML = `<span>第 ${game.turn} 回合 · <strong>${esc(status)}</strong></span><span class="${paused ? 'paused-pill' : ''}">${paused ? 'AI 已停止 · 手动继续' : '规则与 AI 随机流独立'}</span>`;
   const config = game.config || {};
   $('rules-label').textContent = `${config.heroHealth ?? 30} HP / ${config.deckSize ?? 30} 牌 / ${config.boardLimit ?? config.maxBoard ?? 7} 场`;
+  targetHints=targetPreview(game,selected,humanTurn());
   renderPlayer(1); renderBoard(1); renderBoard(0); renderPlayer(0); renderHand(); renderSelection();
   const p = game.players[0];
   const overflow = Math.max(0,p.mana-p.maxMana);
@@ -606,7 +636,7 @@ function render() {
   if (focusMarker) document.querySelector(`[${focusMarker[0]}="${CSS.escape(focusMarker[1])}"]`)?.focus({preventScroll:true});
   $('notice').textContent = [notice, saveNote].filter(Boolean).join(' · ');
   $('revision-label').textContent = `状态 #${game.revision} · ${game.rulesVersion} · 卡池 ${game.cardPoolVersion}`;
-  renderCombatStatus(); renderRecentPlays(); renderResult(); renderAimGuide();
+  renderCombatStatus(); renderRecentPlays(); renderResult(); renderAimGuide(); renderPlacementSlots(); renderTargetBadges();
   $('log').innerHTML = uiLog.length ? uiLog.slice().reverse().map((l) => `<li>#${l.revision} · ${esc(l.text)}${l.eventCount ? ` · ${l.eventCount} 个规则事件` : ''}</li>`).join('') : '<li>新对局已准备好。完整动作记录见「下载回放」。</li>';
 }
 function onEntityClick(uid,index,event) {
@@ -646,6 +676,8 @@ $('app').addEventListener('click',(event) => {
     }
     return;
   }
+  const slot=event.target.closest('[data-placement]');
+  if(slot){const action=placementAction(Number(slot.dataset.placement));if(action)commitAction(action,false,event);return;}
   const card = event.target.closest('[data-card]');
   if (card) {
     const collapsedHand=handExpanded;
@@ -655,6 +687,7 @@ $('app').addEventListener('click',(event) => {
     // at this point; a different target or keyboard second step remains usable.
     notice='';render();return;
   }
+  if(event.target.closest('#friendly-board')&&isMinionPlacement()){const action=placementAction(game.players[0].board.length);if(action){commitAction(action,false,event);return;}}
   const entity = event.target.closest('[data-entity]');
   if (entity) { onEntityClick(entity.dataset.entity,Number(entity.dataset.player),event); return; }
   if (event.target.closest('#friendly-board') && isMinionPlacement()) {
@@ -669,18 +702,17 @@ $('friendly-board').addEventListener('keydown',(event) => {
   const placement = isMinionPlacement() && currentSelectionActions().find(a => !a.target);
   if (placement) commitAction(placement,false,event);
 });
-$('menu-open').addEventListener('click',() => { pause('菜单已打开'); $('menu-dialog').showModal(); });
+$('menu-open').addEventListener('click',() => { pause('设置已打开','settings'); $('menu-dialog').showModal(); });
+$('menu-dialog').addEventListener('click',event=>{const dialog=$('menu-dialog'),r=dialog.getBoundingClientRect();if(event.target===dialog&&(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom))dialog.close();});
 $('detail-open').addEventListener('click',() => {
   gestures?.cancel();
-  if (game.active === 1) { const viewing = selected; pause('牌面详情已打开'); selected = viewing; render(); }
   $('detail-dialog').showModal();
 });
 $('recent-open').addEventListener('click',() => {
   if (!publicPlays().length) return;
-  pause('正在查看最近出牌');
   $('recent-dialog').showModal();
 });
-$('pause').addEventListener('click',() => paused ? resume() : pause());
+$('pause').addEventListener('click',() => { if(paused)resume(); });
 for(const [id,dir] of [['hand-prev',-1],['hand-next',1]]) $(id).addEventListener('click',()=>$('hand').scrollBy({left:dir*286,behavior:'instant'}));
 $('cancel').addEventListener('click',() => { actionInputGuard.reset();clearCombatFX(); selected = null; handExpanded = false; render(); });
 $('hand-count').addEventListener('click',() => { actionInputGuard.reset();gestures?.cancel(); handExpanded = !handExpanded; selected = null; notice = ''; render(); });
@@ -693,14 +725,14 @@ $('end-turn').addEventListener('click',(event) => {
 $('hero-options').innerHTML = Object.entries(HEROES).map(([id,h],index) => `<label class="hero-option"><input type="radio" name="hero" value="${id}" ${index === 0 ? 'checked' : ''}><span>${h.name}<small>${h.role}</small></span></label>`).join('');
 function openSetup() {
   if (saveBusy || saveFailure || closing || closeSent || $('setup-dialog').open) return;
-  $('menu-dialog').close(); invalidatePendingImport(); pause('设置已打开');
+  $('menu-dialog').close(); invalidatePendingImport(); pause('设置已打开','settings');
   $('setup-error').textContent = ''; $('setup-dialog').showModal();
 }
 $('new-game').addEventListener('click',openSetup);
 $('result-replay').addEventListener('click',openSetup);
 $('result-finish').addEventListener('click',requestExit);
 $('save-finish').addEventListener('click',requestExit);
-$('snapshot-open').addEventListener('click',() => { $('menu-dialog').close(); pause('快照窗口已打开'); $('import-result').textContent = ''; $('snapshot-dialog').showModal(); });
+$('snapshot-open').addEventListener('click',() => { $('menu-dialog').close(); pause('快照窗口已打开','settings'); $('import-result').textContent = ''; $('snapshot-dialog').showModal(); });
 document.querySelectorAll('[data-close]').forEach((button) => button.addEventListener('click',() => {
   if (button.dataset.close === 'snapshot-dialog') invalidatePendingImport();
   $(button.dataset.close).close();
@@ -719,7 +751,7 @@ $('setup-form').addEventListener('submit',(event) => {
     const nextGame = createGame({rulesSeed:Number(data.get('rulesSeed')),aiSeed:Number(data.get('aiSeed')),heroes:[data.get('hero'),data.get('opponentHero')],config});
     clearCombatFX(); cancelAITimer(); invalidatePendingImport();
     actionInputGuard.reset();
-    resultRecoveryNote = ''; game = nextGame; paused = portrait.matches; pauseReason = paused ? '请横过手机再继续' : ''; selected = null; uiLog = []; recentPlayedCards = []; notice = '';
+    resultRecoveryNote = ''; game = nextGame; if(portrait.matches)pauseReasons.set('orientation','请横过手机再继续'); selected = null; uiLog = []; recentPlayedCards = []; notice = '';
     $('setup-dialog').close(); render(); persist();
   } catch (err) { $('setup-error').textContent = `无法开始：${err.message || '实验参数无效'}`; }
 });
@@ -734,19 +766,19 @@ $('download-replay').addEventListener('click',() => { download(`bookcard-replay-
 function importSnapshot(text) {
   try {
     const candidate = deserialize(text);
-    clearCombatFX(); cancelAITimer(); actionInputGuard.reset(); resultRecoveryNote = ''; game = candidate; selected = null; paused = true; pauseReason = '快照已导入'; uiLog = []; recentPlayedCards = []; notice = '快照已导入。关闭窗口后点击「继续」恢复。';
+    clearCombatFX(); cancelAITimer(); actionInputGuard.reset(); resultRecoveryNote = ''; game = candidate; selected = null; pauseReasons.set('settings','快照已导入'); uiLog = []; recentPlayedCards = []; notice = '快照已导入。关闭设置后恢复。';
     $('import-result').textContent = notice; render(); persist(); return true;
   } catch (err) {
     $('import-result').textContent = `导入失败，当前对局已保留：${err.message || '快照无效'}`; return false;
   }
 }
-$('import-button').addEventListener('click',() => { if (!importBusy) { importGeneration += 1; pause('正在导入快照'); importSnapshot($('import-text').value); } });
+$('import-button').addEventListener('click',() => { if (!importBusy) { importGeneration += 1; pause('正在导入快照','settings'); importSnapshot($('import-text').value); } });
 $('import-file').addEventListener('change',async (event) => {
   const file = event.target.files?.[0]; if (!file) return;
   // Keep this File reference, then reset native selection before any asynchronous work.
   // Re-selecting the same file must trigger change, including while this read is pending.
   event.target.value = '';
-  pause('正在读取快照'); const generation = ++importGeneration; importBusy = true; $('import-button').disabled = true;
+  pause('正在读取快照','settings'); const generation = ++importGeneration; importBusy = true; $('import-button').disabled = true;
   try {
     if (file.size > 10 * 1024 * 1024) throw new Error('文件超过 10 MB 限制');
     const text = await file.text();
@@ -754,9 +786,27 @@ $('import-file').addEventListener('change',async (event) => {
   } catch (err) { if (generation === importGeneration) $('import-result').textContent = `导入失败，当前对局已保留：${err.message}`; }
   finally { if (generation === importGeneration) { importBusy = false; $('import-button').disabled = false; } }
 });
-document.addEventListener('visibilitychange',() => { if (document.visibilityState === 'hidden') pause('页面已隐藏，返回后请手动继续'); });
-window.addEventListener('pagehide',() => pause('页面已离开，返回后请手动继续'));
-window.addEventListener('pageshow',(event) => { if (event.persisted) pause('页面已恢复，请手动继续'); });
+function recoverForegroundAudio(){
+  if(!foregroundPending||foregroundTimer!==null||paused||saveBusy||saveFailure||closing||closeSent||document.hidden||portrait.matches)return;
+  if(muted){foregroundPending=false;return;}
+  combatAudio.resumeExisting();
+  const generation=foregroundGeneration;
+  foregroundTimer=setTimeout(()=>{
+    foregroundTimer=null;
+    if(generation!==foregroundGeneration||!foregroundPending||paused||document.hidden)return;
+    foregroundPending=false;
+    if(bgm.status.state!=='running'||combatAudio.status.state!=='running')pause('声音恢复受浏览器限制，点击继续解锁','audio');
+  },600);
+}
+function hidePage(){foregroundPending=true;pause('页面已隐藏','visibility');}
+function returnToForeground(){
+  if(document.hidden||!pauseReasons.has('visibility'))return;
+  pauseReasons.delete('visibility');foregroundPending=true;
+  render();scheduleAI();
+}
+document.addEventListener('visibilitychange',()=>document.hidden?hidePage():returnToForeground());
+window.addEventListener('pagehide',hidePage);
+window.addEventListener('pageshow',event=>{if(event.persisted)returnToForeground();});
 document.addEventListener('keydown',(event) => {
   if (event.key === 'Escape' && (spellFX.active() || combatFX || document.querySelector('.heavy-impact'))) { clearCombatFX(); render(); }
   // Held Enter/Space is one intent. A released-and-repressed key remains immediate.
@@ -784,7 +834,7 @@ async function persist() {
     if (r.tmpLeft) tmpLeftCount += 1;
     saveNote = ''; render(); scheduleAI(); flushClose(); return true;
   }
-  saveFailure = r; pause(failText(r)); showSaveFail(); return false;
+  saveFailure = r; pause(failText(r),'save'); showSaveFail(); return false;
 }
 function showSaveFail(exiting = closing) {
   const r = saveFailure; if (!r) return;
@@ -811,7 +861,7 @@ $('save-retry').addEventListener('click',async () => {
   // Retain the pause; only replace the stale failure text after verified success.
   // A newer visibility, rotation or exit reason during the await takes precedence.
   if (saved && paused && pauseReason === failedPauseReason) {
-    pauseReason = `已保存到第 ${store.lastSaved.revision} 步`;
+    pauseReasons.set('save',`已保存到第 ${store.lastSaved.revision} 步`);
     notice = '';
     render();
   } else if (!saved && !saveFailure) flushClose();
@@ -826,7 +876,7 @@ async function restoreFromBackup() {
   saveBusy = true; cancelAITimer();
   const r = await store.restoreBackup();
   saveBusy = false;
-  if (!r.ok) { saveFailure = r; pause(failText(r)); showSaveFail(); return; }
+  if (!r.ok) { saveFailure = r; pause(failText(r),'save'); showSaveFail(); return; }
   saveFailure = null; actionInputGuard.reset();
   game = r.game; uiLog = []; recentPlayedCards = []; selected = null; notice = ''; saveNote = '';
   pause('已从备份恢复，点击继续');
@@ -846,7 +896,7 @@ $('resume-continue').addEventListener('click',() => { $('resume-dialog').close()
 function startFresh() {
   clearCombatFX(); $('resume-dialog').close(); cancelAITimer(); actionInputGuard.reset();
   resultRecoveryNote = ''; game = freshGame(); uiLog = []; recentPlayedCards = []; selected = null; notice = '';
-  paused = document.visibilityState === 'hidden' || portrait.matches; pauseReason = paused ? portrait.matches ? '请横过手机再继续' : '页面不可见，点击继续后恢复' : '';
+  pauseReasons.clear();resumeAfterSettings=false;if(document.hidden)pauseReasons.set('visibility','页面不可见，点击继续后恢复');if(portrait.matches)pauseReasons.set('orientation','请横过手机再继续');syncPauseReasons();
   render(); persist();
 }
 $('resume-abandon').addEventListener('click',() => {
@@ -855,11 +905,12 @@ $('resume-abandon').addEventListener('click',() => {
 });
 $('resume-new').addEventListener('click',startFresh);
 async function boot() {
-  clearCombatFX(); resultRecoveryNote = ''; cancelAITimer(); saveFailure = null; closing = false; closeSent = false; paused = true; pauseReason = '正在读取存档'; render();
+  clearCombatFX(); resultRecoveryNote = ''; cancelAITimer(); saveFailure = null; closing = false; closeSent = false; pauseReasons.set('loading','正在读取存档'); render();
   // A missing or mismatched QA handshake stays paused and never falls back to live keys.
   await matchScope.ready;
   if (closeSent) return; // An exit queued before the handshake must not start a new save.
   const r = await store.load();
+  pauseReasons.delete('loading');
   if (closeSent) return; // Async load/quarantine may complete after an exit.
   const q = r.quarantine === 'saved' ? '原数据已另存。' : r.quarantine === 'occupied' ? '原数据未另存（隔离区已占用）。' : r.quarantine ? '原数据未能备份。' : '';
   const noWrite = r.writable === false ? ' 当前浏览器无法写存档。' : '';
@@ -880,7 +931,7 @@ async function boot() {
 function onParent(d) {
   if (!d || typeof d !== 'object') return;
   if (collection?.receive(d)) return;
-  if ((d.card === 'hello' || d.card === 'mute') && typeof d.muted === 'boolean') { muted = d.muted; document.body.dataset.muted = String(muted); bgm.update({muted}); }
+  if ((d.card === 'hello' || d.card === 'mute') && typeof d.muted === 'boolean') { muted = d.muted; document.body.dataset.muted = String(muted); bgm.update({muted}); combatAudio.update({muted}); }
   if (d.card === 'requestClose') requestExit();
 }
 function sendClose() {
@@ -908,25 +959,25 @@ if (embed) {
 // Every drop is resolved against current legal actions, never against a cached rule guess.
 function gestureIntent(element) {
   if (!humanTurn() || document.querySelector('dialog[open]')) return null;
-  if(element.closest('[data-card]')) return null; // Cards use explicit two-step click; horizontal browsing stays native.
-  const sourceElement = element.closest('[data-entity]');
+  const sourceElement = element.closest('[data-card],[data-entity]');
   if (!sourceElement || sourceElement.disabled) return null;
   const type = sourceElement.dataset.card ? 'play' : 'attack';
   const source = sourceElement.dataset.card || sourceElement.dataset.entity;
   if (!actions().some(a => a.player === 0 && a.type === type && a.source === source)) return null;
-  return {type,source,fromExpandedHand:handExpanded && type === 'play',revision:game.revision,sourceElement,label:sourceElement.getAttribute('aria-label')?.split('，')[0] || '卡牌'};
+  return {type,source,allowHorizontalScroll:handExpanded&&type==='play',fromExpandedHand:handExpanded && type === 'play',revision:game.revision,sourceElement,label:sourceElement.getAttribute('aria-label')?.split('，')[0] || '卡牌'};
 }
-function gestureDrop(intent,element) {
+function gestureDrop(intent,element,event) {
   if (!element || !humanTurn() || document.querySelector('dialog[open]') || game.revision !== intent.revision || selected?.source !== intent.source || selected?.type !== intent.type) return null;
   if (element.closest('#hand') || element.closest('[data-card]')) return null;
   const legal = currentSelectionActions();
+  if(intent.type==='play'&&isMinionPlacement()){const slot=element.closest('[data-placement]');if(slot)return placementAction(Number(slot.dataset.placement));if(element.closest('#friendly-board'))return placementAction(placementIndex(event.clientX));return null;}
   const entity = element.closest('[data-entity]');
   if (entity) {
     if (entity.dataset.entity === intent.source) return null;
     const targeted = legal.find(a => a.target === entity.dataset.entity);
     if (targeted) return targeted;
   }
-  if (intent.type === 'play' && element.closest('#friendly-board')) return legal.find(a => !a.target) || null;
+  // Non-target spells/weapons still require explicit confirmation, never a board drop.
   return null;
 }
 gestures = attachBattleGestures({
@@ -940,6 +991,7 @@ gestures = attachBattleGestures({
     // Only an expanded hand collapsing may expose a new entity under its old
     // rectangle. gestureDrop already revalidates turn/revision/selection.
     const entity = element?.closest('[data-entity]');
+    if(intent.fromExpandedHand&&intent.type==='play'&&Number.isInteger(action.position))return !!element.closest('#friendly-board,[data-placement]');
     return intent.fromExpandedHand === true && intent.type === 'play' && !!action.target &&
       action.target !== intent.source && entity?.dataset.entity === action.target &&
       !element.closest('#hand,[data-card]');
@@ -947,7 +999,7 @@ gestures = attachBattleGestures({
   commit(action,event) { commitAction(action,false,{detail:1,clientX:event.clientX,clientY:event.clientY}); },
   cancel() { clearCombatFX(); selected = null; render(); },
 });
-portrait.addEventListener('change',() => { gestures.cancel(); selected = null; actionInputGuard.reset(); pause(portrait.matches ? '请横过手机再继续' : '方向已改变，点击继续'); });
+portrait.addEventListener('change',() => { gestures.cancel(); selected = null; actionInputGuard.reset(); pause(portrait.matches ? '请横过手机再继续' : '方向已改变，点击继续','orientation'); });
 window.addEventListener('resize',() => { clearCombatFX(); gestures.cancel(); selected = null; render(); });
 // Collection drafts never replace an active game without parent ownership validation
 // and the collection's explicit replacement confirmation. Save the candidate before
@@ -961,17 +1013,21 @@ async function startCollectionDeck(candidate) {
   try { result = await store.save(nextGame); }
   finally { saveBusy = false; }
   lastSave = result;
-  if (!result.ok) { saveFailure = result; pause(failText(result)); showSaveFail(); throw new Error('新对局尚未确认安全保存，当前画面保留原对局。请处理存档提示。'); }
+  if (!result.ok) { saveFailure = result; pause(failText(result),'save'); showSaveFail(); throw new Error('新对局尚未确认安全保存，当前画面保留原对局。请处理存档提示。'); }
   if (result.tmpLeft) tmpLeftCount += 1;
   clearCombatFX(); cancelAITimer(); invalidatePendingImport(); actionInputGuard.reset();
   resultRecoveryNote = ''; game = nextGame; selected = null; uiLog = []; recentPlayedCards = []; notice = ''; saveNote = '';
-  paused = true; pauseReason = '收藏牌组已保存，点击继续开始'; render(); flushClose();
+  pauseReasons.set('system','收藏牌组已保存，点击继续开始'); render(); flushClose();
 }
-collection = mountCollection({document,send:message=>{if(!parentPort)throw new Error('尚未连接书店');parentPort.postMessage(message);},pause:()=>pause('牌册已打开，对局保持暂停'),getMuted:()=>muted,startDeck:startCollectionDeck});
+collection = mountCollection({document,send:message=>{if(!parentPort)throw new Error('尚未连接书店');parentPort.postMessage(message);},pause:()=>pause('牌册已打开','settings'),getMuted:()=>muted,startDeck:startCollectionDeck});
+// Native close/cancel fires after nested dialogs have had a chance to open.
+for(const dialog of document.querySelectorAll('dialog'))dialog.addEventListener('close',()=>{
+  if(pauseReasons.has('settings')&&!document.querySelector('dialog[open]')){resumeAfterSettings=true;render();}
+});
 render(); boot();
 
 // Read-only diagnostics for local browser regression checks. No global state hooks.
 export function getDiagnostics() {
-  return {bgm:bgm.status,combatFXActive:!!combatFX || spellFX.active(),spellFeedbackRemainingMs:spellFX.remaining(),spellFeedbackError:spellFX.error(),aiActionIntervalMs:AI_ACTION_INTERVAL_MS,aiCardReadMs:AI_CARD_READ_MS,publicPlays:publicPlays().map(entry => ({revision:entry.revision,player:entry.player,cardId:entry.playedCardId})),lastAction:uiLog.at(-1) ? {...uiLog.at(-1)} : null,handExpanded,interactionMode:handExpanded ? 'inspect-hand' : selected ? 'aim' : 'battle',revision:game.revision,hash:hashState(game),active:game.active,phase:game.phase,paused,aiScheduled:aiTimer !== null,aiSteps:game.active === 1 ? actionsThisTurn(game,1) : 0,selected:selected ? {...selected} : null,turn:game.turn,saveBusy,saveFailure:saveFailure ? {...saveFailure} : null,lastSaved:store.lastSaved,readOnly:store.readOnly,tmpLeftCount,muted,embed,closing,ported:!!parentPort,config:JSON.parse(JSON.stringify(game.config))};
+  return {bgm:bgm.status,combatAudio:combatAudio.status,combatFXActive:!!combatFX || spellFX.active(),spellFeedbackRemainingMs:spellFX.remaining(),spellFeedbackError:spellFX.error(),aiActionIntervalMs:AI_ACTION_INTERVAL_MS,aiCardReadMs:AI_CARD_READ_MS,publicPlays:publicPlays().map(entry => ({revision:entry.revision,player:entry.player,cardId:entry.playedCardId})),lastAction:uiLog.at(-1) ? {...uiLog.at(-1)} : null,handExpanded,interactionMode:handExpanded ? 'inspect-hand' : selected ? 'aim' : 'battle',revision:game.revision,hash:hashState(game),active:game.active,phase:game.phase,paused,pauseReasons:Object.fromEntries(pauseReasons),aiScheduled:aiTimer !== null,aiSteps:game.active === 1 ? actionsThisTurn(game,1) : 0,selected:selected ? {...selected} : null,turn:game.turn,saveBusy,saveFailure:saveFailure ? {...saveFailure} : null,lastSaved:store.lastSaved,readOnly:store.readOnly,tmpLeftCount,muted,embed,closing,ported:!!parentPort,config:JSON.parse(JSON.stringify(game.config))};
 }
 

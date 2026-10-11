@@ -234,6 +234,7 @@ export function attachBattleGestures(options) {
       return;
     }
     if (!g.dragging && !hasDragThreshold(g.start, event, threshold)) return;
+    if(!g.dragging&&event.pointerType==='touch'&&g.intent.allowHorizontalScroll&&Math.abs(event.clientX-g.start.clientX)>Math.abs(event.clientY-g.start.clientY)){abort('horizontal-scroll',event,false);return;}
     prevent(event);
     try {
       if (!g.dragging && !startDrag(g, event)) return;

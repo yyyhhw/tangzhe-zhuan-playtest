@@ -14,7 +14,7 @@ const STORAGE = COLLECTION.storage;
 const TD = window.TDCore; let tdOpen = false, tdPort = null, tdGeneration = 0;
 const ZB = window.ZBCore; var zbOpen = false, zbPort = null;
 let cardsOpen=false,cardsPort=null,cardsGeneration=0,cardsCloseTimer=null;
-const CARDS_SHOP=2,CARDS_V='formal-cards-candidate-7';
+const CARDS_SHOP=2,CARDS_V='formal-cards-audio-candidate-8-r3';
 const ZB_SHOP = 0; var zbLastCeo = null, zbRun = null; const zbUsedRuns = new Set();   // 13d：用过的 runId（本页内存），重复 / 过期的 start 不能把旧局重新激活   // 13a：打僵尸 = 烧烤摊（店 0）；zbLastCeo = 最近一次成功结算的上场 CEO（只在内存）
 // 13c：zbRun = 父页开局登记 { runId, ceoId, startedAt, settled }——结算只认这份记录、同一局只结一次；中途调岗不要求仍在任
 const SAVE_KEY = COLLECTION.keys.main, BAK_KEY = COLLECTION.keys.backup, LOCK_KEY = COLLECTION.keys.tab;
@@ -143,14 +143,15 @@ function audioInit() {
   AU.bgm = AU.ctx.createGain(); AU.bgm.gain.value = 0.09; AU.bgm.connect(AU.master);
   AU.sfx = AU.ctx.createGain(); AU.sfx.gain.value = 0.5; AU.sfx.connect(AU.master);
   AU.master.gain.value = state.muted ? 0 : 1;
+  AU.recorded=TzzLoopMusic.create({context:AU.ctx,output:AU.bgm,url:new URL('audio/hot-springs-town.mp3',document.baseURI),isAllowed:()=>!state.muted&&!frozen&&!tdOpen&&!cardsOpen&&!zbOpen});
 }
-function audioUnlock() { if (cardsOpen) return; // 只能在用户手势里调用（iOS）
+function audioUnlock() { if (cardsOpen || tdOpen || zbOpen) return; // 只能在用户手势里调用（iOS）
   audioInit(); if (!AU.ctx) return;
   if (AU.ctx.state !== 'running' && !document.hidden && !state.muted) AU.ctx.resume().catch(() => {});
-  if (!AU.started) { AU.started = true; startBgm(); }
+  if (!AU.started) { AU.started = true; startBgm(); } else AU.recorded?.retry();
 }
 function audioPause() { if (AU.ctx && AU.ctx.state === 'running') AU.ctx.suspend().catch(() => {}); stopBgm(); }
-function audioResume() { if (!AU.ctx || state.muted || document.hidden || frozen || tdOpen || cardsOpen) return; AU.ctx.resume().catch(() => {}); if (AU.started) startBgm(); }
+function audioResume() { if (!AU.ctx || state.muted || document.hidden || frozen || tdOpen || cardsOpen || zbOpen) return; AU.ctx.resume().catch(() => {}); if (AU.started) startBgm(); }
 function tone(f, t, dur, type = 'sine', vol = 0.3, dest = AU.sfx, f2) {
   const c = AU.ctx, o = c.createOscillator(), g = c.createGain();
   o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
@@ -178,8 +179,8 @@ function sfx(name) {
 const N = s => 440 * Math.pow(2, (s - 69) / 12);
 const CHORDS = [[48, 55, 64], [45, 52, 60], [41, 48, 57], [43, 50, 59]];
 const MEL = [72, 0, 74, 76, 0, 79, 76, 0, 74, 0, 72, 74, 0, 0, 69, 0, 72, 0, 74, 76, 0, 81, 79, 0, 76, 0, 74, 72, 0, 0, 0, 0];
-function startBgm() { if (AU.timer || !AU.ctx) return; AU.nextT = AU.ctx.currentTime + 0.1; AU.timer = setInterval(scheduleBgm, 120); }
-function stopBgm() { if (AU.timer) { clearInterval(AU.timer); AU.timer = null; } }
+function startBgm() { AU.recorded?.start(); }
+function stopBgm() { AU.recorded?.stop(); }
 function scheduleBgm() {
   if (!AU.ctx || AU.ctx.state !== 'running') return;
   const spb = 0.2;
@@ -2562,7 +2563,7 @@ window.__tzz = { upgradeGate, TEST_MODE, TEST_LV, SAVE_KEY, BAK_KEY, get saveBlo
   forceSupers() { for (const k in superNext) superNext[k] = 0; updateSupers(); renderTab(); },
   get big() { return order; }, get order() { return order; }, get special() { return special; }, get guests() { return guests; },
   hitBig, modalOpen, closeModal, get frozen() { return frozen; },
-  audioState() { return AU.ctx ? AU.ctx.state : 'none'; }, showPreview, openAssign, JOB_ART, jobShown, jobURL, showJobArt,
+  musicStatus() { return AU.recorded?.status || null; }, audioState() { return AU.ctx ? AU.ctx.state : 'none'; }, showPreview, openAssign, JOB_ART, jobShown, jobURL, showJobArt,
   HOME_ART, FURN_ART, FURN_UP, homeAct, homeAdvanceActor, homeDrawActor, homeOwner, get homeWho() { return homeWho; }, get homeSub() { return homeSub; }, get homeMode() { return homeMode; }, set homeMode(v) { homeMode = v === 'decor' ? 'decor' : 'live'; }, get homeSel() { return homeSel; }, get homeDrag() { return homeDrag; }, homeActor, LIVE_LINES, homeUndo, resize, get canvasSize() { return { W, H }; }, pet: petHooks, pets: petsHooks, lookOf, drawPerson, drawHead, LOOKS, get bubble() { return bubble; } };
 /* ================= 科技公司塔防：与主钱包同一存档、同一原子交易 ================= */
 function tdCard() {

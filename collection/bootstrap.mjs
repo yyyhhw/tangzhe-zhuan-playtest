@@ -32,7 +32,7 @@ async function launch() {
     const memory=new Map();
     const coordinator=createSaveCoordinator({storage:{getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v)},economy:E,model:createApprovedTrialModel(TRIAL_CONFIG,{schemaVersion:1,approvedConfigCanonical:canonical(TRIAL_CONFIG),evidenceRefs:APPROVAL_EVIDENCE,walletBridgeApproved:false}),ownsLock:()=>true});
     window.FormalCollectionRuntime={keys:KEYS,storage:{getItem:()=>null,setItem:()=>{}},coordinator,ownsLock:()=>true,entryEnabled:false};
-    await import(new URL(location.pathname.includes('/pet/game/')?'../pet/game/app.js?v=formal-cards-candidate-7':'../app.js?v=formal-cards-candidate-7',import.meta.url));return;
+    await import(new URL(location.pathname.includes('/pet/game/')?'../pet/game/app.js?v=formal-cards-candidate-7':'../app.js?v=formal-cards-audio-candidate-8-r3',import.meta.url));return;
   }
   if(!navigator.locks?.request){notice('SAFE_WEB_LOCK_UNAVAILABLE');return;}
   if(!crypto?.subtle||!crypto?.getRandomValues){notice('SECURE_CONTEXT_REQUIRED');return;}
@@ -75,7 +75,7 @@ async function launch() {
     window.FormalCollectionRuntime={entryEnabled:CARDS_ENTRY_ENABLED,keys:KEYS,storage:scopedStorage(),coordinator,model,qa,ownsLock:()=>ownsLock,handle:null};
     document.getElementById('collectionStartup')?.remove();
     if(qa){const badge=document.createElement('div');badge.textContent='QA 独立测试存档 · 不读写实际经营存档';badge.style.cssText='position:fixed;top:0;left:0;right:0;z-index:70;background:#ffdf6c;color:#141414;text-align:center;font:12px/1.5 system-ui';document.body.append(badge);}
-    await import(new URL(location.pathname.includes('/pet/game/')?'../pet/game/app.js?v=formal-cards-candidate-7':'../app.js?v=formal-cards-candidate-7',import.meta.url));
+    await import(new URL(location.pathname.includes('/pet/game/')?'../pet/game/app.js?v=formal-cards-candidate-7':'../app.js?v=formal-cards-audio-candidate-8-r3',import.meta.url));
     const host=createCollectionHost({coordinator,model,economy:E,getState:()=>window.__tzz.state,replaceState:s=>window.__tzz.collectionReplaceState(s),flush:()=>window.__tzz.persist(),enabled:WALLET_BRIDGE_APPROVED,randomInt:n=>secureRandomInt(crypto,n),makeId:()=>`tx:${crypto.randomUUID()}`});
     window.FormalCollectionRuntime.handle=message=>host.handle(message);
     window.FormalCollectionRuntime.snapshot=()=>host.snapshot();

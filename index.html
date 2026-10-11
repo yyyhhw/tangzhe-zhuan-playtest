@@ -95,7 +95,7 @@
 <div id="toast" class="hidden"></div>
 <script>
 /* 版本自检：App 内置浏览器 / 主屏图标可能缓存旧的 index.html。拿最新版本号，比本页新就带版本号重开一次（只重开一次，不会死循环） */
-(function(){var B='formal-cards-candidate-7';try{fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(j){if(!j||!j.v)return;if(String(j.v)===B){try{sessionStorage.removeItem('tzz-reload-'+B);}catch(e){}try{sessionStorage.removeItem('tzz-reload-path:'+location.pathname.replace(/\/index\.html$/,'/')+':'+B);}catch(e){}return;}var k='tzz-reload-path:'+location.pathname.replace(/\/index\.html$/,'/')+':'+j.v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');var q=location.search.replace(/^\?/,'').split('&').filter(function(x){return x&&x.split('=')[0]!=='v'});q.unshift('v='+j.v);location.replace(location.pathname+'?'+q.join('&')+location.hash);}).catch(function(){});}catch(e){}})();
+(function(){var B='formal-cards-audio-candidate-8-r3';try{fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(j){if(!j||!j.v)return;if(String(j.v)===B){try{sessionStorage.removeItem('tzz-reload-'+B);}catch(e){}try{sessionStorage.removeItem('tzz-reload-path:'+location.pathname.replace(/\/index\.html$/,'/')+':'+B);}catch(e){}return;}var k='tzz-reload-path:'+location.pathname.replace(/\/index\.html$/,'/')+':'+j.v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');var q=location.search.replace(/^\?/,'').split('&').filter(function(x){return x&&x.split('=')[0]!=='v'});q.unshift('v='+j.v);location.replace(location.pathname+'?'+q.join('&')+location.hash);}).catch(function(){});}catch(e){}})();
 </script>
 <script src="zombie/zbcore.js?v=15c"></script>
 <script src="td/tdcore.js?v=15c"></script>
@@ -114,6 +114,7 @@
 <script src="home-interaction.js?v=15c"></script>
 <script src="pet/game/petgame.js?v=15c"></script>
 <script src="upgrade-snapshot.js?v=15c"></script>
-<script type="module" src="collection/bootstrap.mjs?v=formal-cards-candidate-7"></script>
+<script src="audio/loop-music.js?v=formal-cards-audio-candidate-8-r3"></script>
+<script type="module" src="collection/bootstrap.mjs?v=formal-cards-audio-candidate-8-r3"></script>
 </body>
 </html>

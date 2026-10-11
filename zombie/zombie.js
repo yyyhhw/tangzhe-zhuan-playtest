@@ -96,7 +96,7 @@ let hostMute = false, userMute = false;   // hostMute = 经营页静音开关；
 // 背景乐只在真正开打、没暂停、页面在前台、没静音时响
 function bgmOk() { return !hostMute && !userMute && !!G && !G.over && !G.pendStart && !paused && !document.hidden; }
 function bgmTry() { if (bgmOk()) SFX.startBgm(diff()); }
-function applyMute() { SFX.setMuted(hostMute || userMute); bgmTry(); $('#sndBtn').textContent = userMute ? '声音：关' : '声音：开'; }
+function applyMute() { SFX.setMuted(hostMute || userMute); bgmTry(); $('#sndBtn').textContent = hostMute ? '经营页已静音' : userMute ? '声音：关' : '声音：开'; }
 function onState(d) {
   if (!d || d.zb !== 'state') return;
   pend = false; proto.coins = Math.max(0, fin(d.coins, 0)); proto.blocked = !!d.blocked; Object.assign(proto, ZB.norm(d.z)); proto.ceo = ZB.heroOf('ceo' in d ? d.ceo : undefined); proto.ready = true;

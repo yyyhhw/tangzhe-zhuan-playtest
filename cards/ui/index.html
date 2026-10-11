@@ -15,13 +15,14 @@
   <link rel="stylesheet" href="./readable-effects.css?v=formal-cards-candidate-7">
   <link rel="stylesheet" href="./weapon-hud.css?v=formal-cards-candidate-7">
 <link rel="stylesheet" href="./hand-flow.css?v=formal-cards-candidate-7">
+  <link rel="stylesheet" href="./action-hints.css?v=formal-cards-audio-candidate-8-r3">
 </head>
 <body>
   <main id="app">
     <header class="topbar">
       <div class="brand"><h1>书页之间 <span>卡牌对战</span></h1></div>
       <div id="turn-bar" class="turn-bar" aria-live="polite"></div>
-      <div class="top-actions"><button id="exit-embed" class="quiet" hidden>返回</button><button id="pause" class="quiet">暂停</button><button id="menu-open" class="quiet" aria-haspopup="dialog">菜单</button></div>
+      <div class="top-actions"><button id="exit-embed" class="quiet" hidden>返回</button><button id="pause" class="quiet" hidden>继续</button><button id="menu-open" class="quiet" aria-haspopup="dialog">设置</button></div>
     </header>
     <div id="last-action-status" class="last-action-status" role="status" aria-live="polite" aria-atomic="true" hidden></div>
     <button id="recent-open" class="recent-open quiet" aria-haspopup="dialog" disabled><span>最近出牌</span></button>
@@ -35,6 +36,7 @@
       <div id="hand-browser-nav" hidden><button id="hand-prev" aria-label="查看前面的手牌">←</button><span>完整卡牌 · 左右滑动 · 点牌后再确认</span><button id="hand-next" aria-label="查看后面的手牌">→</button></div>
       <div id="aim-guide" role="status" hidden></div><svg id="aim-arrows" aria-hidden="true"></svg>
       <div id="hand" class="hand" aria-label="我的手牌"></div>
+      <div id="placement-slots" aria-label="选择随从上场位置"></div>
       <aside class="battle-rail" aria-label="法力与回合操作">
         <div id="mana-rail" class="mana-rail" aria-live="polite"></div>
         <button id="hand-count" class="hand-count quiet" aria-expanded="false" aria-controls="hand">手牌 ↑</button>
@@ -55,17 +57,17 @@
     <div class="rotate-prompt" role="status"><span aria-hidden="true">↻</span><strong>横过手机，展开战场</strong><p>菜单、存档和返回仍可使用。对局已暂停。</p></div>
   </main>
   <dialog id="menu-dialog" aria-labelledby="menu-title">
-    <div class="dialog-heading"><h2 id="menu-title">对局菜单</h2><button data-close="menu-dialog" class="icon-button" aria-label="关闭菜单">×</button></div>
+    <div class="dialog-heading"><h2 id="menu-title">对局设置</h2><button data-close="menu-dialog" class="icon-button" aria-label="关闭设置">×</button></div>
     <div class="snapshot-actions"><button id="new-game" class="primary">新对局</button><button id="snapshot-open" class="quiet">存档与回放</button></div>
     <p class="prototype-note">对局进度逐步保存在当前浏览器；牌册抽卡会消耗经营金币，合成会消耗星尘。</p>
     <p id="rules-label"></p>
-    <p class="dialog-note">点选手牌，再点绿色己方战场或绿色目标使用；拖动可攻击的角色到合法目标上攻击。拖回手牌、松开在无效位置或旋转屏幕均取消。无目标法术与武器再点确认使用。选牌本身不会出牌。</p>
+    <p class="dialog-note">点选手牌，再点绿色己方战场或轮廓目标使用（敌方红色、我方绿色）；拖动可攻击的角色到合法目标上攻击。拖回手牌、松开在无效位置或旋转屏幕均取消。无目标法术与武器再点确认使用。选牌本身不会出牌。</p>
     <details class="event-log"><summary>对局记录 <span id="revision-label"></span></summary><ol id="log"></ol></details>
     <details class="version-details"><summary>版本详情</summary><p>已接入 39 / 83 张目录卡：中立 25、战士 4、法师 4、圣骑士 4、术士 2，以及 2 张现有衍生牌。固定 30 张牌组，每张最多 2 张。未验证完整规则或职业平衡。</p></details>
   </dialog>
   <dialog id="recent-dialog" aria-labelledby="recent-title">
     <div class="dialog-heading"><h2 id="recent-title">最近出牌</h2><button data-close="recent-dialog" class="icon-button" aria-label="关闭最近出牌">×</button></div>
-    <p class="dialog-note">仅显示本次打开对局后已打出的最近 8 张牌。对局已暂停，关闭后点「继续」。</p>
+    <p class="dialog-note">仅显示本次打开对局后已打出的最近 8 张牌。查看期间对局照常进行。</p>
     <div id="recent-cards" class="recent-cards"></div>
   </dialog>
   <dialog id="detail-dialog" aria-labelledby="detail-title">
@@ -112,7 +114,7 @@
     <div class="snapshot-actions"><button id="save-retry" class="primary">重试保存</button><button id="save-restore" class="quiet">回到最后成功档</button><button id="save-download" class="quiet">下载快照</button><button id="save-finish" class="quiet" hidden>结束游戏…</button><button id="save-exit" class="quiet" hidden>仍要退出</button></div>
   </dialog>
   <noscript><p>游戏需要启用 JavaScript。</p></noscript>
-  <script type="module" src="./app.mjs?v=formal-cards-candidate-7"></script>
+  <script type="module" src="./app.mjs?v=formal-cards-audio-candidate-8-r3"></script>
 </body>
 </html>
 

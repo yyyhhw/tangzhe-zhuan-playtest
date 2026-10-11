@@ -1,4 +1,4 @@
-// 塔防音效（从现有 zbsfx 合成器派生）：全部 WebAudio 现场合成，不加载音频文件。iPhone 要在点按里 unlock() 才能出声；静音跟经营页（state.muted）或暂停页开关。
+// 塔防音效（从现有 zbsfx 合成器派生）：短音效 WebAudio 现场合成，BGM 加载 audio/CREDITS.md 记录的 CC0 曲目。iPhone 要在点按里 unlock() 才能出声；静音跟经营页（state.muted）或暂停页开关。
 (function () {
   'use strict';
   const BPM_MIN = 100, BPM_MAX = 150;
@@ -11,10 +11,12 @@
       try { S.ctx = new C(); } catch (e) { return; }
       S.master = S.ctx.createGain(); const limiter = S.ctx.createDynamicsCompressor(); limiter.threshold.value = -18; limiter.knee.value = 12; limiter.ratio.value = 8; limiter.attack.value = .003; limiter.release.value = .15; S.master.connect(limiter); limiter.connect(S.ctx.destination); S.master.gain.value = S.muted || S.paused ? 0 : .7;
       S.music = S.ctx.createGain(); S.music.gain.value = 0.16; S.music.connect(S.master);
+      S.recorded=TzzLoopMusic.create({context:S.ctx,output:S.music,url:new URL('../audio/tower-defense-theme.mp3',document.baseURI),isAllowed:()=>!S.muted&&!S.paused&&S.on});
       S.sfx = S.ctx.createGain(); S.sfx.gain.value = 0.32; S.sfx.connect(S.master);
       const n = S.ctx.sampleRate; S.noiseBuf = S.ctx.createBuffer(1, n, n); const d = S.noiseBuf.getChannelData(0); for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
     }
     if (S.ctx.state !== 'running' && !S.muted && !document.hidden) S.ctx.resume().catch(() => {});
+    S.recorded?.retry();
   }
   function setMuted(m) { S.muted = !!m; if (S.master) S.master.gain.value = S.muted || S.paused ? 0 : .7; if (S.muted) stopBgm(); }
   // 同一种声音最短间隔，免得一帧几十下打击声糊成一片
@@ -70,8 +72,8 @@
       S.step++; S.next += spb;
     }
   }
-  function startBgm(d) { setTempo(d); if (S.on || S.muted) return; S.on = true; S.next = 0; clearInterval(S.timer); S.timer = setInterval(tick, 40); tick(); }
-  function stopBgm() { S.on = false; clearInterval(S.timer); S.timer=0; for(const voice of S.voices){try{voice.stop();}catch(e){}} S.voices.clear(); }
+  function startBgm(d) { setTempo(d); if (S.on || S.muted) return; S.on = true; S.recorded?.start(); }
+  function stopBgm() { S.on = false; S.recorded?.stop(); clearInterval(S.timer); S.timer=0; for(const voice of S.voices){try{voice.stop();}catch(e){}} S.voices.clear(); }
   document.addEventListener('visibilitychange', () => { if (!S.ctx) return; if (document.hidden) S.ctx.suspend().catch(() => {}); else if (!S.muted) S.ctx.resume().catch(() => {}); });
   window.ZBSfx = Object.assign(sfx, { unlock, setMuted, setPaused, startBgm, stopBgm, newTrack, TRACKS, setTempo, bpmFor, BPM_MIN, BPM_MAX, state: S });
 })();
