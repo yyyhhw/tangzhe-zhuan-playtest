@@ -209,5 +209,5 @@ export function createSaveCoordinator({storage, economy:E, model, ownsLock, onFa
     const p=parse(actual.raw); if (!p.ok) return p;
     expectedRaw=actual.raw; started=true; failed=null; uncertain=null; return p;
   }
-  return Object.freeze({validateCollection,parse,inspect,adopt,initialize,upgradeConfig,current,commit,reconcile,get raw(){return expectedRaw;},get failed(){return failed;}});
+  return Object.freeze({validateCollection,parse,inspect,adopt,initialize,upgradeConfig,current,commit,reconcile,get raw(){return expectedRaw;},get failed(){return failed;},get maxBytes(){return maxBytes;}});
 }

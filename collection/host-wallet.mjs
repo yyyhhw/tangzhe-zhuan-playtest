@@ -4,7 +4,31 @@ const clone = x => JSON.parse(JSON.stringify(x));
 const idOK = x => typeof x==='string' && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/.test(x) && !['__proto__','prototype','constructor'].includes(x);
 const fail = code => ({ok:false,code});
 const same = (a,b) => canonical(a)===canonical(b);
-export function createCollectionHost({coordinator,model,economy:E,getState,replaceState,flush,enabled=false,randomInt,makeId}) {
+export const CAPACITY_MARGIN_BYTES = 8192;
+export const CAPACITY_FALLBACK_RESERVE_BYTES = 32768;
+/**
+ * Capacity guard: before BEGIN, dry-run the WHOLE transaction (BEGIN→DECIDE→SELECT→RECORD_DEBIT→COMMIT receipt
+ * →request binding→ack) on a clone with worst-case tickets, and require the final save to fit maxBytes with margin.
+ * Pure: never writes, never touches RNG, never changes prices. Recovery/resume/ack of existing transactions is NOT gated.
+ */
+export function reserveFor({state,model,request,txId,requestId,maxBytes,marginBytes=CAPACITY_MARGIN_BYTES}) {
+  const base=JSON.stringify(state).length, sizes=[];
+  const finish=(collection)=>{const s=clone(state);s.collection=collection;s.rev=(s.rev||0)+1;s.collectionHost.requests[requestId]={txId,requestCanonical:canonical(request)};s.collectionHost.acknowledged[txId]=true;return JSON.stringify(s).length;};
+  const step=(c,type,extra={})=>model.reduce(c,{type,txId,eventId:`${txId}:${type}`,expectedRevision:c.revision,...extra});
+  const decide={decision:'continue',allowDustOverflow:true,suppressFutureOverflowWarnings:false};
+  const variants=[];
+  if(request.kind==='draw'){let start=0;for(const r of model.config.rarities){const n=model.config.pool.filter(p=>p.rarity===r.id).length;for(const golden of [0,model.config.probabilityScale-1])variants.push({rarity:start,card:Math.max(0,n-1),golden});start+=r.weight;}}
+  else variants.push(null);
+  for(const tickets of variants){try{
+    let c=step(state.collection,'BEGIN',{request});c=step(c,'DECIDE',decide);
+    if(tickets){c=step(c,'SELECT',{tickets});c=step(c,'RECORD_DEBIT',{walletReceipt:{schemaVersion:1,debitId:`debit:${txId}`,intent:model.walletIntent(c,txId),walletRevision:Number.MAX_SAFE_INTEGER}});}
+    c=step(c,'COMMIT');sizes.push(finish(c));
+  }catch{}}
+  const finalBytes=sizes.length?Math.max(...sizes):base+CAPACITY_FALLBACK_RESERVE_BYTES;
+  const needed=finalBytes+marginBytes;
+  return {ok:needed<=maxBytes,usedBytes:base,reserveBytes:needed-base,neededBytes:needed,maxBytes,estimated:sizes.length>0};
+}
+export function createCollectionHost({coordinator,model,economy:E,getState,replaceState,flush,enabled=false,randomInt,makeId,capacityMarginBytes=CAPACITY_MARGIN_BYTES}) {
   const preparedCache=new Map();
   const freshId=() => { const id=makeId(); if(!idOK(id)) throw Error('INVALID_HOST_ID'); return id; };
   const step=(state,type,txId,extra={})=>model.reduce(state,{type,txId,eventId:`${txId}:${type}`,expectedRevision:state.revision,...extra});
@@ -30,12 +54,14 @@ export function createCollectionHost({coordinator,model,economy:E,getState,repla
     if(tx.stage!=='selected')return fail('INVALID_PREPARED_STATE');
     const price=tx.request.kind==='draw'?model.config.drawPriceGold:0;
     if(state.coins<price)return fail('INSUFFICIENT_FUNDS');
+    let saveCode=null;
     const result=E.transact(state,{price,apply:draft=>{
       let next=draft.collection;
       if(tx.request.kind==='draw')next=step(next,'RECORD_DEBIT',txId,{walletReceipt:{schemaVersion:1,debitId:`debit:${txId}`,intent:model.walletIntent(next,txId),walletRevision:state.rev+1}});
       next=step(next,'COMMIT',txId); draft.collection=next; return {ok:true};
-    },save:draft=>coordinator.commit(draft,{allowCollectionChange:true})});
-    if(!result.ok)return fail(coordinator.failed||'WRITE_FAILED');
+    },save:draft=>{const r=coordinator.commit(draft,{allowCollectionChange:true});if(!r.ok)saveCode=r.code;return r;}});
+    // E.transact restores state in place on any failure: no debit is kept, tx stays PREPARED for resume.
+    if(!result.ok)return fail(coordinator.failed||saveCode||'WRITE_FAILED');
     replaceState(clone(state)); preparedCache.delete(txId);return committed(state.collection,txId);
   }
   function selectTickets() {
@@ -78,7 +104,9 @@ export function createCollectionHost({coordinator,model,economy:E,getState,repla
         if(c.activeTxId)return fail('ACTIVE_TRANSACTION_PENDING');
         const quote=model.quote(c,request);
         if(state.coins<quote.goldCost)return fail('INSUFFICIENT_FUNDS');
-        const txId=freshId(); state.collection=step(c,'BEGIN',txId,{request});
+        const txId=freshId();
+        const cap=reserveFor({state,model,request,txId,requestId:message.requestId,maxBytes:coordinator.maxBytes,marginBytes:capacityMarginBytes});
+        if(!cap.ok)return {ok:false,code:'CAPACITY_LIMIT_REACHED',capacity:cap}; state.collection=step(c,'BEGIN',txId,{request});
         h.requests[message.requestId]={txId,requestCanonical};
         const saved=save(state);return saved.ok?{ok:true,txId,quote,...snapshot()}:saved;
       }
@@ -116,7 +144,25 @@ export function createCollectionHost({coordinator,model,economy:E,getState,repla
       return transactPrepared(tx.txId);
     } catch(error){return fail(typeof error?.message==='string'?error.message:'HOST_ERROR');}
   }
-  return Object.freeze({handle,snapshot});
+  /** Hanging-transaction recovery (parent-side, not an iframe command). Never decides for the player, never re-rolls. */
+  function recoverPending() {
+    try {
+      if(coordinator.failed==='COMMIT_UNCERTAIN'){const r=coordinator.reconcile();if(!r.ok)return r;replaceState(clone(r.state));}
+      const loaded=read();if(!loaded.ok)return loaded;
+      const c=model.restore(loaded.state.collection);
+      if(!c.activeTxId)return {ok:true,recovered:false,reason:'NO_PENDING'};
+      const tx=c.transactions[c.activeTxId];
+      if(tx.stage==='awaiting-decision')return {ok:true,recovered:false,txId:tx.txId,needsDecision:true};
+      if(enabled!==true)return fail('WALLET_BRIDGE_DISABLED');
+      const out=transactPrepared(tx.txId);
+      return out.ok?{...out,recovered:true,txId:tx.txId}:out;
+    } catch(error){return fail(typeof error?.message==='string'?error.message:'HOST_ERROR');}
+  }
+  function capacity(request={kind:'draw'}) {
+    const loaded=read();if(!loaded.ok)return loaded;
+    return {ok:true,...reserveFor({state:loaded.state,model,request,txId:'capacity:probe',requestId:'capacity:probe',maxBytes:coordinator.maxBytes,marginBytes:capacityMarginBytes})};
+  }
+  return Object.freeze({handle,snapshot,recoverPending,capacity});
 }
 
 /** Rejection sampling prevents modulo bias; parent calls it only after Continue. */
