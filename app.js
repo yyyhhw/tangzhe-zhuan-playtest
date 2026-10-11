@@ -64,6 +64,10 @@ function persist() {
   const r=COLLECTION.coordinator.commit(state);
   if (r.ok) { lastGood=COLLECTION.coordinator.raw; return true; }
   if (COLLECTION.coordinator.failed) { saveBlocked=true; showCollectionProtection(r.code); }
+  else if (r && typeof r.code === 'string' && r.code.startsWith('CAPACITY_') && (!persist.capNoteAt || Date.now() - persist.capNoteAt > 60000)) {
+    persist.capNoteAt = Date.now();   // 容量拒绝不是故障（failed 不设置）：给明确提示，内存进度保留，不要刷新
+    toast(r.code === 'CAPACITY_ACK_RESERVED' ? '存档空间留给了待查看的抽卡结果：经营进度这次没存上。请先到卡牌收藏查看结果，不要刷新页面。' : '存档空间已满：经营进度这次没存上。请不要刷新页面，以免丢失未保存的进度。', 4000);
+  }
   return false;
 }
 

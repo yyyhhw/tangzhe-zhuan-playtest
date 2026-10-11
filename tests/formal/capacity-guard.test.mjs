@@ -236,3 +236,27 @@ test('R2#4 the former +8 code-unit counterexample is covered with margin 0',()=>
   const fin=JSON.parse(JSON.stringify(st));fin.collection=c;fin.coins-=PRICE;fin.rev+=6;fin.collectionHost.requests[REQ]={txId:TX,requestCanonical:canonical({kind:'draw'})};fin.collectionHost.acknowledged[TX]=true;
   const actual=JSON.stringify(fin).length;assert(actual<=est.neededBytes,`actual ${actual} est ${est.neededBytes}`);console.log('former +8 case: actual',actual,'estimate',est.neededBytes);
 });
+test('R2 15:47: NO-ADOPT ack with dirty business memory — ack succeeds on durable save, dirty progress kept in memory',()=>{
+  const LIMIT=2097152;const t=setup({maxBytes:LIMIT});const r=t.draw(1);assert(r.ok);const paid=t.state.coins;const diskBefore=t.c.raw;
+  t.state.futureCompatibleField='';const overhead=JSON.stringify(t.state).length;t.state.futureCompatibleField='x'.repeat(LIMIT-10-overhead);t.state.taps=777;
+  const refused=t.c.commit(t.state);assert.equal(refused.code,'CAPACITY_ACK_RESERVED');assert.equal(t.c.raw,diskBefore);assert.equal(t.c.failed,null);
+  // same dirty memory, no adopt / reload
+  const ack=t.cmd('acknowledge','a1',{txId:r.txId});assert(ack.ok,JSON.stringify(ack).slice(0,200));assert.equal(ack.ackedOnDurable,true);assert.equal(ack.businessUnsaved,true);
+  assert.equal(t.c.current().state.collectionHost.acknowledged[r.txId],true);assert.equal(t.c.current().state.coins,paid);
+  assert.equal(t.state.taps,777);assert.equal(t.state.futureCompatibleField.length,LIMIT-10-overhead);assert.equal(t.state.collectionHost.acknowledged[r.txId],true);
+  assert.equal(t.state.rev,t.c.current().state.rev);
+  assert(t.cmd('acknowledge','a2',{txId:r.txId}).replay);
+});
+test('app.persist shows an explicit capacity toast for non-fault CAPACITY_* refusals',()=>{
+  const src=fs.readFileSync(new URL('../../app.js',import.meta.url),'utf8');assert(src.includes("r.code.startsWith('CAPACITY_')"));assert(src.includes('不要刷新页面'));
+});
+test('verified-state cache: second restore of the same reloaded 80-tx text is fast; any text change is fully re-validated',()=>{
+  const c=history(80);const text=JSON.stringify(c);assert(text.length>32768);
+  let t=performance.now();const first=model.restore(JSON.parse(text));const cold=performance.now()-t;
+  t=performance.now();const second=model.restore(JSON.parse(text));const warm=performance.now()-t;
+  assert.deepEqual(JSON.parse(JSON.stringify(second)),JSON.parse(JSON.stringify(first)));assert(Object.isFrozen(second));
+  console.log('restore 80 reloaded cold/warm ms',cold.toFixed(0),warm.toFixed(1));assert(warm<50,`warm ${warm}`);
+  const bad=JSON.parse(text);bad.dust=bad.dust+1;assert.throws(()=>model.restore(bad),/STATE_REPLAY_MISMATCH|DUST|MISMATCH/);
+  const bad2=JSON.parse(text);const anyTx=Object.values(bad2.transactions).find(x=>x.receipt);anyTx.receipt.goldSpent=0;assert.throws(()=>model.restore(bad2));
+  assert.equal(model.restore(JSON.parse(text)),second);
+});

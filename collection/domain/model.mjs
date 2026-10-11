@@ -65,8 +65,21 @@ function createModel(config, mode) {
   function createState(genesis) { return makeInitial(genesis); }
 
   /** Replay-check all persisted fields, including outcomes, receipts, consent and revision. */
+  // Verified-state cache (capacity candidate, R2 perf): key = FNV-1a hash of the exact JSON text, and on every hit the full
+  // text is compared, so a hash collision can never return another state. Any change to the text misses the cache and is
+  // fully replay-validated. Cached values are trusted (deep-frozen) states, so callers cannot mutate them.
+  const verifiedCache = new Map(); const VERIFIED_CACHE_MAX = 6; const VERIFIED_CACHE_MIN_CHARS = 32768;   // small states are cheap to replay; keeping them out avoids evicting the big ones
+  function textHash(text) { let h = 0x811c9dc5; for (let i = 0; i < text.length; i++) { h ^= text.charCodeAt(i); h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(16) + ':' + text.length; }
   function restore(input) {
     if (trustedStates.has(input)) return input;
+    let text = null, key = null;
+    try { text = JSON.stringify(input); key = textHash(text); } catch { text = null; }
+    if (key !== null) { const hit = verifiedCache.get(key); if (hit && hit.text === text) return hit.state; }
+    const verified = restoreUncached(input);
+    if (key !== null && text.length >= VERIFIED_CACHE_MIN_CHARS) { verifiedCache.delete(key); verifiedCache.set(key, { text, state: verified }); while (verifiedCache.size > VERIFIED_CACHE_MAX) verifiedCache.delete(verifiedCache.keys().next().value); }
+    return verified;
+  }
+  function restoreUncached(input) {
     canonical(input);
     exact(input, ['schemaVersion','configVersion','configCanonical','genesis','revision','collectionRevision','holdings','dust','preferences','activeTxId','transactions','events'], 'STATE');
     if (input.schemaVersion === 1) throw new Error('LEGACY_STATE_REQUIRES_EXPLICIT_MIGRATION_KEEP_ORIGINAL');
@@ -296,7 +309,9 @@ function createModel(config, mode) {
     next.events.push(clone(command));
     return trusted(next);
   }
-  function reduce(input, command) { return apply(restore(input), command); }
+  function remember(state) { try { const text = JSON.stringify(state); if (text.length < VERIFIED_CACHE_MIN_CHARS) return state; const key = textHash(text); verifiedCache.delete(key); verifiedCache.set(key, { text, state }); while (verifiedCache.size > VERIFIED_CACHE_MAX) verifiedCache.delete(verifiedCache.keys().next().value); } catch {} return state; }
+  // States produced by reduce() are trusted by construction; remembering their text lets the next read of the saved raw hit.
+  function reduce(input, command) { const out = apply(restore(input), command); return trustedStates.has(out) ? remember(out) : out; }
   /** Host must durably save SELECT first, then use the idempotent shared-wallet adapter. */
   function walletIntent(input, txId) {
     const state = restore(input); identifier(txId, 'TX_ID');

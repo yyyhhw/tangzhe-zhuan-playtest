@@ -136,6 +136,7 @@ export function createCollectionHost({coordinator,model,economy:E,getState,repla
         const current=read();if(!current.ok)return current;
         return {ok:true,...model.inspectDeck(current.state.collection,message.cards,message.classId,30),collectionRevision:current.state.collection.collectionRevision};
       }
+      if(message.command==='acknowledge')return acknowledge(message.txId);
       const ready=mutationReady();if(!ready.ok)return ready;
       const state=clone(ready.state), c=model.restore(state.collection), h=state.collectionHost;
       if(message.command==='quote') {
@@ -194,6 +195,29 @@ export function createCollectionHost({coordinator,model,economy:E,getState,repla
       if(decision.decision==='cancel'){preparedCache.delete(tx.txId);return {ok:true,cancelled:true,...snapshot()};}
       return transactPrepared(tx.txId);
     } catch(error){return fail(typeof error?.message==='string'?error.message:'HOST_ERROR');}
+  }
+  /**
+   * Ack never touches coins, so it must not depend on the business flush succeeding (R2 follow-up: a business save refused with
+   * CAPACITY_ACK_RESERVED would otherwise block the very ack that frees the reserve). Ack is applied to the DURABLE save, then
+   * merged into the live (possibly dirty) memory state: unsaved business progress is kept in memory, never discarded.
+   */
+  function acknowledge(txId) {
+    if(enabled!==true)return fail('WALLET_BRIDGE_DISABLED');
+    if(!idOK(txId))return fail('INVALID_TX_ID');
+    const durable=coordinator.current();if(!durable.ok)return durable;
+    const d=clone(durable.state), c=model.restore(d.collection), tx=c.transactions[txId];
+    if(!tx)return fail('UNKNOWN_TX');
+    if(tx.stage!=='committed')return fail('NO_COMMITTED_RECEIPT');
+    if(d.collectionHost.acknowledged[txId])return {ok:true,replay:true,...snapshot()};
+    // Try the normal path first (flush business progress, then ack on top of it).
+    const flushed=flush()===true;
+    if(flushed){const live=clone(getState());live.collectionHost.acknowledged[txId]=true;const saved=save(live);return saved.ok?snapshot():saved;}
+    if(coordinator.failed)return fail(coordinator.failed);
+    d.collectionHost.acknowledged[txId]=true;
+    const saved=coordinator.commit(d,{allowCollectionChange:true});if(!saved.ok)return saved;
+    const live=clone(getState());live.rev=saved.state.rev;live.collectionHost=clone(saved.state.collectionHost);
+    replaceState(live);
+    return {...snapshot(),ackedOnDurable:true,businessUnsaved:true};
   }
   /** Hanging-transaction recovery (parent-side, not an iframe command). Never decides for the player, never re-rolls. */
   function recoverPending() {

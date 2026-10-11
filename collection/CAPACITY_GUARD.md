@@ -51,6 +51,25 @@ maxBytes、余量、预留都按 `JSON.stringify(...).length` 计，单位是 **
 - 代价：存档逼近上限、又有回执没查看时，经营保存会被拒绝，直到玩家查看回执。这是行为变化，请熊大确认能不能接受。
 - 已有的临界档（ack 本身就超出物理上限）仍然返回 CAPACITY_READ_ONLY，**不承诺 ack 能成功**。
 
+### ack 不依赖经营 flush（R2 15:47 闭锁修正）
+- 原来的问题：经营保存因为 CAPACITY_ACK_RESERVED 被拒，内存是脏的；这时 acknowledge 要先走 mutationReady 的 flush，flush 又失败，结果 ack 永远确认不了，形成闭锁。
+- 现在：acknowledge 先尝试正常 flush。flush 失败、但 coordinator 没有进入故障时，把 ack 直接写进**磁盘上的耐久档**（只加 acknowledged 一项），再合并回内存：rev 和 collectionHost 用耐久档的，经营进度保留脏内存里的值，不丢弃、不需要刷新。返回 ackedOnDurable:true、businessUnsaved:true。ack 不碰金币，所以跳过 flush 是安全的。
+- 主页面 app.persist：收到 CAPACITY_*（不是故障，不会设置 failed）时，弹出明确提示（最多每 60 秒一次），提醒先去查看回执、不要刷新。saveBlocked 不变，自动保存会继续重试。
+- 如果经营数据本身已经超过物理上限，ack 之后经营保存仍然会失败（CAPACITY_READ_ONLY）。这是真的满了，不是预留造成的闭锁，提示会一直显示。
+
+## 读档缓存（已校验状态）
+- model.restore 加了缓存：键是 JSON 原文的 FNV-1a 哈希加长度；命中时**再逐字比较全文**，所以哈希碰撞也不会返回别的状态。原文只要有一个字符不同就不命中，走完整重放校验。缓存的是冻结的可信状态，最多 6 份，只缓存 ≥32768 字符的状态（小状态重放本来就便宜，也避免预估用的代理档把大状态挤出去）。
+- model.reduce 产出的可信状态会记下自己的原文，所以写盘之后下一次读档能直接命中。
+- 端到端实测（熊大的 sample-80，每个请求都从 coordinator JSON 重新读档；Node，云端）：
+  | 请求 | 旧 | 新 |
+  |---|---|---|
+  | snapshot | 9,569ms | 32ms |
+  | quote | 55,381ms | 270ms |
+  | confirm（抽卡+提交） | 89,785ms | 468ms |
+  | acknowledge | 49,876ms | 227ms |
+  单次 restore（JSON 重载）：冷启动 2.4–2.5s，命中后 5–7ms。
+- 还剩：每次会话第一次读档（冷启动）仍要完整校验一次，80 笔约 2.4s；一笔交易要 1–2 次大字符串 stringify。另外顺带发现：model 回放校验不检查 eventId 的内容（改 events[i].eventId 仍能通过）。这是原有行为，跟缓存无关，请熊大判断要不要收紧。
+
 ## 容量提示（UI 文案）
 cards/ui/collection.mjs 的 errorText 新增：
 - `CAPACITY_LIMIT_REACHED`：收藏存档空间不够完成这次操作：这次没有开始，没有扣金币。已经抽到的结果仍可继续查看。
