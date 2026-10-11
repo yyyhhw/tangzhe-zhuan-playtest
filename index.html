@@ -91,10 +91,11 @@
 </div>
 <div id="tdOverlay" class="zb-ov hidden"><iframe id="tdFrame" title="机房塔防" src="about:blank"></iframe></div>
 <div id="zbOverlay" class="zb-ov hidden"><iframe id="zbFrame" title="77 打僵尸" src="about:blank"></iframe></div>
+<div id="cardsOverlay" class="zb-ov hidden"><iframe id="cardsFrame" title="书店卡牌" src="about:blank"></iframe></div>
 <div id="toast" class="hidden"></div>
 <script>
 /* 版本自检：App 内置浏览器 / 主屏图标可能缓存旧的 index.html。拿最新版本号，比本页新就带版本号重开一次（只重开一次，不会死循环） */
-(function(){var B='15e-td-campaign-exp1-20261008';try{fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(j){if(!j||!j.v)return;if(String(j.v)===B){try{sessionStorage.removeItem('tzz-reload-'+B);}catch(e){}try{sessionStorage.removeItem('tzz-reload-path:'+location.pathname.replace(/\/index\.html$/,'/')+':'+B);}catch(e){}return;}var k='tzz-reload-path:'+location.pathname.replace(/\/index\.html$/,'/')+':'+j.v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');var q=location.search.replace(/^\?/,'').split('&').filter(function(x){return x&&x.split('=')[0]!=='v'});q.unshift('v='+j.v);location.replace(location.pathname+'?'+q.join('&')+location.hash);}).catch(function(){});}catch(e){}})();
+(function(){var B='formal-cards-candidate-7';try{fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(j){if(!j||!j.v)return;if(String(j.v)===B){try{sessionStorage.removeItem('tzz-reload-'+B);}catch(e){}try{sessionStorage.removeItem('tzz-reload-path:'+location.pathname.replace(/\/index\.html$/,'/')+':'+B);}catch(e){}return;}var k='tzz-reload-path:'+location.pathname.replace(/\/index\.html$/,'/')+':'+j.v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');var q=location.search.replace(/^\?/,'').split('&').filter(function(x){return x&&x.split('=')[0]!=='v'});q.unshift('v='+j.v);location.replace(location.pathname+'?'+q.join('&')+location.hash);}).catch(function(){});}catch(e){}})();
 </script>
 <script src="zombie/zbcore.js?v=15c"></script>
 <script src="td/tdcore.js?v=15c"></script>
@@ -102,8 +103,9 @@
 <script src="td/tdprogress.js?v=15e-td-campaign-exp1-20261008"></script>
 <script src="td/tdcampaign.js?v=15e-td-campaign-exp1-20261008"></script>
 <script src="td/tdcampaign-progress.js?v=15e-td-campaign-exp1-20261008"></script>
-<script src="td/tdhost.js?v=15e-td-campaign-exp1-20261008"></script>
-<script src="economy.js?v=15e-td-campaign-exp1-20261008"></script>
+<script src="td/tdupgrade-receipts.js?v=formal-cards-candidate-7"></script>
+<script src="td/tdhost.js?v=formal-cards-candidate-7"></script>
+<script src="economy.js?v=formal-cards-candidate-7"></script>
 <script src="pet/art.js?v=15c"></script>
 <script src="pet/puppy.js?v=15c"></script>
 <script src="pet/room.js?v=15c"></script>
@@ -112,6 +114,6 @@
 <script src="home-interaction.js?v=15c"></script>
 <script src="pet/game/petgame.js?v=15c"></script>
 <script src="upgrade-snapshot.js?v=15c"></script>
-<script src="app.js?v=15e-td-campaign-exp1-20261008"></script>
+<script type="module" src="collection/bootstrap.mjs?v=formal-cards-candidate-7"></script>
 </body>
 </html>

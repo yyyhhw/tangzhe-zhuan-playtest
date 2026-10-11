@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';
+const engine=process.env.TEST_ENGINE||'chromium',pw=await import(process.env.PLAYWRIGHT_MODULE),b=await pw[engine].launch();const rows=[];
+try{const c=await b.newContext(),old=await c.newPage();
+ await old.route('http://127.0.0.1:8788/**',async route=>{const u=new URL(route.request().url());let rel=decodeURIComponent(u.pathname);if(rel.endsWith('/'))rel+='index.html';const file=path.join('/tmp/formal-baseline',rel);if(fs.existsSync(file)&&fs.statSync(file).isFile())await route.fulfill({body:fs.readFileSync(file),contentType:file.endsWith('.js')?'text/javascript':file.endsWith('.html')?'text/html':file.endsWith('.css')?'text/css':file.endsWith('.json')?'application/json':undefined});else await route.abort();});
+ await old.goto('http://127.0.0.1:8788/?legacy=1');await old.waitForFunction(()=>window.__tzz);assert.equal(await old.evaluate(()=>__tzz.SAVE_KEY),'tangzhe-save');
+ const fresh=await c.newPage();await fresh.goto('http://127.0.0.1:8788/');await fresh.getByRole('button',{name:'同意并继续'}).click();await fresh.waitForFunction(()=>window.__tzz);const original=await fresh.evaluate(()=>localStorage.getItem('tangzhe-formal-collection-v1-original'));rows.push('actual old formal tab remains open during migration');
+ assert.equal(await old.evaluate(()=>{__tzz.closeModal();return __tzz.persist('legacy-test')}),true);
+ assert.equal(await fresh.evaluate(()=>__tzz.persist()),true);assert.equal(await fresh.evaluate(()=>localStorage.getItem('tangzhe-formal-collection-v1-original')),original);rows.push('old and new writers coexist without overwriting new save/original');
+ await fresh.reload();await fresh.waitForFunction(()=>window.__tzz);assert.equal(await fresh.evaluate(()=>__tzz.SAVE_KEY),'tangzhe-formal-collection-v1-save');rows.push('refresh adopts new save despite changed old source');
+ await c.close();
+}finally{await b.close();fs.writeFileSync(`evidence/${engine}-legacy.json`,JSON.stringify(rows,null,2));}console.log(rows);

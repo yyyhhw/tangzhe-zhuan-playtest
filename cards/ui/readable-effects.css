@@ -1,0 +1,31 @@
+/* Surface detail only; original card bounds, fan spacing and cost/stat lanes stay. */
+.hand-card{background:linear-gradient(115deg,#fff9e8,#e8cc97 65%,#c99d59);border-top-color:#ffedb6;border-right-color:#927045;box-shadow:inset 1px 0 #fff6d3,inset -2px -2px #8b633577,2px 4px 6px #30201566}
+.hand-card .card-art,.hand-card .hand-peek{box-shadow:inset 0 0 0 1px #fff4ce,0 1px 3px #2a190c99}
+.hand-mechanisms{position:absolute;z-index:5;left:3px;top:calc(47px + var(--peek-w));width:var(--peek-w);background:#332a20;color:#ffe7a4;border:1px solid #c9a569;border-radius:3px;font-size:10px;line-height:13px;font-weight:700;text-align:center;pointer-events:none}
+.hand.is-expanded .hand-card:not(.selected) .hand-mechanisms{top:59px}
+.hand-mechanism-copy{display:none}
+.hand-card.selected .hand-mechanisms{top:59px;left:36px;width:calc(100% - 41px)}
+.hand-card.selected .hand-mechanism-copy{display:block;position:absolute;left:4px;right:4px;top:80px;z-index:5;padding:4px;background:#fff2d9f5;color:#392a1a;border:1px solid #b99250;border-radius:4px;font-size:11px;line-height:15px;pointer-events:none}
+.mechanism-explanation{padding:8px;background:#f7e8c9;border-left:3px solid #90713d;color:#382819}
+.power-button[data-available="false"]{background:#e2d5bc;color:#4d4232}
+.heavy-impact{position:fixed;inset:-6px;z-index:1500;pointer-events:none!important;display:flex;align-items:flex-start;justify-content:center;padding-top:42px;border:9px solid #e9b755cc;box-shadow:inset 0 0 35px #a93d2677;color:#fff4ce;font-size:16px;font-weight:900;text-shadow:0 2px 3px #30150b,1px 0 2px #30150b}
+@media(prefers-reduced-motion:reduce){.heavy-impact{border-width:3px;box-shadow:none}.hand-card{transition:none}}
+/* Cropped fan cards must not scroll the viewport when keyboard/touch focus moves. */
+@supports(overflow:clip){html,body,#app{overflow:clip}}
+.heavy-impact{padding-top:44dvh;font-size:14px}
+/* Selected reading card widens over the hand, so prose stays inside short screens. */
+.hand-card.selected{width:180px;left:clamp(0px,calc((100% - 29dvh)*var(--hand-index)/var(--fan-divisor)),calc(100% - 180px));bottom:9dvh}
+.hand-card.selected .hand-mechanism-copy{top:75px}
+
+/* R2: local impact on decorative art; no interactive ancestor is translated. */
+.heavy-impact{inset:0;border:4px solid #ffc765bb;box-shadow:inset 0 0 26px #a9472255;display:block;padding:0;overflow:hidden}
+.heavy-hit-ring{position:absolute;border:4px solid #ffe68d;border-radius:28%;box-shadow:0 0 15px #ffb944,inset 0 0 12px #ffd269;pointer-events:none}
+.heavy-hit-streak{position:absolute;width:21px;height:4px;background:#fff0aa;box-shadow:0 0 5px #ffb944;border-radius:100%;pointer-events:none}
+.is-heavy-number{border-color:#ffdf78!important;box-shadow:0 0 12px #ffd365!important}
+.combat-damage.is-heavy-number{font-size:19px;font-weight:950;background:#782719;color:#fff6ce;padding:4px 8px}
+@media(prefers-reduced-motion:reduce){.heavy-impact{box-shadow:none;border-width:2px}.heavy-hit-ring{border-width:2px;box-shadow:none}.combat-damage.is-heavy-number{font-size:18px}}
+/* Decorative descendants never enlarge the parent button's pointer hit area. */
+.minion-art,.hero-avatar{pointer-events:none}
+
+.heavy-hit-ring{background:radial-gradient(ellipse,#ffd97655,transparent 70%)}
+@media(prefers-reduced-motion:reduce){.heavy-hit-ring{background:none}}

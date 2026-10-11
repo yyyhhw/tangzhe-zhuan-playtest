@@ -1,0 +1,15 @@
+/* Fixed adjacent status slots, outside HP/armor and the hero hit rectangle. */
+.hero-weapon{position:absolute;display:flex;flex-direction:column;justify-content:center;gap:2px;width:64px;height:44px;padding:3px 4px;border:1px solid #d2ac65;border-radius:7px;background:#392c20;color:#fff0ce;box-shadow:0 2px 3px #23180e55;pointer-events:none;white-space:nowrap;text-align:center;box-sizing:border-box}
+.hero-weapon-title{font:700 10px/12px system-ui;color:#f6d796}
+.hero-weapon-values{display:flex;justify-content:space-between;gap:3px;font:800 16px/20px system-ui;font-variant-numeric:tabular-nums}
+.hero-weapon-values b{display:flex;align-items:center;gap:2px}
+.hero-weapon-values small{font:700 10px/14px system-ui;color:#e3c78d}
+.hero-weapon-values b:last-child{color:#bce6f3}
+.hero-weapon-empty{font:700 10px/16px system-ui;color:#eee0ca}
+.hero-weapon[data-state="broken"]{border-color:#c99678;background:#4d2d24}
+.hero-weapon[data-state="empty"]{border-color:#a29178;background:#41392e}
+.opponent .hero-weapon{left:calc(50% + 85px);top:-24px}
+.opponent .opponent-power-status,.opponent .opponent-hand-count{left:calc(50% + 157px)}
+.player .hero-weapon{left:calc(var(--stage-left) + var(--stage)*.065 + 7dvh + 8px);top:-7dvh}
+@media(forced-colors:active){.hero-weapon,.hero-weapon[data-state]{background:Canvas;color:CanvasText;border:1px solid CanvasText}.hero-weapon-title,.hero-weapon-empty,.hero-weapon-values b,.hero-weapon-values small{color:CanvasText}}
+.player .hero-weapon{width:60px}

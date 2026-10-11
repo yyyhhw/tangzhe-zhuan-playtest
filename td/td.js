@@ -199,7 +199,7 @@ function buyUp(id) {
   if (!T.TOWER_IDS.includes(id)) return false;
   const lv = proto.lv[id]; if (lv >= T.MAX_UP) return false;
   const p = T.price(id, lv); if (!canSpend(p)) return false;
-  if (EMBED) { pend = true; buyRequest = { td:'buy', id, requestId:'b-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2) }; sendBuy(); renderMenu(); return true; }
+  if (EMBED) { pend = true; buyRequest = { td:'buy', id, requestId:'b-' + (globalThis.crypto?.randomUUID ? crypto.randomUUID() : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2)) }; sendBuy(); renderMenu(); return true; }
   localBuy={id,expectedLevel:lv,requestId:'p-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2)};protoTask=purchaseProto();return true;
 }
 function sendBuy() {

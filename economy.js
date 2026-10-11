@@ -1,11 +1,17 @@
 /* 躺着也能赚 — 经济/结算核心 v2（CEO + 员工）。纯函数，不依赖 DOM，浏览器 / Node 通用。 */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory(typeof require === 'function' ? require('./td/tdprogress.js') : undefined, typeof require === 'function' ? require('./td/tdcampaign-progress.js') : undefined);
-  else root.Economy = factory(root.TDProgress, root.TDStageProgress);
-})(typeof self !== 'undefined' ? self : this, function (TDProgress, TDStageProgress) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(typeof require === 'function' ? require('./td/tdprogress.js') : undefined, typeof require === 'function' ? require('./td/tdcampaign-progress.js') : undefined, typeof require === 'function' ? require('./td/tdupgrade-receipts.js') : undefined);
+  else root.Economy = factory(root.TDProgress, root.TDStageProgress, root.TDUpgradeReceipts);
+})(typeof self !== 'undefined' ? self : this, function (TDProgress, TDStageProgress, TDUpgradeReceipts) {
   'use strict';
 
   /* ================= 可调参数（数值都在这里） ================= */
+  let formalCollectionCoordinator = null;
+  function installFormalCollectionProtocol(coordinator) {
+    if (formalCollectionCoordinator && formalCollectionCoordinator !== coordinator) throw Error('COORDINATOR_ALREADY_INSTALLED');
+    if (!coordinator || typeof coordinator.commit !== 'function' || typeof coordinator.validateCollection !== 'function') throw Error('INVALID_COORDINATOR');
+    formalCollectionCoordinator = coordinator;
+  }
   const CFG = {
     SAVE_VERSION: 3,
     UP_GROWTH: 1.33,            // 店铺升级价 = 基础价 × 1.33^等级
@@ -1231,6 +1237,11 @@
   function checkSave(raw) {
     if (!isObj(raw)) return ['save'];
     const bad = [], has = k => raw[k] !== undefined;
+    if (has('collection') || has('collectionHost') || has('_collectionProtocol')) {
+      if (!formalCollectionCoordinator) bad.push('collection-reader-unavailable');
+      else bad.push(...formalCollectionCoordinator.validateCollection(raw));
+    }
+
     // Optional for old saves. Reject damaged TD data instead of silently
     // resetting purchased levels, while leaving all unrelated fields untouched.
     if (has('td')) {
@@ -1244,6 +1255,7 @@
     }
     // Extension validation is strict; old 10-wave data remains untouched.
     if (has('td50')) bad.push(...(TDProgress ? TDProgress.check(raw.td50) : ['td50.module']));
+    if (has('tdUpgradeReceipts')) bad.push(...(TDUpgradeReceipts ? TDUpgradeReceipts.check(raw.tdUpgradeReceipts,raw.td) : ['tdUpgradeReceipts.module']));
     if (has('tdCampaign')) bad.push(...(TDStageProgress ? TDStageProgress.check(raw.tdCampaign) : ['tdCampaign.module']));
     if (has('v') && !(Number.isInteger(raw.v) && raw.v >= 0)) bad.push('v');
     if (!isAmt(raw.coins)) bad.push('coins');
@@ -1340,9 +1352,9 @@
     const mainRev = m.raw && isObj(m.raw) && isAmt(m.raw.rev) ? m.raw.rev : 0;
     // A newer/invalid campaign or td50 extension is read-only. Never replace its wallet
     // with an older backup just because this build cannot understand its rules.
-    if (mBad.some(k => k.startsWith('td50') || k.startsWith('tdCampaign'))) {
+    if (mBad.some(k => k.startsWith('td50') || k.startsWith('tdCampaign') || k.startsWith('tdUpgradeReceipts'))) {
       const campaign = mBad.some(k => k.startsWith('tdCampaign'));
-      const onlyExtension = mBad.every(k => k.startsWith('td50') || k.startsWith('tdCampaign'));
+      const onlyExtension = mBad.every(k => k.startsWith('td50') || k.startsWith('tdCampaign') || k.startsWith('tdUpgradeReceipts'));
       const r = Object.assign(migrate(onlyExtension ? m.raw : null, now), {source:campaign ? 'tdCampaign-protected' : 'td50-protected',bad:mBad,raw:m.raw,mainRev,blocked:true,tdCampaignProtected:campaign,td50Protected:mBad.some(k => k.startsWith('td50')),bakOk:!bBad.length});
       markBlocked(r.st); return r;
     }
@@ -1397,31 +1409,10 @@
   //   ④ 当前主档结构坏（或余额异常）→ 拒绝，原文不动 ⑤ 先把当前好主档整份写进 -bak（写失败 / 读回不一致 → 整次放弃，主档不动）
   //   ⑥ rev + 1 再写主档（失败 → rev 不变，返回失败）。返回 { ok:true, rev } 或 { ok:false, why, stage }
   function commitSave(storage, mainKey, bakKey, st) {
-    if (!storage || !mainKey || !bakKey || mainKey === bakKey) return { ok:false, why:'存档键不对', stage:'args' };
-    if (isBlocked(st)) return { ok:false, why:'存档异常（只读模式），不能保存', stage:'blocked' };
-    const bad = validState(st);
-    if (bad.length) return { ok:false, why:'数据异常（' + bad.slice(0, 3).join('、') + '），没有保存', stage:'validate' };
-    let prev;
-    try { prev = storage.getItem(mainKey); } catch (e) { return { ok:false, why:'读不到存档', stage:'read' }; }
-    let prevRaw = null;
-    if (prev != null && prev !== '') {
-      try { prevRaw = JSON.parse(prev); } catch (e) { prevRaw = undefined; }
-      if (prevRaw !== null && (prevRaw === undefined || checkSave(prevRaw).length)) return { ok:false, why:'当前存档异常，没有覆盖', stage:'main-bad' };
-      if (prevRaw && isAmt(prevRaw.rev) && prevRaw.rev > (st.rev || 0)) return { ok:false, why:'存档已被别的页面更新，请重新读档', stage:'conflict' };
-    }
-    const rev0 = st.rev;
-    st.rev = (isAmt(rev0) ? rev0 : 0) + 1;
-    const json = JSON.stringify(st);
-    let back = null; try { back = JSON.parse(json); } catch (e) {}
-    const cb = back ? checkSave(back) : ['json'];
-    if (cb.length) { st.rev = rev0; return { ok:false, why:'数据异常（' + cb.slice(0, 3).join('、') + '），没有保存', stage:'validate' }; }
-    if (prevRaw) {
-      try { storage.setItem(bakKey, prev); if (storage.getItem(bakKey) !== prev) throw new Error('bak mismatch'); }
-      catch (e) { st.rev = rev0; return { ok:false, why:'备份写入失败，这次没有保存（原存档未改）', stage:'bak' }; }
-    }
-    try { storage.setItem(mainKey, json); if (storage.getItem(mainKey) !== json) throw new Error('main mismatch'); }
-    catch (e) { st.rev = rev0; try { if (storage.getItem(mainKey) !== prev && prev != null) storage.setItem(mainKey, prev); } catch (x) {} return { ok:false, why:'保存失败（存储不可用）', stage:'main' }; }
-    return { ok:true, rev:st.rev };
+    if (!formalCollectionCoordinator || mainKey !== 'tangzhe-formal-collection-v1-save' || bakKey !== 'tangzhe-formal-collection-v1-save-bak') return {ok:false, why:'安全写入协议未就绪', stage:'blocked'};
+    if (isBlocked(st)) return {ok:false, why:'只读存档', stage:'blocked'};
+    const r = formalCollectionCoordinator.commit(st);
+    return r.ok ? r : Object.assign(r, {why:r.code, stage:r.code === 'REVISION_CONFLICT' ? 'conflict' : 'save'});
   }
 
   /* ================= 12b2：测试房间（只给 ?test=homes 用，不读不写真存档） ================= */
@@ -1473,7 +1464,7 @@
   return { CFG, ROCKET_NAME, TYPES, SHOPS, CEOS, CEO_BY_ID, SIGNS, CROSS, ITEMS, ITEM_BY_ID, REGULAR_ITEMS, SUPER_ITEMS, CARD_COUNT, SET_REWARD, MILESTONES,
     SUPER_OF_SHOP, hasSuper, superMult, rushActive, rushMult, startRush, critChance, critMult, portalReward, gachaComplete,
     COIN_CAP:CFG.COIN_CAP, SAFE_COINS:SAFE, normEarned, walletOk, normWallet, balance, overCap, addCoins, spendCoins, canAfford, priceOk, pendingOk,
-    shopMaxLv, empMaxLv, ceoMaxLv, shopMaxed, empMaxed, ceoMaxed, shopBuyCount, checkSave, validState, loadSave, transact, commitSave, isBlocked, markBlocked,
+    installFormalCollectionProtocol, shopMaxLv, empMaxLv, ceoMaxLv, shopMaxed, empMaxed, ceoMaxed, shopBuyCount, checkSave, validState, loadSave, transact, commitSave, isBlocked, markBlocked,
     milestoneMult, nextMilestone, upgradeCost, bulkUpgradeCost, empCost, ceoCost, empMult, shopBase,
     ceoAt, ceoInfo, shopRate, baseRate, onlineRate, offlineRate, rushOnlineRate, boostActive, orderPayout, settleOrder,
     BIG_ORDERS, SPECIAL_GUESTS, specialReward, settleSpecial, specialInterval,

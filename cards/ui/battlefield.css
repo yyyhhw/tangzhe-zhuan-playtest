@@ -1,0 +1,337 @@
+/* Landscape battlefield. UI only: original book-spine art and all rule/save code stay intact. */
+html,body{width:100%;height:100%;overflow:hidden;overscroll-behavior:none}
+body{background:#33291f}
+#app{--rail:84px;max-width:none;width:100%;height:100vh;height:100dvh;display:grid;grid-template-rows:44px minmax(0,1fr) 20px;gap:2px;margin:0;padding:max(2px,env(safe-area-inset-top)) max(4px,env(safe-area-inset-right)) max(2px,env(safe-area-inset-bottom)) max(4px,env(safe-area-inset-left));overflow:hidden;color:#fff4da}
+button{min-width:44px;min-height:44px;touch-action:manipulation}
+.topbar{display:flex;flex-wrap:nowrap;align-items:center;gap:8px;margin:0;min-width:0}
+.brand{flex:none;display:block}.brand h1{font-size:15px;color:#fff1cd;white-space:nowrap;margin:0}.brand h1 span{font-size:9px;padding:2px 4px;color:#ddc69c;background:transparent;border-color:#887454}
+.top-actions{margin:0;gap:4px;flex:none}.top-actions button{min-height:44px;min-width:44px;padding:4px 9px;font-size:12px;color:#fff1cd;border-color:#887454}
+.turn-bar{flex:1;min-width:0;min-height:0;display:block;text-align:center;padding:0;background:none;font-size:11px}.turn-bar span:last-child{display:none}.turn-bar strong{color:#f4d484}
+.table{position:relative;min-width:0;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) var(--rail);grid-template-rows:44px minmax(54px,1fr) 4px minmax(54px,1fr) 44px 82px;overflow:visible;border:2px solid #92744c;border-radius:12px;background:radial-gradient(ellipse at center,#eadfc3 15%,#c9b184 100%);box-shadow:inset 0 0 28px #74533360,0 0 0 2px #251c16}
+.player-bar{grid-column:1;min-width:0;padding:0 8px;display:flex;align-items:center;justify-content:center;gap:8px;background:none;position:relative;flex-wrap:nowrap}.opponent{grid-row:1}.player{grid-row:5}
+.hero-button{min-width:144px;max-width:190px;height:44px;min-height:44px;padding:2px 8px;gap:6px;border-left-width:5px;box-shadow:1px 2px 0 #4c332d55;position:relative;z-index:2}.hero-avatar{width:30px;height:32px;font-size:23px;flex:none}.hero-title{font-size:10px;white-space:nowrap}.hero-stats{font-size:12px;margin-top:0;white-space:nowrap}.hero-button:disabled{opacity:1}
+.player-metadata{position:absolute;left:10px;top:5px;max-width:calc(50% - 110px);font-size:10px;flex:none;overflow:hidden;pointer-events:none}.player-metadata .mana-dots{display:none}.player-metadata .mana-label{font-size:10px;display:block;white-space:nowrap}.resource-line{font-size:9px;line-height:1.3;gap:3px 7px;max-height:25px;overflow:hidden;color:#594735}.resource-line .weapon-status{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.player .player-metadata>.mana-label{display:none}.resource-line span:nth-child(2),.resource-line span:nth-child(3){display:none}
+.power-button{position:absolute;right:8px;top:0;width:76px;max-width:76px;height:44px;min-height:44px;padding:2px 4px;font-size:10px;margin:0;background:#fff3d8}.power-button small{font-size:8px}
+.board,.board:has(.minion:nth-child(6)){grid-column:1;display:flex;align-items:stretch;justify-content:center;min-height:0;min-width:0;padding:4px 10px;gap:6px;overflow:visible}.enemy-board{grid-row:2}.friendly-board{grid-row:4}.table-divider{grid-column:1;grid-row:3;min-width:0;min-height:0;margin:0 12px;padding:0;border:0;border-top:1px solid #a98b5b;justify-content:center;opacity:.7}.table-divider span{font-size:7px;line-height:1;background:#decba4;padding:0 7px;transform:translateY(-50%)}
+.empty-board{font-size:10px;letter-spacing:.12em;color:#796548;pointer-events:none}.friendly-board.drop-ready{border-radius:8px;outline:2px dashed #2f7653;outline-offset:-4px;background:#e7f0cf70;cursor:pointer}.friendly-board.drop-ready .empty-board{color:#225c3d;font-weight:700}
+.minion{flex:0 1 84px;width:84px;min-width:44px;height:100%;min-height:44px;max-height:110px;padding:2px 3px 2px 6px;display:grid;grid-template-rows:12px minmax(0,1fr) 17px;gap:1px;border-radius:11px 11px 6px 6px;border-width:2px;box-shadow:1px 2px 0 #694d3250;touch-action:none;user-select:none;-webkit-user-select:none;position:relative;overflow:hidden}.minion.taunt{border-width:3px}.minion-name{font-size:9px;line-height:12px;min-height:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;z-index:1}.minion-art{grid-row:2;min-height:0;width:100%;height:100%;overflow:hidden;border-radius:7px}.minion-art.original-art img{object-fit:cover;object-position:center 40%}.minion-stats{grid-row:3;margin:0;gap:1px;font-size:12px;align-self:end;z-index:1}.attack-stat,.health-stat{font-size:12px;line-height:15px;padding:0 3px;border:1px solid #a88753}.stat-label{display:none}.minion-status{font-size:7px;line-height:8px;max-width:27px}.taunt-badge,.charge-badge,.spell-damage-badge{position:absolute;top:16px;right:3px;font-size:8px;line-height:10px;z-index:2;padding:0 2px;max-width:85%;white-space:nowrap}.charge-badge+.spell-damage-badge,.taunt-badge+.charge-badge{top:28px}
+.minion.can-attack,.hero-button.can-attack{box-shadow:0 0 0 2px #427653,0 0 9px #7d9e5560}.valid-target{outline:2px solid #b57916!important;outline-offset:1px;box-shadow:0 0 0 3px #ffe9a0!important}.selected{outline-offset:-2px!important}
+.hand{--hand-count:1;grid-column:1;grid-row:6;display:grid;grid-template-columns:repeat(var(--hand-count),minmax(0,1fr));align-items:end;justify-content:center;gap:0;min-width:0;min-height:0;padding:8px 16px 3px;overflow:visible;background:linear-gradient(0deg,#6f513b80,transparent);border-radius:0 0 0 10px;position:relative;isolation:auto}
+.hand-card{display:flex;flex-direction:column;position:relative;align-self:end;justify-self:center;width:86px;max-width:calc(100% + 20px);height:70px;min-height:70px;max-height:70px;margin:0;padding:3px 4px 3px 8px;gap:1px;border-width:1px;border-radius:4px 7px 2px 2px;background:linear-gradient(to right,var(--spine,#877154) 0 5px,#fff7df 5px);box-shadow:2px 2px 2px #33281e70;text-align:left;touch-action:none;user-select:none;-webkit-user-select:none;transition:transform .12s ease,box-shadow .12s ease;transform-origin:bottom center;overflow:hidden}
+.hand-card::before{display:none}.hand-card .card-heading{min-height:21px;gap:3px;font-size:9px;line-height:10px;padding:0;z-index:1}.hand-card .card-heading strong{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.hand-card .cost{width:18px;height:21px;font-size:14px;flex:none}.cost small{display:none}.hand-card .card-art{display:block;width:100%;height:26px;min-height:0;aspect-ratio:auto;flex:none}.hand-card .card-art img{object-fit:cover;object-position:center 35%}.hand-card .card-type,.hand-card .card-preview,.hand-card .effective-spell-damage{display:none}.hand-card .card-bottom{border:0;padding:0;font-size:8px;line-height:12px;margin-top:auto;white-space:nowrap}.hand-card .art-fallback{font-size:8px;bottom:2px}.hand-card.playable{border-color:#26764c;box-shadow:0 0 0 1px #37794b,2px 3px 3px #33281e70}.hand-card.playable::after{height:3px}.hand-card.selected{z-index:20;transform:translateY(-8px) scale(1.13);box-shadow:0 4px 12px #30231990}.hand-card:focus-visible{z-index:21}.hand-card:nth-child(odd){rotate:-1deg}.hand-card:nth-child(even){rotate:1deg}
+.battle-rail{grid-column:2;grid-row:1 / -1;display:flex;flex-direction:column;align-items:center;gap:3px;min-height:0;border-left:2px solid #a58860;border-radius:0 9px 9px 0;background:linear-gradient(90deg,#644f3c,#48382c);padding:5px 5px;color:#fff2cb}.mana-rail{font-size:11px;text-align:center;color:#d1f1f5;line-height:1.3;width:100%;min-height:42px}.mana-rail strong{font-size:20px;display:block;color:#fff3ce;line-height:24px}.mana-rail .mana-dots{justify-content:center;flex-wrap:wrap;gap:2px;margin:2px 0}.mana-rail .mana-dots i{width:7px;height:6px}.hand-count{font-size:9px;line-height:12px}.interaction-actions{display:grid;grid-template-columns:1fr;grid-template-rows:repeat(4,44px);width:100%;max-width:none;gap:4px;padding:0;margin:auto 0 0;flex:none}.action-slot{min-height:44px;width:100%}.interaction-actions .action-slot button{height:44px;min-height:44px;padding:3px;font-size:11px;line-height:1.2}.battle-rail .quiet{color:#fff2cb;border-color:#b19c77;background:#ffffff09}.battle-rail #end-turn{background:#e2b952;color:#332716;border-color:#f0d583}.battle-rail button:disabled{opacity:.5}
+.battle-status{display:flex;align-items:center;min-width:0;gap:8px;overflow:hidden;font-size:10px;line-height:16px;color:#e7d6b4;padding-inline:4px}.battle-status>span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.battle-status .notice{min-height:0;padding:0;color:#ffdda3;font-size:10px;margin-left:auto}.battle-status .notice:empty{display:none}
+.rotate-prompt{display:none}.gesture-ghost{position:fixed;z-index:1000;max-width:150px;pointer-events:none;background:#fff4d6;color:#392c20;padding:10px;border:2px solid #be9747;border-radius:9px;box-shadow:0 8px 20px #0007;font-size:12px}.gesture-drop-target{outline:3px solid #3c8554!important;outline-offset:1px;box-shadow:0 0 14px #52aa5b!important}[data-gesture-dragging="true"] .hand-card.selected{opacity:.5}[data-gesture-dragging="true"]{cursor:grabbing}
+#detail-dialog{width:min(460px,calc(100% - 24px))}.selection{font-size:12px}.selection-art{flex-basis:88px;width:88px}.selection-copy{min-width:0}.selection-copy strong{font-size:15px}.selection .source-info{font-size:10px}.prototype-note{display:block!important;font-size:12px!important;line-height:1.7}.event-log ol{max-height:140px}.event-log #revision-label{font-size:10px}dialog{max-height:calc(100dvh - 16px);padding:16px}dialog .dialog-heading h2{font-size:21px}dialog footer{text-align:left}
+@media(min-height:500px) and (orientation:landscape){#app{grid-template-rows:48px minmax(0,1fr) 24px;max-width:1440px;margin:auto}.table{grid-template-rows:58px minmax(70px,1fr) 4px minmax(70px,1fr) 58px 114px}.player-bar{align-items:center}.hero-button{height:52px}.power-button{top:7px}.hand-card{width:108px;height:100px;min-height:100px;max-height:100px}.hand-card .card-art{height:48px}.hand-card .card-heading{font-size:11px}.minion{max-height:150px;flex-basis:110px;grid-template-rows:18px minmax(0,1fr) 22px}.minion-name{font-size:11px;line-height:16px}.minion-status{font-size:9px;max-width:none}.attack-stat,.health-stat{font-size:16px;line-height:19px}.table-divider span{font-size:10px}}
+@media(max-width:720px) and (orientation:landscape){#app{--rail:78px}.brand h1{font-size:12px}.brand h1 span{display:none}.topbar{gap:4px}.top-actions button{padding:3px 7px;font-size:11px}.turn-bar{font-size:10px}.player-metadata{left:6px;max-width:calc(50% - 88px)}.hero-button{min-width:138px}.power-button{right:4px;width:66px;font-size:9px}.board{padding-inline:7px;gap:4px}.minion{flex-basis:72px}.hand{padding-inline:10px}.hand-card{max-width:calc(100% + 12px)}.battle-status{font-size:9px}}
+@media(orientation:portrait){#app{grid-template-rows:48px minmax(0,1fr) 24px}.brand h1{font-size:12px}.brand h1 span,.turn-bar{display:none}.topbar{justify-content:space-between}.table{visibility:hidden}.rotate-prompt{display:flex;position:absolute;inset:60px 15px 30px;align-items:center;justify-content:center;flex-direction:column;text-align:center;color:#fff0ce;pointer-events:none}.rotate-prompt>span{font-size:72px}.rotate-prompt strong{font-size:21px}.rotate-prompt p{font-size:12px;line-height:1.8}.battle-status{visibility:hidden}.selection-art{flex-basis:62px;width:62px}}
+@media(prefers-reduced-motion:reduce){.hand-card{transition:none}}
+@media(forced-colors:active){.friendly-board.drop-ready{outline-color:Highlight}.gesture-drop-target{outline-color:Highlight!important}.battle-rail,.table{border-color:ButtonText}}
+
+/* Accessible taps and equipped-hero drags must not compete with browser panning. */
+.hero-button.can-attack{touch-action:none;user-select:none;-webkit-user-select:none}
+.settings-details summary{min-height:44px;padding-block:12px}
+#friendly-board:focus-visible{outline:3px solid #1e667b;outline-offset:-3px}
+
+/* v3: crowded-hand content stays inside each exposed strip, not under its neighbour. */
+.hand-card{max-width:calc(100% + 4px);padding:3px 7px 3px 6px;rotate:none}
+.hand-card:nth-child(odd),.hand-card:nth-child(even){rotate:none}
+.hand-card .card-heading{display:grid;grid-template-columns:18px minmax(0,1fr);grid-template-rows:14px 18px;min-height:32px;gap:0;font-size:9px;line-height:9px}
+.hand-card .card-heading .cost{grid-column:1;grid-row:1;width:18px;height:14px;font-size:12px;line-height:12px}
+.hand-card .card-heading strong{grid-column:1 / -1;grid-row:2;font-size:9px;line-height:9px;align-self:center;overflow-wrap:anywhere;min-width:0}
+.hand-card .card-art{height:16px}
+.hand-card .card-bottom{display:flex;align-items:center;justify-content:space-between;gap:2px;min-height:11px;font-size:9px;line-height:11px}
+.hand-card .hand-stat{font-size:9px;line-height:11px;white-space:nowrap;padding:0;border:0;background:none;font-weight:700}
+.hand-card .durability-stat{color:#285c6a}
+.power-button{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:1px;white-space:nowrap;line-height:13px}
+.power-button small{display:block;white-space:nowrap;font-size:8px;line-height:11px}
+@media(min-height:500px) and (orientation:landscape){.hand-card .card-art{height:43px}.hand-card .card-heading{grid-template-rows:16px 20px;min-height:36px}.hand-card .card-heading strong{font-size:10px;line-height:10px}.hand-card .card-heading .cost{height:16px}}
+
+/* v4: the hand is not an isolated stacking context. Only the lifted card uses
+   its existing z-index 20 above hero z-index 2; row geometry, hit regions and
+   native dialog top-layer behavior remain unchanged. */
+
+/* Action feedback: green = executable; gold = selected legal target. */
+.hand-readiness{grid-column:2;grid-row:1;justify-self:end;align-self:center;white-space:nowrap;font-size:8px;font-weight:800;line-height:12px;padding:0 2px;border-radius:3px;color:#695c49;background:#e6dfce}
+.hand-readiness.readiness-ready{color:#f5ffe9;background:#17673e;box-shadow:0 0 5px #90ff76}
+.hand-readiness.readiness-mana,.readiness-blocked{color:#8b4b19;background:#f5d9ae}
+.hand-card.playable{background:linear-gradient(90deg,var(--spine,#487854) 0 5px,#e5ffd5 5px,#fff6dc);border-color:#3ba746;box-shadow:0 0 0 2px #66cf5d,0 0 10px #61d750b0,2px 3px 3px #33281e70}
+.minion.can-attack,.hero-button.can-attack{background-color:#efffde;box-shadow:0 0 0 2px #6add58,0 0 13px #54be4599,inset 0 0 10px #a7ff7566}
+.minion-status{max-width:none;font-weight:700;font-size:8px;line-height:10px;white-space:nowrap;border-radius:3px;padding:1px}
+.readiness-ready{color:#175b29;background:#d7ffc2}.readiness-frozen{color:#12557c;background:#d2f2ff}.readiness-sleeping{color:#4e4f8a;background:#e5e3fa}.readiness-used,.readiness-waiting{color:#70665b;background:#eae4d7}
+.hero-readiness{position:absolute;bottom:-4px;left:50%;transform:translateX(-50%);font-size:8px;line-height:12px;white-space:nowrap;padding:0 4px;border-radius:4px;box-shadow:0 1px 3px #0004}
+.mana-hint{display:block;color:#e9e2cb;font-size:8px;line-height:10px}.mana-dots i.temporary{background:#c195ef;box-shadow:0 0 3px #e0b5ff;border-color:#f1d6ff}
+.combat-fx{position:fixed;inset:0;z-index:900;pointer-events:none!important;overflow:hidden;contain:strict}.combat-fx *{pointer-events:none!important}
+.combat-attacker{position:absolute!important;margin:0!important;min-width:0!important;max-width:none!important;min-height:0!important;max-height:none!important;display:flex;flex-direction:column;overflow:hidden;border:2px solid #fff2a9!important;border-radius:14px;background:#f6edce;box-shadow:0 0 14px #ffe17f;opacity:.9;color:#35251d}
+.combat-attacker .minion-art{flex:1;min-height:0}.combat-attacker .minion-name{font-size:9px}.combat-attacker .minion-status,.combat-attacker .hero-readiness{display:none}
+.combat-impact{position:absolute;border-radius:50%;border:4px solid #ffefae;background:radial-gradient(ellipse,#fff8d9aa,transparent 65%);box-shadow:0 0 16px #fbd554,inset 0 0 13px #fcfae5}
+.combat-damage{position:absolute;transform:translateX(-50%);font:bold 22px/1.1 system-ui;color:#fff4c6;text-shadow:2px 2px #6b2118,-1px -1px #6b2118,1px -1px #6b2118,-1px 1px #6b2118;white-space:nowrap}
+@media(prefers-reduced-motion:no-preference){.minion.can-attack .readiness-ready,.hero-button.can-attack .hero-readiness{animation:ready-glint 1.2s ease-in-out 2}@keyframes ready-glint{50%{background:#96f169;box-shadow:0 0 6px #6fed53}}}
+@media(forced-colors:active){.hand-card.playable,.minion.can-attack,.hero-button.can-attack{outline:2px solid Highlight}.hand-readiness,.minion-status,.hero-readiness{color:ButtonText;background:ButtonFace;border:1px solid ButtonText}}
+
+/* v5 portrait-first battlefield: stage scales from height, not ultrawide width.
+   Resting fan deliberately overlaps; selection opens the full card face. */
+#app{--stage:min(100vw,178dvh);--stage-left:calc((100vw - var(--stage))/2);--unit-w:17dvh;--unit-h:21.5dvh;position:relative;display:block;padding:0;max-width:none;width:100vw;height:100dvh;margin:0;overflow:hidden}
+.topbar{position:absolute;top:max(3px,env(safe-area-inset-top));left:max(7px,env(safe-area-inset-left));right:max(7px,env(safe-area-inset-right));height:44px;z-index:40;pointer-events:none;align-items:flex-start}.brand,.turn-bar{display:none}.top-actions{margin-left:auto;pointer-events:auto;gap:4px}.top-actions button{min-width:44px;min-height:44px;font-size:11px;background:#362b22dc}.top-actions #pause{font-size:11px}
+.table{position:absolute;inset:0;display:block;border:0;border-radius:0;box-shadow:inset 0 0 65px #382718ad;background:radial-gradient(ellipse at 50% 48%,#ecdfb7 0,#d7c397 48%,#967347 77%,#493526 100%);overflow:visible}
+.table:before{content:'';position:absolute;left:calc(var(--stage-left) + var(--stage)*.07);right:calc(var(--stage-left) + var(--stage)*.07);top:22dvh;bottom:20dvh;border:2px solid #95774c66;border-radius:42%;box-shadow:0 0 0 6px #84623e1c;pointer-events:none}
+.player-bar{position:absolute;left:0;right:0;top:0;height:0;display:block;padding:0;z-index:4}.opponent{top:13.5dvh}.player{top:86.5dvh}
+.hero-button{position:absolute;left:50%;top:0;transform:translate(-50%,-50%);width:20dvh;min-width:20dvh;max-width:20dvh;height:23dvh;min-height:23dvh;padding:4px;display:block;border:3px solid #856747;border-left:5px solid var(--spine,#ad4a38);border-radius:44% 44% 20% 20%;background:linear-gradient(145deg,#fbefd0,#bb925b);box-shadow:0 3px 0 #594530,0 0 0 3px #e8d4a780;overflow:visible}
+.hero-avatar{display:flex;align-items:center;justify-content:center;width:100%;height:calc(100% - 11px);border:0;border-radius:40% 40% 20% 20%;font-size:11dvh;color:#4e3828;background:linear-gradient(130deg,#fff0c1,#cfac72)}.hero-title{display:none}.hero-stats{font-size:0;margin:0;line-height:1}.hero-stats .hp,.hero-stats .armor{position:absolute;bottom:-5px;font-size:4.3dvh;line-height:6.4dvh;min-width:6.4dvh;height:6.4dvh;padding:0 3px;text-align:center;border:2px solid #6e3b21;border-radius:50%;box-shadow:0 2px 2px #0005;color:#fff6d5;background:#aa3d31;font-weight:800;letter-spacing:-1px}.hero-stats .hp{right:-7px}.hero-stats .armor{left:-7px;background:#87929a;color:#fff;letter-spacing:-2px}.hero-readiness{top:-11px;bottom:auto;font-size:9px;line-height:14px;z-index:3}
+.player-metadata{display:none}.opponent .player-metadata{display:block;position:absolute;left:calc(50% - 32dvh);top:-7dvh;max-width:22dvh;color:#f4e8c8;background:#4e3b28d9;border-radius:8px;padding:5px}.opponent .player-metadata .mana-label{color:#b1edf7;font-size:12px}.opponent .resource-line{font-size:9px;color:#e6d5b4}.power-button{left:calc(50% + 12dvh);right:auto;top:0;transform:translateY(-50%);width:17dvh;max-width:17dvh;height:17dvh;min-height:44px;border:3px solid #9d794e;border-radius:50%;background:radial-gradient(circle,#e8d299,#8d714d);box-shadow:0 2px 0 #4a3524;font-size:10px;color:#392f22}.power-button small{font-size:9px;line-height:12px}.power-button:disabled{opacity:.7;filter:saturate(.5)}
+.board,.board:has(.minion:nth-child(6)){position:absolute;left:var(--stage-left);width:var(--stage);height:var(--unit-h);padding:0;gap:1.5dvh;display:flex;align-items:center;justify-content:center;overflow:visible;z-index:5}.enemy-board{top:calc(38.5dvh - var(--unit-h)/2)}.friendly-board{top:calc(61.5dvh - var(--unit-h)/2)}.table-divider{position:absolute;left:calc(var(--stage-left) + var(--stage)*.13);right:calc(var(--stage-left) + var(--stage)*.13);top:50dvh;height:1px;margin:0;opacity:.35}.table-divider span{display:none}.empty-board{font-size:11px;opacity:.7}.friendly-board.drop-ready{outline:3px dashed #559546;outline-offset:6px;background:#e3ffc938}
+.minion,.minion.taunt{flex:0 0 var(--unit-w);width:var(--unit-w);min-width:var(--unit-w);height:var(--unit-h);min-height:var(--unit-h);max-height:var(--unit-h);display:block;padding:3px;border:3px solid #76624b;border-radius:48% 48% 43% 43%;overflow:visible;background:#bea278;box-shadow:0 3px 1px #533b28,0 0 0 2px #e2c99a}
+.minion.taunt{border:4px double #76604c;border-radius:42% 42% 26% 26%;box-shadow:0 0 0 3px #ded5b7,0 3px 0 5px #725a3c}.minion-name{display:none}.minion-art{position:absolute;inset:3px;width:auto;height:auto;border-radius:48% 48% 43% 43%;overflow:hidden;background-size:cover;filter:saturate(.9)}.minion-art .art-fallback{font-size:9px;bottom:32%;opacity:.7}.minion-art.original-art img{height:100%;width:100%;object-fit:cover;object-position:50% 40%}
+.minion-stats{position:absolute;inset:0;display:block;margin:0;padding:0;pointer-events:none}.minion-stats .attack-stat,.minion-stats .health-stat{position:absolute;bottom:-5px;display:flex;align-items:center;justify-content:center;width:6.5dvh;min-width:6.5dvh;height:6.5dvh;padding:0;border:2px solid #75603a;border-radius:50%;font-size:5.5dvh;line-height:1;font-weight:900;text-shadow:1px 1px #ffecba;box-shadow:0 2px 2px #0005;letter-spacing:-1px}.minion-stats .attack-stat{left:-7px;color:#4c341a;background:#f2cf67}.minion-stats .health-stat{right:-7px;color:#fff6df;background:#ae3e32;border-color:#70352c;text-shadow:1px 1px #652417}.minion-status{position:absolute;left:50%;top:-11px;transform:translateX(-50%);font-size:9px;line-height:13px;padding:0 4px;white-space:nowrap;max-width:none;box-shadow:0 1px 3px #47372480}.minion-status:empty{display:none}.taunt-badge,.charge-badge{display:none}.spell-damage-badge{top:auto;bottom:8px;right:50%;transform:translateX(50%);font-size:9px;line-height:12px;background:#ddbcf4}
+.battle-rail{display:contents}.mana-rail{position:absolute;left:calc(var(--stage-left) + var(--stage)*.82);top:72dvh;width:calc(var(--stage)*.15);min-height:0;z-index:7;background:#392c22dd;border:1px solid #8b714c;border-radius:9px;padding:3px;font-size:10px;color:#bbecf0}.mana-rail strong{font-size:19px;line-height:20px}.mana-rail .mana-dots{gap:2px;margin:2px 0}.mana-rail .mana-dots i{width:6px;height:5px}.mana-hint{font-size:8px;line-height:10px}.hand-count{position:absolute;right:calc(var(--stage-left) + 3px);bottom:2px;z-index:35;font-size:9px;color:#ebddc0;pointer-events:none}
+.interaction-actions{display:contents}.action-slot{display:contents}.interaction-actions .action-slot button{position:absolute;z-index:35;min-width:44px;height:44px;min-height:44px;font-size:11px;box-shadow:0 2px 3px #241b1270}.interaction-actions #end-turn{left:calc(var(--stage-left) + var(--stage)*.87);top:calc(49dvh - 22px);width:calc(var(--stage)*.11);background:linear-gradient(#f3dc82,#c99836);border-radius:12px;white-space:nowrap}.interaction-actions #confirm{left:calc(var(--stage-left) + 8px);bottom:55px;width:96px;background:#398346;color:#fff}.interaction-actions #cancel{left:calc(var(--stage-left) + 8px);bottom:7px;width:96px;background:#473729ed}.interaction-actions #detail-open{left:calc(var(--stage-left) + 108px);bottom:7px;width:72px;background:#473729ed}
+.hand{position:absolute;left:calc(var(--stage-left) + var(--stage)*.60);bottom:-15dvh;width:calc(var(--stage)*.39);height:42dvh;display:grid;grid-template-columns:repeat(var(--hand-count),minmax(0,1fr));gap:0;padding:0;align-items:end;border:0;background:none;border-radius:0;z-index:10;overflow:visible;transition:left .12s,width .12s}
+.hand-card{position:relative;align-self:end;justify-self:start;flex:none;width:29dvh;max-width:none;height:42dvh;min-height:42dvh;max-height:42dvh;display:flex;flex-direction:column;padding:5px 6px 5px 9px;gap:2px;border:2px solid #755837;border-left:5px solid var(--spine,#877154);border-radius:8px 10px 5px 5px;transform:rotate(calc(var(--fan-angle,0)*1deg));transform-origin:50% 100%;overflow:hidden;box-shadow:0 2px 6px #261b13b0;background:linear-gradient(135deg,#fff3d3,#d5bc8d);transition:transform .12s ease}
+.hand-card:nth-child(odd),.hand-card:nth-child(even){rotate:none}.hand-card .card-heading{display:grid;grid-template-columns:26px minmax(0,1fr);grid-template-rows:24px 25px;min-height:49px;gap:1px}.hand-card .card-heading .cost{grid-column:1;grid-row:1;width:26px;height:26px;line-height:24px;font-size:22px;border-radius:50%;background:#28649a;color:#fff;border:2px solid #a0d5ee}.hand-card .card-heading strong{grid-column:1 / -1;grid-row:2;font-size:12px;line-height:12px;align-self:center;text-align:center;overflow-wrap:anywhere;-webkit-line-clamp:2}.hand-readiness{font-size:9px;line-height:15px;padding:1px 3px}.hand-card .card-art{height:17dvh;flex:1;min-height:25px;border-radius:42% 42% 6px 6px}.hand-card .art-fallback{font-size:10px}.hand-card .card-bottom{display:flex;justify-content:space-between;gap:4px;font-size:15px;line-height:19px;min-height:19px}.hand-card .hand-stat{font-size:15px;line-height:19px}.hand-card .card-preview{display:none}.hand-card.playable{box-shadow:0 0 0 2px #66df59,0 0 12px #64d04bb0,1px 3px 4px #261b13a0}
+.hand:has(.hand-card.selected){left:calc(var(--stage-left) + var(--stage)*.035);width:calc(var(--stage)*.93);bottom:-14dvh;z-index:20}.hand-card.selected{position:absolute;left:50%;bottom:15dvh;transform:translateX(-50%);width:33dvh;height:49dvh;min-height:49dvh;max-height:49dvh;z-index:30;border-color:#f5d97b;box-shadow:0 0 0 2px #e8c04e,0 7px 20px #251c17bb}.hand-card.selected .card-preview{display:block;font-size:10px;line-height:13px;max-height:40px;overflow:auto;flex:none}.hand-card.selected .card-art{height:17dvh;min-height:30px}.hand-card.selected .card-heading strong{font-size:13px;line-height:13px}.hand-card.selected .hand-stat{font-size:17px;line-height:21px}.hand-card:focus-visible{outline:3px solid #fff0a9;outline-offset:2px;z-index:31}
+.battle-status{position:absolute;left:8px;top:4px;width:calc(50% - 70px);height:auto;min-height:18px;display:block;z-index:30;font-size:10px;line-height:13px;color:#fff0cc;pointer-events:none;text-shadow:0 1px #3c271b}.battle-status>span{display:block;white-space:normal;max-height:39px;overflow:hidden}.battle-status .notice{font-size:9px;color:#ffe9ac}
+@media(orientation:portrait){.table{visibility:hidden}.topbar{height:44px}.rotate-prompt{inset:60px 15px 30px}.battle-status{visibility:hidden}}
+@media(prefers-reduced-motion:reduce){.hand,.hand-card{transition:none}}
+.hand-card{justify-self:center}.hero-stats .hero-attack-stat{position:absolute;bottom:22px;left:-15px;font-size:14px;line-height:20px;border-radius:50%;background:#f0cb68;color:#493719;padding:1px 4px;border:1px solid #7a603e;font-weight:800;z-index:3}
+/* Keep the resting fan below the separate mana readout; focused fan may cover
+   the lower battlefield, while action controls always remain above it. */
+.hand{bottom:-24dvh}.hand:has(.hand-card.selected){bottom:-14dvh}.mana-rail{top:63dvh;z-index:35}
+/* Placeholder art still needs identity. One short non-blocking name ribbon;
+   tap any resting minion to inspect its complete card without issuing a move. */
+.minion-name{display:block;position:absolute;left:1px;right:1px;bottom:21px;min-height:0;height:12px;font-size:9px;line-height:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;border-radius:3px;background:#392b20d6;color:#fff5dc;padding:0 2px;z-index:2;pointer-events:none}
+.mana-rail .mana-dots i{width:9px;height:9px;border:1px solid #cbf8ff;background:#30abd1;opacity:1;box-shadow:inset 0 0 0 1px #166a86}
+.mana-rail .mana-dots i.spent{border:1px solid #c7b793;background:linear-gradient(135deg,transparent 42%,#b5a37c 44%,#b5a37c 55%,transparent 57%);opacity:1;box-shadow:none}
+.mana-rail .mana-dots i.temporary{border:1px solid #f2d8ff;background:#b578e4;box-shadow:0 0 4px #dcb3ff}
+.blocked-aim .valid-target{outline:3px solid #efb733!important;box-shadow:0 0 0 4px #fff2b8,0 0 16px #e8aa37!important}
+@media(prefers-reduced-motion:no-preference){.blocked-aim .valid-target{animation:target-reminder .45s ease-in-out 2}@keyframes target-reminder{50%{filter:brightness(1.25)}}}
+/* During targeting, legal target hit regions outrank the inspection fan.
+   The preview remains draggable from its exposed lower face; target clicks
+   never land on the card underneath. Native dialogs keep their top layer. */
+.friendly-board:has(.valid-target),.enemy-board:has(.valid-target),.player-bar:has(.valid-target){z-index:26}
+[data-gesture-dragging="true"] .hand-card.selected{pointer-events:none}
+[data-gesture-dragging="true"] .friendly-board.drop-ready{z-index:26}
+
+/* v5f: corrections from real 667/844 screenshots, retaining reference scale.
+   Every fan card's outer box stays inside its region; rotation gets edge room. */
+.hand{left:calc(var(--stage-left) + var(--stage)*.64);width:calc(var(--stage)*.32);display:block;bottom:-24dvh}
+.hand:has(.hand-card.selected){left:calc(var(--stage-left) + var(--stage)*.04);width:calc(var(--stage)*.92);bottom:-14dvh}
+.hand-card{position:absolute;left:calc((100% - 29dvh)*var(--hand-index)/var(--fan-divisor));bottom:0;z-index:calc(var(--hand-index) + 1)}
+.hand-card.selected{left:50%;bottom:15dvh;z-index:30}
+.minion-stats{height:100%;top:0;left:0;right:auto;bottom:auto;align-self:auto;grid-row:auto}
+.minion>.minion-status{top:-10px;bottom:auto;z-index:4;font-size:9px;line-height:13px}
+.mana-rail{left:calc(var(--stage-left) + var(--stage)*.90);top:60dvh;width:calc(var(--stage)*.09);padding:3px 2px;font-size:9px;line-height:10px;z-index:35;border-radius:7px}
+.mana-rail strong{font-size:18px;line-height:20px;letter-spacing:-.7px}.mana-rail .mana-dots{gap:2px;margin:3px 0 0;max-width:none}.mana-rail .mana-dots i{width:8px;height:8px;flex:none}.mana-rail .mana-hint{font-size:8px;line-height:10px;margin-top:2px;white-space:nowrap}
+
+/* v5g separates temporary hand inspection from action aiming. Picking a card
+   closes the fan; the board and heroes are visible before any target/drop. */
+.hand,.hand:has(.hand-card.selected){left:calc(var(--stage-left) + var(--stage)*.64);width:calc(var(--stage)*.32);bottom:-24dvh;z-index:10}
+.hand.is-expanded{left:calc(var(--stage-left) + var(--stage)*.04);width:calc(var(--stage)*.92);bottom:-14dvh;z-index:20}
+.hand-card.selected{position:absolute;left:calc((100% - 29dvh)*var(--hand-index)/var(--fan-divisor));bottom:5dvh;width:29dvh;height:42dvh;min-height:42dvh;max-height:42dvh;transform:rotate(0deg);z-index:30;box-shadow:0 0 0 2px #f6d472,0 0 13px #fff2b399}
+.hand-card.selected .card-preview{display:none}.hand-card.selected .card-heading strong{font-size:12px;line-height:12px}.hand-card.selected .hand-stat{font-size:15px;line-height:19px}
+.hand-count{position:absolute;right:calc(var(--stage-left) + 3px);bottom:2px;z-index:36;min-width:76px;min-height:44px;height:44px;padding:4px 8px;font-size:11px;line-height:15px;color:#fff0cf;background:#413225e8!important;border:1px solid #b19a70;pointer-events:auto;box-shadow:0 2px 4px #0005}
+[data-gesture-dragging="true"] .hand,[data-gesture-dragging="true"] .hand.is-expanded{left:calc(var(--stage-left) + var(--stage)*.64);width:calc(var(--stage)*.32);bottom:-24dvh;z-index:10}
+[data-gesture-dragging="true"] .hand-card.selected{opacity:0;pointer-events:none}
+
+/* v6: compact opposing hero frees space for a raised, full-size portrait fan.
+   Attack/health live in each exposed upper-left strip, never below the viewport. */
+.opponent{top:7.8dvh}
+.opponent .hero-button{width:154px;min-width:154px;max-width:154px;height:48px;min-height:48px;border-radius:13px;padding:3px 7px;display:flex;align-items:center;gap:8px}
+.opponent .hero-avatar{width:31px;height:34px;font-size:25px;border-radius:8px;flex:none}
+.opponent .hero-title{display:block;max-width:98px;overflow:hidden;text-overflow:ellipsis;font-size:10px;line-height:12px}
+.opponent .hero-stats{display:flex;gap:5px;margin-top:3px;align-items:center}
+.opponent .hero-stats .hp,.opponent .hero-stats .armor{position:static;display:inline-flex;align-items:center;justify-content:center;min-width:37px;width:auto;height:23px;font-size:18px;line-height:21px;border-width:1px;border-radius:6px;letter-spacing:0;padding:0 3px}
+.opponent .hero-stats .hp:before{content:'♥';font-size:11px;margin-right:3px}.opponent .hero-stats .armor:before{content:'⬡';font-size:12px;margin-right:3px}
+.opponent-power-status{position:absolute;left:calc(50% + 87px);top:-14px;min-height:28px;display:flex;align-items:center;border:1px solid #ab925c;border-radius:7px;background:#433425;color:#ffe6a1;padding:4px 6px;font-size:10px;white-space:nowrap}
+.opponent-power-status.is-used{background:#303936;color:#d4ded8;border-color:#708078}
+.opponent .player-metadata{left:calc(50% - 158px);top:-22px;width:74px;max-width:74px;padding:4px}.opponent .player-metadata .mana-label{font-size:10px}.opponent .resource-line{font-size:8px}
+.enemy-board{top:calc(33.5dvh - var(--unit-h)/2)}.friendly-board{top:calc(57dvh - var(--unit-h)/2)}.table-divider{top:45dvh}
+.player{top:80dvh}.player .hero-button{left:calc(var(--stage-left) + var(--stage)*.065);width:14dvh;min-width:14dvh;max-width:14dvh;height:17dvh;min-height:17dvh}.player .hero-avatar{font-size:7dvh}
+.player .hero-stats .hp,.player .hero-stats .armor{height:22px;min-width:22px;font-size:16px;line-height:19px;bottom:-3px}.player .hero-stats .hp{right:-4px}.player .hero-stats .armor{left:-4px}
+.player .power-button{left:calc(var(--stage-left) + 4px);top:8dvh;transform:none;width:calc(var(--stage)*.12);max-width:none;height:44px;min-height:44px;border-radius:9px;border-width:2px;font-size:10px;padding:2px}.player .power-button small{font-size:9px}
+/* Preserve portrait card scale and overlap; numeric strips stay exposed. */
+.hand,.hand:has(.hand-card.selected),[data-gesture-dragging="true"] .hand,[data-gesture-dragging="true"] .hand.is-expanded{left:calc(var(--stage-left) + var(--stage)*.21);width:calc(var(--stage)*.73);bottom:calc(max(22dvh,86px) - 42dvh);height:42dvh;display:block;padding:0;z-index:10;transition:none}
+.hand.is-expanded{left:calc(var(--stage-left) + var(--stage)*.04);width:calc(var(--stage)*.92);bottom:-8dvh;height:42dvh;z-index:20}
+.hand-card,.hand-card.selected{position:absolute;left:calc((100% - 29dvh)*var(--hand-index)/var(--fan-divisor));bottom:0;width:29dvh;max-width:none;min-width:0;height:42dvh;min-height:42dvh;max-height:42dvh;padding:5px 5px 5px 6px;gap:2px;transform:rotate(calc(var(--fan-angle,0)*.35deg));rotate:none;border-width:2px;border-left-width:4px;border-radius:8px 10px 5px 5px;overflow:hidden;z-index:calc(var(--hand-index) + 1)}
+.hand-card.selected{bottom:5dvh;transform:none;outline:2px solid #ffe58e!important;outline-offset:1px!important;box-shadow:0 0 9px #fff0ab;z-index:30}
+.hand-card .card-heading{grid-template-columns:25px minmax(0,1fr);grid-template-rows:25px 25px;min-height:78px;align-content:space-between;gap:1px}
+.hand-card .card-heading .cost{height:25px;width:25px;font-size:21px;line-height:22px;border-width:1px}
+.hand-card .card-heading strong,.hand-card.selected .card-heading strong{font-size:12px;line-height:12px;text-align:left;word-break:break-all;padding-left:32px}
+.hand-card .hand-readiness{font-size:9px;line-height:12px;padding:1px 2px;max-width:100%;overflow:hidden}
+.hand-card .card-art,.hand-card.selected .card-art{height:auto;min-height:30px;flex:1;border-radius:38% 38% 6px 6px}.hand-card .art-fallback{font-size:10px}
+.hand-card .card-bottom{position:absolute;top:33px;left:4px;width:29px;display:flex;flex-direction:column;align-items:stretch;justify-content:center;gap:2px;min-height:43px;margin:0;background:#2d241e;border-radius:5px;padding:2px;z-index:4}
+.hand-card .hand-stat,.hand-card.selected .hand-stat{display:flex;align-items:center;justify-content:center;gap:1px;flex:1;min-width:0;font-size:17px;line-height:19px;font-weight:900;padding:0 1px;border-radius:3px;color:#fff3ca;background:#66563d;white-space:nowrap}.hand-card .hand-stat small{font-size:8px;font-weight:700;line-height:12px}
+.hand-card .attack-stat{color:#35260d;background:#f8d469}.hand-card .health-stat{color:#fff;background:#a12d29}.hand-card .durability-stat{color:#fff;background:#275e75}
+.hand.is-expanded .hand-card .card-bottom{width:49px;flex-direction:row;min-height:24px;gap:2px}.hand.is-expanded .hand-card .card-heading strong{padding-left:0}
+.hand-card .card-preview,.hand-card.selected .card-preview{display:none}
+.hand-count{top:54px;bottom:auto;right:calc(var(--stage-left) + 4px);min-width:72px;height:44px;padding:3px 5px;font-size:10px}
+.interaction-actions #detail-open{left:calc(var(--stage-left) + 5px);bottom:30dvh;width:72px}.interaction-actions #cancel{left:calc(var(--stage-left) + 5px);bottom:calc(30dvh + 48px);width:72px}.interaction-actions #confirm{left:calc(var(--stage-left) + 5px);bottom:calc(30dvh + 96px);width:72px}
+.last-action-status{position:absolute;left:calc(var(--stage-left) + var(--stage)*.23);top:16dvh;width:calc(var(--stage)*.54);height:7.5dvh;z-index:30;pointer-events:none;text-align:center;color:#fff3d1;text-shadow:0 1px #231a12;background:#3a2b20e8;border:1px solid #b79861;border-radius:6px;padding:2px 5px;overflow:hidden;font-size:10px;line-height:12px}.last-action-status[hidden]{display:none}.last-action-label,.last-action-detail{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.last-action-label{font-weight:800}.last-action-detail{color:#f7cf7d;font-size:9px}
+@media(min-height:500px) and (orientation:landscape){.last-action-status{font-size:13px;line-height:17px}.last-action-detail{font-size:11px}}
+@media(orientation:portrait){.last-action-status{display:none}}
+@media(forced-colors:active){.hand-card .card-bottom,.hand-card .hand-stat,.opponent-power-status,.last-action-status{background:Canvas;color:CanvasText;border:1px solid CanvasText}}
+/* Keep small-screen status copy clear of the compact opponent resource panel. */
+.battle-status{left:calc(var(--stage-left) + 8px);width:calc(var(--stage)*.22)}
+.last-action-status{top:15.5dvh;height:7dvh}
+.player{top:78dvh}.player .power-button{top:10dvh}
+/* Selected cards retain the same semantic attack/health colours. */
+.hand-card .hand-stat.attack-stat{color:#35260d;background:#f8d469}.hand-card .hand-stat.health-stat{color:#fff;background:#a12d29}.hand-card .hand-stat.durability-stat{color:#fff;background:#275e75}
+.hand-card .hand-stat:only-child{font-size:12px}
+@media(max-width:600px) and (orientation:landscape){.hand.is-expanded .hand-card .card-bottom{width:29px;flex-direction:column;min-height:43px}}
+
+/* Result controls remain visible in landscape and portrait; native save/setup
+   dialogs retain the top layer and existing explicit failure confirmation. */
+.result-panel{position:fixed;z-index:100;left:50%;top:50%;transform:translate(-50%,-50%);width:min(420px,calc(100% - 32px));max-height:calc(100dvh - 100px);overflow:auto;padding:20px;border:2px solid #c8a668;border-radius:16px;background:#fff4da;color:#392c20;box-shadow:0 10px 40px #20170dc0;text-align:center}
+.result-panel[hidden]{display:none}
+.result-panel h2{margin:0 0 10px;font-size:24px;color:#62421e}
+.result-panel p{margin:0 0 16px;font-size:13px;line-height:1.6}
+.result-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:10px}
+.result-actions button{min-height:48px;padding:10px 16px}
+.result-actions .quiet{color:#594123;border-color:#9c8055;background:#fffaf0}
+@media(max-height:360px){.result-panel{padding:12px}.result-panel h2{font-size:20px}.result-panel p{margin-bottom:10px}}
+
+/* v8: artwork is on the exposed card face, never below a 78px empty header.
+   Preserve all fan widths, legal-target geometry and the visible numeric strip. */
+.hand-card .card-heading{min-height:26px;grid-template-rows:25px;align-content:start;position:relative;z-index:3}
+.hand-card .card-heading strong,.hand-card.selected .card-heading strong,.hand.is-expanded .hand-card .card-heading strong{position:absolute;left:32px;right:0;top:27px;grid-row:auto;padding:2px 3px;font-size:10px;line-height:11px;border-radius:3px;background:#241c16df;color:#fff2d5;text-shadow:none;max-height:26px}
+.hand-card .card-art,.hand-card.selected .card-art{position:absolute;left:3px;right:3px;top:31px;bottom:3px;width:auto;height:auto;min-height:0;flex:none;border-radius:5px;z-index:0}
+.hand-card .card-art.original-art img{object-fit:cover;object-position:50% 45%}
+.minion-art.original-art img{object-position:50% 45%}
+/* Pixel-reviewed focal framing. Full illustrations remain available in detail. */
+.minion-art[data-art-source="VAN_CS2_065"] img{transform:scale(1.28);transform-origin:50% 57%}
+.minion-art[data-art-source="VAN_NEW1_011"] img{transform:scale(1.4);transform-origin:51% 34%}
+.hand-card .card-art[data-art-source="VAN_NEW1_011"] img{object-position:50% 28%}
+.hand-card .card-art[data-art-source="VAN_CS2_106"] img{object-position:50% 58%}
+/* Review is a deliberate pause. Its button sits in the unused upper-left rail,
+   outside every hero/board/hand hit area. Auto reveal is inert and AI-only. */
+.recent-open{position:absolute;left:calc(var(--stage-left) + 5px);top:54px;z-index:36;width:72px;height:44px;min-height:44px;padding:3px;display:flex;align-items:center;gap:3px;background:#413225f0;color:#fff0cf;border:1px solid #b19a70;border-radius:7px;font-size:10px;line-height:12px;box-shadow:0 2px 4px #0005}
+.recent-open:disabled{opacity:.6}.recent-thumb{display:block;flex:0 0 25px;height:34px;overflow:hidden;border-radius:3px}.recent-thumb img{object-fit:cover}
+.played-reveal{position:absolute;left:50%;top:25dvh;transform:translateX(-50%);width:252px;max-width:70vw;height:43dvh;max-height:190px;z-index:32;display:flex;gap:10px;padding:8px;background:#2d241df5;color:#fff2d1;border:2px solid #e5be6e;border-radius:12px;box-shadow:0 5px 22px #20170c99;pointer-events:none}
+.played-reveal[hidden]{display:none}.reveal-art{display:block;flex:0 0 47%;height:100%;min-height:0;border-radius:6px;overflow:hidden;background:#614d33}.reveal-art img{object-fit:contain}
+.revealed-copy{display:flex;flex-direction:column;gap:5px;min-width:0;overflow:auto;font-size:11px;line-height:1.45}.revealed-copy small{font-size:10px;color:#f2cb7c}.revealed-copy strong{font-size:16px;line-height:1.3}.revealed-copy span{font-size:10px}.revealed-copy p{margin:0;font-size:11px}
+#recent-dialog{width:min(610px,calc(100% - 24px))}.recent-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.recent-card{display:flex;gap:10px;padding:8px;min-height:180px;background:#f0e2c6;border:1px solid #b69a65;border-radius:8px;color:#362a1e}.recent-card .reveal-art{height:160px;flex-basis:44%}.recent-card small{color:#72511e}.recent-card .revealed-copy{overflow:visible}.recent-card .revealed-copy strong{font-size:15px}
+@media(max-width:500px){.recent-cards{grid-template-columns:1fr}}
+@media(orientation:portrait){.recent-open,.played-reveal{display:none}}
+@media(forced-colors:active){.recent-open,.played-reveal,.recent-card{background:Canvas;color:CanvasText;border:2px solid CanvasText}}
+.recent-open[hidden]{display:none}
+/* Generated portrait subjects: emphasize their identifying face/object rather
+   than the surrounding shelves. These affect pixels only, not hit regions. */
+.minion-art.original-art img{transform:scale(1.16);transform-origin:50% 45%}
+.minion-art[data-art-source="VAN_CS1_042"] img{transform:scale(1.22);transform-origin:50% 62%}
+.minion-art[data-art-source="VAN_CS2_119"] img{transform:scale(1.2);transform-origin:45% 65%}
+.minion-art[data-art-source="VAN_CS2_179"] img{transform:scale(1.2);transform-origin:50% 38%}
+.minion-art[data-art-source="VAN_CS2_131"] img{transform:scale(1.15);transform-origin:50% 40%}
+.minion-art[data-art-source="VAN_CS2_187"] img{transform:scale(1.2);transform-origin:50% 32%}
+.minion-art[data-art-source="VAN_CS2_200"] img{transform:scale(1.13);transform-origin:50% 25%}
+.minion-art[data-art-source="VAN_CS2_162"] img{transform:scale(1.14);transform-origin:50% 12%}
+.minion-art[data-art-source="VAN_CS2_201"] img{transform:scale(1.06);transform-origin:50% 0%}
+.minion-art[data-art-source="VAN_CS2_186"] img{transform:scale(1.16);transform-origin:50% 35%}
+.minion-art[data-art-source="VAN_CS2_213"] img{transform:scale(1.12);transform-origin:50% 45%}
+
+/* v8a: reserve the left rail for public reveal; the battle and damage targets
+   are never behind a centre card. Full illustration/text stays in paused history. */
+.played-reveal{left:calc(var(--stage-left) + 5px);top:54px;transform:none;width:72px;max-width:none;height:calc(70dvh - 108px);max-height:164px;display:grid;grid-template-rows:minmax(0,1fr) auto;gap:4px;padding:4px;border-radius:7px;border-width:1px;z-index:32;pointer-events:none}
+.played-reveal .reveal-art{width:100%;height:100%;min-height:0;border-radius:4px}
+.played-reveal .revealed-copy{gap:2px;overflow:hidden;text-align:center}
+.played-reveal .revealed-copy strong{font-size:10px;line-height:12px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.played-reveal .revealed-copy span{font-size:9px;line-height:11px;white-space:nowrap}
+@media(max-width:600px) and (orientation:landscape){.played-reveal{width:64px}}
+
+/* Every crowded exposed slot gets a complete, distinct image tile. Cost sits
+   above it; labelled attack/health sit below. Full-size selected art is retained. */
+.hand-peek{display:none}
+.hand{--hand-step:calc((var(--stage)*.73 - 29dvh)/var(--fan-divisor));--peek-w:clamp(26px,calc(var(--hand-step) - 5px),38px)}
+.hand.is-crowded .hand-card:not(.selected){transform:none}
+.hand.is-crowded .hand-card:not(.selected) .card-heading strong,.hand.is-crowded .hand-card:not(.selected) .hand-readiness{display:none}
+.hand.is-crowded .hand-card:not(.selected) .card-art{display:none}
+.hand.is-crowded .hand-card:not(.selected) .hand-peek{display:block;position:absolute;left:3px;top:29px;width:var(--peek-w);height:var(--peek-w);border:1px solid #f0d49c;border-radius:4px;overflow:hidden;background:#f2dfbd;z-index:1}
+.hand-peek.original-art img{object-fit:cover;object-position:50% 40%}
+.hand.is-crowded .hand-card:not(.selected) .card-bottom{top:calc(31px + var(--peek-w));left:3px;width:var(--peek-w);min-height:15px;height:15px;padding:0;gap:1px;flex-direction:row;border-radius:2px}
+.hand.is-crowded .hand-card:not(.selected) .hand-stat{min-width:0;padding:0;font-size:12px;line-height:15px}
+.hand.is-crowded .hand-card:not(.selected) .hand-stat small{font-size:6px;line-height:9px}
+.hand.is-crowded .hand-card:not(.selected) .hand-stat:only-child{font-size:9px}
+/* Expanded browsing is below the friendly stat row, with separate name,
+   cost/stats and portrait areas in every exposed slot. Selecting still folds it. */
+.hand.is-expanded{bottom:-13dvh;--hand-step:calc((var(--stage)*.92 - 29dvh)/var(--fan-divisor));--peek-w:clamp(26px,calc(var(--hand-step) - 5px),56px)}
+.hand.is-expanded .hand-card:not(.selected){transform:none}
+.hand.is-expanded .hand-card:not(.selected) .card-art,.hand.is-expanded .hand-card:not(.selected) .hand-readiness{display:none}
+.hand.is-expanded .hand-card:not(.selected) .card-heading{position:static;min-height:0}
+.hand.is-expanded .hand-card:not(.selected) .card-heading strong{display:-webkit-box;position:absolute;left:3px;right:auto;top:3px;width:var(--peek-w);height:23px;max-height:23px;margin:0;padding:0 1px;background:#32261be8;color:#fff4da;text-align:left;font-size:10px;line-height:11px;-webkit-line-clamp:2;word-break:break-all}
+.hand.is-expanded .hand-card:not(.selected) .cost{position:absolute;left:3px;top:29px;width:22px;height:23px;font-size:18px;line-height:21px}
+.hand.is-expanded .hand-card:not(.selected) .card-bottom{position:absolute;left:29px;top:28px;width:calc(var(--peek-w) - 26px);height:27px;min-height:27px;padding:0;gap:1px;flex-direction:column;z-index:4}
+.hand.is-expanded .hand-card:not(.selected) .hand-stat{font-size:12px;line-height:13px;padding:0;min-width:0}
+.hand.is-expanded .hand-card:not(.selected) .hand-stat small{font-size:7px;line-height:9px}
+.hand.is-expanded .hand-card:not(.selected) .hand-stat:only-child{font-size:9px}
+.hand.is-expanded .hand-card:not(.selected) .hand-peek{display:block;position:absolute;left:3px;top:57px;width:var(--peek-w);height:min(var(--peek-w),calc(29dvh - 61px));border:1px solid #f0d49c;border-radius:4px;overflow:hidden;background:#f2dfbd;z-index:1}
+.hand-count{white-space:pre-line;font-size:9px;line-height:12px}
+/* These image-mat colours are identity cues, never availability/rule borders. */
+.minion-art[data-art-source="VAN_CS2_131"],.hand-peek[data-art-source="VAN_CS2_131"]{border:2px solid #277d91}
+.minion-art[data-art-source="VAN_CS2_124"],.hand-peek[data-art-source="VAN_CS2_124"]{border:2px solid #975fc0}
+.minion-art[data-art-source="VAN_CS2_213"],.hand-peek[data-art-source="VAN_CS2_213"]{border:2px solid #c36428}
+.minion-art[data-art-source="VAN_CS2_187"],.hand-peek[data-art-source="VAN_CS2_187"]{border:2px solid #418269}
+.minion-art[data-art-source="VAN_CS2_162"],.hand-peek[data-art-source="VAN_CS2_162"]{border:2px solid #507cbd}
+.minion-art[data-art-source="VAN_EX1_582"],.hand-peek[data-art-source="VAN_EX1_582"]{border:2px solid #9c678f}
+.minion-art[data-art-source="VAN_CS2_155"],.hand-peek[data-art-source="VAN_CS2_155"]{border:2px solid #c1923d}
+.minion-art[data-art-source="VAN_CS1_042"],.hand-peek[data-art-source="VAN_CS1_042"]{border:3px solid #263f57;background:#deedf2}
+.hand-peek[data-art-source="VAN_CS2_131"] img{object-position:50% 55%}
+.hand-peek[data-art-source="VAN_CS2_124"] img{object-position:50% 65%}
+.hand-peek[data-art-source="VAN_CS2_213"] img{object-position:50% 58%}
+.hand-peek[data-art-source="VAN_CS1_042"] img{object-position:50% 68%}
+@media(orientation:portrait){.played-reveal{display:none}}
+/* Keep the full illustration behind each exposed identity tile, so the last
+   card and wider low-count fans do not acquire blank unused card faces. */
+.hand.is-crowded .hand-card:not(.selected) .card-art,.hand.is-expanded .hand-card:not(.selected) .card-art{display:block}
+.minion-art[data-art-source="VAN_CS2_131"] img{transform:scale(1);object-position:50% 55%}
+.minion-art[data-art-source="VAN_CS2_124"] img{transform:scale(1);object-position:50% 65%}
+.minion-art[data-art-source="VAN_CS2_213"] img{transform:scale(1);object-position:50% 58%}
+.minion-art[data-art-source="VAN_CS2_187"] img{transform:scale(1.08);transform-origin:50% 45%}
+.minion-art[data-art-source="VAN_CS2_162"] img{transform:scale(1);object-position:50% 25%}
+/* A 4:3 landscape board reaches the side edges. Use the free top-left band,
+   ending above the first row, instead of assuming phone-width side space. */
+@media(max-aspect-ratio:3/2) and (orientation:landscape){.played-reveal{width:calc(var(--stage)*.22 - 12px);height:calc(22.75dvh - 60px);max-height:164px;grid-template-columns:min(60px,8vw) minmax(0,1fr);grid-template-rows:minmax(0,1fr)}.played-reveal .revealed-copy{justify-content:center}}
+.hand.is-crowded:not(.is-expanded) .hand-card:not(.selected) .card-heading{position:static}
+.hand.is-crowded:not(.is-expanded) .hand-card:not(.selected) .cost{position:absolute;left:3px;top:3px;width:22px;height:23px;font-size:18px;line-height:21px}
+[data-art-source="VAN_CS2_131"]{--art-mat:#277d91}[data-art-source="VAN_CS2_124"]{--art-mat:#975fc0}[data-art-source="VAN_CS2_213"]{--art-mat:#c36428}[data-art-source="VAN_CS2_187"]{--art-mat:#418269}[data-art-source="VAN_CS2_162"]{--art-mat:#507cbd}[data-art-source="VAN_EX1_582"]{--art-mat:#9c678f}[data-art-source="VAN_CS2_155"]{--art-mat:#c1923d}[data-art-source="VAN_CS1_042"]{--art-mat:#263f57}
+.hand.is-crowded .hand-card:not(.selected) .hand-peek,.hand.is-expanded .hand-card:not(.selected) .hand-peek{border:2px solid var(--art-mat,#e6c88c)}
+
+/* v8b: lay out a real board rectangle between the control rails. Tablet rows
+   shrink uniformly to this rectangle; controls never cover a seventh minion. */
+#app{--right-rail:max(84px,calc(var(--stage)*.15));--row-width:calc(var(--stage) - 84px - var(--right-rail));--unit-w:min(17dvh,calc((var(--row-width) - 9dvh)/7));--unit-h:calc(var(--unit-w)*1.265);--stat-size:min(6.5dvh,calc(var(--unit-w)*.42))}
+.board,.board:has(.minion:nth-child(6)){left:calc(var(--stage-left) + 84px);width:var(--row-width)}
+.minion-stats .attack-stat,.minion-stats .health-stat{width:var(--stat-size);min-width:var(--stat-size);height:var(--stat-size);font-size:min(5.5dvh,calc(var(--unit-w)*.36));line-height:1}
+/* Detached, bounded death feedback occupies the existing public action band,
+   never an old battlefield coordinate. Surviving damage stays on surviving UID. */
+.combat-death-lane{position:fixed;display:flex;align-items:stretch;gap:4px;padding:1px 3px;overflow:hidden;background:#30241af5;color:#fff1d2;border:1px solid #c2945e;border-radius:6px;pointer-events:none!important}
+.combat-death-badge{display:flex;flex:1;align-items:center;gap:4px;min-width:0;overflow:hidden;font-size:10px;line-height:12px}
+.combat-death-badge>span:last-child{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.combat-death-art{display:block;position:static;flex:0 0 22px;width:22px;height:22px;max-height:100%;overflow:hidden;border-radius:3px}
+.combat-death-art img{display:block;width:100%;height:100%;object-fit:cover;transform:none}
+/* Explicit dimensions avoid WebKit's percentage image in auto-height flex art
+   collapsing. Every resting hand count also has the proven exposed square tile. */
+.hand-card .card-art,.hand-card.selected .card-art{position:absolute;left:3px;right:auto;top:31px;bottom:auto;width:calc(100% - 6px);height:calc(42dvh - 36px);min-height:0}
+.hand:not(.is-expanded) .hand-card:not(.selected) .card-heading{position:static}
+.hand:not(.is-expanded) .hand-card:not(.selected) .cost{position:absolute;left:3px;top:3px;width:22px;height:23px;font-size:18px;line-height:21px}
+.hand:not(.is-expanded) .hand-card:not(.selected) .hand-peek{display:block;position:absolute;left:3px;top:29px;width:var(--peek-w);height:var(--peek-w);border:2px solid var(--art-mat,#e6c88c);border-radius:4px;overflow:hidden;background:#f2dfbd;z-index:1}
+.hand:not(.is-expanded) .hand-card:not(.selected) .card-bottom{top:calc(31px + var(--peek-w));left:3px;width:var(--peek-w);min-height:15px;height:15px;padding:0;gap:1px;flex-direction:row;border-radius:2px}
+.hand:not(.is-expanded) .hand-card:not(.selected) .hand-stat{min-width:0;padding:0;font-size:12px;line-height:15px;gap:0}
+.hand:not(.is-expanded) .hand-card:not(.selected) .hand-stat small{font-size:6px;line-height:9px}
+.hand:not(.is-expanded) .hand-card:not(.selected) .hand-stat:only-child{font-size:9px}
+.hand:not(.is-expanded):not(.is-crowded) .hand-card:not(.selected) .card-heading strong{left:46px;right:3px;top:29px;max-height:26px;font-size:10px;line-height:11px}
+/* At568px the old 16.75px stat lane clipped digit ink. Smaller cost + a20.75px
+   explicit two-cell lane give label and number their own nonshrinking columns. */
+.hand.is-expanded .hand-card:not(.selected) .cost{width:20px;height:23px;font-size:16px}
+.hand.is-expanded .hand-card:not(.selected) .card-bottom{left:25px;width:calc(var(--peek-w) - 22px)}
+.hand.is-expanded .hand-card:not(.selected) .hand-stat{display:grid;grid-template-columns:6px minmax(0,1fr);gap:0;align-items:center;padding:0;font-size:11px;line-height:13px;min-width:0}
+.hand.is-expanded .hand-card:not(.selected) .hand-stat small{display:block;font-size:6px;line-height:10px;min-width:0}
+.hand.is-expanded .hand-card:not(.selected) .hand-value{display:block;font-size:11px;line-height:13px;font-variant-numeric:tabular-nums;text-align:center;white-space:nowrap}
+.hand.is-expanded .hand-card:not(.selected) .hand-stat:only-child{display:flex;font-size:9px}
+/* Both controls use the same rail boundary as the board, rather than unrelated
+   percentages inherited from earlier layouts. Seven-pixel stat overhang leaves
+   another seven pixels before the first control. */
+.interaction-actions #end-turn{left:calc(var(--stage-left) + var(--stage) - var(--right-rail) + 14px);width:calc(var(--right-rail) - 20px)}
+.mana-rail{left:calc(var(--stage-left) + var(--stage) - var(--right-rail) + 18px);top:60dvh;width:calc(var(--right-rail) - 24px)}
+
+/* v8c: stable high-contrast hit information for its complete1250ms lifetime.
+   Only the attacker's decorative motion uses WAAPI; hit opacity is never animated. */
+.combat-impact{opacity:1;z-index:1}
+.combat-damage{opacity:1;z-index:2;transform:translate(-50%,-100%);padding:2px 5px;border:2px solid #fff1c4;border-radius:7px;background:#74291f;color:#fffbe7;text-shadow:0 1px #301009;box-shadow:0 2px 3px #231309aa}

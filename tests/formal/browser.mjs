@@ -1,0 +1,42 @@
+import assert from 'node:assert/strict';import fs from 'node:fs';
+const engine=process.env.TEST_ENGINE||'chromium';const pw=await import(process.env.PLAYWRIGHT_MODULE);
+const poll=async(fn,test)=>{for(let i=0;i<200;i++){const d=await fn();if(test(d))return d;await new Promise(r=>setTimeout(r,25));}throw Error('poll timeout '+JSON.stringify(await fn()));};
+const browser=await pw[engine].launch({headless:true});const errors=[],rows=[],failed=[];
+try{
+ const c=await browser.newContext({viewport:{width:844,height:390}});await c.addInitScript(()=>{Date.now=()=>1791648000000});const p=await c.newPage();p.on('response',r=>{if(r.status()>=400)failed.push(r.url())});p.on('pageerror',e=>{errors.push(e.message);console.log('PAGEERROR',e.message)});
+ await p.goto('http://127.0.0.1:8788/');await p.getByRole('button',{name:'暂不进入'}).click();assert.equal(await p.evaluate(()=>localStorage.length),0);rows.push('cancel zero writes');
+ await p.reload();await p.getByRole('button',{name:'同意并继续'}).click();await p.waitForFunction(()=>window.__tzz);rows.push('bootstrap');
+ assert.equal(await p.evaluate(()=>__tzz.SAVE_KEY),'tangzhe-formal-collection-v1-save');
+ await p.screenshot({path:`evidence/${engine}-formal-entry.png`});
+ await p.evaluate(()=>{__tzz.closeModal();__tzz.state.shops[2].open=true;__tzz.state.shops[2].lv=1;if(!__tzz.persist())throw Error("fixture persist failed");__tzz.openCards();});
+ const f=await (await p.$('#cardsFrame')).contentFrame();await f.waitForURL('**/cards/ui/index.html?**');
+ await f.waitForSelector('script[type=module]',{state:'attached'});
+ await poll(()=>f.evaluate(async()=>(await import(document.querySelector('script[type=module]').src)).getDiagnostics()),d=>d.ported===true);
+ rows.push('cards port');assert.equal(await p.evaluate(()=>__tzz.cardsOpen),true);
+ await p.screenshot({path:`evidence/${engine}-card-entry.png`});
+ const diag=()=>f.evaluate(async()=>(await import(document.querySelector('script[type=module]').src)).getDiagnostics());
+ await poll(diag,d=>d.lastSaved!==null);
+ assert.equal((await diag()).bgm.unlocked,false);
+ await f.locator('#pause').click();await f.locator('#pause').click();
+ await poll(diag,d=>d.bgm.created===1&&d.bgm.state==='running');
+ assert.equal((await diag()).bgm.created,1);assert.equal((await diag()).bgm.state,'running');rows.push('BGM user unlock/decode/single player');
+ await f.locator('#pause').click();await poll(diag,d=>d.bgm.state==='suspended');
+ await f.locator('#pause').click();assert.equal((await diag()).bgm.created,1);rows.push('pause/resume reuses player');
+ await f.evaluate(()=>{Object.defineProperty(document,'visibilityState',{configurable:true,get:()=> 'hidden'});Object.defineProperty(document,'hidden',{configurable:true,get:()=>true});document.dispatchEvent(new Event('visibilitychange'));});
+ await poll(diag,d=>d.paused&&d.bgm.state==='suspended');
+ await f.evaluate(()=>{delete document.visibilityState;delete document.hidden;document.dispatchEvent(new Event('visibilitychange'));});
+ await f.locator('#pause').click();await poll(diag,d=>d.bgm.state==='running');assert.equal((await diag()).bgm.created,1);rows.push('simulated visibility pause/resume no overlap');
+ await p.evaluate(()=>document.querySelector('#mute').click());await poll(diag,d=>d.muted);
+ assert.equal((await diag()).bgm.muted,true);rows.push('parent mute inherited');
+ await f.locator('#exit-embed').click();await p.waitForFunction(()=>!__tzz.cardsOpen);assert.equal(await p.evaluate(()=>__tzz.persist()),true);rows.push('exit/business saves continue');
+ await p.evaluate(()=>__tzz.openCards());const restored=await (await p.$('#cardsFrame')).contentFrame();await restored.waitForURL('**/cards/ui/index.html?**');
+ await restored.locator('#resume-continue').click();const restoredDiag=await restored.evaluate(async()=>(await import(document.querySelector('script[type=module]').src)).getDiagnostics());assert.equal(restoredDiag.ported,true);assert.equal(restoredDiag.muted,true);assert.equal(restoredDiag.bgm.created,0);rows.push('reopen restores match and mute');
+ const keys=await p.evaluate(()=>Object.keys(localStorage));assert(keys.some(k=>k==='tangzhe-formal-card-save'));assert(!keys.some(k=>k.startsWith('tangzhe-preview')));rows.push('formal card namespace');
+
+ const second=await c.newPage();await second.goto('http://127.0.0.1:8788/pet/game/');await second.waitForSelector('#collectionStartup');assert.equal(await second.evaluate(()=>!!window.__tzz),false);rows.push('pet writer waits');
+ const fieldsBefore=await p.evaluate(()=>{__tzz.persist();const s=structuredClone(__tzz.state);delete s.rev;return s});await p.close();await second.waitForFunction(()=>window.__tzz);assert.equal(await second.evaluate(()=>__tzz.SAVE_KEY),'tangzhe-formal-collection-v1-save');const fieldsAfter=await second.evaluate(()=>{const s=structuredClone(__tzz.state);delete s.rev;return s});assert.deepEqual(fieldsAfter,fieldsBefore);rows.push('pet takes lease with all fields preserved except revision');await second.close();
+ const rollback=await c.newPage();await rollback.route('**/collection/release-gate.mjs*',route=>route.fulfill({contentType:'text/javascript',body:fs.readFileSync('collection/release-gate.mjs','utf8').replace('CARDS_ENTRY_ENABLED = true','CARDS_ENTRY_ENABLED = false')}));
+ await rollback.goto('http://127.0.0.1:8788/');await rollback.waitForFunction(()=>window.__tzz);assert.equal(await rollback.evaluate(()=>{__tzz.openCards();return __tzz.cardsOpen}),false);assert.equal(await rollback.evaluate(()=>__tzz.persist()),true);assert.equal(await rollback.evaluate(()=>__tzz.SAVE_KEY),'tangzhe-formal-collection-v1-save');rows.push('rollback hides cards and keeps new business save');
+ await rollback.close();await c.close();assert.deepEqual(errors,[]);assert.deepEqual(failed,[]);
+}finally{await browser.close();fs.writeFileSync(`evidence/${engine}-browser.json`,JSON.stringify({rows,errors,failed},null,2));}
+console.log(rows);

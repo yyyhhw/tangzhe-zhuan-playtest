@@ -1,15 +1,15 @@
 // Parent-only campaign controller. Wallet mutations remain in the host's atomic transaction.
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory(require('./tdcore.js'), require('./tdcampaign-progress.js'), require('./tdprogress.js'));
-  else root.TDHost = factory(root.TDCore, root.TDStageProgress, root.TDProgress);
-})(this, function (T, P, Archive) {
+  if (typeof module === 'object' && module.exports) module.exports = factory(require('./tdcore.js'), require('./tdcampaign-progress.js'), require('./tdprogress.js'), require('./tdupgrade-receipts.js'));
+  else root.TDHost = factory(root.TDCore, root.TDStageProgress, root.TDProgress, root.TDUpgradeReceipts);
+})(this, function (T, P, Archive, Receipts) {
   'use strict';
   const PROTOCOL = 3;
   function create(o) {
     const runs = new Map(), buys = new Map(); let current = null, handshaken = false;
     const progress = () => o.state().tdCampaign === undefined ? P.fresh() : o.state().tdCampaign;
     const snapshot = () => P.legacy(o.state().td);
-    const blocked = () => !P.configured() || !handshaken || !!o.blocked() || !o.state().shops[3].open || P.check(o.state().tdCampaign).length > 0 || (o.state().td50 !== undefined && (!Archive || Archive.check(o.state().td50).length > 0));
+    const blocked = () => !Receipts || Receipts.check(o.state().tdUpgradeReceipts,o.state().td).length>0 || !P.configured() || !handshaken || !!o.blocked() || !o.state().shops[3].open || P.check(o.state().tdCampaign).length > 0 || (o.state().td50 !== undefined && (!Archive || Archive.check(o.state().td50).length > 0));
     const reply = (extra = {}) => o.send(Object.assign({td:'state',protocol:PROTOCOL,ruleset:P.RULESET_ID,coins:blocked() ? 0 : o.balance(),z:snapshot(),tdCampaign:JSON.parse(JSON.stringify(progress())),...(o.state().td50 === undefined ? {} : {td50:JSON.parse(JSON.stringify(o.state().td50))}),blocked:blocked(),muted:!!o.state().muted},extra));
     const identity = (run,d,kind) => run.mode === kind && run.n === d.n && run.cmd === d.cmd && run.mapId === d.mapId && run.seed === (kind === 'normal' && d.seed === undefined ? 0 : d.seed);
     function msg(d) {
@@ -38,19 +38,32 @@
         runs.set(d.runId,current); return reply(Object.assign(ack,{ok:true,cmd:current.cmd,n:current.n,mapId:current.mapId,seed:current.seed}));
       }
       if (d.td === 'buy') {
-        if (!P.validId(d.requestId) || !T.TOWER_IDS.includes(d.id)) return fail('升级请求无效');
-        let rec = buys.get(d.requestId);
-        if (rec && rec.id !== d.id) return fail('升级编号不匹配');
-        if (rec && rec.done) return reply(Object.assign(ack,{ok:true,dup:true}));
-        if (blocked()) return fail('只读模式或科技公司未开张，不能升级');
-        if (!rec) { if (buys.size >= 4096) return fail('本页升级次数已满，请刷新后再试'); rec = {id:d.id,done:false}; buys.set(d.requestId,rec); }
-        const lv = snapshot().lv[d.id]; if (lv >= T.MAX_UP) return fail('已满级');
-        const r = o.transact(st => { const z = P.legacy(st.td); if (z.lv[d.id] !== lv) return {ok:false,why:'等级已变化'}; z.lv[d.id]++; st.td = z; return {ok:true}; },T.price(d.id,lv),'td-buy:'+d.requestId+':'+d.id+':'+lv);
-        if (!r.ok) {
-          if (r.uncertain || r.stage === 'save') return reply(Object.assign(ack,{uncertain:true,why:'保存状态尚未确认，请重试确认；不要重复购买'}));
-          return fail(r.stage === 'pay' ? '金币不够或金额无效' : '升级未完成，请重试');
+        if (!P.validId(d.requestId) || !T.TOWER_IDS.includes(d.id) || Object.keys(d).some(k=>!['td','ruleset','requestId','id'].includes(k))) return fail('升级请求无效');
+        // Resolve an uncertain previous commit through the same owned writer,
+        // before examining a stale in-memory level or receipt.
+        if(o.reconcile){const resolved=o.reconcile();if(!resolved.ok)return reply(Object.assign(ack,{uncertain:true,why:'保存状态尚未确认，请保留本局并重试确认'}));}
+        if(blocked())return fail('只读模式或科技公司未开张，不能升级');
+        const ledger=o.state().tdUpgradeReceipts||Receipts.fresh();
+        const saved=ledger.receipts.find(r=>r.requestId===d.requestId);
+        if(saved){if(saved.id!==d.id)return fail('升级编号不匹配');return reply(Object.assign(ack,{ok:true,dup:true,purchase:{...saved}}));}
+        let rec=buys.get(d.requestId);
+        if(rec&&rec.id!==d.id)return fail('升级编号不匹配');
+        if(ledger.receipts.length>=Receipts.MAX)return fail('升级回执已满，请保留存档并联系维护者');
+        if(!rec){if(buys.size>=Receipts.MAX)return fail('本页升级请求已满，请刷新后再试');rec={id:d.id};buys.set(d.requestId,rec);}
+        const lv=snapshot().lv[d.id];if(lv>=T.MAX_UP)return fail('已满级');
+        const purchase={requestId:d.requestId,id:d.id,fromLevel:lv,toLevel:lv+1,cost:T.price(d.id,lv)};
+        const r=o.transact(st=>{
+          const z=P.legacy(st.td),history=st.tdUpgradeReceipts||Receipts.fresh();
+          if(Receipts.check(history,st.td).length||z.lv[d.id]!==lv||history.receipts.some(r=>r.requestId===d.requestId))return {ok:false,why:'升级状态已变化'};
+          z.lv[d.id]++;st.td=z;
+          st.tdUpgradeReceipts={...history,receipts:[...history.receipts,purchase]};
+          return {ok:true};
+        },purchase.cost,'td-buy:'+d.requestId+':'+d.id+':'+lv);
+        if(!r.ok){
+          if(r.uncertain||r.stage==='save')return reply(Object.assign(ack,{uncertain:true,why:'保存状态尚未确认，请重试确认；不要重复购买'}));
+          return fail(r.stage==='pay'?'金币不够或金额无效':'升级未完成，请重试');
         }
-        rec.done = true; o.changed(); return reply(Object.assign(ack,{ok:true}));
+        o.changed();return reply(Object.assign(ack,{ok:true,purchase:{...purchase}}));
       }
       const run = runs.get(d.runId), kind = d.td === 'endlessResult' ? 'endless' : 'normal';
       if (!P.validId(d.runId) || !run || !identity(run,d,kind)) return fail('本局登记不匹配');

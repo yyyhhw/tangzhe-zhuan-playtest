@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#433425">
+  <meta name="color-scheme" content="light">
+  <title>书店卡牌</title>
+  <link rel="stylesheet" href="./styles.css?v=card-s1">
+  <link rel="stylesheet" href="./bookspine.css?v=card-s1">
+  <link rel="stylesheet" href="./battlefield.css?v=card-art-8c">
+  <link rel="stylesheet" href="./spell-feedback.css?v=card-shield-10a">
+  <link rel="stylesheet" href="./collection.css?v=collection-trial-1c">
+  <link rel="stylesheet" href="./readable-effects.css?v=formal-cards-candidate-7">
+  <link rel="stylesheet" href="./weapon-hud.css?v=formal-cards-candidate-7">
+<link rel="stylesheet" href="./hand-flow.css?v=formal-cards-candidate-7">
+</head>
+<body>
+  <main id="app">
+    <header class="topbar">
+      <div class="brand"><h1>书页之间 <span>卡牌对战</span></h1></div>
+      <div id="turn-bar" class="turn-bar" aria-live="polite"></div>
+      <div class="top-actions"><button id="exit-embed" class="quiet" hidden>返回</button><button id="pause" class="quiet">暂停</button><button id="menu-open" class="quiet" aria-haspopup="dialog">菜单</button></div>
+    </header>
+    <div id="last-action-status" class="last-action-status" role="status" aria-live="polite" aria-atomic="true" hidden></div>
+    <button id="recent-open" class="recent-open quiet" aria-haspopup="dialog" disabled><span>最近出牌</span></button>
+    <aside id="played-reveal" class="played-reveal" aria-label="对手刚刚打出的牌" hidden></aside>
+    <section class="table" aria-label="横屏卡牌战场">
+      <div id="opponent" class="player-bar opponent"></div>
+      <div id="enemy-board" class="board enemy-board" aria-label="对手随从"></div>
+      <div class="table-divider" aria-hidden="true"><span>书 页 之 间</span></div>
+      <div id="friendly-board" data-gesture-target class="board friendly-board" role="group" tabindex="0" aria-label="我的战场：选牌后点击此处或按回车出牌"></div>
+      <div id="player" class="player-bar player"></div>
+      <div id="hand-browser-nav" hidden><button id="hand-prev" aria-label="查看前面的手牌">←</button><span>完整卡牌 · 左右滑动 · 点牌后再确认</span><button id="hand-next" aria-label="查看后面的手牌">→</button></div>
+      <div id="aim-guide" role="status" hidden></div><svg id="aim-arrows" aria-hidden="true"></svg>
+      <div id="hand" class="hand" aria-label="我的手牌"></div>
+      <aside class="battle-rail" aria-label="法力与回合操作">
+        <div id="mana-rail" class="mana-rail" aria-live="polite"></div>
+        <button id="hand-count" class="hand-count quiet" aria-expanded="false" aria-controls="hand">手牌 ↑</button>
+        <div class="interaction-actions">
+          <span class="action-slot"><button id="end-turn" class="primary">结束回合</button></span>
+          <span class="action-slot"><button id="confirm" class="primary" hidden>确认出牌</button></span>
+          <span class="action-slot"><button id="cancel" class="quiet" hidden>取消选择</button></span>
+          <span class="action-slot"><button id="detail-open" class="quiet" aria-haspopup="dialog">牌面详情</button></span>
+        </div>
+      </aside>
+    </section>
+    <div class="battle-status"><span id="battle-hint" aria-live="polite">展开手牌，点选后再点绿色战场或目标</span><span id="notice" class="notice" role="status" aria-live="polite"></span></div>
+    <section id="result-panel" class="result-panel" aria-labelledby="result-title" hidden>
+      <h2 id="result-title" aria-live="polite"></h2>
+      <p id="result-note" role="status"></p>
+      <div class="result-actions"><button id="result-finish" class="primary">结束游戏 · 返回书店</button><button id="result-replay" class="quiet" aria-haspopup="dialog">再来一局</button></div>
+    </section>
+    <div class="rotate-prompt" role="status"><span aria-hidden="true">↻</span><strong>横过手机，展开战场</strong><p>菜单、存档和返回仍可使用。对局已暂停。</p></div>
+  </main>
+  <dialog id="menu-dialog" aria-labelledby="menu-title">
+    <div class="dialog-heading"><h2 id="menu-title">对局菜单</h2><button data-close="menu-dialog" class="icon-button" aria-label="关闭菜单">×</button></div>
+    <div class="snapshot-actions"><button id="new-game" class="primary">新对局</button><button id="snapshot-open" class="quiet">存档与回放</button></div>
+    <p class="prototype-note">对局进度逐步保存在当前浏览器；牌册抽卡会消耗经营金币，合成会消耗星尘。</p>
+    <p id="rules-label"></p>
+    <p class="dialog-note">点选手牌，再点绿色己方战场或绿色目标使用；拖动可攻击的角色到合法目标上攻击。拖回手牌、松开在无效位置或旋转屏幕均取消。无目标法术与武器再点确认使用。选牌本身不会出牌。</p>
+    <details class="event-log"><summary>对局记录 <span id="revision-label"></span></summary><ol id="log"></ol></details>
+    <details class="version-details"><summary>版本详情</summary><p>已接入 39 / 83 张目录卡：中立 25、战士 4、法师 4、圣骑士 4、术士 2，以及 2 张现有衍生牌。固定 30 张牌组，每张最多 2 张。未验证完整规则或职业平衡。</p></details>
+  </dialog>
+  <dialog id="recent-dialog" aria-labelledby="recent-title">
+    <div class="dialog-heading"><h2 id="recent-title">最近出牌</h2><button data-close="recent-dialog" class="icon-button" aria-label="关闭最近出牌">×</button></div>
+    <p class="dialog-note">仅显示本次打开对局后已打出的最近 8 张牌。对局已暂停，关闭后点「继续」。</p>
+    <div id="recent-cards" class="recent-cards"></div>
+  </dialog>
+  <dialog id="detail-dialog" aria-labelledby="detail-title">
+    <div class="dialog-heading"><h2 id="detail-title">牌面详情</h2><button data-close="detail-dialog" class="icon-button" aria-label="关闭牌面详情">×</button></div>
+    <div id="selection" class="selection" aria-live="polite" aria-atomic="true"></div>
+    <p class="dialog-note">关闭后，原选择仍保留。点击战场或目标执行；也可取消选择。</p>
+  </dialog>
+  <dialog id="setup-dialog" aria-labelledby="setup-title">
+    <form id="setup-form">
+      <div class="dialog-heading"><div><small>开始一段新篇章</small><h2 id="setup-title">新对局</h2></div><button type="button" data-close="setup-dialog" class="icon-button" aria-label="关闭新对局设置">×</button></div>
+      <p class="dialog-note">这会替换当前对局和自动存档（上一份存档保留为备份）。需要保留进度时，请先下载快照。固定 30 张实验牌组，每张最多 2 张，仅中立及本职业牌。四副固定 30 张牌组；新圣骑士牌组用两张「珍珠护套」替换两张「折页搬箱客」，旧对局保持原牌组；已支持 39 张目录卡，不代表默认牌组包含所有已支持卡。菜单中的「牌册」可管理收藏和独立组牌草稿；此处仍使用固定实验牌组。尚未完成完整规则与职业平衡验收。</p>
+      <fieldset><legend>你的角色</legend><div id="hero-options" class="hero-options"></div></fieldset>
+      <label>对手角色<select name="opponentHero"><option value="mage">阿宅 · 法师</option><option value="warrior">77 · 战士</option><option value="paladin">珍珠姐 · 圣骑士</option><option value="warlock">火箭 · 术士</option></select></label>
+      <details class="settings-details"><summary>实验规则与随机种子</summary><div class="settings-grid">
+        <label>英雄生命<input name="heroHealth" type="number" value="30" min="1" max="99" required></label>
+        <label>牌库张数<input name="deckSize" type="number" value="30" min="30" max="30" readonly required></label>
+        <label>场上上限<input name="boardLimit" type="number" value="7" min="1" max="12" required></label>
+        <label>手牌上限<input name="handLimit" type="number" value="10" min="4" max="20" required></label>
+        <label>法力上限<input name="maxMana" type="number" value="10" min="1" max="20" required></label>
+        <label>规则种子<input name="rulesSeed" type="number" value="123" min="1" max="4294967295" required></label>
+        <label>AI 种子<input name="aiSeed" type="number" value="456" min="1" max="4294967295" required></label>
+      </div></details>
+      <p id="setup-error" class="error-text" role="alert"></p>
+      <button type="submit" class="primary wide">开始新对局</button>
+    </form>
+  </dialog>
+  <dialog id="snapshot-dialog" aria-labelledby="snapshot-title">
+    <div class="dialog-heading"><div><small>本地 JSON · 另有每步自动存档</small><h2 id="snapshot-title">对局快照</h2></div><button type="button" data-close="snapshot-dialog" class="icon-button" aria-label="关闭快照">×</button></div>
+    <p class="dialog-note">对局每步自动存档，刷新后可继续上一局。快照包含完整技术状态，包括双方牌库、手牌和随机状态，请仅用于测试。导入时会暂停 AI；导入失败不会替换当前对局。</p>
+    <div class="snapshot-actions"><button id="download" class="primary">下载 JSON 快照</button><button id="download-replay" class="quiet">下载回放</button></div>
+    <label class="file-label">从文件导入<input id="import-file" type="file" accept="application/json,.json"></label>
+    <label>或粘贴快照 JSON<textarea id="import-text" rows="6" spellcheck="false" placeholder="粘贴已下载的完整 JSON 快照"></textarea></label>
+    <button id="import-button" class="quiet wide">导入粘贴的快照</button>
+    <p id="import-result" class="error-text" role="status"></p>
+  </dialog>
+  <dialog id="resume-dialog" aria-labelledby="resume-title">
+    <div class="dialog-heading"><div><small>本机存档</small><h2 id="resume-title">上一局</h2></div></div>
+    <p id="resume-text" class="dialog-note" role="status"></p>
+    <div class="snapshot-actions"><button id="resume-continue" class="primary">继续上一局</button><button id="resume-abandon" class="quiet">放弃</button><button id="resume-new" class="primary" hidden>新开一局</button></div>
+  </dialog>
+  <dialog id="save-dialog" aria-labelledby="save-title">
+    <div class="dialog-heading"><div><small>对局已暂停</small><h2 id="save-title">保存没有成功</h2></div></div>
+    <p id="save-text" class="dialog-note" role="alert"></p><details><summary>查看维护详情</summary><p id="save-error-info"></p></details>
+    <div class="snapshot-actions"><button id="save-retry" class="primary">重试保存</button><button id="save-restore" class="quiet">回到最后成功档</button><button id="save-download" class="quiet">下载快照</button><button id="save-finish" class="quiet" hidden>结束游戏…</button><button id="save-exit" class="quiet" hidden>仍要退出</button></div>
+  </dialog>
+  <noscript><p>游戏需要启用 JavaScript。</p></noscript>
+  <script type="module" src="./app.mjs?v=formal-cards-candidate-7"></script>
+</body>
+</html>
+

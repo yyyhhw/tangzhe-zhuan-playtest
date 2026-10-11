@@ -1,0 +1,144 @@
+/* Original cloth-spine / library-slip skin. Presentation only, no orientation lock. */
+:root { --ink:#30251f; --muted:#6b5d50; --paper:#fff8e8; --green:#386654; --line:#c8b79b; color:var(--ink); background:#f0e6d0; }
+body { background:radial-gradient(ellipse at top,#fffaf0 0,#f0e6d0 85%); }
+button { border-color:var(--line); border-radius:5px; }
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,summary:focus-visible { outline:3px solid #1e667b; outline-offset:3px; }
+#app { max-width:1100px; }
+.brand-mark { background:#433425; color:#fff0ca; border:2px solid var(--ink); border-radius:3px; box-shadow:3px 3px 0 #c0a777; }
+.brand h1 { color:#35261d; }
+.brand h1 span { color:#5d4933; background:#f8e6be; border-color:#bfaa86; border-radius:3px; }
+.brand p,.prototype-note { color:var(--muted); }
+.prototype-note { font-size:12px; line-height:1.65; }
+.table { border:2px solid #574536; border-radius:7px; background:#eaddc3; box-shadow:4px 5px 0 #3d2e2225; }
+.turn-bar { background:#49392b; color:#fff6df; }
+.player-bar { background:#f6eddb80; }
+[data-class="warrior"] { --spine:#c84c40; }
+[data-class="mage"] { --spine:#4159a6; }
+[data-class="paladin"] { --spine:#2f7667; }
+[data-class="warlock"] { --spine:#725187; }
+[data-class="neutral"] { --spine:#877154; }
+.hero-button { border:1px solid #a88f6b; border-left:7px solid var(--spine,#877154); border-radius:4px; background:#fff8e8; box-shadow:2px 3px 0 #6b513221; }
+.hero-button:disabled,.minion:disabled { opacity:1; }
+.hero-avatar { color:var(--ink); background:#f5e6c6; border:1px solid #ad9573; border-radius:3px; }
+.hero-stats,.resource-line,.card-type,.card-bottom,.minion-status { font-variant-numeric:tabular-nums; }
+.resource-line { color:#5d4c3c; }
+.weapon-status { flex-basis:100%; }
+.mana-label { color:#285c6a; }
+.mana-dots i { transform:none; background:#376e7b; border-color:#245661; }
+.mana-dots i.spent { background:#e0d6c1; border-color:#aa9d86; }
+.table-divider { color:#6e5942; border-color:#baa47f; }
+.board { min-height:158px; padding-top:9px; padding-bottom:13px; }
+.empty-board { color:#776b58; }
+.minion { flex-basis:114px; height:142px; padding:6px 6px 6px 11px; background:linear-gradient(to right,var(--spine,#877154) 0 5px,#fff8e8 5px); border:2px solid #49372a; border-radius:3px 8px 3px 3px; box-shadow:2px 3px 0 #47342528; }
+.minion-name { font-size:12px; line-height:1.3; min-height:31px; }
+.minion-art { min-height:0; border-radius:2px; background:#efe0bd; }
+.minion.taunt { border:4px double #49372a; }
+.taunt-badge,.charge-badge { color:#463554; background:#eee4f2; border:1px solid #8e769b; border-radius:2px; font-size:11px; line-height:1.15; }
+.minion-stats { gap:2px; }
+.attack-stat,.health-stat { padding:1px 3px; border-radius:2px; font-size:12px; white-space:nowrap; }
+.attack-stat { color:#453719; background:#ead69b; }
+.health-stat { color:#702f29; background:#f1d4c7; }
+.stat-label { font-size:9px; font-weight:500; }
+.minion-status { font-size:9px; line-height:1.15; color:#66533e; }
+.selected { outline:3px solid #985a24!important; outline-offset:-3px; }
+.valid-target { box-shadow:0 0 0 3px #a36510,0 0 0 5px #fff2c4!important; }
+.hand-label { color:#5d4933; border-color:#bda987; }
+.hand-label span:last-child { font-size:11px; }
+.hand { min-height:0; gap:12px; padding-top:10px; padding-bottom:17px; background:#d7c2a380; scroll-padding-inline:16px; }
+.hand-card { flex:0 0 160px; width:160px; min-height:296px; max-height:none; padding:8px 8px 8px 16px; gap:6px; color:var(--ink); background:linear-gradient(to right,var(--spine,#877154) 0 8px,#fff8e8 8px); border:2px solid #3f3026; border-radius:3px 10px 3px 3px; box-shadow:3px 4px 0 #57412b40; }
+.hand-card::before { content:""; position:absolute; left:0; top:46px; width:10px; height:3px; background:#f6d68d; border:1px solid #745a32; box-shadow:0 178px 0 #b99750; pointer-events:none; }
+.hand-card .card-heading { font-size:12px; min-height:33px; padding:0; gap:5px; overflow-wrap:anywhere; }
+.cost { width:27px; height:31px; border-radius:2px; background:#f8e6bb; border:1px solid #5e4931; color:#342a21; font-size:16px; line-height:1; display:flex; flex-direction:column; justify-content:center; gap:1px; }
+.cost small { font-size:9px; font-weight:500; }
+.card-type { font-size:10px; line-height:1.4; color:#695843; }
+.card-art { display:block; height:auto; min-height:0; width:100%; aspect-ratio:1122 / 1402; flex:none; border:1px solid #b6a181; border-radius:1px; background:#ead8b5; }
+.original-art::before,.original-art::after { content:none; }
+.original-art img { display:block; width:100%; height:100%; object-fit:contain; object-position:center; }
+.art-fallback { position:absolute; bottom:7px; left:0; right:0; color:#68563e; font-size:10px; text-align:center; }
+.card-art.placeholder-art::before { top:28%; left:22%; }
+.card-art.placeholder-art::after { top:35%; right:22%; }
+.minion-art .art-fallback { display:none; }
+.card-preview { display:block; -webkit-line-clamp:unset; overflow:visible; min-height:35px; font-size:11px; line-height:1.55; color:#524433; font-weight:500; border-top:1px solid #d4c2a1; padding-top:5px; }
+.card-bottom { color:#473726; font-size:11px; border-top:1px solid #d4c2a1; padding-top:5px; }
+.playable::after { top:auto; bottom:0; right:0; box-sizing:border-box; max-width:100%; border-radius:0; height:5px; width:100%; background:#3b7158; }
+.interaction { position:relative; bottom:auto; border:1px solid #a88d66; border-left:6px solid #95734d; border-radius:3px; background:#fff9eaf5; backdrop-filter:none; box-shadow:3px 4px 0 #59402720; align-items:flex-start; }
+.selection { font-size:13px; }
+.selection p { color:#5e4f3d; }
+.selection .selection-hint { color:#8a4d21; }
+.selection-detail { display:flex; gap:12px; align-items:flex-start; }
+.selection-copy { min-width:0; overflow-wrap:anywhere; }
+.selection-art { display:block; flex:0 0 88px; width:88px; aspect-ratio:1122 / 1402; border:1px solid #b6a181; background:#ead8b5; }
+.source-info { font-size:11px; }
+.interaction-actions { padding-top:2px; }
+.event-log { color:#5d4c3c; }
+.event-log #revision-label { float:none; display:block; overflow-wrap:anywhere; }
+.event-log summary { min-height:44px; }
+footer { color:#6d5c47; font-size:11px; line-height:1.7; }
+dialog { border-color:#8f7551; border-radius:6px; background:#fff8e8; }
+dialog::backdrop { background:#30261dba; }
+.dialog-note,.hero-option span small { color:#675540; }
+.hero-option:has(:checked) { background:#ece6ce; border-color:#6c7354; }
+@media(max-width:600px) {
+  .prototype-note { font-size:11px; }
+  .top-actions button { min-height:44px; }
+  /* Keep resources readable when an equipped weapon adds a full text line. */
+  .player-metadata { flex-basis:100%; order:1; }
+  .board { min-height:144px; }
+  .minion { flex-basis:104px; height:128px; padding-left:10px; }
+  .minion-name { font-size:11px; min-height:28px; }
+  .hand { gap:10px; scroll-padding-inline:10px; }
+  .hand-card { flex-basis:148px; width:148px; min-height:281px; padding:7px 7px 7px 15px; }
+  .hand-label { align-items:flex-start; flex-wrap:wrap; gap:3px; }
+  .hand-label span:last-child { font-size:10px; }
+  .interaction { padding:10px; gap:10px; bottom:auto; align-items:stretch; }
+  .selection { font-size:12px; }
+  .selection-detail { gap:8px; }
+  .selection-art { flex-basis:62px; width:62px; }
+  .interaction-actions { flex-wrap:wrap; }
+  .interaction-actions button { min-height:44px; }
+  .power-button { min-height:44px; }
+  .table { border-radius:5px; }
+}
+/* A horizontal checkout slip on short landscape screens. Portrait stays usable. */
+@media(orientation:landscape) and (max-height:450px) {
+  .prototype-note { display:block; font-size:11px; margin:5px 0 8px; }
+  .top-actions button { min-height:44px; }
+  .board { min-height:124px; }
+  .minion { height:108px; flex-basis:112px; }
+  .minion-name { min-height:16px; font-size:11px; }
+  /* 30x26 bordered box rotates fully inside the measured 34.36px art slot. */
+  .minion-art.placeholder-art::before { top:4px; width:24px; height:20px; }
+  .hand { min-height:0; }
+  .hand-card { display:grid; grid-template-columns:80px minmax(0,1fr); grid-template-rows:auto auto 1fr auto; column-gap:9px; row-gap:4px; flex-basis:258px; width:258px; min-height:150px; padding:7px 8px 8px 16px; }
+  .hand-card::before { box-shadow:0 75px 0 #b99750; }
+  .hand-card .card-heading { grid-column:2; grid-row:1; min-height:31px; }
+  .hand-card .card-type { grid-column:2; grid-row:2; }
+  .hand-card .card-art { grid-column:1; grid-row:1 / 5; width:80px; height:auto; align-self:center; }
+  .hand-card .card-preview { grid-column:2; grid-row:3; min-height:0; }
+  .hand-card .card-bottom { grid-column:2; grid-row:4; }
+  /* A damage card has one extra line; keep it beside, never below, the artwork. */
+  .hand-card:has(.effective-spell-damage) { grid-template-rows:auto auto 1fr auto auto; }
+  .hand-card:has(.effective-spell-damage) .card-art { grid-row:1 / 6; }
+  .hand-card .effective-spell-damage { grid-column:2; grid-row:4; }
+  .hand-card:has(.effective-spell-damage) .card-bottom { grid-row:5; }
+  .interaction { flex-wrap:wrap; }
+  .selection { min-width:260px; }
+  .interaction-actions button { min-height:44px; }
+}
+@media(forced-colors:active) {
+  .hand-card,.minion,.hero-button { border-color:ButtonText; }
+  .selected { outline-color:Highlight!important; }
+  .valid-target { outline:3px dashed Highlight; outline-offset:-4px; }
+}
+
+/* ui1: permanent action slots prevent a hidden confirmation from moving End Turn
+   under a second click. Hidden buttons keep native focus/accessibility semantics. */
+.interaction-actions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); width:330px; max-width:100%; gap:6px; align-items:stretch; }
+.action-slot { display:block; min-width:0; min-height:52px; }
+.interaction-actions .action-slot button { width:100%; height:100%; min-height:52px; padding:6px; white-space:normal; overflow-wrap:anywhere; line-height:1.25; }
+@media(max-width:600px) { .interaction-actions { width:100%; } }
+
+/* Derived current spell damage is separate from immutable printed card text. */
+.spell-damage-total { color: #643774; }
+.spell-damage-badge { display: inline-block; padding: 0; border: 1px solid #8e769b; border-radius: 2px; color: #463554; background: #eee4f2; font-size: 11px; line-height: 1.15; }
+.effective-spell-damage { display: block; color: #643774; font-size: 11px; line-height: 1.35; overflow-wrap: anywhere; }
