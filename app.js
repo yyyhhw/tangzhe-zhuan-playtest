@@ -14,7 +14,7 @@ const STORAGE = COLLECTION.storage;
 const TD = window.TDCore; let tdOpen = false, tdPort = null, tdGeneration = 0;
 const ZB = window.ZBCore; var zbOpen = false, zbPort = null;
 let cardsOpen=false,cardsPort=null,cardsGeneration=0,cardsCloseTimer=null;
-const CARDS_SHOP=2,TD_SHOP=1,CARDS_V='formal-cards-audio-candidate-8-r3';
+const CARDS_SHOP=2,CARDS_V='formal-cards-audio-candidate-8-r3';
 const ZB_SHOP = 0; var zbLastCeo = null, zbRun = null; const zbUsedRuns = new Set();   // 13d：用过的 runId（本页内存），重复 / 过期的 start 不能把旧局重新激活   // 13a：打僵尸 = 烧烤摊（店 0）；zbLastCeo = 最近一次成功结算的上场 CEO（只在内存）
 // 13c：zbRun = 父页开局登记 { runId, ceoId, startedAt, settled }——结算只认这份记录、同一局只结一次；中途调岗不要求仍在任
 const SAVE_KEY = COLLECTION.keys.main, BAK_KEY = COLLECTION.keys.backup, LOCK_KEY = COLLECTION.keys.tab;
@@ -1397,7 +1397,7 @@ function renderShop() {
 }
 // 13h：每家店自己的小游戏入口（只在店铺页最底部）；烧烤摊 = 打僵尸，其余三家以后各有自己的游戏，加在这里
 function shopGameCard(i) {
-  const card = i === ZB_SHOP ? zbCard() : i === CARDS_SHOP && COLLECTION.entryEnabled ? cardsCard() : i === TD_SHOP ? tdCard() : i === 3 ? techSoonCard() : '';
+  const card = i === ZB_SHOP ? zbCard() : i === CARDS_SHOP && COLLECTION.entryEnabled ? cardsCard() : i === 3 ? tdCard() : '';
   return card ? `<div class="sec-title shop-game-title">小游戏</div>${card}` : '';
 }
 function ceoPost(id) { const s = state.ceos[id]; return s.at >= 0 ? E.signOf(state, s.at).name : '休息中（空着）'; }
@@ -2574,9 +2574,8 @@ window.__tzz = { upgradeGate, TEST_MODE, TEST_LV, SAVE_KEY, BAK_KEY, get saveBlo
   hitBig, modalOpen, closeModal, get frozen() { return frozen; },
   musicStatus() { return AU.recorded?.status || null; }, audioState() { return AU.ctx ? AU.ctx.state : 'none'; }, showPreview, openAssign, JOB_ART, jobShown, jobURL, showJobArt,
   HOME_ART, FURN_ART, FURN_UP, homeAct, homeAdvanceActor, homeDrawActor, homeOwner, get homeWho() { return homeWho; }, get homeSub() { return homeSub; }, get homeMode() { return homeMode; }, set homeMode(v) { homeMode = v === 'decor' ? 'decor' : 'live'; }, get homeSel() { return homeSel; }, get homeDrag() { return homeDrag; }, homeActor, LIVE_LINES, homeUndo, resize, get canvasSize() { return { W, H }; }, pet: petHooks, pets: petsHooks, lookOf, drawPerson, drawHead, LOOKS, get bubble() { return bubble; } };
-/* ================= 奶茶店塔防「消灭细菌，保卫奶茶」（原科技公司塔防换皮）：与主钱包同一存档、同一原子交易 =================
- * 入口从科技公司（3）挪到奶茶店（1）；state.tdCampaign / 存档键 / 经济 / 玩法全部不变，旧进度原样沿用。 */
-function techSoonCard() { return `<div class="card td-soon dim"><div class="ava">🚧</div><div class="info"><div class="name">科技公司小游戏</div><div class="desc">敬请期待</div></div><button class="buy no" type="button" disabled>敬请期待</button></div>`; }
+/* ================= 科技公司塔防「消灭细菌，保卫奶茶」（文案层换皮，入口仍在科技公司）：与主钱包同一存档、同一原子交易 =================
+ * 入口/门禁保持科技公司（3）；state.tdCampaign / 存档键 / 经济 / 玩法全部不变，旧进度原样沿用。 */
 function tdCard() {
   const z = window.TDStageProgress.check(state.tdCampaign).length ? window.TDStageProgress.fresh() : (state.tdCampaign || window.TDStageProgress.fresh());
   return `<div class="card td-card"><div class="ava">🧋</div><div class="info"><div class="name">消灭细菌，保卫奶茶<span class="tag">无尽挑战</span></div><div class="desc">50 个独立关卡 · 每关 10–14 波 · 第50关巨型 Boss<br>已通关 ${z.highestCleared}/50 关 · 通关后解锁无尽 · 升级共用经营金币</div></div><button class="buy" data-act="td">去守</button></div>`;
@@ -2593,7 +2592,7 @@ const tdController = window.TDHost.create({
   send:d => { if (tdOpen && tdPort) tdPort.postMessage(d); }
 });
 function openTD() {
-  if (frozen || tdOpen || zbOpen || cardsOpen || !state.shops[TD_SHOP].open) return;
+  if (frozen || tdOpen || zbOpen || cardsOpen || !state.shops[3].open) return;
   tdOpen = true; const f = $('#tdFrame'), generation = ++tdGeneration;
   const target = new URL('td/index.html?embed=1&v=formal-cards-candidate-7', location.href);
   f.onload = () => {
