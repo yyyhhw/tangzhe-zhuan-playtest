@@ -13,7 +13,7 @@ const PRICE=TRIAL_CONFIG.drawPriceGold;
 function setup({maxBytes,coins=PRICE*20,failStage=null}={}){
   delete require.cache[require.resolve('../../economy.js')];const E=require('../../economy.js');
   const data=new Map(),writes=[];const ctl={failStage,throwMain:false};
-  const storage={getItem:k=>data.get(k)??null,setItem(k,v){writes.push(k);if(k===KEYS.main&&(ctl.throwMain||(ctl.failStage&&Object.values(JSON.parse(v).collection?.transactions||{}).some(t=>t.stage===ctl.failStage))))throw new Error('QuotaExceededError');data.set(k,v);}};
+  const storage={getItem(k){if(ctl.blockRead&&k===KEYS.main)throw new Error('synthetic read failure');return data.get(k)??null},setItem(k,v){writes.push(k);if(k===KEYS.main&&(ctl.throwMain||(ctl.failStage&&Object.values(JSON.parse(v).collection?.transactions||{}).some(t=>t.stage===ctl.failStage))))throw new Error('QuotaExceededError');data.set(k,v);if(k===KEYS.main&&ctl.blockReadAfterWrite){ctl.blockReadAfterWrite=false;ctl.blockRead=true;}}};
   const c=createSaveCoordinator({storage,economy:E,model,ownsLock:()=>true,...(maxBytes?{maxBytes}:{})});E.installFormalCollectionProtocol(c);
   const src=E.newState(1);src.coins=coins;src.coinFrac=.5;data.set(KEYS.source,JSON.stringify(src));
   const i=c.inspect();let state=c.initialize({approvedSourceRaw:i.sourceRaw,approvedSourceEvidence:i.sourceEvidence,approvedEmpty:false,now:1000}).state;
@@ -277,4 +277,25 @@ test('R2 15:54: restore-reminders (host command, allowCollectionChange) cannot e
   assert(JSON.stringify(JSON.parse(t.c.raw).collection)===JSON.stringify(JSON.parse(before).collection),'reminders event must not be written');
   const ack=t.cmd('acknowledge','a1',{txId:r.txId});assert(ack.ok,JSON.stringify(ack).slice(0,200));
   const d=t.c.current().state;assert.equal(d.collectionHost.acknowledged[r.txId],true);assert.equal(d.coins,paid);
+});
+
+for(const written of [true,false])test(`R2 16:20: ack fallback + unknown commit (${written?'ack written, readback failed':'ack NOT written'}) keeps dirty business memory across reconcile`,()=>{
+  const LIMIT=2097152;const t=setup({maxBytes:LIMIT});const r=t.draw(1);assert(r.ok);const paid=t.state.coins;
+  t.state.futureCompatibleField='';const overhead=JSON.stringify(t.state).length;t.state.futureCompatibleField='x'.repeat(LIMIT-10-overhead);t.state.taps=4242;
+  assert.equal(t.c.commit(t.state).code,'CAPACITY_ACK_RESERVED');const fieldLen=t.state.futureCompatibleField.length;
+  if(written)t.ctl.blockReadAfterWrite=true;else t.ctl.throwMainOnce=true;
+  if(!written){t.ctl.throwMain=true;}
+  const ack=t.cmd('acknowledge','a1',{txId:r.txId});assert.equal(ack.ok,false);
+  t.ctl.throwMain=false;t.ctl.blockRead=false;
+  const snap=t.cmd('snapshot','s1',{});assert(snap.ok!==false,JSON.stringify(snap).slice(0,200));
+  assert.equal(t.state.taps,4242);assert.equal(t.state.futureCompatibleField.length,fieldLen);
+  const d=t.c.current().state;assert.equal(t.state.rev,d.rev);assert.equal(d.coins,paid);
+  assert.equal(Boolean(d.collectionHost.acknowledged[r.txId]),written);
+  assert.deepEqual(t.state.collectionHost,d.collectionHost);
+  if(!written){const again=t.cmd('acknowledge','a2',{txId:r.txId});assert(again.ok,JSON.stringify(again).slice(0,200));assert.equal(t.state.taps,4242);}
+});
+test('verified-state cache never relaxes strict object checks (NaN / undefined / toJSON / prototype)',()=>{
+  const c=history(80);const text=JSON.stringify(c);model.restore(JSON.parse(text));   // warm the cache
+  const mut=[o=>{o.dust=NaN},o=>{o.preferences.extra=undefined},o=>{o.toJSON=()=>JSON.parse(text)},o=>Object.setPrototypeOf(o,{x:1})];
+  for(const m of mut){const o=JSON.parse(text);m(o);assert.throws(()=>model.restore(o));}
 });

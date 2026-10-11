@@ -62,9 +62,13 @@ maxBytes、余量、预留都按 `JSON.stringify(...).length` 计，单位是 **
 - resume 遇到 debited 时，在 flush 之前就进入保护：recoverPending 和 resume 两个入口都不改主档原文（包括 rev）。
 - 缓存还在时，容量拒绝返回 canCancel:false，和实际行为一致（本会话里不允许取消，防止重抽）。是否改成允许取消，待熊大决定。
 
+### ack fallback 遇到未知提交时保留脏内存（R2 16:20）
+- ack 写耐久档之前，先把脏业务内存存进 pendingAckMerge。如果提交结果是 COMMIT_UNCERTAIN，之后 snapshot、resume、recoverPending 走 reconcile 时，不再用耐久档直接覆盖内存，而是在**真实的**耐久档（collection、collectionHost、rev）上合并内存里的业务字段。ack 写成和没写成两种情况都有测试；没写成的话可以再 ack 一次。
+
 ## 读档缓存（已校验状态）
 - model.restore 加了缓存：键是 JSON 原文的 FNV-1a 哈希加长度；命中时**再逐字比较全文**，所以哈希碰撞也不会返回别的状态。原文只要有一个字符不同就不命中，走完整重放校验。缓存的是冻结的可信状态，最多 6 份，只缓存 ≥32768 字符的状态（小状态重放本来就便宜，也避免预估用的代理档把大状态挤出去）。
 - model.reduce 产出的可信状态会记下自己的原文，所以写盘之后下一次读档能直接命中。
+- 只有通过纯 JSON 检查的输入才查缓存（有限数、非 -0、普通原型、无 toJSON、无 undefined、无稀疏数组），NaN、特殊原型这类对象一律走完整严格校验（R2 16:20）。
 - 端到端实测（熊大的 sample-80，每个请求都从 coordinator JSON 重新读档；Node，云端）：
   | 请求 | 旧 | 新 |
   |---|---|---|

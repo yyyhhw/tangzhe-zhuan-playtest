@@ -66,6 +66,15 @@ export function createCollectionHost({coordinator,model,economy:E,getState,repla
   const freshId=() => { const id=makeId(); if(!idOK(id)) throw Error('INVALID_HOST_ID'); return id; };
   const step=(state,type,txId,extra={})=>model.reduce(state,{type,txId,eventId:`${txId}:${type}`,expectedRevision:state.revision,...extra});
   const adopt=result=>{if(result.ok) replaceState(clone(result.state));return result;};
+  // Dirty business memory waiting to be merged after an ack fallback whose commit outcome is unknown (R2 16:20).
+  // A reconcile must never overwrite it with the durable save: merge business fields from memory on top of the REAL durable
+  // collection/host/rev, whichever side of the unknown commit actually happened.
+  let pendingAckMerge=null;
+  function adoptReconciled(durable){
+    if(!pendingAckMerge){replaceState(clone(durable));return;}
+    const live=clone(pendingAckMerge.live);live.rev=durable.rev;live.collection=clone(durable.collection);live.collectionHost=clone(durable.collectionHost);
+    pendingAckMerge=null;replaceState(live);
+  }
   function read() { const result=coordinator.current(); if(!result.ok)return result; return {ok:true,state:getState()}; }
   function snapshot() {
     const loaded=read(); if(!loaded.ok)return loaded;
@@ -129,7 +138,7 @@ export function createCollectionHost({coordinator,model,economy:E,getState,repla
       if(!fields||Object.keys(message).some(k=>!['card','protocol','requestId','command',...fields].includes(k)))return fail('INVALID_COMMAND');
       if (['snapshot','resume'].includes(message.command) && coordinator.failed==='COMMIT_UNCERTAIN') {
         const reconciled=coordinator.reconcile(); if(!reconciled.ok)return reconciled;
-        replaceState(clone(reconciled.state));
+        adoptReconciled(reconciled.state);
       }
       if(message.command==='snapshot')return snapshot();
       if(message.command==='validate-deck') {
@@ -217,7 +226,10 @@ export function createCollectionHost({coordinator,model,economy:E,getState,repla
     if(flushed){const live=clone(getState());live.collectionHost.acknowledged[txId]=true;const saved=save(live);return saved.ok?snapshot():saved;}
     if(coordinator.failed)return fail(coordinator.failed);
     d.collectionHost.acknowledged[txId]=true;
-    const saved=coordinator.commit(d,{allowCollectionChange:true});if(!saved.ok)return saved;
+    pendingAckMerge={live:clone(getState()),txId};
+    const saved=coordinator.commit(d,{allowCollectionChange:true});
+    if(!saved.ok){if(coordinator.failed!=='COMMIT_UNCERTAIN')pendingAckMerge=null;return {...saved,businessUnsaved:true,businessKeptInMemory:true};}
+    pendingAckMerge=null;
     const live=clone(getState());live.rev=saved.state.rev;live.collectionHost=clone(saved.state.collectionHost);
     replaceState(live);
     return {...snapshot(),ackedOnDurable:true,businessUnsaved:true};
@@ -225,7 +237,7 @@ export function createCollectionHost({coordinator,model,economy:E,getState,repla
   /** Hanging-transaction recovery (parent-side, not an iframe command). Never decides for the player, never re-rolls. */
   function recoverPending() {
     try {
-      if(coordinator.failed==='COMMIT_UNCERTAIN'){const r=coordinator.reconcile();if(!r.ok)return r;replaceState(clone(r.state));}
+      if(coordinator.failed==='COMMIT_UNCERTAIN'){const r=coordinator.reconcile();if(!r.ok)return r;adoptReconciled(r.state);}
       const loaded=read();if(!loaded.ok)return loaded;
       const c=model.restore(loaded.state.collection);
       if(!c.activeTxId)return {ok:true,recovered:false,reason:'NO_PENDING'};
