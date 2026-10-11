@@ -6,7 +6,7 @@ import {createSaveCoordinator,KEYS} from '../../collection/host-save.mjs';
 import {createApprovedTrialModel} from '../../collection/domain/model.mjs';
 import {TRIAL_CONFIG} from '../../collection/domain/trial-config.mjs';
 import {canonical} from '../../collection/domain/json.mjs';
-import {planBatchDraw,BATCH_DRAW_ENABLED} from '../../collection/batch-draw.mjs';
+import fs from 'node:fs';
 const require=createRequire(import.meta.url);
 const model=createApprovedTrialModel(TRIAL_CONFIG,{schemaVersion:1,approvedConfigCanonical:canonical(TRIAL_CONFIG),evidenceRefs:['test-only'],walletBridgeApproved:false});
 const PRICE=TRIAL_CONFIG.drawPriceGold;
@@ -57,16 +57,14 @@ test('commit write failure (quota/capacity) never swallows the debit; resume deb
   const rng=t.rng;assert(t.cmd('resume','again',{txId:r.txId}).replay);assert.equal(t.state.coins,coins-PRICE);assert.equal(t.rng,rng);
   assert.equal(t.host.recoverPending().reason,'NO_PENDING');
 });
-test('save failure code is propagated (CAPACITY_READ_ONLY), state rolled back',()=>{
-  // shrink limit after BEGIN so COMMIT exceeds maxBytes
-  const t=setup();const q=t.cmd('quote','q1',{request:{kind:'draw'}});assert(q.ok);const len=t.c.raw.length;
+test('selected recovery with no physical room: CAPACITY_READ_ONLY propagated, protected, no debit, history kept',()=>{
+  const t=setup({failStage:'committed'});const r0=t.draw(1);assert.equal(r0.ok,false);t.ctl.failStage=null;const len=t.c.raw.length;
   delete require.cache[require.resolve('../../economy.js')];const E2=require('../../economy.js');
-  const small=createSaveCoordinator({storage:{getItem:k=>t.data.get(k)??null,setItem:(k,v)=>t.data.set(k,v)},economy:E2,model,ownsLock:()=>true,maxBytes:len+600});
-  E2.installFormalCollectionProtocol(small);let st=small.adopt().state;const coins=st.coins;
+  const small=createSaveCoordinator({storage:{getItem:k=>t.data.get(k)??null,setItem:(k,v)=>t.data.set(k,v)},economy:E2,model,ownsLock:()=>true,maxBytes:len+10});
+  E2.installFormalCollectionProtocol(small);let st=small.adopt().state;const coins=st.coins,ev=st.collection.events.length;
   const h=createCollectionHost({coordinator:small,model,economy:E2,getState:()=>st,replaceState:s=>st=s,flush:()=>small.commit(st).ok,enabled:true,randomInt:()=>0,makeId:()=>'z:1'});
-  const r=h.handle({card:'collection',protocol:1,command:'confirm',requestId:'c1',txId:q.txId,decision:'continue',allowDustOverflow:true,suppressFutureOverflowWarnings:false});
-  assert.equal(r.ok,false);assert.equal(r.code,'CAPACITY_READ_ONLY');assert.equal(small.current().state.coins,coins);
-  assert.equal(h.recoverPending().code,'CAPACITY_READ_ONLY');assert.equal(small.current().state.coins,coins);
+  const r=h.recoverPending();assert.equal(r.ok,false);assert.equal(r.code,'CAPACITY_READ_ONLY');assert.equal(r.protected,true);
+  const cur=small.current().state;assert.equal(cur.coins,coins);assert.equal(cur.collection.transactions[r0.txId].stage,'selected');assert.equal(cur.collection.events.length,ev);
 });
 test('hanging awaiting-decision tx is not decided for the player; new tx blocked',()=>{
   const t=setup();const q=t.cmd('quote','q1',{request:{kind:'draw'}});assert(q.ok);
@@ -84,10 +82,56 @@ test('no history deleted: transactions/events only grow across many draws',()=>{
   const t=setup();let prevTx=0,prevEv=0;for(let i=1;i<=5;i++){const r=t.draw(i);assert(r.ok);assert(t.cmd('acknowledge','a'+i,{txId:r.txId}).ok);const c=t.state.collection;const n=Object.keys(c.transactions).length;assert(n>prevTx);assert(c.events.length>prevEv);prevTx=n;prevEv=c.events.length;}
   assert.equal(TRIAL_CONFIG.drawPriceGold,5000000);
 });
-test('ten-draw is interface only and not enabled',()=>{
-  assert.equal(BATCH_DRAW_ENABLED,false);
-  assert.equal(planBatchDraw({count:10,usedBytes:1000,reservePerDrawBytes:100,maxBytes:5000}).code,'BATCH_DRAW_NOT_ENABLED');
-  assert.equal(planBatchDraw({count:10,usedBytes:1000,reservePerDrawBytes:1000,maxBytes:5000}).code,'CAPACITY_LIMIT_REACHED');
-  assert.equal(planBatchDraw({count:11,usedBytes:0,reservePerDrawBytes:1,maxBytes:5}).code,'INVALID_BATCH_COUNT');
+test('ten-draw is NOT in this candidate: no module, no command; design doc only',()=>{
+  assert.equal(fs.existsSync(new URL('../../collection/batch-draw.mjs',import.meta.url)),false);
+  assert(fs.readFileSync(new URL('../../collection/BATCH_DRAW_DESIGN.md',import.meta.url),'utf8').includes('原子'));
   const t=setup();assert.equal(t.cmd('batch-draw','b1',{count:10}).code,'INVALID_COMMAND');
+});
+// Build a durable 'debited' save: RECORD_DEBIT and the gold debit in the same revision, COMMIT not yet written.
+function debitedSetup(){
+  const t=setup();const q=t.cmd('quote','q1',{request:{kind:'draw'}});assert(q.ok);
+  let s=t.c.current().state;let c=s.collection;const step=(c,type,x={})=>model.reduce(c,{type,txId:q.txId,eventId:`${q.txId}:${type}`,expectedRevision:c.revision,...x});
+  c=step(c,'DECIDE',{decision:'continue',allowDustOverflow:true,suppressFutureOverflowWarnings:false});c=step(c,'SELECT',{tickets:{rarity:0,card:0,golden:0}});
+  c=step(c,'RECORD_DEBIT',{walletReceipt:{schemaVersion:1,debitId:`debit:${q.txId}`,intent:model.walletIntent(c,q.txId),walletRevision:s.rev+1}});
+  s.collection=c;const before=s.coins;t.E.spendCoins(s,PRICE);assert(t.c.commit(s,{allowCollectionChange:true}).ok);
+  t.state=t.c.adopt().state;t.host=t.mk();return {t,txId:q.txId,paid:t.state.coins,before};
+}
+test('debited hanging tx: recoverPending commits without second debit or RNG',()=>{
+  const {t,txId,paid,before}=debitedSetup();assert.equal(paid,before-PRICE);assert.equal(tx(t,txId).stage,'debited');
+  const r=t.host.recoverPending();assert(r.ok&&r.recovered,JSON.stringify(r));assert.equal(r.fromStage,'debited');
+  assert.equal(tx(t,txId).stage,'committed');assert.equal(t.state.coins,paid);assert.equal(t.rng,0);
+  assert.equal(tx(t,txId).receipt.walletDebitId,`debit:${txId}`);
+  assert(t.cmd('resume','again',{txId}).replay);assert.equal(t.state.coins,paid);assert.equal(t.host.recoverPending().reason,'NO_PENDING');
+});
+test('debited via resume command also works (no INVALID_PREPARED_STATE)',()=>{
+  const {t,txId,paid}=debitedSetup();const r=t.cmd('resume','r1',{txId});assert(r.ok,JSON.stringify(r));assert.equal(t.state.coins,paid);assert.equal(tx(t,txId).stage,'committed');
+});
+test('debited with forged/unproven wallet evidence is refused (model replay or host check), no write',()=>{
+  const {t,txId}=debitedSetup();const s=t.c.current().state;s.collection.transactions[txId].walletReceipt.walletRevision=s.rev+5;
+  // cannot persist a forged state through model validation? build host over in-memory clone only
+  const raw=t.c.raw;let st=s;const h=createCollectionHost({coordinator:{...t.c,current:()=>({ok:true,state:st}),failed:null,maxBytes:t.c.maxBytes,commit:()=>{throw Error('must not write')}},model,economy:t.E,getState:()=>st,replaceState:x=>st=x,flush:()=>true,enabled:true,randomInt:()=>0,makeId:()=>'p:1'});
+  const r=h.recoverPending();assert.equal(r.ok,false,JSON.stringify(r));assert(['DEBIT_EVIDENCE_UNPROVEN_PROTECTED','STATE_REPLAY_MISMATCH_KEEP_ORIGINAL'].includes(r.code),JSON.stringify(r));assert.equal(t.c.raw,raw);
+});
+test('debited recovery with no physical room: protected, coins unchanged, history kept',()=>{
+  const {t,txId,paid}=debitedSetup();const len=t.c.raw.length;
+  delete require.cache[require.resolve('../../economy.js')];const E2=require('../../economy.js');
+  const small=createSaveCoordinator({storage:{getItem:k=>t.data.get(k)??null,setItem:(k,v)=>t.data.set(k,v)},economy:E2,model,ownsLock:()=>true,maxBytes:len+10});E2.installFormalCollectionProtocol(small);
+  let st=small.adopt().state;const ev=st.collection.events.length;
+  const h=createCollectionHost({coordinator:small,model,economy:E2,getState:()=>st,replaceState:x=>st=x,flush:()=>small.commit(st).ok,enabled:true,randomInt:()=>0,makeId:()=>'s:1'});
+  const r=h.recoverPending();assert.equal(r.ok,false);assert.equal(r.protected,true);assert.equal(r.code,'CAPACITY_READ_ONLY');
+  const cur=small.current().state;assert.equal(cur.coins,paid);assert.equal(cur.collection.transactions[txId].stage,'debited');assert.equal(cur.collection.events.length,ev);
+});
+test('confirm re-checks capacity after business growth: rejects before entropy/debit, cancel still possible',()=>{
+  const t=setup();const q=t.cmd('quote','q1',{request:{kind:'draw'}});assert(q.ok);
+  const s=t.c.current().state;const need=reserveFor({state:s,model,request:{kind:'draw'},txId:q.txId,requestId:'',maxBytes:1e9,existing:true}).neededBytes;
+  const len=t.c.raw.length;
+  delete require.cache[require.resolve('../../economy.js')];const E2=require('../../economy.js');
+  const small=createSaveCoordinator({storage:{getItem:k=>t.data.get(k)??null,setItem:(k,v)=>t.data.set(k,v)},economy:E2,model,ownsLock:()=>true,maxBytes:need-1});E2.installFormalCollectionProtocol(small);
+  let st=small.adopt().state;const coins=st.coins;let rng=0;
+  const h=createCollectionHost({coordinator:small,model,economy:E2,getState:()=>st,replaceState:x=>st=x,flush:()=>small.commit(st).ok,enabled:true,randomInt:()=>{rng++;return 0},makeId:()=>'s:1'});
+  const m=(command,requestId,x)=>h.handle({card:'collection',protocol:1,command,requestId,...x});
+  const r=m('confirm','c1',{txId:q.txId,decision:'continue',allowDustOverflow:true,suppressFutureOverflowWarnings:false});
+  assert.equal(r.code,'CAPACITY_LIMIT_REACHED');assert.equal(rng,0);assert.equal(small.current().state.coins,coins);assert.equal(small.current().state.collection.transactions[q.txId].stage,'awaiting-decision');
+  assert(m('confirm','c2',{txId:q.txId,decision:'cancel',allowDustOverflow:false,suppressFutureOverflowWarnings:false}).cancelled);assert.equal(small.current().state.coins,coins);
+  assert(len<need);
 });

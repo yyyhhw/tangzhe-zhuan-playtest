@@ -11,16 +11,16 @@ export const CAPACITY_FALLBACK_RESERVE_BYTES = 32768;
  * →request binding→ack) on a clone with worst-case tickets, and require the final save to fit maxBytes with margin.
  * Pure: never writes, never touches RNG, never changes prices. Recovery/resume/ack of existing transactions is NOT gated.
  */
-export function reserveFor({state,model,request,txId,requestId,maxBytes,marginBytes=CAPACITY_MARGIN_BYTES}) {
+export function reserveFor({state,model,request,txId,requestId,maxBytes,marginBytes=CAPACITY_MARGIN_BYTES,existing=false}) {
   const base=JSON.stringify(state).length, sizes=[];
-  const finish=(collection)=>{const s=clone(state);s.collection=collection;s.rev=(s.rev||0)+1;s.collectionHost.requests[requestId]={txId,requestCanonical:canonical(request)};s.collectionHost.acknowledged[txId]=true;return JSON.stringify(s).length;};
+  const finish=(collection)=>{const s=clone(state);s.collection=collection;s.rev=(s.rev||0)+1;if(!existing)s.collectionHost.requests[requestId]={txId,requestCanonical:canonical(request)};s.collectionHost.acknowledged[txId]=true;return JSON.stringify(s).length;};
   const step=(c,type,extra={})=>model.reduce(c,{type,txId,eventId:`${txId}:${type}`,expectedRevision:c.revision,...extra});
   const decide={decision:'continue',allowDustOverflow:true,suppressFutureOverflowWarnings:false};
   const variants=[];
   if(request.kind==='draw'){let start=0;for(const r of model.config.rarities){const n=model.config.pool.filter(p=>p.rarity===r.id).length;for(const golden of [0,model.config.probabilityScale-1])variants.push({rarity:start,card:Math.max(0,n-1),golden});start+=r.weight;}}
   else variants.push(null);
   for(const tickets of variants){try{
-    let c=step(state.collection,'BEGIN',{request});c=step(c,'DECIDE',decide);
+    let c=existing?state.collection:step(state.collection,'BEGIN',{request});c=step(c,'DECIDE',decide);
     if(tickets){c=step(c,'SELECT',{tickets});c=step(c,'RECORD_DEBIT',{walletReceipt:{schemaVersion:1,debitId:`debit:${txId}`,intent:model.walletIntent(c,txId),walletRevision:Number.MAX_SAFE_INTEGER}});}
     c=step(c,'COMMIT');sizes.push(finish(c));
   }catch{}}
@@ -51,6 +51,7 @@ export function createCollectionHost({coordinator,model,economy:E,getState,repla
     if(tx.stage==='committed')return committed(c,txId,true);
     if(tx.stage==='cancelled')return {ok:true,cancelled:true,...snapshot()};
     if(tx.stage==='awaiting-decision')return {ok:true,txId,quote:tx.quote,needsDecision:true,...snapshot()};
+    if(tx.stage==='debited')return commitDebited(state,c,tx);
     if(tx.stage!=='selected')return fail('INVALID_PREPARED_STATE');
     const price=tx.request.kind==='draw'?model.config.drawPriceGold:0;
     if(state.coins<price)return fail('INSUFFICIENT_FUNDS');
@@ -63,6 +64,20 @@ export function createCollectionHost({coordinator,model,economy:E,getState,repla
     // E.transact restores state in place on any failure: no debit is kept, tx stays PREPARED for resume.
     if(!result.ok)return fail(coordinator.failed||saveCode||'WRITE_FAILED');
     replaceState(clone(state)); preparedCache.delete(txId);return committed(state.collection,txId);
+  }
+  /**
+   * 'debited' = RECORD_DEBIT is durable, i.e. the gold was already taken in the SAME save that recorded the receipt
+   * (walletRevision === that save's rev). Recovery only appends COMMIT with price 0: no second debit, no RNG.
+   * If the wallet evidence does not prove the debit is inside the current save, stay in a protective state.
+   */
+  function commitDebited(state,c,tx) {
+    const w=tx.walletReceipt;
+    if(tx.request.kind!=='draw'||!w||w.debitId!==`debit:${tx.txId}`||!Number.isSafeInteger(w.walletRevision)||w.walletRevision>state.rev)return fail('DEBIT_EVIDENCE_UNPROVEN_PROTECTED');
+    let saveCode=null;
+    const result=E.transact(state,{price:0,apply:draft=>{draft.collection=step(draft.collection,'COMMIT',tx.txId);return {ok:true};},
+      save:draft=>{const r=coordinator.commit(draft,{allowCollectionChange:true});if(!r.ok)saveCode=r.code;return r;}});
+    if(!result.ok)return fail(coordinator.failed||saveCode||'WRITE_FAILED');
+    replaceState(clone(state));preparedCache.delete(tx.txId);return committed(state.collection,tx.txId);
   }
   function selectTickets() {
     const rarity=randomInt(model.config.probabilityScale);
@@ -131,6 +146,11 @@ export function createCollectionHost({coordinator,model,economy:E,getState,repla
       if(tx.stage==='selected')return transactPrepared(tx.txId);
       if(tx.stage!=='awaiting-decision')return fail('INVALID_PREPARED_STATE');
       if(decision.decision==='continue'&&state.coins<tx.quote.goldCost)return fail('INSUFFICIENT_FUNDS');
+      if(decision.decision==='continue'&&!preparedCache.has(tx.txId)){
+        // Business saves may have grown since quote: re-check the full remaining transaction before any entropy/debit.
+        const cap=reserveFor({state,model,request:tx.request,txId:tx.txId,requestId:'',maxBytes:coordinator.maxBytes,marginBytes:capacityMarginBytes,existing:true});
+        if(!cap.ok)return {ok:false,code:'CAPACITY_LIMIT_REACHED',capacity:cap,canCancel:true};
+      }
       const cached=preparedCache.get(tx.txId);
       if(cached){if(!same(cached.decision,decision))return fail('TX_DECISION_CONFLICT');state.collection=cached.collection;}
       else {
@@ -153,9 +173,12 @@ export function createCollectionHost({coordinator,model,economy:E,getState,repla
       if(!c.activeTxId)return {ok:true,recovered:false,reason:'NO_PENDING'};
       const tx=c.transactions[c.activeTxId];
       if(tx.stage==='awaiting-decision')return {ok:true,recovered:false,txId:tx.txId,needsDecision:true};
+      if(!['selected','debited'].includes(tx.stage))return {ok:false,code:'RECOVERY_STAGE_UNSUPPORTED_PROTECTED',stage:tx.stage,txId:tx.txId,protected:true};
       if(enabled!==true)return fail('WALLET_BRIDGE_DISABLED');
       const out=transactPrepared(tx.txId);
-      return out.ok?{...out,recovered:true,txId:tx.txId}:out;
+      if(out.ok)return {...out,recovered:true,txId:tx.txId,fromStage:tx.stage};
+      // Physically no room / unknown commit: keep the locked result, never delete history or re-roll.
+      return {...out,protected:true,txId:tx.txId,stage:tx.stage};
     } catch(error){return fail(typeof error?.message==='string'?error.message:'HOST_ERROR');}
   }
   function capacity(request={kind:'draw'}) {
