@@ -195,7 +195,8 @@ export function createSaveCoordinator({storage, economy:E, model, ownsLock, onFa
     if (!Number.isSafeInteger(candidate.rev)) return bad('REVISION_EXHAUSTED');
     const raw=JSON.stringify(candidate); if (raw.length > maxBytes) return bad('CAPACITY_READ_ONLY');
     // Ack space is reserved while receipts wait to be viewed: ordinary business saves may not consume it.
-    if (!allowCollectionChange) { const ackReserve=pendingAckChars(candidate); if (ackReserve>0 && raw.length+ackReserve>maxBytes) return bad('CAPACITY_ACK_RESERVED',{ackReserveChars:ackReserve}); }
+    // ALL writers (business saves and every host command, incl. restore-reminders) keep it; an ack itself shrinks the reserve.
+    { const ackReserve=pendingAckChars(candidate); if (ackReserve>0 && raw.length+ackReserve>maxBytes) return bad('CAPACITY_ACK_RESERVED',{ackReserveChars:ackReserve}); }
     const p=parse(raw); if (!p.ok) return p;
     // Cooperative lifetime lock + exact raw check; no async gap, and no blind old-value rollback.
     const pre=readKey(KEYS.main); if (!pre.ok) return fault(pre.code); if (pre.raw !== previous.raw) return fault('FOREIGN_WRITE_READ_ONLY');

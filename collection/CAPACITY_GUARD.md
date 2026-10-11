@@ -57,6 +57,11 @@ maxBytes、余量、预留都按 `JSON.stringify(...).length` 计，单位是 **
 - 主页面 app.persist：收到 CAPACITY_*（不是故障，不会设置 failed）时，弹出明确提示（最多每 60 秒一次），提醒先去查看回执、不要刷新。saveBlocked 不变，自动保存会继续重试。
 - 如果经营数据本身已经超过物理上限，ack 之后经营保存仍然会失败（CAPACITY_READ_ONLY）。这是真的满了，不是预留造成的闭锁，提示会一直显示。
 
+### ack 预留覆盖所有写者（R2 15:54 持久化死锁修正）
+- host-save 的 ack 预留检查不再只限经营保存：restore-reminders 等所有宿主命令（allowCollectionChange=true）也必须给待确认的回执留出空间。ack 自己会缩小预留，不受影响。
+- resume 遇到 debited 时，在 flush 之前就进入保护：recoverPending 和 resume 两个入口都不改主档原文（包括 rev）。
+- 缓存还在时，容量拒绝返回 canCancel:false，和实际行为一致（本会话里不允许取消，防止重抽）。是否改成允许取消，待熊大决定。
+
 ## 读档缓存（已校验状态）
 - model.restore 加了缓存：键是 JSON 原文的 FNV-1a 哈希加长度；命中时**再逐字比较全文**，所以哈希碰撞也不会返回别的状态。原文只要有一个字符不同就不命中，走完整重放校验。缓存的是冻结的可信状态，最多 6 份，只缓存 ≥32768 字符的状态（小状态重放本来就便宜，也避免预估用的代理档把大状态挤出去）。
 - model.reduce 产出的可信状态会记下自己的原文，所以写盘之后下一次读档能直接命中。

@@ -137,6 +137,8 @@ export function createCollectionHost({coordinator,model,economy:E,getState,repla
         return {ok:true,...model.inspectDeck(current.state.collection,message.cards,message.classId,30),collectionRevision:current.state.collection.collectionRevision};
       }
       if(message.command==='acknowledge')return acknowledge(message.txId);
+      // debited protection happens BEFORE any flush, so no entry point rewrites the main save for a debited tx
+      if(message.command==='resume'&&idOK(message.txId)){const d=coordinator.current();if(d.ok&&d.state.collection?.transactions?.[message.txId]?.stage==='debited')return protectDebited(d.state.collection.transactions[message.txId]);}
       const ready=mutationReady();if(!ready.ok)return ready;
       const state=clone(ready.state), c=model.restore(state.collection), h=state.collectionHost;
       if(message.command==='quote') {
@@ -181,7 +183,8 @@ export function createCollectionHost({coordinator,model,economy:E,getState,repla
         // Also for a CACHED prepared result (earlier PREPARED write failed): same tickets are kept, never re-rolled,
         // but nothing is persisted unless the latest full save still has room (R2 #1).
         const cap=reserveFor({state,model,request:tx.request,txId:tx.txId,requestId:'',maxBytes:coordinator.maxBytes,marginBytes:capacityMarginBytes,existing:true});
-        if(!cap.ok)return {ok:false,code:cap.code||'CAPACITY_LIMIT_REACHED',capacity:cap,canCancel:true};
+        // canCancel reflects reality: while this session holds cached tickets, cancel is refused (no re-roll in-session)
+        if(!cap.ok)return {ok:false,code:cap.code||'CAPACITY_LIMIT_REACHED',capacity:cap,canCancel:!preparedCache.has(tx.txId)};
       }
       const cached=preparedCache.get(tx.txId);
       if(cached){if(!same(cached.decision,decision))return fail('TX_DECISION_CONFLICT');state.collection=cached.collection;}
