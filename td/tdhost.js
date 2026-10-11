@@ -30,7 +30,7 @@
           if (old !== current || !identity(old,d,kind) || old.settled) return fail('这局编号已用过');
           return reply(Object.assign(ack,{ok:!blocked(),cmd:old.cmd,n:old.n,mapId:old.mapId,seed:old.seed,dup:true,why:blocked() ? '只读模式，不能开局' : ''}));
         }
-        if (blocked()) return fail('只读模式或奶茶店未开张，不能开局');
+        if (blocked()) return fail('只读模式或科技公司未开张，不能开局');
         if (progress().results.some(r => r.runId === d.runId)) return fail('这局编号已结算');
         if (runs.size >= P.MAX_RESULTS || progress().results.length >= P.MAX_RESULTS) return fail('本页或本规则的结算记录已满，请保留存档');
         if (kind === 'endless' ? !P.endUnlocked(progress()) : !P.unlocked(progress(),d.n)) return fail(kind === 'endless' ? '先通关第50关并保存，再进入无尽' : '请先通关上一关');
@@ -42,7 +42,7 @@
         // Resolve an uncertain previous commit through the same owned writer,
         // before examining a stale in-memory level or receipt.
         if(o.reconcile){const resolved=o.reconcile();if(!resolved.ok)return reply(Object.assign(ack,{uncertain:true,why:'保存状态尚未确认，请保留本局并重试确认'}));}
-        if(blocked())return fail('只读模式或奶茶店未开张，不能升级');
+        if(blocked())return fail('只读模式或科技公司未开张，不能升级');
         const ledger=o.state().tdUpgradeReceipts||Receipts.fresh();
         const saved=ledger.receipts.find(r=>r.requestId===d.requestId);
         if(saved){if(saved.id!==d.id)return fail('升级编号不匹配');return reply(Object.assign(ack,{ok:true,dup:true,purchase:{...saved}}));}

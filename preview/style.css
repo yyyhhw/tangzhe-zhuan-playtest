@@ -776,3 +776,5 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 
 .item-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
 .item-grid>.item{min-width:0;overflow-wrap:anywhere}
+.collectible-preview .item-art img{width:100%;height:auto;object-fit:contain;aspect-ratio:1}
+.collectible-preview .preview-note{display:block;font-size:11px;opacity:.75}

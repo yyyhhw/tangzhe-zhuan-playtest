@@ -1264,6 +1264,13 @@ function drawCollectible(c, id) {
     oval(0,-9,23,23,'#ffb638');oval(0,-9,14,14,YELLOW);line([[-8,-9],[0,-18],[7,-9],[0,1]],'#fff8e8',3);box(-19,30,10,4,'#70d5ad',1);box(9,30,10,4,'#70d5ad',1);
   }
 }
+/* 首批盲盒 6+2 图鉴图：纯展示层。不在 E.ITEMS / 盲盒池 / 发奖 / 经济里；itemId 已由熊大 19:40 确认为本批展示映射。 */
+const COLLECTIBLE_PREVIEW = Object.freeze([{"id": "c_charcoal_vest", "name": "炭灰小马甲", "type": "clothes", "shop": "烧烤摊", "hidden": false, "unlock": null, "src": "art/collectibles/c_charcoal_vest_catalog_v1.webp", "alt": "深灰色V领马甲，正面有四颗棕色纽扣、两个口袋和浅色缝线，口袋下部有深色斑点。"}, {"id": "c_matcha_knit", "name": "抹茶针织背心", "type": "clothes", "shop": "奶茶店", "hidden": false, "unlock": null, "src": "art/collectibles/c_matcha_knit_catalog_v1.webp", "alt": "抹茶绿色V领针织背心，正面织着竖向麻花纹，领口、袖口和下摆带米白色罗纹边。"}, {"id": "h_guokui", "name": "锅盔软帽", "type": "hat", "shop": "烧烤摊", "hidden": false, "unlock": null, "src": "art/collectibles/h_guokui_catalog_v1.webp", "alt": "圆鼓鼓的米金色软帽，带短帽檐和顶部圆扣，帽面有烘烤色斑与芝麻状点缀。"}, {"id": "h_antenna_clip", "name": "天线发卡", "type": "hat", "shop": "科技公司", "hidden": false, "unlock": null, "src": "art/collectibles/h_antenna_clip_catalog_v1.webp", "alt": "一枚金色发卡，蓝绿色椭圆饰面上有橙色电路线纹，上方的弯曲弹簧顶着一颗橙色圆球。"}, {"id": "d_borrow_register", "name": "借阅登记本", "type": "decor", "shop": "漫画书店", "hidden": false, "unlock": null, "src": "art/collectibles/d_borrow_register_catalog_v1.webp", "alt": "一本摊开的绿皮登记本，米色书页上画着空白表格，中央放着绿金色钢笔，下方垂着红色书签带。"}, {"id": "d_rocket_piggy", "name": "迷你火箭存钱罐", "type": "decor", "shop": "科技公司", "hidden": false, "unlock": null, "src": "art/collectibles/d_rocket_piggy_catalog_v1.webp", "alt": "米白色小火箭配橙红色尖顶和尾翼，机身有金边蓝绿色圆窗，上部有狭长投币口。"}, {"id": "d_opening_photo", "name": "开业合影", "type": "decor", "shop": "街区", "hidden": true, "unlock": "四家店全部开张", "src": "art/collectibles/d_opening_photo_catalog_v1.webp", "alt": "木相框中的四人合影，四人分别拿着烤夹、奶茶、书和小火箭，身后亮着烤串、饮料、书本与火箭图案招牌。"}, {"id": "d_ward_charm", "name": "退散护身符", "type": "decor", "shop": "科技公司", "hidden": true, "unlock": "打僵尸通关第10关", "src": "art/collectibles/d_ward_charm_catalog_v1.webp", "alt": "系着红绳的蓝绿色束口布袋，袋面饰有金色枝叶纹和电路纹盾牌，下方挂着金铃铛与红色流苏。"}].map(Object.freeze));
+const COLLECTIBLE_ART = Object.freeze(Object.fromEntries(COLLECTIBLE_PREVIEW.map(x => [x.id, x])));
+function collectiblePreviewHTML() {
+  const TL = { clothes:'衣服', hat:'帽子', decor:'装饰' };
+  return `<div class="sec-title">新品图鉴预览（只展示，暂未放进盲盒）</div><div class="item-grid collectible-preview">${COLLECTIBLE_PREVIEW.map(x => `<div class="item preview-only" data-preview-item="${x.id}"><span class="t">${TL[x.type]}${x.hidden ? ' · 隐藏' : ''}</span><span class="item-art"><img data-item-art="${x.id}" src="${x.src}?v=collectibles-1" alt="${x.alt}" width="512" height="512" loading="lazy"><span class="item-art-status" hidden>图示暂不可用</span></span>${x.name}<small class="preview-note">${x.shop}${x.hidden ? ' · ' + x.unlock + '（条件未接入）' : ''}</small></div>`).join('')}</div><div class="note">外观收藏，不影响收益、概率和战斗。本批 8 件为图鉴预览，尚未加入盲盒、不能抽到。</div>`;
+}
 function itemThumb(id) {
   if (thumbCache[id]) return thumbCache[id];
   const it=E.ITEM_BY_ID[id]||{},source=document.createElement('canvas');source.width=source.height=384;
@@ -1283,6 +1290,7 @@ function itemThumb(id) {
 function itemIcon(id) {
   const it=E.ITEM_BY_ID[id];
   if(it&&it.type==='card')return '<span class="ii">📜</span>';
+  if(Object.hasOwn(COLLECTIBLE_ART,id)){const x=COLLECTIBLE_ART[id];return `<span class="item-art"><img data-item-art="${id}" src="${x.src}?v=collectibles-1" alt="${x.alt}"><span class="item-art-status" hidden>图示暂不可用</span></span>`;}
   const u=itemThumb(id);
   return u?`<span class="item-art"><img data-item-art="${id}" src="${u}" alt=""><span class="item-art-status" hidden>图示暂不可用</span></span>`:'<span class="ii">❓</span>';
 }
@@ -1420,6 +1428,7 @@ function renderGacha() {
   h += `<div class="item-grid">${E.REGULAR_ITEMS.map(it => { const has = state.gacha.owned.includes(it.id);
     if (has && it.type === 'card') return `<button type="button" class="item story-open" data-act="card" data-arg="${it.id}" aria-label="重看故事卡：${it.name}"><span class="t">故事卡</span>${storyArt(it.id)}<span>${it.name}</span><span class="story-replay-hint">点击重看 ›</span></button>`;
     return `<div class="item ${has ? '' : 'no'}"><span class="t">${TYPE_LABEL[it.type]}</span>${itemIcon(it.id)}${has ? it.name : '？？？'}</div>`; }).join('')}</div>`;
+  h += collectiblePreviewHTML();
   h += `<div class="note">规则：不重复收藏盒，共 ${total} 件：普通收藏 ${E.REGULAR_ITEMS.length} 件（衣服 8 / 帽子 8 / 装饰 8 / 故事卡 8）+ 超级装饰 ${E.SUPER_ITEMS.length} 件。每抽先定类别：<b>超级装饰 ${P(CFG.SUPER_P)}</b>、普通收藏 ${P(1 - CFG.SUPER_P)}，再从该类<b>还没收集的</b>里等概率抽；连续 ${CFG.SUPER_PITY - 1} 抽没出超级装饰，第 ${CFG.SUPER_PITY} 抽必出。某一类抽完了，就只出另一类。每抽必得新物品，最多 ${total} 抽集齐，集齐后不能再买、不扣金币。普通收藏只是好看，<b>不加产速</b>；超级装饰加本店产量和专属效果，但不抽也能正常开齐店铺。单价 ${fmt(CFG.GACHA_PRICE)}。</div>`;
   return h;
 }
