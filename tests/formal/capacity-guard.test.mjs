@@ -88,39 +88,25 @@ test('ten-draw is NOT in this candidate: no module, no command; design doc only'
   assert(fs.readFileSync(new URL('../../collection/BATCH_DRAW_DESIGN.md',import.meta.url),'utf8').includes('原子'));
   const t=setup();assert.equal(t.cmd('batch-draw','b1',{count:10}).code,'INVALID_COMMAND');
 });
-// Build a durable 'debited' save: RECORD_DEBIT and the gold debit in the same revision, COMMIT not yet written.
-function debitedSetup(){
+// Build a durable 'debited' save (never produced by the formal host, which writes RECORD_DEBIT+COMMIT together).
+// spend=true: wallet really debited in the same save; spend=false: R2 forged/unpaid ledger (F0C8FSMS3GU case 3).
+function debitedSetup({spend=true}={}){
   const t=setup();const q=t.cmd('quote','q1',{request:{kind:'draw'}});assert(q.ok);
   let s=t.c.current().state;let c=s.collection;const step=(c,type,x={})=>model.reduce(c,{type,txId:q.txId,eventId:`${q.txId}:${type}`,expectedRevision:c.revision,...x});
-  c=step(c,'DECIDE',{decision:'continue',allowDustOverflow:true,suppressFutureOverflowWarnings:false});c=step(c,'SELECT',{tickets:{rarity:0,card:0,golden:0}});
+  c=step(c,'DECIDE',{decision:'continue',allowDustOverflow:true,suppressFutureOverflowWarnings:false});c=step(c,'SELECT',{tickets:{rarity:9999,card:0,golden:9999}});
   c=step(c,'RECORD_DEBIT',{walletReceipt:{schemaVersion:1,debitId:`debit:${q.txId}`,intent:model.walletIntent(c,q.txId),walletRevision:s.rev+1}});
-  s.collection=c;const before=s.coins;t.E.spendCoins(s,PRICE);assert(t.c.commit(s,{allowCollectionChange:true}).ok);
-  t.state=t.c.adopt().state;t.host=t.mk();return {t,txId:q.txId,paid:t.state.coins,before};
+  s.collection=c;const before=s.coins;if(spend)t.E.spendCoins(s,PRICE);assert(t.c.commit(s,{allowCollectionChange:true}).ok);
+  t.state=t.c.adopt().state;t.host=t.mk();return {t,txId:q.txId,coins:t.state.coins,before};
 }
-test('debited hanging tx: recoverPending commits without second debit or RNG',()=>{
-  const {t,txId,paid,before}=debitedSetup();assert.equal(paid,before-PRICE);assert.equal(tx(t,txId).stage,'debited');
-  const r=t.host.recoverPending();assert(r.ok&&r.recovered,JSON.stringify(r));assert.equal(r.fromStage,'debited');
-  assert.equal(tx(t,txId).stage,'committed');assert.equal(t.state.coins,paid);assert.equal(t.rng,0);
-  assert.equal(tx(t,txId).receipt.walletDebitId,`debit:${txId}`);
-  assert(t.cmd('resume','again',{txId}).replay);assert.equal(t.state.coins,paid);assert.equal(t.host.recoverPending().reason,'NO_PENDING');
-});
-test('debited via resume command also works (no INVALID_PREPARED_STATE)',()=>{
-  const {t,txId,paid}=debitedSetup();const r=t.cmd('resume','r1',{txId});assert(r.ok,JSON.stringify(r));assert.equal(t.state.coins,paid);assert.equal(tx(t,txId).stage,'committed');
-});
-test('debited with forged/unproven wallet evidence is refused (model replay or host check), no write',()=>{
-  const {t,txId}=debitedSetup();const s=t.c.current().state;s.collection.transactions[txId].walletReceipt.walletRevision=s.rev+5;
-  // cannot persist a forged state through model validation? build host over in-memory clone only
-  const raw=t.c.raw;let st=s;const h=createCollectionHost({coordinator:{...t.c,current:()=>({ok:true,state:st}),failed:null,maxBytes:t.c.maxBytes,commit:()=>{throw Error('must not write')}},model,economy:t.E,getState:()=>st,replaceState:x=>st=x,flush:()=>true,enabled:true,randomInt:()=>0,makeId:()=>'p:1'});
-  const r=h.recoverPending();assert.equal(r.ok,false,JSON.stringify(r));assert(['DEBIT_EVIDENCE_UNPROVEN_PROTECTED','STATE_REPLAY_MISMATCH_KEEP_ORIGINAL'].includes(r.code),JSON.stringify(r));assert.equal(t.c.raw,raw);
-});
-test('debited recovery with no physical room: protected, coins unchanged, history kept',()=>{
-  const {t,txId,paid}=debitedSetup();const len=t.c.raw.length;
-  delete require.cache[require.resolve('../../economy.js')];const E2=require('../../economy.js');
-  const small=createSaveCoordinator({storage:{getItem:k=>t.data.get(k)??null,setItem:(k,v)=>t.data.set(k,v)},economy:E2,model,ownsLock:()=>true,maxBytes:len+10});E2.installFormalCollectionProtocol(small);
-  let st=small.adopt().state;const ev=st.collection.events.length;
-  const h=createCollectionHost({coordinator:small,model,economy:E2,getState:()=>st,replaceState:x=>st=x,flush:()=>small.commit(st).ok,enabled:true,randomInt:()=>0,makeId:()=>'s:1'});
-  const r=h.recoverPending();assert.equal(r.ok,false);assert.equal(r.protected,true);assert.equal(r.code,'CAPACITY_READ_ONLY');
-  const cur=small.current().state;assert.equal(cur.coins,paid);assert.equal(cur.collection.transactions[txId].stage,'debited');assert.equal(cur.collection.events.length,ev);
+for(const spend of [true,false])test(`debited (${spend?'wallet debited':'FORGED unpaid ledger, R2 #3'}) is always protected: no card, no write, no RNG`,()=>{
+  const {t,txId,coins}=debitedSetup({spend});const raw=t.c.raw,holdings=JSON.stringify(t.state.collection.holdings),w=t.writes.length;
+  const r=t.host.recoverPending();assert.equal(r.ok,false);assert.equal(r.code,'DEBIT_PROVENANCE_UNPROVEN_PROTECTED');assert.equal(r.protected,true);
+  assert(t.c.raw===raw&&t.data.get(KEYS.main)===raw,'recoverPending must not write at all');
+  const via=t.cmd('resume','r1',{txId});assert.equal(via.code,'DEBIT_PROVENANCE_UNPROVEN_PROTECTED');
+  assert.equal(t.state.coins,coins);assert.equal(JSON.stringify(t.state.collection.holdings),holdings);
+  assert.equal(t.state.collection.transactions[txId].stage,'debited');assert.equal(t.rng,0);
+  // only the pre-mutation business flush of resume may write; the collection is untouched
+  assert.deepEqual(JSON.parse(t.c.raw).collection,JSON.parse(raw).collection);void w;
 });
 test('confirm re-checks capacity after business growth: rejects before entropy/debit, cancel still possible',()=>{
   const t=setup();const q=t.cmd('quote','q1',{request:{kind:'draw'}});assert(q.ok);
@@ -214,4 +200,39 @@ test('UI maps capacity codes to explicit no-charge messages',()=>{
   const src=fs.readFileSync(new URL('../../cards/ui/collection.mjs',import.meta.url),'utf8');
   for(const k of ['capacity-limit-reached','capacity-estimate-unavailable','capacity-ack-reserved'])assert(src.includes(`'${k}'`),k);
   assert(/capacity-limit-reached':'[^']*没有扣金币/.test(src));
+});
+
+// ---------- R2 (F0C8FSMS3GU) follow-ups ----------
+test('R2#1 cached PREPARED retry re-checks latest capacity: no selected persisted, same tickets, no re-roll',()=>{
+  const probe=setup();const q0=probe.cmd('quote','q1',{request:{kind:'draw'}});assert(q0.ok);
+  const need=reserveFor({state:probe.c.current().state,model,request:{kind:'draw'},txId:q0.txId,requestId:'',maxBytes:1e9,existing:true}).neededBytes;
+  const t=setup({maxBytes:need+500});const q=t.cmd('quote','q1',{request:{kind:'draw'}});assert(q.ok);
+  t.ctl.failStage='selected';const conf={txId:q.txId,decision:'continue',allowDustOverflow:true,suppressFutureOverflowWarnings:false};
+  const first=t.cmd('confirm','c1',conf);assert.equal(first.ok,false);assert.equal(t.c.current().state.collection.transactions[q.txId].stage,'awaiting-decision');const rng=t.rng;assert(rng>0);
+  t.ctl.failStage=null;const s=t.state;s.futureCompatibleField='x'.repeat(2000);assert(t.c.commit(s).ok);
+  const retry=t.cmd('confirm','c2',conf);assert.equal(retry.code,'CAPACITY_LIMIT_REACHED');assert.equal(t.rng,rng);
+  const disk=t.c.current().state;assert.equal(disk.collection.transactions[q.txId].stage,'awaiting-decision');assert.equal(disk.coins,PRICE*20);
+});
+test('R2#1 cached retry with room: commits the SAME cached tickets, one debit, no re-roll',()=>{
+  const t=setup();const q=t.cmd('quote','q1',{request:{kind:'draw'}});assert(q.ok);t.ctl.failStage='selected';
+  const conf={txId:q.txId,decision:'continue',allowDustOverflow:true,suppressFutureOverflowWarnings:false};assert.equal(t.cmd('confirm','c1',conf).ok,false);const rng=t.rng;
+  t.ctl.failStage=null;const r=t.cmd('confirm','c2',conf);assert(r.ok,JSON.stringify(r).slice(0,300));assert.equal(t.rng,rng);assert.equal(t.state.coins,PRICE*19);
+});
+test('R2#2 ack reserve: business save that would leave <ack space is refused CAPACITY_ACK_RESERVED; ack then succeeds (F0C8FSMS3GU scenario, LIMIT-10)',()=>{
+  const LIMIT=2097152;const t=setup({maxBytes:LIMIT});const r=t.draw(1);assert(r.ok);const paid=t.state.coins;
+  const s=t.state;s.futureCompatibleField='';const overhead=JSON.stringify(s).length;s.futureCompatibleField='x'.repeat(LIMIT-10-overhead);
+  const saved=t.c.commit(s);assert.equal(saved.ok,false);assert.equal(saved.code,'CAPACITY_ACK_RESERVED');
+  t.state=t.c.adopt().state;t.host=t.mk();const ack=t.cmd('acknowledge','a1',{txId:r.txId});assert(ack.ok);assert.equal(t.c.current().state.collectionHost.acknowledged[r.txId],true);assert.equal(t.state.coins,paid);
+});
+test('R2#4 the former +8 code-unit counterexample is covered with margin 0',()=>{
+  const holdings=Object.fromEntries(model.config.pool.map(p=>[p.cardId,{normal:model.cardPolicy(p.cardId).ownershipCap,golden:0}]));
+  const c0=model.createState({holdings,dust:49999,preferences:{suppressOverflowWarning:false}});
+  const st=parentWith(c0,{rev:Number.MAX_SAFE_INTEGER-10,coins:123456789});
+  const TX='tx:00000001-0000-4000-8000-000000000000',REQ='cu-00000000-0000-4000-8000-000000000000-0-1';
+  const est=reserveFor({state:st,model,request:{kind:'draw'},txId:TX,requestId:REQ,maxBytes:1e12,marginBytes:0});
+  const step=(c,type,x={})=>model.reduce(c,{type,txId:TX,eventId:`${TX}:${type}`,expectedRevision:c.revision,...x});
+  let c=step(c0,'BEGIN',{request:{kind:'draw'}});c=step(c,'DECIDE',{decision:'continue',allowDustOverflow:true,suppressFutureOverflowWarnings:false});
+  c=step(c,'SELECT',{tickets:{rarity:9700,card:0,golden:999}});c=step(c,'RECORD_DEBIT',{walletReceipt:{schemaVersion:1,debitId:`debit:${TX}`,intent:model.walletIntent(c,TX),walletRevision:Number.MAX_SAFE_INTEGER}});c=step(c,'COMMIT');
+  const fin=JSON.parse(JSON.stringify(st));fin.collection=c;fin.coins-=PRICE;fin.rev+=6;fin.collectionHost.requests[REQ]={txId:TX,requestCanonical:canonical({kind:'draw'})};fin.collectionHost.acknowledged[TX]=true;
+  const actual=JSON.stringify(fin).length;assert(actual<=est.neededBytes,`actual ${actual} est ${est.neededBytes}`);console.log('former +8 case: actual',actual,'estimate',est.neededBytes);
 });

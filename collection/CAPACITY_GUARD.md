@@ -4,7 +4,7 @@
 
 ## 行为
 1. **新交易预留（quote 阶段，BEGIN 之前）**：`reserveFor()` 在克隆上把整笔交易空跑一遍：BEGIN→DECIDE→SELECT→RECORD_DEBIT→COMMIT（回执）→request 绑定→ack。抽卡取 4 种稀有度 × 金/非金票据里最长的那种；`walletRevision` 按 MAX_SAFE_INTEGER（16 位）算。然后要求 `最终 JSON 长度 + 8192 字符 ≤ maxBytes`（c 版改为上界算法，见下文），不满足就返回 `CAPACITY_LIMIT_REACHED`：不写收藏、不抽随机数、不扣费。
-2. **confirm 时再检查一次**（这次新加）：quote 之后玩家可能还在经营，存档会变大。所以 confirm 选 continue 时，在 flush 之后、生成随机票之前，按当前真实存档再预留一次；不够就返回 `CAPACITY_LIMIT_REACHED`（canCancel:true）。交易停在 awaiting-decision，玩家还能取消。
+2. **confirm 时再检查一次**（R2 #1：preparedCache 命中时也要查，同一票据不重抽；空间不够时不落盘 selected，交易停在 awaiting-decision）：quote 之后玩家可能还在经营，存档会变大。所以 confirm 选 continue 时，在 flush 之后、生成随机票之前，按当前真实存档再预留一次；不够就返回 `CAPACITY_LIMIT_REACHED`（canCancel:true）。交易停在 awaiting-decision，玩家还能取消。
 3. **写档失败分三类**（按 host-save.commit 的真实返回）：
    - 写前失败（`CAPACITY_READ_ONLY` 超长、`BACKUP_WRITE_FAILED`、`REVISION_CONFLICT` 等）：主档没写。`E.transact` 在内存里原地回滚，存档里的金币不变。可以断言"没扣费"。
    - 写了、读回仍是旧值（`WRITE_FAILED`）：主档仍是旧值，可以断言"没扣费"。
@@ -12,7 +12,7 @@
    - 外部写入（`FOREIGN_WRITE_READ_ONLY`）：只读保护，不覆盖。
 4. **悬挂交易恢复 `recoverPending()`**（按真实状态）：
    - `selected`：走原来的 transactPrepared，先查 committed 再扣费，按锁定票据提交，只扣一次、不重抽。
-   - `debited`：RECORD_DEBIT 和扣费是在同一次保存里写进去的（walletRevision = 那次保存的 rev），所以金币已经扣过。恢复时只追加 COMMIT（price 0），不再扣费、不抽随机数。如果钱包证据（debitId / walletRevision ≤ 当前 rev）证明不了扣费已经在当前存档里，就返回 `DEBIT_EVIDENCE_UNPROVEN_PROTECTED`，不写档。实际上被篡改的 receipt 在模型回放校验那一步就会被 `STATE_REPLAY_MISMATCH_KEEP_ORIGINAL` 拒掉。`resume` 命令同样支持 debited，不会再报 INVALID_PREPARED_STATE。
+   - `debited`（R2 #3 修正）：**一律保护**，返回 `DEBIT_PROVENANCE_UNPROVEN_PROTECTED`：不写档、不发卡、不按 price 0 提交、不重抽，保留原文供取证。原因是正式 host 把 RECORD_DEBIT 和 COMMIT 放在同一次保存里，单独落盘的 debited 只可能来自故障、旧版或外部写入、或者伪造账本；「账本回放一致 + walletRevision ≤ rev」证明不了钱包真的扣过款（熊大用一份没扣钱的合成账本通过了 coordinator 和 adopt）。`resume` 命令也走同样的保护。要支持某个旧协议，必须先有它可以验证的原子扣款证据，本候选不做。
    - `awaiting-decision`：不替玩家做决定，返回 needsDecision。
    - `confirmed` 等其他阶段：返回 `RECOVERY_STAGE_UNSUPPORTED_PROTECTED`，不处理。
    - 物理空间不足（恢复所需的提交超过 maxBytes）：返回原错误码（如 `CAPACITY_READ_ONLY`）并带 `protected:true`。交易保持锁定结果，金币不变，**不删历史、不重抽、不承诺可恢复**；需要人工处理或者等扩容方案。
@@ -29,6 +29,8 @@ maxBytes、余量、预留都按 `JSON.stringify(...).length` 计，单位是 **
 3. 新增文本里每个数字 token 都按「最多 16 位」补足（MAX_SAFE_INTEGER 是 16 位）。这覆盖了真实存档里 revision、collectionRevision、expectedRevision、walletRevision、票据、尘等计数位数比代理大的情况。另外再加：父档 rev、revision、collectionRevision、dust 四个计数各 16 位，结构 slack 64，request/ack 条目的真实长度，**其他待 ack 回执的预留**，以及 8192 余量。
 4. confirm（existing 模式）减去真实存档里已有的这笔 tx 和它的 BEGIN 事件长度。上界本来就覆盖了最终 tx 和全部事件，所以减掉也不会低估。
 5. 变体会抛错的，是真实交易同样提交不了（会在扣费前失败）的结果，所以不需要为它们留空间。全部变体都失败时，返回 `CAPACITY_ESTIMATE_UNAVAILABLE` 并拒绝。原来的 32K「回退」已经删掉。
+- 熊大举的「+8 字符」反例（全卡满持有、尘 49999、rev=MAX−10、票据 9700/0/999）：新上界在 margin=0 下估 23,244，实际 17,602，已经覆盖并写进测试。
+- 「严格上界」的口径：上界是按枚举和位数推出来的，有随机测试和上面这个反例作证据，不是形式化证明；8192 余量继续保留。
 - 随机测试 60 组（历史长度、尘、revision 用 0/9/99999/MAX−10，coins，txId 和 requestId 长度，票据都随机），margin 取 0 时**真实长度全部 ≤ 估算值**，最小富余 4436 字符。
 - 代价：上界大约是 23.5K 字符，实际单笔是 9–12K 字符，多出来的主要是数字补位。所以到上限会比实际提前大约 11K 字符拒绝。这是有意偏保守。
 

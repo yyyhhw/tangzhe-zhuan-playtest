@@ -84,7 +84,7 @@ export function createCollectionHost({coordinator,model,economy:E,getState,repla
     if(tx.stage==='committed')return committed(c,txId,true);
     if(tx.stage==='cancelled')return {ok:true,cancelled:true,...snapshot()};
     if(tx.stage==='awaiting-decision')return {ok:true,txId,quote:tx.quote,needsDecision:true,...snapshot()};
-    if(tx.stage==='debited')return commitDebited(state,c,tx);
+    if(tx.stage==='debited')return protectDebited(tx);
     if(tx.stage!=='selected')return fail('INVALID_PREPARED_STATE');
     const price=tx.request.kind==='draw'?model.config.drawPriceGold:0;
     if(state.coins<price)return fail('INSUFFICIENT_FUNDS');
@@ -99,18 +99,14 @@ export function createCollectionHost({coordinator,model,economy:E,getState,repla
     replaceState(clone(state)); preparedCache.delete(txId);return committed(state.collection,txId);
   }
   /**
-   * 'debited' = RECORD_DEBIT is durable, i.e. the gold was already taken in the SAME save that recorded the receipt
-   * (walletRevision === that save's rev). Recovery only appends COMMIT with price 0: no second debit, no RNG.
-   * If the wallet evidence does not prove the debit is inside the current save, stay in a protective state.
+   * 'debited' persisted on its own cannot prove the gold was actually taken: the formal host writes RECORD_DEBIT and COMMIT in
+   * the SAME save, so a separately persisted debited tx comes from a fault, an older/foreign writer or a forged ledger. A
+   * replay-consistent ledger plus walletRevision<=rev is NOT wallet evidence (R2 review: unpaid synthetic ledger passed).
+   * Policy: always protected. No write, no card, no price-0 commit, original text kept for forensics.
    */
-  function commitDebited(state,c,tx) {
-    const w=tx.walletReceipt;
-    if(tx.request.kind!=='draw'||!w||w.debitId!==`debit:${tx.txId}`||!Number.isSafeInteger(w.walletRevision)||w.walletRevision>state.rev)return fail('DEBIT_EVIDENCE_UNPROVEN_PROTECTED');
-    let saveCode=null;
-    const result=E.transact(state,{price:0,apply:draft=>{draft.collection=step(draft.collection,'COMMIT',tx.txId);return {ok:true};},
-      save:draft=>{const r=coordinator.commit(draft,{allowCollectionChange:true});if(!r.ok)saveCode=r.code;return r;}});
-    if(!result.ok)return fail(coordinator.failed||saveCode||'WRITE_FAILED');
-    replaceState(clone(state));preparedCache.delete(tx.txId);return committed(state.collection,tx.txId);
+  function protectDebited(tx) {
+    return {ok:false,code:'DEBIT_PROVENANCE_UNPROVEN_PROTECTED',protected:true,txId:tx.txId,stage:'debited',
+      detail:'debited 状态无法证明钱包已扣款：保持原档，不发卡、不扣费、不重抽，需人工核对。'};
   }
   function selectTickets() {
     const rarity=randomInt(model.config.probabilityScale);
@@ -179,8 +175,10 @@ export function createCollectionHost({coordinator,model,economy:E,getState,repla
       if(tx.stage==='selected')return transactPrepared(tx.txId);
       if(tx.stage!=='awaiting-decision')return fail('INVALID_PREPARED_STATE');
       if(decision.decision==='continue'&&state.coins<tx.quote.goldCost)return fail('INSUFFICIENT_FUNDS');
-      if(decision.decision==='continue'&&!preparedCache.has(tx.txId)){
+      if(decision.decision==='continue'){
         // Business saves may have grown since quote: re-check the full remaining transaction before any entropy/debit.
+        // Also for a CACHED prepared result (earlier PREPARED write failed): same tickets are kept, never re-rolled,
+        // but nothing is persisted unless the latest full save still has room (R2 #1).
         const cap=reserveFor({state,model,request:tx.request,txId:tx.txId,requestId:'',maxBytes:coordinator.maxBytes,marginBytes:capacityMarginBytes,existing:true});
         if(!cap.ok)return {ok:false,code:cap.code||'CAPACITY_LIMIT_REACHED',capacity:cap,canCancel:true};
       }
