@@ -125,14 +125,15 @@ function audioInit() {
   AU.bgm = AU.ctx.createGain(); AU.bgm.gain.value = 0.09; AU.bgm.connect(AU.master);
   AU.sfx = AU.ctx.createGain(); AU.sfx.gain.value = 0.5; AU.sfx.connect(AU.master);
   AU.master.gain.value = state.muted ? 0 : 1;
+  AU.recorded=TzzLoopMusic.create({context:AU.ctx,output:AU.bgm,url:new URL('../audio/carefree-kevin-macleod-8433b770.mp3',document.baseURI),isAllowed:()=>!state.muted&&!frozen&&!tdOpen&&!cardsOpen&&!zbOpen});
 }
-function audioUnlock() { // 只能在用户手势里调用（iOS）
+function audioUnlock() { if (cardsOpen || tdOpen || zbOpen) return; // 只能在用户手势里调用（iOS）
   audioInit(); if (!AU.ctx) return;
   if (AU.ctx.state !== 'running' && !document.hidden && !state.muted) AU.ctx.resume().catch(() => {});
-  if (!AU.started) { AU.started = true; startBgm(); }
+  if (!AU.started) { AU.started = true; startBgm(); } else AU.recorded?.retry();
 }
 function audioPause() { if (AU.ctx && AU.ctx.state === 'running') AU.ctx.suspend().catch(() => {}); stopBgm(); }
-function audioResume() { if (!AU.ctx || state.muted || document.hidden || frozen || tdOpen || cardsOpen) return; AU.ctx.resume().catch(() => {}); if (AU.started) startBgm(); }
+function audioResume() { if (!AU.ctx || state.muted || document.hidden || frozen || tdOpen || cardsOpen || zbOpen) return; AU.ctx.resume().catch(() => {}); if (AU.started) startBgm(); }
 function tone(f, t, dur, type = 'sine', vol = 0.3, dest = AU.sfx, f2) {
   const c = AU.ctx, o = c.createOscillator(), g = c.createGain();
   o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
@@ -160,8 +161,8 @@ function sfx(name) {
 const N = s => 440 * Math.pow(2, (s - 69) / 12);
 const CHORDS = [[48, 55, 64], [45, 52, 60], [41, 48, 57], [43, 50, 59]];
 const MEL = [72, 0, 74, 76, 0, 79, 76, 0, 74, 0, 72, 74, 0, 0, 69, 0, 72, 0, 74, 76, 0, 81, 79, 0, 76, 0, 74, 72, 0, 0, 0, 0];
-function startBgm() { if (AU.timer || !AU.ctx) return; AU.nextT = AU.ctx.currentTime + 0.1; AU.timer = setInterval(scheduleBgm, 120); }
-function stopBgm() { if (AU.timer) { clearInterval(AU.timer); AU.timer = null; } }
+function startBgm() { AU.recorded?.start(); }
+function stopBgm() { AU.recorded?.stop(); }
 function scheduleBgm() {
   if (!AU.ctx || AU.ctx.state !== 'running') return;
   const spb = 0.2;
@@ -1204,6 +1205,7 @@ function act(a, arg, btn) {
     case 'jobBig': { const [who, k] = arg.split(':'); return showJobArt(who, +k); }
     case 'decor': { if (E.ITEM_BY_ID[arg]?.type !== 'decor' || !state.gacha.owned.includes(arg)) return; const r = atomic(() => { const h = state.decorHidden || (state.decorHidden = []); const k = h.indexOf(arg); if (k >= 0) h.splice(k, 1); else h.push(arg); return { ok:true }; }, '装饰显示没有切换'); dirty = true; bgKey = ''; if (r.ok) toast(decorOn(arg) ? '已摆出：四家店共用，开店后可见' : '已从四家店收起', 1900, 'header'); break; }
     case 'card': return showCard(arg);
+    case 'musicCredits': return showMusicCredits();
     case 'reset': return confirmReset();
     case 'goShop': switchShop(+arg); setTab('shop'); break;
     default: if (a.indexOf('home') === 0 || a.indexOf('mall') === 0 || a.indexOf('pet') === 0) return homeAct(a, arg, btn);
@@ -1467,7 +1469,7 @@ function renderCol() {
   h += cards.map((c, k) => own.has(c.id)
     ? `<button type="button" class="story story-open" data-act="card" data-arg="${c.id}" aria-label="重看故事卡：${c.name}"><b>${k + 1}. ${c.name}</b>${storyArt(c.id)}<span class="story-text">${c.text}</span><span class="story-replay-hint">已收集 · 点击重看 ›</span></button>` : `<div class="story no" aria-label="第 ${k + 1} 张故事卡，未收集"><b>${k + 1}. ？？？</b><p>还没收集</p></div>`).join('');
   h += `<div class="note">${setDone ? `✅ 已集齐 ${cards.length} 张故事卡：解锁专属外观「金牌摊主」（金马甲 + 金厨师帽），在衣橱里给任意 CEO 换上。` : `集齐 ${cards.length} 张故事卡，解锁专属外观「金牌摊主」（金马甲 + 金厨师帽）。`}</div>`;
-  h += `<div class="sec-title">设置</div><div class="card"><div class="info"><div class="name">存档</div><div class="desc">版本 v${state.v} · 自动保存在本机浏览器 · 每日双倍按马来西亚时间早上 5 点重置</div></div>
+  h += `<div class="sec-title">设置</div><div class="card"><div class="info"><div class="name">关于／鸣谢</div><div class="desc">经营音乐 · Carefree — Kevin MacLeod</div></div><button type="button" class="buy ghost" data-act="musicCredits">查看鸣谢</button></div><div class="card"><div class="info"><div class="name">存档</div><div class="desc">版本 v${state.v} · 自动保存在本机浏览器 · 每日双倍按马来西亚时间早上 5 点重置</div></div>
     <button class="buy ghost" data-act="reset" data-arg="">重新开始</button></div><div class="note">试玩版 · 只花游戏金币，没有任何真钱购买。</div>`;
   return h;
 }
@@ -1573,6 +1575,23 @@ function openSheet(html) { sheetPanel.innerHTML = `<button class="cx-close" id="
 function closeSheet() { sheet.classList.add('hidden'); sheetPanel.innerHTML = ''; }
 sheet.querySelector('.sheet-bg').addEventListener('click', closeSheet);
 const coinSm = '<span class="coin-ico sm"><span>赚</span></span>';
+
+function showMusicCredits() {
+  // Never replace an unresolved reward or confirmation dialog.
+  if (modalOpen()) return;
+  const previousFocus = document.activeElement;
+  openModal(`<section aria-labelledby="musicCreditsTitle"><div class="mtitle" id="musicCreditsTitle">设置 · 关于／鸣谢</div>
+    <div class="mnote" style="text-align:left;overflow-wrap:anywhere"><b>经营模式背景音乐</b><br>
+      “Carefree” Kevin MacLeod (incompetech.com)<br>
+      <a href="https://incompetech.com/music/royalty-free/index.html?isrc=USUAN1400037" target="_blank" rel="noopener noreferrer">官方曲目来源 · Carefree</a><br>
+      Licensed under Creative Commons: By Attribution 4.0 License<br>
+      <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0 许可</a><br>
+      音频文件使用官方原件，未剪裁、未转码；游戏播放时首尾做 100 毫秒交叉淡化并循环。<br>
+      声音开关位于游戏顶部；家宅等经营界面共用此曲。</div>
+    <button type="button" class="buy big" id="mOk">关闭</button></section>`, false);
+  $('#mOk').addEventListener('click', () => { closeModal(); if (previousFocus?.isConnected) previousFocus.focus({preventScroll:true}); }, {once:true});
+  $('#mOk').focus({preventScroll:true});
+}
 
 /* ---------- 离线收益 ---------- */
 function showOffline() {
@@ -2394,6 +2413,7 @@ cv.addEventListener('pointercancel', e => { delete ptr[e.pointerId]; });
 tabBody.addEventListener('click', e => { const b = e.target.closest('[data-act]'); if (!b || b.disabled || frozen) return; if (b.tagName === 'SELECT' || (b.tagName === 'INPUT' && b.type === 'search')) return; audioUnlock(); const arg = (b.type === 'checkbox') ? b.checked : b.dataset.arg; act(b.dataset.act, arg, b); });
 $('#shopTabs').addEventListener('click', e => { const b = e.target.closest('[data-shop]'); if (!b) return; audioUnlock(); switchShop(+b.dataset.shop); if (tab !== 'shop') setTab('shop'); });
 $('#bottomNav').addEventListener('click', e => { const b = e.target.closest('[data-tab]'); if (!b) return; audioUnlock(); setTab(b.dataset.tab); });
+$('#settings').addEventListener('click', showMusicCredits);
 $('#mute').addEventListener('click', () => {
   state.muted = !state.muted; $('#mute').classList.toggle('off', state.muted);
   if (state.muted) { if (AU.master) AU.master.gain.value = 0; audioPause(); }
@@ -2492,7 +2512,7 @@ window.__tzz = { TEST_MODE, TEST_LV, SAVE_KEY, BAK_KEY, get saveBlocked() { retu
   forceSupers() { for (const k in superNext) superNext[k] = 0; updateSupers(); renderTab(); },
   get big() { return order; }, get order() { return order; }, get special() { return special; }, get guests() { return guests; },
   hitBig, modalOpen, closeModal, get frozen() { return frozen; },
-  audioState() { return AU.ctx ? AU.ctx.state : 'none'; }, showPreview, openAssign, JOB_ART, jobShown, jobURL, showJobArt,
+  musicStatus() { return AU.recorded?.status || null; }, audioState() { return AU.ctx ? AU.ctx.state : 'none'; }, showPreview, openAssign, JOB_ART, jobShown, jobURL, showJobArt,
   HOME_ART, FURN_ART, FURN_UP, homeAct, get homeWho() { return homeWho; }, get homeSub() { return homeSub; }, get homeMode() { return homeMode; }, set homeMode(v) { homeMode = v === 'decor' ? 'decor' : 'live'; }, get homeSel() { return homeSel; }, get homeDrag() { return homeDrag; }, homeActor, LIVE_LINES, homeUndo, resize, get canvasSize() { return { W, H }; }, pet: petHooks, pets: petsHooks, lookOf, drawPerson, drawHead, LOOKS, get bubble() { return bubble; } };
 /* ================= 科技公司塔防：与主钱包同一存档、同一原子交易 ================= */
 function tdCard() {
