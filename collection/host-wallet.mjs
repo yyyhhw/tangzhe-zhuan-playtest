@@ -4,29 +4,62 @@ const clone = x => JSON.parse(JSON.stringify(x));
 const idOK = x => typeof x==='string' && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,159}$/.test(x) && !['__proto__','prototype','constructor'].includes(x);
 const fail = code => ({ok:false,code});
 const same = (a,b) => canonical(a)===canonical(b);
-export const CAPACITY_MARGIN_BYTES = 8192;
-export const CAPACITY_FALLBACK_RESERVE_BYTES = 32768;
+export const CAPACITY_MARGIN_BYTES = 8192;   // unit: JSON.stringify(...).length (UTF-16 code units), same unit as host-save maxBytes
+const MAX_NUMBER_CHARS = 16;                   // Number.MAX_SAFE_INTEGER has 16 digits; all counters are safe integers
+const STRUCTURE_SLACK = 64;                    // commas/brackets when objects/arrays go from empty to non-empty
+/** Pending committed-but-unacknowledged receipts: each future ack writes `"<txId>":true` plus a comma. Pure, no restore. */
+export function pendingAckChars(state) {
+  const tx=state?.collection?.transactions||{}, ack=state?.collectionHost?.acknowledged||{};
+  let n=0;for(const [id,t] of Object.entries(tx))if(t&&t.stage==='committed'&&ack[id]!==true)n+=JSON.stringify(id).length+6;
+  return n;
+}
 /**
- * Capacity guard: before BEGIN, dry-run the WHOLE transaction (BEGIN→DECIDE→SELECT→RECORD_DEBIT→COMMIT receipt
- * →request binding→ack) on a clone with worst-case tickets, and require the final save to fit maxBytes with margin.
- * Pure: never writes, never touches RNG, never changes prices. Recovery/resume/ack of existing transactions is NOT gated.
+ * Capacity guard (upper bound, no full-history replay).
+ * The added text of a whole transaction depends only on: holdings, dust, preferences, the request, ids, tickets/outcome and
+ * revision-like counters. We dry-run it on a small TRUSTED proxy collection (model.createState with the same holdings/dust/
+ * preferences, empty history), enumerating every card × golden/non-golden outcome, then add a strict correction for every
+ * numeric token in the added text (each may grow to 16 digits in the real save) and for top-level counters.
+ * Cost: one JSON.stringify of the current save + ~80 tiny trusted steps; it never restores the real event log.
+ * Variants that throw are outcomes the real transaction cannot commit either (it fails before any debit), so they need no space;
+ * if ALL variants throw the estimate is unavailable and the request is refused.
  */
-export function reserveFor({state,model,request,txId,requestId,maxBytes,marginBytes=CAPACITY_MARGIN_BYTES,existing=false}) {
-  const base=JSON.stringify(state).length, sizes=[];
-  const finish=(collection)=>{const s=clone(state);s.collection=collection;s.rev=(s.rev||0)+1;if(!existing)s.collectionHost.requests[requestId]={txId,requestCanonical:canonical(request)};s.collectionHost.acknowledged[txId]=true;return JSON.stringify(s).length;};
+export function reserveFor({state,model,request,txId,requestId,maxBytes,marginBytes=CAPACITY_MARGIN_BYTES,existing=false,baseChars}) {
+  const base=Number.isSafeInteger(baseChars)?baseChars:JSON.stringify(state).length;
+  const col=state.collection;
+  const proxy=model.createState({holdings:clone(col.holdings),dust:col.dust,preferences:clone(col.preferences)});
+  const proxyChars=JSON.stringify(proxy).length;
   const step=(c,type,extra={})=>model.reduce(c,{type,txId,eventId:`${txId}:${type}`,expectedRevision:c.revision,...extra});
   const decide={decision:'continue',allowDustOverflow:true,suppressFutureOverflowWarnings:false};
   const variants=[];
-  if(request.kind==='draw'){let start=0;for(const r of model.config.rarities){const n=model.config.pool.filter(p=>p.rarity===r.id).length;for(const golden of [0,model.config.probabilityScale-1])variants.push({rarity:start,card:Math.max(0,n-1),golden});start+=r.weight;}}
-  else variants.push(null);
+  if(request.kind==='draw'){
+    let start=0;const scale=model.config.probabilityScale;
+    // Cards of one rarity with the same id length and the same current holdings produce outcomes of identical text length
+    // (only the id characters differ), so one representative per class is an exact enumeration, not a sample.
+    for(const r of model.config.rarities){const cards=model.config.pool.filter(p=>p.rarity===r.id);const seen=new Set();
+      cards.forEach((p,card)=>{const key=p.cardId.length+'|'+JSON.stringify(col.holdings[p.cardId]??null);if(seen.has(key))return;seen.add(key);for(const golden of [0,scale-1])variants.push({rarity:start,card,golden});});start+=r.weight;}
+  } else variants.push(null);
+  let worst=-1;
+  let prefix=null;try{prefix=step(step(proxy,'BEGIN',{request}),'DECIDE',decide);}catch{}
   for(const tickets of variants){try{
-    let c=existing?state.collection:step(state.collection,'BEGIN',{request});c=step(c,'DECIDE',decide);
+    if(!prefix)break;
+    let c=prefix;
     if(tickets){c=step(c,'SELECT',{tickets});c=step(c,'RECORD_DEBIT',{walletReceipt:{schemaVersion:1,debitId:`debit:${txId}`,intent:model.walletIntent(c,txId),walletRevision:Number.MAX_SAFE_INTEGER}});}
-    c=step(c,'COMMIT');sizes.push(finish(c));
+    c=step(c,'COMMIT');
+    const added=JSON.stringify(c.transactions[txId])+JSON.stringify(c.events);
+    const numericTokens=(added.match(/-?\d+(\.\d+)?(e[+-]?\d+)?/gi)||[]).length;
+    const delta=JSON.stringify(c).length-proxyChars+numericTokens*MAX_NUMBER_CHARS;
+    if(delta>worst)worst=delta;
   }catch{}}
-  const finalBytes=sizes.length?Math.max(...sizes):base+CAPACITY_FALLBACK_RESERVE_BYTES;
-  const needed=finalBytes+marginBytes;
-  return {ok:needed<=maxBytes,usedBytes:base,reserveBytes:needed-base,neededBytes:needed,maxBytes,estimated:sizes.length>0};
+  if(worst<0)return {ok:false,code:'CAPACITY_ESTIMATE_UNAVAILABLE',usedBytes:base,maxBytes,estimated:false};
+  const host=(existing?0:JSON.stringify(requestId).length+JSON.stringify({txId,requestCanonical:canonical(request)}).length+2)+JSON.stringify(txId).length+6;
+  const counters=4*MAX_NUMBER_CHARS;           // parent rev, collection.revision, collectionRevision, dust may each gain digits
+  const ackReserve=pendingAckChars(state);      // other receipts still waiting for ack keep their space
+  // existing (confirm-time): the real save already holds this tx and its BEGIN event; the bound above covers the final tx
+  // and all of its events, so the real text already present can be subtracted without risking an underestimate.
+  let present=0;
+  if(existing&&col.transactions[txId]){present=JSON.stringify(col.transactions[txId]).length;const ev=col.events.find(e=>e.txId===txId&&e.type==='BEGIN');if(ev)present+=JSON.stringify(ev).length;}
+  const needed=base+worst-present+host+counters+STRUCTURE_SLACK+ackReserve+marginBytes;
+  return {ok:needed<=maxBytes,usedBytes:base,reserveBytes:needed-base,neededBytes:needed,maxBytes,estimated:true,ackReserveChars:ackReserve,variants:variants.length};
 }
 export function createCollectionHost({coordinator,model,economy:E,getState,replaceState,flush,enabled=false,randomInt,makeId,capacityMarginBytes=CAPACITY_MARGIN_BYTES}) {
   const preparedCache=new Map();
@@ -121,7 +154,7 @@ export function createCollectionHost({coordinator,model,economy:E,getState,repla
         if(state.coins<quote.goldCost)return fail('INSUFFICIENT_FUNDS');
         const txId=freshId();
         const cap=reserveFor({state,model,request,txId,requestId:message.requestId,maxBytes:coordinator.maxBytes,marginBytes:capacityMarginBytes});
-        if(!cap.ok)return {ok:false,code:'CAPACITY_LIMIT_REACHED',capacity:cap}; state.collection=step(c,'BEGIN',txId,{request});
+        if(!cap.ok)return {ok:false,code:cap.code||'CAPACITY_LIMIT_REACHED',capacity:cap}; state.collection=step(c,'BEGIN',txId,{request});
         h.requests[message.requestId]={txId,requestCanonical};
         const saved=save(state);return saved.ok?{ok:true,txId,quote,...snapshot()}:saved;
       }
@@ -149,7 +182,7 @@ export function createCollectionHost({coordinator,model,economy:E,getState,repla
       if(decision.decision==='continue'&&!preparedCache.has(tx.txId)){
         // Business saves may have grown since quote: re-check the full remaining transaction before any entropy/debit.
         const cap=reserveFor({state,model,request:tx.request,txId:tx.txId,requestId:'',maxBytes:coordinator.maxBytes,marginBytes:capacityMarginBytes,existing:true});
-        if(!cap.ok)return {ok:false,code:'CAPACITY_LIMIT_REACHED',capacity:cap,canCancel:true};
+        if(!cap.ok)return {ok:false,code:cap.code||'CAPACITY_LIMIT_REACHED',capacity:cap,canCancel:true};
       }
       const cached=preparedCache.get(tx.txId);
       if(cached){if(!same(cached.decision,decision))return fail('TX_DECISION_CONFLICT');state.collection=cached.collection;}

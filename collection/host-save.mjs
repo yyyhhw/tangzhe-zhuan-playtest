@@ -7,6 +7,12 @@ export const WRITE_PROTOCOL = 1;
 const MAX_BYTES = 2 * 1024 * 1024;
 const copy = v => JSON.parse(JSON.stringify(v));
 const bad = (code, extra = {}) => ({ok:false,code,...extra});
+/** Space every committed-but-unacknowledged receipt still needs for its ack (`"<txId>":true,`). Same rule as host-wallet. */
+export function pendingAckChars(state) {
+  const tx=state?.collection?.transactions||{}, ack=state?.collectionHost?.acknowledged||{};
+  let n=0;for(const [id,t] of Object.entries(tx))if(t&&t.stage==='committed'&&ack[id]!==true)n+=JSON.stringify(id).length+6;
+  return n;
+}
 
 export function createSaveCoordinator({storage, economy:E, model, ownsLock, onFault = () => {}, maxBytes = MAX_BYTES}) {
   if (!storage || typeof storage.getItem !== 'function' || typeof storage.setItem !== 'function' || typeof ownsLock !== 'function') throw Error('STORAGE_AND_LOCK_REQUIRED');
@@ -188,6 +194,8 @@ export function createSaveCoordinator({storage, economy:E, model, ownsLock, onFa
     const candidate=copy(state); candidate.rev=previous.state.rev+1;
     if (!Number.isSafeInteger(candidate.rev)) return bad('REVISION_EXHAUSTED');
     const raw=JSON.stringify(candidate); if (raw.length > maxBytes) return bad('CAPACITY_READ_ONLY');
+    // Ack space is reserved while receipts wait to be viewed: ordinary business saves may not consume it.
+    if (!allowCollectionChange) { const ackReserve=pendingAckChars(candidate); if (ackReserve>0 && raw.length+ackReserve>maxBytes) return bad('CAPACITY_ACK_RESERVED',{ackReserveChars:ackReserve}); }
     const p=parse(raw); if (!p.ok) return p;
     // Cooperative lifetime lock + exact raw check; no async gap, and no blind old-value rollback.
     const pre=readKey(KEYS.main); if (!pre.ok) return fault(pre.code); if (pre.raw !== previous.raw) return fault('FOREIGN_WRITE_READ_ONLY');

@@ -47,7 +47,8 @@ test('capacity limit: quote rejected before BEGIN, no collection write, no debit
   const cur=t.c.current().state;assert.equal(cur.coins,coins);assert.deepEqual(cur.collection.transactions,{});assert.equal(cur.collection.activeTxId,null);assert.equal(t.rng,0);
   // business saves keep working
   const s=t.state;s.taps=(s.taps||0)+1;assert(t.c.commit(s).ok);assert(raw!==t.c.raw||w>=0);
-  const ok=setup({maxBytes:need});assert(ok.draw(1).ok);
+  // confirm-time bound may exceed the quote-time bound by a few counter digits; still an upper bound
+  const ok=setup({maxBytes:need+64});const dr=ok.draw(1);assert(dr.ok,JSON.stringify({need,code:dr.code,cap:dr.capacity}));
 });
 test('commit write failure (quota/capacity) never swallows the debit; resume debits exactly once',()=>{
   const t=setup({failStage:'committed'});const coins=t.state.coins,frac=t.state.coinFrac;
@@ -134,4 +135,83 @@ test('confirm re-checks capacity after business growth: rejects before entropy/d
   assert.equal(r.code,'CAPACITY_LIMIT_REACHED');assert.equal(rng,0);assert.equal(small.current().state.coins,coins);assert.equal(small.current().state.collection.transactions[q.txId].stage,'awaiting-decision');
   assert(m('confirm','c2',{txId:q.txId,decision:'cancel',allowDustOverflow:false,suppressFutureOverflowWarnings:false}).cancelled);assert.equal(small.current().state.coins,coins);
   assert(len<need);
+});
+
+// ---------- R22: performance, strict upper bound, ack reservation ----------
+import {pendingAckChars} from '../../collection/host-save.mjs';
+import {performance} from 'node:perf_hooks';
+function rngOf(seed){let x=seed>>>0||1;return n=>{x^=x<<13;x>>>=0;x^=x>>17;x^=x<<5;x>>>=0;return x%n;};}
+// Build a collection history quickly on TRUSTED states, then JSON round-trip so it is untrusted like a reloaded save.
+function history(n,r=rngOf(7)){
+  let c=model.createState({holdings:{},dust:r(1000),preferences:{suppressOverflowWarning:false}});
+  for(let i=0;i<n;i++){const txId=`h:${i}:${'x'.repeat(r(60))}`;const step=(c,type,x={})=>model.reduce(c,{type,txId,eventId:`${txId}:${type}`,expectedRevision:c.revision,...x});
+    try{let d=step(c,'BEGIN',{request:{kind:'draw'}});d=step(d,'DECIDE',{decision:'continue',allowDustOverflow:true,suppressFutureOverflowWarnings:false});
+      const card=TRIAL_CONFIG.pool[r(TRIAL_CONFIG.pool.length)];let start=0;for(const rr of TRIAL_CONFIG.rarities){if(rr.id===card.rarity)break;start+=rr.weight;}
+      const idx=TRIAL_CONFIG.pool.filter(p=>p.rarity===card.rarity).indexOf(card);
+      d=step(d,'SELECT',{tickets:{rarity:start+r(10),card:idx,golden:r(TRIAL_CONFIG.probabilityScale)}});
+      d=step(d,'RECORD_DEBIT',{walletReceipt:{schemaVersion:1,debitId:`debit:${txId}`,intent:model.walletIntent(d,txId),walletRevision:i+1}});c=step(d,'COMMIT');}catch{}}
+  return c;
+}
+function parentWith(collection,{rev=0,coins=PRICE*3,acked=true}={}){
+  delete require.cache[require.resolve('../../economy.js')];const E=require('../../economy.js');const s=E.newState(1);s.coins=coins;s.rev=rev;s._collectionProtocol=1;
+  s.collection=collection;s.collectionHost={schemaVersion:1,requests:{},acknowledged:{},migration:{schemaVersion:1,kind:'empty-new-formal',sourceKey:'tangzhe-save',sourceRev:0,originalSha256:'0'.repeat(64)}};
+  if(acked)for(const [id,t] of Object.entries(collection.transactions))if(t.stage==='committed')s.collectionHost.acknowledged[id]=true;
+  return JSON.parse(JSON.stringify(s));
+}
+test('perf: 80-draw history reloaded from JSON — reserveFor < 50ms (was ~24s in R22 review)',()=>{
+  const reloaded=parentWith(history(80));assert(Object.keys(reloaded.collection.transactions).length>=70);
+  const times=[];for(let i=0;i<5;i++){const st=JSON.parse(JSON.stringify(reloaded));const t=performance.now();const r=reserveFor({state:st,model,request:{kind:'draw'},txId:'tx:ffffffff-0000-4000-8000-000000000000',requestId:'cu-ffffffff-0000-4000-8000-000000000000-0-1',maxBytes:2097152});times.push(performance.now()-t);assert(r.estimated);}
+  times.sort((a,b)=>a-b);const median=times[2];console.log('reserveFor 80 reloaded ms',times.map(x=>x.toFixed(1)).join(','));
+  assert(median<50,`median ${median.toFixed(1)}ms`);
+});
+test('perf: cost does not grow with history (220 reloaded vs 10 reloaded)',()=>{
+  const small=parentWith(history(10)),big=parentWith(history(220));
+  const time=s=>{const t=performance.now();reserveFor({state:JSON.parse(JSON.stringify(s)),model,request:{kind:'draw'},txId:'t:1',requestId:'r:1',maxBytes:1e9});return performance.now()-t;};
+  time(small);const a=Math.min(time(small),time(small)),b=Math.min(time(big),time(big));console.log('10 vs 220 ms',a.toFixed(1),b.toFixed(1));
+  assert(b<50,`220-history ${b.toFixed(1)}ms`);
+});
+test('upper bound never underestimates: randomized holdings / dust / revisions / ids / tickets (margin 0)',()=>{
+  const r=rngOf(20261011);let checked=0,minSlack=Infinity;
+  for(let iter=0;iter<60;iter++){
+    const hist=history(r(25),rngOf(iter+1));
+    const rev=[0,9,99999,Number.MAX_SAFE_INTEGER-10][r(4)];
+    const st=parentWith(hist,{rev,coins:[PRICE,PRICE*7,Number.MAX_SAFE_INTEGER-1][r(3)],acked:r(2)===0});
+    const txId=`tx:${'a'.repeat(r(130))}${iter}`, requestId=`rq:${'b'.repeat(r(150))}`;
+    const est=reserveFor({state:st,model,request:{kind:'draw'},txId,requestId,maxBytes:1e12,marginBytes:0});assert(est.estimated);
+    // real transaction with a random legal ticket on the real (trusted) collection
+    let c=model.restore(st.collection);const step=(c,type,x={})=>model.reduce(c,{type,txId,eventId:`${txId}:${type}`,expectedRevision:c.revision,...x});
+    try{
+      c=step(c,'BEGIN',{request:{kind:'draw'}});c=step(c,'DECIDE',{decision:'continue',allowDustOverflow:true,suppressFutureOverflowWarnings:r(2)===0&&c.transactions[txId].quote.requiresOverflowConfirmation});
+      c=step(c,'SELECT',{tickets:{rarity:r(TRIAL_CONFIG.probabilityScale),card:0,golden:r(TRIAL_CONFIG.probabilityScale)}});
+      c=step(c,'RECORD_DEBIT',{walletReceipt:{schemaVersion:1,debitId:`debit:${txId}`,intent:model.walletIntent(c,txId),walletRevision:Math.min(Number.MAX_SAFE_INTEGER,st.rev+1)}});c=step(c,'COMMIT');
+    }catch{continue;}
+    const fin=JSON.parse(JSON.stringify(st));fin.collection=c;fin.rev=Math.min(Number.MAX_SAFE_INTEGER,st.rev+3);fin.coins=Math.max(0,st.coins-PRICE);
+    fin.collectionHost.requests[requestId]={txId,requestCanonical:canonical({kind:'draw'})};
+    for(const [id,t] of Object.entries(c.transactions))if(t.stage==='committed')fin.collectionHost.acknowledged[id]=true;
+    const actual=JSON.stringify(fin).length;assert(actual<=est.neededBytes,`iter ${iter}: actual ${actual} > estimate ${est.neededBytes}`);
+    minSlack=Math.min(minSlack,est.neededBytes-actual);checked++;
+  }
+  console.log('random upper-bound cases',checked,'min slack chars',minSlack);assert(checked>=40);
+});
+test('estimate unavailable is refused (no 32KiB fallback)',()=>{
+  const st=parentWith(history(2));const bad={...model,reduce:()=>{throw Error('boom')}};
+  const r=reserveFor({state:st,model:bad,request:{kind:'draw'},txId:'t:1',requestId:'r:1',maxBytes:1e9});assert.equal(r.ok,false);assert.equal(r.code,'CAPACITY_ESTIMATE_UNAVAILABLE');
+});
+test('ack space reserved while receipt waits: business save refused with CAPACITY_ACK_RESERVED, ack still succeeds',()=>{
+  const t=setup();const r=t.draw(1);assert(r.ok);const len=t.c.raw.length;const need=pendingAckChars(t.c.current().state);assert(need>0);
+  delete require.cache[require.resolve('../../economy.js')];const E2=require('../../economy.js');
+  const small=createSaveCoordinator({storage:{getItem:k=>t.data.get(k)??null,setItem:(k,v)=>t.data.set(k,v)},economy:E2,model,ownsLock:()=>true,maxBytes:len+need+40});E2.installFormalCollectionProtocol(small);
+  let st=small.adopt().state;st.extraGrowth='y'.repeat(25);
+  const b=small.commit(st);assert.equal(b.ok,false,JSON.stringify({len,need,raw:small.raw.length}));assert.equal(b.code,'CAPACITY_ACK_RESERVED');
+  st=small.adopt().state;const h=createCollectionHost({coordinator:small,model,economy:E2,getState:()=>st,replaceState:x=>st=x,flush:()=>small.commit(st).ok,enabled:true,randomInt:()=>0,makeId:()=>'k:1'});
+  const a=h.handle({card:'collection',protocol:1,command:'acknowledge',requestId:'ack1',txId:r.txId});assert(a.ok,JSON.stringify(a));assert.equal(small.current().state.collectionHost.acknowledged[r.txId],true);
+});
+test('new quote also keeps other pending receipts\' ack space',()=>{
+  const t=setup();const r=t.draw(1);assert(r.ok);const s=t.c.current().state;
+  const a=reserveFor({state:s,model,request:{kind:'draw'},txId:'n:1',requestId:'q',maxBytes:1e9});assert.equal(a.ackReserveChars,pendingAckChars(s));assert(a.ackReserveChars>0);
+});
+test('UI maps capacity codes to explicit no-charge messages',()=>{
+  const src=fs.readFileSync(new URL('../../cards/ui/collection.mjs',import.meta.url),'utf8');
+  for(const k of ['capacity-limit-reached','capacity-estimate-unavailable','capacity-ack-reserved'])assert(src.includes(`'${k}'`),k);
+  assert(/capacity-limit-reached':'[^']*没有扣金币/.test(src));
 });

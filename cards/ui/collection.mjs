@@ -43,7 +43,7 @@ export function mountCollection({document:doc=document,send,pause,getMuted=()=>f
     catch(e){setStatus(errorText(e));}
   }
   function errorText(e) {
-    const codes={'insufficient-funds':'经营金币不足，需要 500万。','insufficient-dust':'星尘不足，无法合成普通卡。','read-only':'目前只读，尚未启用收藏交易。','wallet-disabled':'经营钱包尚未启用。','busy':'有一笔操作仍在处理，请刷新状态恢复。','unavailable':'存档暂不可用；请刷新状态确认结果。','migration-required':'请先在经营确认收藏存档迁移。','wallet-bridge-disabled':'当前收藏交易尚未启用。','active-transaction-pending':'有一笔原操作尚未完成，请刷新状态后恢复。','ownership-copy-limit':'同名持有已满，不能合成。','lock-not-owned':'另一个经营页面正在保存，请关闭另一个页面后重新进入。','write-failed':'存档未确认成功，请刷新状态恢复原操作。','capacity-read-only':'收藏存档已达到容量限制，已停止交易以保护原数据。'};
+    const codes={'insufficient-funds':'经营金币不足，需要 500万。','insufficient-dust':'星尘不足，无法合成普通卡。','read-only':'目前只读，尚未启用收藏交易。','wallet-disabled':'经营钱包尚未启用。','busy':'有一笔操作仍在处理，请刷新状态恢复。','unavailable':'存档暂不可用；请刷新状态确认结果。','migration-required':'请先在经营确认收藏存档迁移。','wallet-bridge-disabled':'当前收藏交易尚未启用。','active-transaction-pending':'有一笔原操作尚未完成，请刷新状态后恢复。','ownership-copy-limit':'同名持有已满，不能合成。','lock-not-owned':'另一个经营页面正在保存，请关闭另一个页面后重新进入。','write-failed':'存档未确认成功，请刷新状态恢复原操作。','capacity-read-only':'收藏存档已达到容量限制，已停止交易以保护原数据。','capacity-limit-reached':'收藏存档空间不够完成这次操作：这次没有开始，没有扣金币。已经抽到的结果仍可继续查看。','capacity-estimate-unavailable':'暂时无法确认存档空间，这次没有开始，没有扣金币。','capacity-ack-reserved':'存档空间已留给待查看的抽卡结果，请先查看结果；这次保存没有写入。'};
     $('cc-error-details').hidden=false;$('cc-error-info').textContent=String(e?.code||e?.message||'unknown');
     const code=String(e?.code||'').toLowerCase().replaceAll('_','-');
     return codes[code] || '操作未能确认，已暂停处理。请刷新状态核对结果，不要重复点击。';
