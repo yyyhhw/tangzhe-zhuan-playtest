@@ -18,7 +18,7 @@ function json(x,seen=new Set()) {
     const d=Object.getOwnPropertyDescriptor(p,'constructor');
     if(!d||!own(d,'value')||typeof d.value!=='function')return false;
     const pd=Object.getOwnPropertyDescriptor(d.value,'prototype');
-    return pd?.value===p && Function.prototype.toString.call(d.value)===`function ${name}() { [native code] }`;
+    return pd?.value===p && Function.prototype.toString.call(d.value).replace(/\s/g,'')===`function${name}(){[nativecode]}`;
   };
   const plainPrototype=p=>p===null||(Object.getPrototypeOf(p)===null&&nativePrototype(p,'Object'));
   if(Array.isArray(x)) {
