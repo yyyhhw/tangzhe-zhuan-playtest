@@ -1,0 +1,19 @@
+/* 视觉-12：卡牌页弹窗与按钮接主游戏的样式（纸张色、3px 墨线、硬阴影、900 字重）。
+   只作用于 dialog 内；牌桌、手牌、战场保留原来的木色场景，不在这里改。
+   颜色与主游戏 style.css :root 同值（--paper2 / --ink / --yellow / --sh-2 / --sh-4）。 */
+:root{
+  --tz-panel:#fffaf0; --tz-ink:#141414; --tz-yellow:#ffd23f; --tz-red:#e63946; --tz-muted:#5d564a;
+  --tz-sh-2:3px 3px 0 var(--tz-ink); --tz-sh-4:7px 7px 0 var(--tz-ink);
+  --tz-r-md:8px; --tz-r-lg:12px;
+  --tz-font:-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC",sans-serif;
+}
+dialog{background:var(--tz-panel);color:var(--tz-ink);border:3px solid var(--tz-ink);border-radius:var(--tz-r-lg);box-shadow:var(--tz-sh-4);font-family:var(--tz-font)}
+dialog::backdrop{background:rgba(20,20,20,.55);backdrop-filter:none}
+dialog h2{font-weight:900}
+dialog .dialog-note,dialog .prototype-note{color:var(--tz-muted)}
+dialog button:not(.icon-button){border:3px solid var(--tz-ink);border-radius:var(--tz-r-md);box-shadow:var(--tz-sh-2);background:#fff;color:var(--tz-ink);font-weight:900;transition:transform .06s,box-shadow .06s}
+dialog button.primary{background:var(--tz-yellow);border-color:var(--tz-ink);color:var(--tz-ink)}
+dialog button:not(.icon-button):active:not(:disabled){transform:translate(2px,2px);box-shadow:1px 1px 0 var(--tz-ink)}
+dialog .icon-button{border:3px solid var(--tz-ink);border-radius:50%;background:#fff;color:var(--tz-ink);font-weight:900}
+dialog input,dialog select{border:2px solid var(--tz-ink);border-radius:var(--tz-r-md);background:#fff;color:var(--tz-ink)}
+@media (prefers-reduced-motion:reduce){dialog button:not(.icon-button){transition:none}}
