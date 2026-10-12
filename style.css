@@ -789,3 +789,14 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 /* 首批盲盒 6+2 图鉴预览（只展示） */
 .collectible-preview .item-art img{width:100%;height:auto;object-fit:contain;aspect-ratio:1}
 .collectible-preview .preview-note{display:block;font-size:11px;opacity:.75}
+
+/* 星途-03：科技公司发射台入口。比其他小游戏入口醒目：夜空底、火箭、发射塔、探照灯；没开放时整块变灰 */
+.xt-card{align-items:flex-start;background:#fffaf0;border-width:3px}
+.xt-card .xt-pad{flex:0 0 72px;width:72px;height:72px;border-radius:10px;border:2px solid var(--ink)}
+.xt-card .xt-req{list-style:none;margin:4px 0 0;padding:0;font-size:11px;line-height:17px;color:#6b6457}.xt-card .info{min-width:0}.xt-card .xt-req span{white-space:nowrap}
+.xt-card .xt-req li.ok{color:#2a7a4b;font-weight:800}
+.xt-card.locked .xt-pad{filter:grayscale(1);opacity:.75}
+.xt-card.locked .xt-beam,.xt-card.locked .xt-flame{display:none}
+.xt-card.ready{background:#fff4c2}
+.xt-card .buy{align-self:center;min-height:44px}
+.xt-card .buy[disabled]{opacity:.55}
