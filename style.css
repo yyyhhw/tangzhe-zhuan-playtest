@@ -737,6 +737,9 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 .decor-state{color:#294e39}.decor-card .toggle{min-width:60px;min-height:44px}.decor-view{display:block;margin-top:8px;min-height:44px;padding:7px 12px;border:2px solid #141414;border-radius:9px;background:#fff3bd;color:#141414;font:inherit;font-weight:800}.decor-view:focus-visible{outline:3px solid #118ab2;outline-offset:2px}
 
 /* Keep notices over the read-only wallet, away from collection actions. */
+#toast[data-tone="good"]::before{content:"✓";background:var(--yellow);color:var(--ink)}
+#toast[data-tone="info"]::before{content:"i";background:var(--blue);font-style:italic;font-family:Georgia,serif}
+.rule-more{margin-top:4px}.rule-more summary{cursor:pointer;font-weight:800;list-style:none;display:inline-block;padding:2px 0;text-decoration:underline dotted}.rule-more summary::-webkit-details-marker{display:none}.rule-more[open] summary{margin-bottom:2px}
 #toast.toast-header{top:calc(var(--sat) + 58px);bottom:auto;font-size:12px;max-width:calc(100vw - 32px)}
 /* Only owned story cards render an image; failures leave the original text readable. */
 .story-art{display:block;position:relative;width:100%;aspect-ratio:4/3;margin:9px 0;border:2px solid var(--ink);border-radius:8px;background:#fff8e8;overflow:hidden}

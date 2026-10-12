@@ -771,6 +771,7 @@ function toastShow(item) {
   toastActive = { ...item, until:performance.now() + item.ms, wallUntil:Date.now() + item.ms };
   toastEl.classList.toggle('toast-header', item.placement === 'header');
   toastEl.setAttribute('role', item.priority === 2 ? 'alert' : 'status');
+  toastEl.setAttribute('data-tone', item.priority === 2 ? 'error' : /^(双倍)?到账 \+|^\+\d/.test(item.msg) ? 'good' : 'info'); // 好事用金币勾，提醒用 i，只有出错才用红色 !
   toastEl.textContent = item.msg; toastEl.classList.remove('hidden');
   toastEl.style.animation = 'none'; void toastEl.offsetWidth; toastEl.style.animation = '';
   const generation = toastGeneration;

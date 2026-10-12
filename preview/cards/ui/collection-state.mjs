@@ -54,7 +54,7 @@ export function createCollectionClient({send,onSnapshot=()=>{},timeoutMs=12000,s
     if (!sessionId) return Promise.reject(new Error('当前环境不支持安全请求编号，收藏保持只读。请使用新版浏览器。'));
     const requestId = `cu-${sessionId}-${generation}-${++serial}`;
     return new Promise((resolve,reject)=>{
-      const timer = setTimer(()=>{pending.delete(requestId);reject(Object.assign(new Error('连接暂时中断，结果可能已入账。请刷新状态恢复，不要重复付款。'),{code:'uncertain'}));},timeoutMs);
+      const timer = setTimer(()=>{pending.delete(requestId);reject(Object.assign(new Error('连接暂时中断，结果可能已入账。请刷新状态恢复，不要重复点击。'),{code:'uncertain'}));},timeoutMs);
       pending.set(requestId,{resolve,reject,timer});
       try { send({card:'collection',protocol:1,requestId,command,...body}); }
       catch (error) { clearTimer(timer);pending.delete(requestId);reject(error); }

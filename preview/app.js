@@ -760,6 +760,7 @@ function toastShow(item) {
   toastActive = { ...item, until:performance.now() + item.ms, wallUntil:Date.now() + item.ms };
   toastEl.classList.toggle('toast-header', item.placement === 'header');
   toastEl.setAttribute('role', item.priority === 2 ? 'alert' : 'status');
+  toastEl.setAttribute('data-tone', item.priority === 2 ? 'error' : /^(双倍)?到账 \+|^\+\d/.test(item.msg) ? 'good' : 'info'); // 好事用金币勾，提醒用 i，只有出错才用红色 !
   toastEl.textContent = item.msg; toastEl.classList.remove('hidden');
   toastEl.style.animation = 'none'; void toastEl.offsetWidth; toastEl.style.animation = '';
   const generation = toastGeneration;
@@ -1431,7 +1432,7 @@ function renderGacha() {
     if (has && it.type === 'card') return `<button type="button" class="item story-open" data-act="card" data-arg="${it.id}" aria-label="重看故事卡：${it.name}"><span class="t">故事卡</span>${storyArt(it.id)}<span>${it.name}</span><span class="story-replay-hint">点击重看 ›</span></button>`;
     return `<div class="item ${has ? '' : 'no'}"><span class="t">${TYPE_LABEL[it.type]}</span>${itemIcon(it.id)}${has ? it.name : '？？？'}</div>`; }).join('')}</div>`;
   h += collectiblePreviewHTML();
-  h += `<div class="note">规则：不重复收藏盒，共 ${total} 件：普通收藏 ${E.REGULAR_ITEMS.length} 件（衣服 8 / 帽子 8 / 装饰 8 / 故事卡 8）+ 超级装饰 ${E.SUPER_ITEMS.length} 件。每抽先定类别：<b>超级装饰 ${P(CFG.SUPER_P)}</b>、普通收藏 ${P(1 - CFG.SUPER_P)}，再从该类<b>还没收集的</b>里等概率抽；连续 ${CFG.SUPER_PITY - 1} 抽没出超级装饰，第 ${CFG.SUPER_PITY} 抽必出。某一类抽完了，就只出另一类。每抽必得新物品，最多 ${total} 抽集齐，集齐后不能再买、不扣金币。普通收藏只是好看，<b>不加产速</b>；超级装饰加本店产量和专属效果，但不抽也能正常开齐店铺。单价 ${fmt(CFG.GACHA_PRICE)}。</div>`;
+  h += `<div class="note">每次开盲盒都是没拿过的新东西，最多 ${total} 次集齐；集齐后不再扣金币。单价 ${fmt(CFG.GACHA_PRICE)}。<details class="rule-more"><summary>概率与保底</summary>共 ${total} 件：普通收藏 ${E.REGULAR_ITEMS.length} 件（衣服 8 / 帽子 8 / 装饰 8 / 故事卡 8）+ 超级装饰 ${E.SUPER_ITEMS.length} 件。每抽先定类别：<b>超级装饰 ${P(CFG.SUPER_P)}</b>、普通收藏 ${P(1 - CFG.SUPER_P)}，再从该类<b>还没收集的</b>里等概率抽；连续 ${CFG.SUPER_PITY - 1} 抽没出超级装饰，第 ${CFG.SUPER_PITY} 抽必出。某一类抽完了，就只出另一类。每抽必得新物品，最多 ${total} 抽集齐，集齐后不能再买、不扣金币。普通收藏只是好看，<b>不加产速</b>；超级装饰加本店产量和专属效果，但不抽也能正常开齐店铺。</details></div>`;
   return h;
 }
 let wardrobeWho = 'c77';
@@ -1603,7 +1604,7 @@ function showOffline() {
     <div class="mtitle">大家帮你干了 <b id="offDur">${fmtDur(p.sec)}</b></div>
     ${capped ? `<div class="mnote">（离开了 ${fmtDur(p.gap)}，离线最多算 ${capH} 小时）</div>` : ''}
     <div class="mreward">${coinSm}+<span id="offGain">${fmt(p.amount)}</span></div>
-    <div class="mnote" id="offNote">离线 = 在线每秒收益的 50%，最多 ${capH} 小时${capH > 8 ? '（麻辣服务器 +2 小时）' : ''}；团单收入只算在线（离开时进行中的团单会取消）。按你离开时的店铺、员工和 CEO 安排结算。</div>
+    <div class="mnote" id="offNote">离线按在线收益的 50% 算，最多 ${capH} 小时${capH > 8 ? '（麻辣服务器 +2 小时）' : ''}。<details class="rule-more"><summary>怎么算的</summary>团单只算在线，离开时进行中的团单会取消；按你离开时的店铺、员工和 CEO 安排结算。</details></div>
     <div class="mbtns">${can ? `<button class="buy big red" id="claimDouble">今日双倍领取 +${fmt(p.amount * 2)}</button><button class="buy ghost" id="claim">直接领取（双倍留到下次）</button>`
       : `<button class="buy big" id="claim">收下！</button><div class="mnote" style="margin:0">今日双倍已用，${fmtClockMYT(E.nextResetTs(now()))}（马来西亚时间）重置</div>`}</div>`);
   const go = dbl => {
