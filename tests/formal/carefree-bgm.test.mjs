@@ -37,12 +37,12 @@ function setup(prefix, options={}){
 }
 for(const prefix of ['', 'preview/']){
  const assetVersion='space01b04-moon-on-wearables8-20261012-r1';
- const uiVersion='space01b04-moon-accessibility-20261012-r3';
+ const uiVersion='space01b04-moon-startup-20261012-r4';
  const version=(prefix?'preview-':'formal-')+uiVersion;
  const app=read(prefix+'app.js'),html=read(prefix+'index.html'),boot=read(prefix+'collection/bootstrap.mjs');
  assert.equal(JSON.parse(read(prefix+'version.json')).v,version);
  assert(html.includes("var B='"+version+"'"));assert(html.includes('collection/bootstrap.mjs?v='+uiVersion));
- assert(boot.includes('app.js?'+(prefix?'collectionHost=1c&':'')+'v='+assetVersion));
+ assert(boot.includes('app.js?'+(prefix?'collectionHost=1c&':'')+'v='+uiVersion));
  assert(!app.includes('hot-springs-town.mp3'));assert(!app.includes('Wallpaper.mp3'));
  assert(html.includes('id="settings"'));assert(html.includes('aria-label="设置与关于／鸣谢"'));
  assert(html.indexOf('audio/loop-music.js')<html.indexOf('collection/bootstrap.mjs'));

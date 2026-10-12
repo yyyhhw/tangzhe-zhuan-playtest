@@ -63,7 +63,7 @@ export async function launchRealPageQA(options){
             logicalStorageKey:storage.logicalKey,handle:message=>facade.card(message),snapshot:()=>facade.snapshot(),reconcile:()=>facade.reconcile()};
           globalThis[scope==='formal'?'FormalCollectionRuntime':'PreviewCollectionRuntime']=runtime;
           const pet=scope==='formal'&&location.pathname.startsWith('/pet/game/');
-          await import(new URL(pet?'pet/game/app.js?qaProtocol2=1&v=wearables8-on-tea-cards-out-20261012-r1':'app.js?qaProtocol2=1&v=wearables8-on-tea-cards-out-20261012-r1',sourceBase));
+          await import(new URL(pet?'pet/game/app.js?qaProtocol2=1&v=wearables8-on-tea-cards-out-20261012-r1':'app.js?qaProtocol2=1&v=space01b04-moon-startup-20261012-r4',sourceBase));
           if(!lease.owns())throw Error('QA_APP_LOADED_AFTER_REVOKE');
           const attached=facade.attachApp(globalThis.__tzz,{enabled:true,randomInt:n=>secureRandomInt(crypto,n),makeId:()=>`tx:${crypto.randomUUID()}`});
           if(!attached.ok)throw Error(attached.code);appStarted=true;

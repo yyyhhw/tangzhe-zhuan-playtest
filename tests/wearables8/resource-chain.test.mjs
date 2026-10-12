@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import {createHash} from 'node:crypto';import {createRequire} from 'node:module';
 import display from '../../qa-protocol2/wearables8-display.mjs';import {prepareEightWearableCatalog,EIGHT_WEARABLES} from '../../qa-protocol2/eight-catalog.mjs';import {assembly,until,source,RELEASE,ROOT} from './production-harness.mjs';
-const UI_TOKEN="space01b04-moon-accessibility-20261012-r3";
+const UI_TOKEN="space01b04-moon-startup-20261012-r4";
 const root=path.fileURLToPath?path.fileURLToPath(ROOT):decodeURIComponent(ROOT.pathname),require=createRequire(import.meta.url);const sha=b=>createHash('sha256').update(b).digest('hex');
 test('actual candidate production flag/token, root/preview/rootpet version chain and separate unchanged previewpet',()=>{
  assert(source('collectibles/release.mjs').includes('COLLECTIBLES_PRODUCTION_ENABLED = true'));assert.equal(RELEASE,'space01b04-moon-on-wearables8-20261012-r1');
@@ -10,7 +10,7 @@ test('actual candidate production flag/token, root/preview/rootpet version chain
 });
 test('all literal imports in new module closure resolve inside project and use the final token; derived pins match executed bytes',()=>{
  let count=0;const walk=p=>fs.readdirSync(p,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(path.join(p,e.name)):[path.join(p,e.name)]);
- for(const dir of ['collectibles','qa-protocol2','space'])for(const file of walk(path.join(root,dir)).filter(p=>p.endsWith('.mjs'))){const src=fs.readFileSync(file,'utf8');for(const m of src.matchAll(/(?:from\s*|import\s*\(\s*)['"]([^'"]+)['"]/g)){if(!m[1].startsWith('./')&&!m[1].startsWith('../'))continue;const u=new URL(m[1],'file://'+file);assert.equal(u.searchParams.get('v'),/\/(?:collectibles\/entry|space\/overlay)\.mjs$/.test(u.pathname)?UI_TOKEN:RELEASE,file+m[1]);assert(u.pathname.startsWith(root));assert(fs.existsSync(u));count++;}}
+ for(const dir of ['collectibles','qa-protocol2','space'])for(const file of walk(path.join(root,dir)).filter(p=>p.endsWith('.mjs'))){const src=fs.readFileSync(file,'utf8');for(const m of src.matchAll(/(?:from\s*|import\s*\(\s*)['"]([^'"]+)['"]/g)){if(!m[1].startsWith('./')&&!m[1].startsWith('../'))continue;const u=new URL(m[1],'file://'+file);assert.equal(u.searchParams.get('v'),/\/(?:collectibles|qa-protocol2)\/entry\.mjs$/.test(u.pathname)?UI_TOKEN:/\/space\/overlay\.mjs$/.test(u.pathname)?UI_TOKEN:RELEASE,file+m[1]);assert(u.pathname.startsWith(root));assert(fs.existsSync(u));count++;}}
  assert.equal(count,43);for(const pin of JSON.parse(source('qa-protocol2/dependency-pins.json'))){const bytes=fs.readFileSync(new URL(pin.path,ROOT));assert.equal(pin.sha256,sha(bytes));assert.equal(pin.bytes,bytes.length);}
 });
 test('all eight exact owned images are present and versioned; display does not grant ownership or add decoration gameplay',()=>{
@@ -19,7 +19,7 @@ test('all eight exact owned images are present and versioned; display does not g
 });
 for(const scope of ['formal','preview'])test(scope+': actual no-query bootstrap uses production entry under GitHub project subpath; new closure comes from exact candidate files', {timeout:15000},async t=>{
  const h=await assembly({scope,projectRoot:'/tangzhe-zhuan-playtest/',mode:'bootstrap'});t.after(()=>h.close());await until(()=>h.view()?.phase==='prompt','prompt');await h.click('collectibleUpgradeConfirm');await until(()=>h.app,'app');assert.equal(h.runtime.qa,false);assert.equal(h.runtime.entryEnabled,false);
- for(const [url,row]of h.loadedSources){assert(row.file.startsWith(root));assert.equal(row.sha256,sha(fs.readFileSync(row.file)));if(/\/(?:collectibles|qa-protocol2)\//.test(new URL(url).pathname))assert.equal(new URL(url).searchParams.get('v'),/\/collectibles\/entry\.mjs$/.test(new URL(url).pathname)?UI_TOKEN:RELEASE,url);}
+ for(const [url,row]of h.loadedSources){assert(row.file.startsWith(root));assert.equal(row.sha256,sha(fs.readFileSync(row.file)));if(/\/(?:collectibles|qa-protocol2)\//.test(new URL(url).pathname))assert.equal(new URL(url).searchParams.get('v'),/\/(?:collectibles|qa-protocol2)\/entry\.mjs$/.test(new URL(url).pathname)?UI_TOKEN:RELEASE,url);}
 });
 
 // The shared renderer changed in this candidate; existence alone cannot detect stale HTTP URLs.

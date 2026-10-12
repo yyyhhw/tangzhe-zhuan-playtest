@@ -8,7 +8,7 @@ const root=path.resolve(new URL('../..',import.meta.url).pathname);
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const require=createRequire(import.meta.url);
 const apps=['app.js','preview/app.js','pet/game/app.js','preview/pet/game/app.js'];
-const uiToken='space01b04-moon-accessibility-20261012-r3';
+const uiToken='space01b04-moon-startup-20261012-r4';
 const token='space01b04-moon-on-wearables8-20261012-r1';
 const cases=[
  ['Asia/Tokyo','2026-10-05T06:00:00Z','06:00'],
@@ -64,7 +64,7 @@ else{
  try{for(const c of cases){process.env.TZ=c[0];runCase(c);}}
  finally{if(originalTZ===undefined)delete process.env.TZ;else process.env.TZ=originalTZ;}
  const boots=['collection/bootstrap.mjs','preview/collection/bootstrap.mjs'];
- for(const p of boots){const b=read(p);assert(b.includes('app.js?'+(p.startsWith('preview/')?'collectionHost=1c&':'')+'v='+token));}
+ for(const p of boots){const b=read(p);assert(b.includes('app.js?'+(p.startsWith('preview/')?'collectionHost=1c&':'')+'v='+uiToken));}
  assert.equal((read(boots[0]).match(new RegExp('pet/game/app\\.js\\?v='+token,'g'))||[]).length,2);
  for(const p of apps){const html=read(p.replace(/app\.js$/,'index.html')),kind=p.startsWith('preview/')?'preview':'formal';
   assert(html.includes("var B='"+kind+'-'+(p==='preview/pet/game/app.js'?'tea-td-cards-out-20261012-r1':uiToken)+"'"));

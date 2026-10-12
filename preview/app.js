@@ -2597,7 +2597,7 @@ function closeTD() {
   const f = $('#tdFrame'); f.onload = null; f.src = 'about:blank';
   $('#tdOverlay').classList.add('hidden'); dirty = true; audioResume();
 }
-Object.defineProperties(window.__tzz, {zbOpen:{get:()=>zbOpen}, openTD:{value:openTD}, closeTD:{value:closeTD}, tdOpen:{get:() => tdOpen}, tdRun:{get:() => tdController.run}, tdReply:{value:() => tdController.reply()}});
+Object.defineProperties(window.__tzz, {openTD:{value:openTD}, closeTD:{value:closeTD}, tdOpen:{get:() => tdOpen}, tdRun:{get:() => tdController.run}, tdReply:{value:() => tdController.reply()}});
 
 /* ================= 书店卡牌（cards/ui/?embed=1，全屏 iframe，preview 试玩）=================
    父页只放进入按钮、开关浮层、同步静音；不读也不解析卡牌存档，不碰钱包，不发奖励。端口只认 ready / close / stay。 */

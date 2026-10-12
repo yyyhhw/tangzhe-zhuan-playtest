@@ -14,8 +14,8 @@ export function installMoonOverlay({app,runtime,document:doc=globalThis.document
  const node=(tag,id,text)=>{const n=doc.createElement(tag);if(id)n.id=id;if(text!==undefined)n.textContent=text;return n;};
  const clearTimer=()=>{if(timer!==null){win.clearTimeout(timer);timer=null;}};
  const closeView=()=>{clearTimer();cover?.remove();restoreBackground();cover=null;body=null;content=null;signature=null;closeButton=null;const saved=origin;origin=null;
-  let allowed=false;try{allowed=!renderFailed&&!revoked&&!doc.hidden&&!app.xingtuContext().blocked&&!runtime.coordinator.readOnly;}catch{}
-  if(allowed)focus(saved);
+  let allowed=false;try{allowed=!renderFailed&&!revoked&&!doc.hidden&&!app.xingtuContext().blocked&&!runtime.coordinator.readOnly&&host.view().code!=='SPACE_SESSION_REVOKED';}catch{}
+  if(allowed){if(usable(saved))focus(saved);else if(!connected(saved)&&saved?.matches?.('button[data-act="xingtu"]')){const entries=[...doc.querySelectorAll('button[data-act="xingtu"]')];if(entries.length===1&&usable(entries[0]))focus(entries[0]);}}
  };
  const button=(id,label,fn)=>{const b=node('button',id,label);b.type='button';b.onclick=fn;return b;};
  function ensure(){if(cover)return false;origin=doc.activeElement;cover=node('section','xingtuOverlay');cover.className='xingtu-overlay';cover.setAttribute('role','dialog');cover.setAttribute('aria-modal','true');cover.setAttribute('aria-label','星途月面基地');body=node('div','xingtuPanel');body.className='xingtu-panel';cover.append(body);

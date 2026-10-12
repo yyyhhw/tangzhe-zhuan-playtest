@@ -91,11 +91,11 @@ export async function launchProductionCollectibles(options){
             logicalStorageKey:storage.logicalKey,handle:message=>facade.card(message),snapshot:()=>facade.snapshot(),reconcile:()=>{const result=facade.reconcile();if(result.ok)globalThis.XingTu?.resume();return result;}};
           globalThis[scope==='formal'?'FormalCollectionRuntime':'PreviewCollectionRuntime']=runtime;
           const pet=scope==='formal'&&location.pathname.startsWith(new URL('pet/game/',sourceBase).pathname);
-          await import(new URL((pet?'pet/game/app.js':'app.js')+'?v='+COLLECTIBLES_RELEASE,sourceBase));
+          await import(new URL((pet?'pet/game/app.js':'app.js')+'?v='+(pet?COLLECTIBLES_RELEASE:'space01b04-moon-startup-20261012-r4'),sourceBase));
           if(!lease.owns())throw Error('QA_APP_LOADED_AFTER_REVOKE');
           const attached=facade.attachApp(globalThis.__tzz,{enabled:walletBridgeApproved===true,randomInt:n=>secureRandomInt(crypto,n),makeId:()=>`tx:${crypto.randomUUID()}`});
           if(!attached.ok)throw Error(attached.code);
-          const {installMoonOverlay}=await import('../space/overlay.mjs?v=space01b04-moon-accessibility-20261012-r3');
+          const {installMoonOverlay}=await import('../space/overlay.mjs?v=space01b04-moon-startup-20261012-r4');
           if(!lease.owns())throw Error('SPACE_LOADED_AFTER_REVOKE');
           installMoonOverlay({app:globalThis.__tzz,runtime});appStarted=true;
           if(facade.view().canPlay)document.getElementById('collectionStartup')?.remove();render(facade.view());
