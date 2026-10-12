@@ -181,7 +181,7 @@ function renderMenu() {
   $('#heroDesc').innerHTML = `${cmdDetail(cmdSel)}<br>统帅不上地图；8种防御塔。开局10秒、波间5秒，倍速同时加快战斗与倒计时。持有建设点上限400，本关累计收入预算${NORMAL_BUDGET(lvSel,cmdSel)}（含初始；退款不恢复额度）。普通无总塔数限制；无尽上限为地图总格数÷3向下取整。CEO每种1座，共4种。`;
   $('#cmdPick').innerHTML = T.CEO_IDS.map(id => `<button type="button" data-cmd="${id}" class="${id === cmdSel ? 'on' : ''}"><img src="../art/face_${id}.webp" alt="">${T.HEROES[id].name}</button>`).join('');
   $('#lvTxt').textContent=`第 ${lvSel} 关 · ${mapLabel(map)}`;
-  $('#lvInfo').textContent=`本关 ${stage.waves} 波${stage.ultimate?' · 末波终极Boss（阶段数值实验版）':''} · 重玩不重复解锁`;
+  $('#lvInfo').textContent=`本关 ${stage.waves} 波${stage.ultimate?' · 末波终极Boss':''} · 重玩不重复解锁`;
   $('#lvProg').textContent=`已通关 ${progress().highestCleared}/50 · 本关${record.cleared?'已通关':`最佳 ${record.best}/${stage.waves} 波`}`;
   $('#lvPrev').disabled=lvSel<=1;$('#lvNext').disabled=lvSel>=progress().unlocked;
   $('#stageGrid').innerHTML=Campaign.STAGES.map(s=>`<button type="button" data-stage="${s.n}" aria-label="第${s.n}关，${s.n>progress().unlocked?'未解锁':progress().stages[s.n]?.cleared?'已通关':'可挑战'}" aria-pressed="${s.n===lvSel}" class="${s.n===lvSel?'on':''} ${progress().stages[s.n]?.cleared?'cleared':''}" ${s.n>progress().unlocked?'disabled':''}>${s.n}${s.n===50?' ♛':''}</button>`).join('');
@@ -281,7 +281,7 @@ function hit(e, dmg, o, source) {
   if (!e || e.hp <= 0 || !TIDS.includes(source) || !Number.isFinite(dmg) || dmg < 0) return false;
   dmg *= burstMultiplier();
   G.damageByTower[source] = (G.damageByTower[source] || 0) + dmg;
-  e.hp -= dmg; if(e.ultimate&&e.phase===1&&e.hp>0&&e.hp/e.max<=e.phaseAt){e.phase=2;e.sp*=e.phaseSpeed;toast('终极Boss进入第二阶段（实验数值）');} if (!o || !o.dot) { SFX.hit(); e.flash = 0.12; }
+  e.hp -= dmg; if(e.ultimate&&e.phase===1&&e.hp>0&&e.hp/e.max<=e.phaseAt){e.phase=2;e.sp*=e.phaseSpeed;toast('终极Boss进入第二阶段！');} if (!o || !o.dot) { SFX.hit(); e.flash = 0.12; }
   if (o && o.slow) { e.slowT = Math.max(e.slowT, o.slowT || 1); e.slowK = Math.min(e.slowK === 1 ? 1 : e.slowK, 1 - o.slow); }
   if (o && o.stun && e.type !== 'boss' && e.type !== 'mini') e.stunT = Math.max(e.stunT, o.stun);
   if (o && o.burn) { e.burnT = Math.max(e.burnT, o.burnT || 3); if (o.burn >= e.burnD) e.burnSource = source; e.burnD = Math.max(e.burnD, o.burn); }
