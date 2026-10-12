@@ -392,6 +392,9 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 .wall-grid{position:absolute;inset:0;z-index:2}
 .room-wall .furn.wallf{z-index:2; border-radius:4px}
 .room-wall .rw-deco,.room-wall .rw-name{position:relative;z-index:1;pointer-events:none}
+/* 家宅-48：时段/天气小标签挂在房间左上角，和「77的小屋」牌子同一套样式 */
+.room-wall .rw-status{position:absolute;left:10px;top:8px;z-index:1;pointer-events:none;max-width:calc(100% - 128px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:11px;font-weight:900;background:#fff;border:2px solid var(--ink);border-radius:4px;padding:1px 6px;transform:rotate(1.5deg)}
+.room-wall .rw-status[hidden]{display:none}
 #wallHl{z-index:5}
 .drag-ghost.tall{background:transparent;border-width:0;box-shadow:none}
 .furn.tall .fi img{object-position:center bottom}

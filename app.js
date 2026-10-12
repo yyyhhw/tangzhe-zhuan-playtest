@@ -1976,7 +1976,7 @@ function renderRoom() {
   const wallBlocks = E.wallBlockedCells(state, id).map(([x, y]) => `<i class="wall-block" style="left:${x / T.cols * 100}%;top:${y / E.WALL_ROWS * 100}%;width:${100 / T.cols}%;height:${100 / E.WALL_ROWS}%"></i>`).join('');
   h += `<div class="room tier-${T.id}${hasArt ? ' has-art' : ''}${dockHost ? ' pet-host-docked' : ''}" id="room" data-tier="${T.id}" style="--cols:${T.cols};--rows:${T.rows};--wall:${T.wall};--floor:${T.floor};--trim:${T.trim}">
     ${hasArt ? `<img class="room-art" src="art/home_${artKey}.webp?v=${ART_V}" data-homefb="1" alt="" onerror="this.closest('.room')&&this.closest('.room').classList.remove('has-art')">` : ''}
-    <div class="room-wall" id="roomWall"><span class="rw-deco">${T.id === 'hut' ? ic('window') : T.id === 'apt' ? ic('window') + ic('window') : ic('spark') + ic('candle') + ic('spark')}</span><span class="rw-name">${c.name}的${T.name}</span><div class="wall-grid" id="wallGrid">${wallBlocks}${wallItems}<div class="room-hl hidden" id="wallHl"></div></div></div>
+    <div class="room-wall" id="roomWall"><span class="rw-deco">${T.id === 'hut' ? ic('window') : T.id === 'apt' ? ic('window') + ic('window') : ic('spark') + ic('candle') + ic('spark')}</span><span class="rw-name">${c.name}的${T.name}</span>${homeStatusContext ? '<span class="rw-status" id="homeAmbienceStatus" hidden></span>' : ''}<div class="wall-grid" id="wallGrid">${wallBlocks}${wallItems}<div class="room-hl hidden" id="wallHl"></div></div></div>
     <div class="room-floor" id="roomFloor">${floorItems}<div class="home-actor" id="homeActor" style="left:${(homeActorOf(id).x + 0.5) / T.cols * 100}%;top:${(homeActorOf(id).y + 0.5) / T.rows * 100}%"><canvas class="ha-pose" width="240" height="240" aria-label="CEO坐卧姿态"></canvas><span class="ha-ava">${ava(id)}</span>${(() => { const ac = homeActorOf(id); return ac.line && ac.until > clock ? `<b class="ha-line">${ac.line}</b>` : ''; })()}<i class="ha-act">${(() => { const ac = homeActorOf(id); return ac.act === 'rest' ? ic('zz') : ac.act === 'read' ? ic('book') : ac.act === 'dress' ? ic('shirt') : ''; })()}</i></div><div class="room-hl hidden" id="roomHl"></div></div></div>`;
   h += petInteractionBar();
   if(homeActorOf(id).pose)h += `<button class="buy alt" data-act="homeGetUp">起身</button>`;
@@ -1995,7 +1995,7 @@ function renderRoom() {
         <div class="note">布置模式：拖家具、旋转、收回。挂画只挂墙。生活模式下去点空地 / 床 / 书架 / 衣柜互动。</div>`
       : `<div class="note">仓库空空。去商城买家具，再回来布置 ${c.name} 的房间。</div>`;
   } else {
-    h += `<div class="note live-note">${homeStatusContext ? '<span id="homeAmbienceStatus" hidden></span>' : ''}生活模式：点地板空位让 ${c.name} 走过去；点<b>床</b>躺下、点<b>座椅</b>坐下、点<b>书架</b>看书、点<b>衣柜</b>换装。要摆家具请切到「布置」。</div>
+    h += `<div class="note live-note">生活模式：点地板空位让 ${c.name} 走过去；点<b>床</b>躺下、点<b>座椅</b>坐下、点<b>书架</b>看书、点<b>衣柜</b>换装。要摆家具请切到「布置」。</div>
       <button class="buy alt mall-go" data-act="homeSub" data-arg="mall">${ic('mall')}去商城</button>`;
   }
   return h;
