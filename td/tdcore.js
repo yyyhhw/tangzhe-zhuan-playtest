@@ -5,10 +5,10 @@
   const MAX_LV = 1, WAVES = 10, MAX_UP = 30, GROWTH = 1.9;
   // 8 种塔：4 座店铺塔 + 4 座 CEO 塔（统帅和同名 CEO 塔同场时塔有额外效果）；cost = 局内建设点
   const TOWERS = {
-    bbq:     { name: '烧烤火炉', cost: 60,  ceo: null },
-    tea:     { name: '奶茶冷饮', cost: 60,  ceo: null },
+    bbq:     { name: '高温烤炉', cost: 60,  ceo: null },
+    tea:     { name: '冰沙机', cost: 60,  ceo: null },
     book:    { name: '书页发射', cost: 80,  ceo: null },
-    tech:    { name: '科技电塔', cost: 90,  ceo: null },
+    tech:    { name: '紫外灯', cost: 90,  ceo: null },
     t77:     { name: '77 烤串塔', cost: 110, ceo: 'c77' },
     tpearl:  { name: '珍珠塔',   cost: 110, ceo: 'pearl' },
     totaku:  { name: '阿宅漫画塔', cost: 110, ceo: 'otaku' },

@@ -25,10 +25,10 @@ const isPath = (x, y) => PATH.has(x + ',' + y);
 // ---- 可调参数（距离单位 = 格，rate = 出手间隔秒）----
 // 防连锁：燃烧跳伤不再触发燃烧 / 暴击；弹跳、链电、穿透都有次数上限；击杀不触发任何额外攻击
 const P = {
-  bbq:     { k: '烤', range: 1.9, rate: 0.9, dmg: 10, col: '#e8590c', kind: 'cone', arc: 70, burn: 0.25, burnT: 2, desc: '扇形火攻，带轻微灼烧' },
-  tea:     { k: '茶', range: 1.7, rate: 0.9, dmg: 3,  col: '#7fd1e8', kind: 'aura', slow: 0.45, slowT: 1.2, desc: '范围减速' },
+  bbq:     { k: '烤', range: 1.9, rate: 0.9, dmg: 10, col: '#e8590c', kind: 'cone', arc: 70, burn: 0.25, burnT: 2, desc: '扇形热风，带轻微灼烧' },
+  tea:     { k: '冰', range: 1.7, rate: 0.9, dmg: 3,  col: '#7fd1e8', kind: 'aura', slow: 0.45, slowT: 1.2, desc: '冰一下，范围内都变慢' },
   book:    { k: '书', range: 2.8, rate: 1.0, dmg: 14, col: '#2e7d32', kind: 'pierce', pierce: 4, width: 0.4, desc: '书页直线穿透（最多 4 只）' },
-  tech:    { k: '电', range: 2.4, rate: 0.8, dmg: 13, col: '#c13ce0', kind: 'chain', chain: 3, jump: 1.6, fall: 0.75, desc: '链电，最多跳 3 只' },
+  tech:    { k: '紫', range: 2.4, rate: 0.8, dmg: 13, col: '#c13ce0', kind: 'chain', chain: 3, jump: 1.6, fall: 0.75, desc: '紫光连跳，最多 3 只' },
   t77:     { k: '串', range: 2.5, rate: 0.8, dmg: 12, col: RED,       kind: 'burn', burn: 0.6, burnT: 3, synBurn: 2, synBurnT: 4, desc: '飞串命中持续燃烧', syn: '统帅 77：燃烧伤害 ×2、烧 4 秒' },
   tpearl:  { k: '珠', range: 2.4, rate: 0.7, dmg: 12, col: '#6d4c41', kind: 'bounce', bounce: 2, synBounce: 1, jump: 1.8, fall: 0.85, desc: '珍珠弹跳 2 次', syn: '统帅珍珠姐：多弹 1 次' },
   totaku:  { k: '漫', range: 2.4, rate: 1.1, dmg: 14, col: '#3949ab', kind: 'boomerang', back: 0.6, width: 0.45, synBack: 1, synWidth: 0.7, desc: '回旋漫画：去程回程都打', syn: '统帅阿宅：回程满伤、更宽' },
@@ -41,7 +41,7 @@ const TIDS = T.TOWER_IDS;
 const MAX_TLV = 3;
 const upCost = tw => Math.round(T.TOWERS[tw.id].cost * 0.8 * tw.lv);
 const sellBack = tw => Math.round(tw.spent * 0.6);
-const MAP_LABEL = Object.freeze({citadel:'奶茶要塞'});
+const MAP_LABEL = Object.freeze({courtyard:'门口排队区',switchyard:'点单吧台',canal:'冰块水槽',spiral:'珍珠锅边',citadel:'奶茶要塞',boss:'后厨冷柜'});
 const mapLabel = m => (m && MAP_LABEL[m.id]) || (m && m.name) || '';
 const EN = { walk: { hp: 30, sp: 1.0, r: 0.28, cash: 5, col: '#7cb342' }, fast: { hp: 18, sp: 1.8, r: 0.22, cash: 4, col: '#fdd835' }, tank: { hp: 110, sp: 0.6, r: 0.36, cash: 12, col: '#6d4c41' },
   mini: { hp: 600, sp: 0.5, r: 0.42, cash: 50, col: '#ad1457', lives: 3 }, boss: { hp: 2200, sp: 0.42, r: 0.5, cash: 100, col: '#8e24aa', lives: 10 } };
@@ -103,7 +103,7 @@ function cmdDetail(id) {
 }
 function towerSummary(id, lv = 1) {
   const s = TW[id], g = gl(), dmg = s.dmg * tDmg(id) * (1 + .5 * (lv - 1)) * (g.dmg || 1) * burstMultiplier();
-  const attack = {cone:'扇形灼烧',aura:'范围减速',pierce:'直线穿透',chain:'跳跃链电',burn:'单体燃烧',bounce:'珍珠弹跳',boomerang:'往返回旋',splash:'范围爆炸'}[s.kind];
+  const attack = {cone:'扇形灼烧',aura:'范围减速',pierce:'直线穿透',chain:'紫光连跳',burn:'单体燃烧',bounce:'珍珠弹跳',boomerang:'往返回旋',splash:'范围爆炸'}[s.kind];
   return `<b class="core-line">${attack} · 对地含 Boss</b><span class="core-line">伤 ${num(dmg)} · ${num(s.rate*(g.rate||1))}秒 · ${num(towerRange({id,lv}))}格</span>`;
 }
 function towerDetail(id, lv = 1) {
