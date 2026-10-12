@@ -1,0 +1,14 @@
+import vm from 'node:vm';import test from 'node:test';import assert from 'node:assert/strict';import {createRequire} from 'node:module';
+import {assembly,until,copy} from './production-harness.mjs';
+const require=createRequire(import.meta.url),H=require('../../td/tdhost.js'),C=require('../../td/tdcampaign.js'),P=require('../../td/tdcampaign-progress.js'),Archive=require('../../td/tdprogress.js');
+test('formal authentic TD upgrade receipt and stage result survive P1→P2 production migration, gacha and reload; dropping receipt is denied', {timeout:15000},async t=>{
+ let retained;
+ const h=await assembly({mode:'bootstrap',configure:f=>{
+  let s=f.c.current().state;s.coins=50000000;s.tdCampaign=P.fresh();s.td50=Archive.fresh();const funded=f.c.commit(s);assert(funded.ok);s=funded.state;let reply;
+  const host=H.create({state:()=>s,blocked:()=>false,balance:()=>s.coins,changed(){},close(){},send:r=>reply=r,transact:(apply,price)=>f.E.transact(s,{apply,price,save:st=>f.c.commit(st)})});
+  host.msg({td:'hello',protocol:3,ruleset:P.RULESET_ID});host.msg({td:'buy',requestId:'retained-before-eight',id:'bbq',ruleset:P.RULESET_ID});assert(reply.ok);const base={runId:'retained-stage1',n:1,cmd:'c77',mapId:C.getStage(1).mapId,ruleset:P.RULESET_ID};host.msg({td:'start',...base});assert(reply.ok);host.msg({td:'result',...base,win:true,waves:C.getStage(1).waves,kills:1,bossKilled:false});assert(reply.ok);retained=copy({td:s.td,td50:s.td50,tdCampaign:s.tdCampaign,tdUpgradeReceipts:s.tdUpgradeReceipts});
+ }});t.after(()=>h.close());await until(()=>h.view()?.phase==='prompt','migration prompt');await h.click('collectibleUpgradeConfirm');await until(()=>h.app||h.errors.length,'app');assert(h.app,JSON.stringify(h.errors));
+ const history=()=>copy({td:h.app.state.td,td50:h.app.state.td50,tdCampaign:h.app.state.tdCampaign,tdUpgradeReceipts:h.app.state.tdUpgradeReceipts});assert.deepEqual(history(),retained);h.app.doGacha();assert.deepEqual(history(),retained);assert.equal(h.app.state.tdCampaign.highestCleared,1);assert.equal(h.app.state.tdUpgradeReceipts.receipts.length,1);
+ const raw=h.data.get(h.t.keys.main),bad=copy(h.app.state);delete bad.tdUpgradeReceipts;h.context.__receiptDraft=JSON.stringify(bad);const rejected=vm.runInContext('FormalCollectionRuntime.coordinator.commit(JSON.parse(__receiptDraft))',h.context);assert.equal(rejected.code,'TD_UPGRADE_RECEIPTS_IMMUTABLE');assert.equal(h.data.get(h.t.keys.main),raw);
+ const saved=new Map(h.data);await h.close();const reopened=await assembly({mode:'bootstrap',configure:f=>{f.data.clear();for(const [k,v]of saved)f.data.set(k,v)}});t.after(()=>reopened.close());await until(()=>reopened.app||reopened.errors.length,'reopen');assert(reopened.app,JSON.stringify(reopened.errors));assert.deepEqual(copy({td:reopened.app.state.td,td50:reopened.app.state.td50,tdCampaign:reopened.app.state.tdCampaign,tdUpgradeReceipts:reopened.app.state.tdUpgradeReceipts}),retained);
+});

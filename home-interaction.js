@@ -21,13 +21,18 @@
   otaku_sofa_sleeper:{v:.56,angle:-.15},otaku_gaming_pod:{v:.56,angle:-.15},otaku_projector_bed:{v:.79},otaku_cocoon_lounger:{v:.55,angle:-.15}
  };
  function profile(id){const pose=capability(id);return pose?{pose,u:.5,v:pose==='lie'?.65:.67,angle:pose==='lie'?-1.38:0,...surfaces[id.replace(/^furn_/,'')]}:null;}
- function drawPose(c,drawPerson,look,pose,angle){
-  c.clearRect(0,0,240,240);c.save();c.translate(120,120);
+ function drawPose(c,drawPerson,look,pose,angle,displayOptions){
+  // Only the explicit developer caller opts into transparent headroom.
+  // Keep all old pose scales, limb geometry and furniture attachment coordinates.
+  const candidate=displayOptions?.candidateVisual===true;
+  const size=candidate?352:240,inset=candidate?56:0;
+  c.clearRect(0,0,size,size);c.save();c.translate(120+inset,120+inset);
   const lying=pose==='lie';
   if(lying){c.rotate(angle==null?-1.38:angle);c.scale(1.6,1.6);c.translate(0,56);}
   else {c.scale(1.4,1.4);c.translate(0,48);}
   // Keep the shipped face, hair, clothes and arms; replace only the leg pose.
-  c.save();c.beginPath();c.rect(-60,-140,120,103);c.clip();drawPerson(c,0,0,1,look,{happy:true});c.restore();
+  const upper=()=>{c.save();c.beginPath();c.rect(-60,candidate?-153:-140,120,candidate?128:103);c.clip();drawPerson(c,0,0,1,look,candidate?{happy:true,candidateOmitLegs:true}:{happy:true});c.restore();};
+  if(!candidate)upper();
   c.lineJoin='round';c.lineCap='round';c.strokeStyle='#171717';c.lineWidth=2.6;c.fillStyle=look.pants||'#3d405b';
   c.beginPath();c.moveTo(-15,-38);c.lineTo(15,-38);
   if(lying){c.lineTo(11,-8);c.lineTo(-10,-8);c.closePath();}
@@ -37,6 +42,9 @@
   c.lineWidth=1.6;c.beginPath();c.moveTo(0,-36);if(lying)c.lineTo(0,-10);else{c.quadraticCurveTo(15,-32,15,-25);c.lineTo(24,-12);}c.stroke();
   c.fillStyle=look.shoe||'#2f2a28';c.lineWidth=2;
   for(const dx of lying?[-6,5]:[22,30]){c.beginPath();c.ellipse(dx,lying?-6:-9,5,3.5,lying?0:-.15,0,Math.PI*2);c.fill();c.stroke();}
+  // Candidate garments may extend below the old -37 waist crop. Draw them
+  // after posed legs, excluding original standing legs, preserving all anchors.
+  if(candidate)upper();
   c.restore();
  }
  // Ground poses must remain inside the rug and outside every solid footprint.

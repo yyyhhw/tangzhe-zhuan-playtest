@@ -1,0 +1,93 @@
+[
+  {
+    "path": "qa-protocol2/vendor/planner/migration.mjs",
+    "sourcePackage": "collectible-compat-candidate-v2",
+    "sourcePath": "module/migration.mjs",
+    "bytes": 12633,
+    "sha256": "1cf6d290f33f6f4963f62a8f683694b8db806ede8d12c2032b37ce16d1db49d0",
+    "reviewedInputSha256": "5bc0536dacecbaca2f910def14ac7410a7b8c19495625604688156cb89848c49",
+    "reviewedInputBytes": 12549,
+    "integrationChange": "only final cache import URLs; business logic unchanged"
+  },
+  {
+    "path": "qa-protocol2/vendor/planner/lib/json.mjs",
+    "sourcePackage": "collectible-compat-candidate-v2",
+    "sourcePath": "module/lib/json.mjs",
+    "bytes": 2291,
+    "sha256": "f88ea7903e5c58c21466921fefefe861c17c2cb077660bcdf7ba74d0602da095"
+  },
+  {
+    "path": "qa-protocol2/vendor/planner/lib/sha256.mjs",
+    "sourcePackage": "collectible-compat-candidate-v2",
+    "sourcePath": "module/lib/sha256.mjs",
+    "bytes": 2173,
+    "sha256": "651cad0c348883f84bc1fa8d64a30832daf99981d81cbce98c154a383827edbb"
+  },
+  {
+    "path": "qa-protocol2/vendor/codec/snapshot-codec.mjs",
+    "sourcePackage": "collectible-snapshot-codec-v1",
+    "sourcePath": "module/snapshot-codec.mjs",
+    "bytes": 4383,
+    "sha256": "14a65ebbc4f8db3f5872f8ceac19e1a169f07ba753cf7c4d6e78818495507c5c",
+    "reviewedInputSha256": "420e687372a697b79e65da6776088234b9a0e6fbd39154b2582bdbe42b4b156b",
+    "reviewedInputBytes": 4299,
+    "integrationChange": "only final cache import URLs; business logic unchanged"
+  },
+  {
+    "path": "qa-protocol2/vendor/codec/lib/json.mjs",
+    "sourcePackage": "collectible-snapshot-codec-v1",
+    "sourcePath": "module/lib/json.mjs",
+    "bytes": 2291,
+    "sha256": "f88ea7903e5c58c21466921fefefe861c17c2cb077660bcdf7ba74d0602da095"
+  },
+  {
+    "path": "qa-protocol2/vendor/codec/lib/sha256.mjs",
+    "sourcePackage": "collectible-snapshot-codec-v1",
+    "sourcePath": "module/lib/sha256.mjs",
+    "bytes": 2173,
+    "sha256": "651cad0c348883f84bc1fa8d64a30832daf99981d81cbce98c154a383827edbb"
+  },
+  {
+    "path": "qa-protocol2/vendor/runtime/validator.mjs",
+    "sourcePackage": "collectible-protocol2-runtime-v1",
+    "sourcePath": "module/validator.mjs",
+    "bytes": 12029,
+    "sha256": "5451c77f06364b6f0084692157e740d5683c4383f5815c604e18d909983811af",
+    "sourceSha256": "b710aa9da4c979036e980ffdbdf2f8ed46259d13c5d7ac90bf07ea42a806511a",
+    "sourceBytes": 8201,
+    "derivation": "Revision 2 exact boot migration markers, formal leaderboard mirror, optional source-bound pet roster transition guard; original reviewed archive unchanged."
+  },
+  {
+    "path": "qa-protocol2/vendor/cards/card-coordinator.mjs",
+    "sourcePackage": "collectible-card-adapter-v1",
+    "sourcePath": "module/card-coordinator.mjs",
+    "bytes": 8245,
+    "sha256": "0a42ba33adb8e4ccd9d763d827d8266a3d08a03dc017083e0d95d831cea5d06e",
+    "reviewedInputSha256": "c39527224902c835f2cc611527a5fcec2a23293adebd3b78bbb8684d2b41a034",
+    "reviewedInputBytes": 8203,
+    "integrationChange": "only final cache import URLs; business logic unchanged"
+  },
+  {
+    "path": "qa-protocol2/vendor/cards/card-transition.mjs",
+    "sourcePackage": "collectible-card-adapter-v1",
+    "sourcePath": "module/card-transition.mjs",
+    "bytes": 4048,
+    "sha256": "cdda72af83ada125e22127d0f1ec0221c3b170aa6f3655d8ccef5b1f87095315"
+  },
+  {
+    "path": "qa-protocol2/vendor/host/host-model.mjs",
+    "sourcePackage": "collectible-host-model-v1",
+    "sourcePath": "module/host-model.mjs",
+    "bytes": 8310,
+    "sha256": "fc0bfae259adc3744f3886be8d16445687808e969051e218e0b4b5fc1c846ed7"
+  },
+  {
+    "path": "qa-protocol2/vendor/runtime/pet-domain.mjs",
+    "sourcePackage": "real-page-qa-revision-v2",
+    "sourcePath": "pet-source-audit/pet-domain.mjs",
+    "sourceCommit": "f1cf23510c77bc2d4fa5d476cf9e7f9160fe5ba8",
+    "derivation": "Narrow transition schema tested against exact PetGame and engine serializers; no original dependency archive modified.",
+    "bytes": 7607,
+    "sha256": "1f2733a6bad1a01187b95afdd5d75b49ceeb9d41d60315d07de3e2c76687f1d1"
+  }
+]

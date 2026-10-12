@@ -5,7 +5,10 @@ const E = window.Economy, CFG = E.CFG;
 const COLLECTION = window.PreviewCollectionRuntime;
 if (!COLLECTION || !COLLECTION.ownsLock()) throw Error('PREVIEW_WRITER_LEASE_REQUIRED');
 const STORAGE = COLLECTION.storage;
+// Display only. The QA host owns registration, truthful ownership and persistence.
+const WEARABLES8 = COLLECTION.qaProtocol2 && COLLECTION.qaWearables8 === true && window.QAWearables8Display?.version === 'qa-owned-wearables8-display-1' ? window.QAWearables8Display : null;
 const TD = window.TDCore; let tdOpen = false, tdPort = null, tdGeneration = 0;
+let qaTDUncertain = false; // QA-only, page lifetime: legacy TD has no durable replay receipts.
 const ZB = window.ZBCore; var zbOpen = false, zbPort = null;
 const ZB_SHOP = 0; var zbLastCeo = null, zbRun = null; const zbUsedRuns = new Set();   // 13d：用过的 runId（本页内存），重复 / 过期的 start 不能把旧局重新激活   // 13a：打僵尸 = 烧烤摊（店 0）；zbLastCeo = 最近一次成功结算的上场 CEO（只在内存）
 // 13c：zbRun = 父页开局登记 { runId, ceoId, startedAt, settled }——结算只认这份记录、同一局只结一次；中途调岗不要求仍在任
@@ -63,6 +66,7 @@ function txn(apply, price, what) {
   return r;
 }
 function saveFailNote(r, what) {
+  if(COLLECTION.qaProtocol2 && COLLECTION.coordinator.failed){toast('存档已保护，结果需要核对；请勿重复操作或自行退款',3200);return;}
   sfx('no'); dirty = true;
   const w = what || '这次操作没有生效';
   if (r.stage === 'blocked') toast(saveBlocked ? '存档异常（只读模式）：买卖、升级都暂停，原存档保留' : r.why + '，这次没有生效', 2800);
@@ -78,9 +82,16 @@ function atomic(fn, what) {
 }
 // 12d3：主页面跳去别的页面（宠物 / 打僵尸入口都用它）：先 persist()，保存失败 / 只读就不跳转
 function goPage(url) {
+  let target=url;
+  if(COLLECTION.qaProtocol2 && COLLECTION.qa===true){
+    try { const next=new URL(url,location.href),allowed=COLLECTION.qaScope==='preview'?['/preview/','/preview/index.html']:['/','/index.html','/pet/game/','/pet/game/index.html'];
+      if(next.origin!==location.origin||!allowed.includes(next.pathname)){toast('此 QA 入口未接入，已阻止跳转到真实存档页面',2800);return false;}
+      next.searchParams.set('collectionQA','1');if(COLLECTION.qaWearables8)next.searchParams.set('wearables8','1');target=next.href;
+    } catch {return false;}
+  }
   if (saveBlocked) { toast('存档异常（只读模式）：先不跳转，原存档保留', 2800); return false; }
   if (!persist()) { toast('保存失败：没有跳转，请稍后再试', 2800); return false; }
-  location.href = url; return true;
+  location.href = target; return true;
 }
 function claimLock() { if (TEST_MODE) return; try { STORAGE.setItem(LOCK_KEY, JSON.stringify({ tab:TAB, t:now() })); } catch (e) {} }
 function lockMine() { if (TEST_MODE) return true; try { const v = JSON.parse(STORAGE.getItem(LOCK_KEY) || 'null'); return !v || v.tab === TAB; } catch (e) { return true; } }
@@ -89,9 +100,10 @@ function freeze() {
   $('#lockOverlay').classList.remove('hidden'); audioPause();
 }
 window.addEventListener('storage', e => {
+  const storageKey=COLLECTION.qaProtocol2?COLLECTION.logicalStorageKey(e.key):e.key;
   if (frozen || TEST_MODE) return;
-  if (e.key === LOCK_KEY && e.newValue) { try { if (JSON.parse(e.newValue).tab !== TAB) freeze(); } catch (x) {} }
-  if (e.key === SAVE_KEY && e.newValue !== COLLECTION.coordinator.raw) { saveBlocked=true; freeze(); }
+  if (storageKey === LOCK_KEY && e.newValue) { try { if (JSON.parse(e.newValue).tab !== TAB) freeze(); } catch (x) {} }
+  if (storageKey === SAVE_KEY && e.newValue !== COLLECTION.coordinator.raw) { saveBlocked=true; freeze(); }
 });
 $('#lockResume').addEventListener('click', () => location.reload());
 
@@ -206,13 +218,13 @@ const CLOTHES = {
   c_suit:   { top:'#264653', apron:null, pattern:'suit' },
 };
 // 穿搭跟着 CEO 走：每位 CEO 有自己的衣服 / 帽子（state.wear[id]）
-function wearOf(id) { return (state.wear && state.wear[id]) || {}; }
+function wearOf(id) { const eq = (state.wear && state.wear[id]) || {}; return WEARABLES8 ? WEARABLES8.equipment(E, state, id, eq) : eq; }
 function lookOf(id) {
   const base = LOOKS[id]; if (!E.CEO_BY_ID[id]) return base;
   const L = Object.assign({}, base), eq = wearOf(id);
   if (eq.clothes && CLOTHES[eq.clothes]) Object.assign(L, CLOTHES[eq.clothes], { rocketLogo:false, hood:false, tie:false, inner:null, lapel:false, short:false, pants:null, tag:id === 'c77' ? base.tag : null });   // 12b3：换衣服时裤子回到衣服自己的默认色（背带裤蓝 / 深灰），不沿用 77 的深棕长裤
   if (eq.hat) L.hat = eq.hat;
-  return L;
+  return WEARABLES8 ? WEARABLES8.look(L, E, state, id) : L;
 }
 function resize() {
   const r = cv.getBoundingClientRect();
@@ -332,11 +344,13 @@ function drawPerson(c, x, y, s, look, o = {}) {
   c.lineJoin = 'round'; c.lineCap = 'round';
   const LW = 3, pants = look.pants || (look.pattern === 'overall' ? '#2c5282' : '#3d405b');
   // 裤腿：两条有宽度的裤管（内侧一层色块阴影）+ 折边裤脚 + 鞋
+  if (!(WEARABLES8 && o.candidateOmitLegs === true)) {
   for (const d of [-1, 1]) {
     c.beginPath(); c.moveTo(d * 1.5, -42); c.lineTo(d * 16, -42); c.lineTo(d * 14.5, -9); c.lineTo(d * 3.5, -9); c.closePath(); inkFill(c, pants, 2.6);
     c.save(); c.clip(); c.fillStyle = SHADE; c.beginPath(); c.moveTo(d * 1.5, -42); c.lineTo(d * 6.5, -42); c.lineTo(d * 7.5, -9); c.lineTo(d * 1.5, -9); c.closePath(); c.fill(); c.restore();
     c.beginPath(); c.moveTo(d * 3.2, -13); c.lineTo(d * 14.8, -13); c.lineTo(d * 15, -8); c.lineTo(d * 3, -8); c.closePath(); inkFill(c, shadeHex(pants, -0.3), 2);
     c.beginPath(); c.moveTo(d * 2.5, -8); c.lineTo(d * 15, -8); c.quadraticCurveTo(d * 21, -7, d * 20, -1.5); c.lineTo(d * 2.5, -1.5); c.closePath(); inkFill(c, look.shoe || '#2f2a28', 2.2);
+  }
   }
   // 身体（平涂 + 右侧一层色块阴影）
   const torso = () => { c.beginPath(); c.moveTo(-20, -36); c.quadraticCurveTo(-22, -66, -12, -72); c.lineTo(12, -72); c.quadraticCurveTo(22, -66, 20, -36); c.closePath(); };
@@ -360,6 +374,7 @@ function drawPerson(c, x, y, s, look, o = {}) {
   if (look.tie) { c.beginPath(); c.moveTo(0, -70); c.lineTo(-3, -60); c.lineTo(0, -46); c.lineTo(3, -60); c.closePath(); inkFill(c, RED, 1.5); }
   if (look.rocketLogo) { c.save(); c.translate(-10, -60); c.rotate(-0.5); c.beginPath(); c.moveTo(0, -6); c.quadraticCurveTo(3.5, -1, 2.4, 4); c.lineTo(-2.4, 4); c.quadraticCurveTo(-3.5, -1, 0, -6); inkFill(c, '#fff', 1.2); c.fillStyle = '#ff6b35'; c.beginPath(); c.moveTo(-2, 4.5); c.lineTo(0, 8.5); c.lineTo(2, 4.5); c.fill(); c.restore(); }
   if (look.pearls) { c.fillStyle = '#fff'; for (let k = -3; k <= 3; k++) { c.beginPath(); c.arc(k * 3.2, -69 + Math.abs(k) * -0.6 + 3, 1.9, 0, TAU); c.fill(); c.lineWidth = 0.8; c.stroke(); } }
+  if (WEARABLES8) WEARABLES8.drawClothes(c, look.collectibleClothes);
   // 手臂（两段 + 弯肘 + 袖口）
   const p = o.pose, w8 = Math.sin(t * 8), w10 = Math.sin(t * 10);
   let L1 = 0.16, L2 = -0.3, R1 = 0.16, R2 = -0.3;
@@ -421,6 +436,7 @@ function drawHead(c, look, o = {}) {
   if (look.hat) drawHat(c, look.hat, hy);
 }
 function drawHat(c, id, hy) {
+  if (WEARABLES8 && WEARABLES8.drawHat(c, id, hy)) return;
   c.strokeStyle = INK; c.lineWidth = 2.5;
   if (id === 'h_chili') { c.fillStyle = RED; c.beginPath(); c.moveTo(-21, hy - 8); c.quadraticCurveTo(0, hy - 34, 21, hy - 8); c.closePath(); c.fill(); c.stroke(); c.fillStyle = '#fff'; c.beginPath(); c.arc(-8, hy - 16, 1.8, 0, TAU); c.arc(6, hy - 20, 1.8, 0, TAU); c.fill();
     c.fillStyle = '#d00000'; c.beginPath(); c.ellipse(16, hy - 18, 3, 8, 0.6, 0, TAU); c.fill(); c.stroke(); c.fillStyle = '#2d6a4f'; c.fillRect(18, hy - 26, 3, 4); }
@@ -484,6 +500,14 @@ document.addEventListener('error', e => {
   el.dataset.fbd = '1'; el.src = avatarURL(el.dataset.fb);
 }, true);
 function wearPreviewURL(id) {
+  if (WEARABLES8?.hasEquipment(E, state, id)) {
+const k = 'wearables8|' + id + '|' + JSON.stringify(lookOf(id));
+if (avaCache[k]) return avaCache[k];
+const o = document.createElement('canvas'); o.width = 140; o.height = 160;
+const fit = WEARABLES8.fitPerson(o.width, o.height, 8);
+drawPerson(o.getContext('2d'), fit.x, fit.y, fit.scale, lookOf(id), {t:0, pose:'wave'});
+return (avaCache[k] = o.toDataURL());
+  }
   const eq = wearOf(id); const k = 'wear|' + id + '|' + (eq.clothes||'') + '|' + (eq.hat||'');
   if (avaCache[k]) return avaCache[k];
   const o = document.createElement('canvas'); o.width = 140; o.height = 160; const c = o.getContext('2d');
@@ -807,6 +831,7 @@ function sayLine(who, txt, sec = 2.6) { bubble = { who, txt, until:clock + sec }
 
 // 在线收益：按真实时间累计；中途超过 5 秒没跑（锁屏/切走）就当离线结算
 function tick() {
+  if(COLLECTION.qaProtocol2 && saveBlocked)return false;
   const t = now(), gap = (t - state.lastSeen) / 1000;
   if (gap < 0) { if (t > state.maxSeen - CFG.CLOCK_TOLERANCE * 1000) state.lastSeen = t; return; }
   if (gap > 5) { onReturn(); return; }
@@ -1267,6 +1292,7 @@ function drawCollectible(c, id) {
 const COLLECTIBLE_PREVIEW = Object.freeze([{"id": "c_charcoal_vest", "name": "炭灰小马甲", "type": "clothes", "shop": "烧烤摊", "hidden": false, "unlock": null, "src": "art/collectibles/c_charcoal_vest_catalog_v1.webp", "alt": "深灰色V领马甲，正面有四颗棕色纽扣、两个口袋和浅色缝线，口袋下部有深色斑点。"}, {"id": "c_matcha_knit", "name": "抹茶针织背心", "type": "clothes", "shop": "奶茶店", "hidden": false, "unlock": null, "src": "art/collectibles/c_matcha_knit_catalog_v1.webp", "alt": "抹茶绿色V领针织背心，正面织着竖向麻花纹，领口、袖口和下摆带米白色罗纹边。"}, {"id": "h_guokui", "name": "锅盔软帽", "type": "hat", "shop": "烧烤摊", "hidden": false, "unlock": null, "src": "art/collectibles/h_guokui_catalog_v1.webp", "alt": "圆鼓鼓的米金色软帽，带短帽檐和顶部圆扣，帽面有烘烤色斑与芝麻状点缀。"}, {"id": "h_antenna_clip", "name": "天线发卡", "type": "hat", "shop": "科技公司", "hidden": false, "unlock": null, "src": "art/collectibles/h_antenna_clip_catalog_v1.webp", "alt": "一枚金色发卡，蓝绿色椭圆饰面上有橙色电路线纹，上方的弯曲弹簧顶着一颗橙色圆球。"}, {"id": "d_borrow_register", "name": "借阅登记本", "type": "decor", "shop": "漫画书店", "hidden": false, "unlock": null, "src": "art/collectibles/d_borrow_register_catalog_v1.webp", "alt": "一本摊开的绿皮登记本，米色书页上画着空白表格，中央放着绿金色钢笔，下方垂着红色书签带。"}, {"id": "d_rocket_piggy", "name": "迷你火箭存钱罐", "type": "decor", "shop": "科技公司", "hidden": false, "unlock": null, "src": "art/collectibles/d_rocket_piggy_catalog_v1.webp", "alt": "米白色小火箭配橙红色尖顶和尾翼，机身有金边蓝绿色圆窗，上部有狭长投币口。"}, {"id": "d_opening_photo", "name": "开业合影", "type": "decor", "shop": "街区", "hidden": true, "unlock": "四家店全部开张", "src": "art/collectibles/d_opening_photo_catalog_v1.webp", "alt": "木相框中的四人合影，四人分别拿着烤夹、奶茶、书和小火箭，身后亮着烤串、饮料、书本与火箭图案招牌。"}, {"id": "d_ward_charm", "name": "退散护身符", "type": "decor", "shop": "科技公司", "hidden": true, "unlock": "打僵尸通关第10关", "src": "art/collectibles/d_ward_charm_catalog_v1.webp", "alt": "系着红绳的蓝绿色束口布袋，袋面饰有金色枝叶纹和电路纹盾牌，下方挂着金铃铛与红色流苏。"}].map(Object.freeze));
 const COLLECTIBLE_ART = Object.freeze(Object.fromEntries(COLLECTIBLE_PREVIEW.map(x => [x.id, x])));
 function collectiblePreviewHTML() {
+  if (WEARABLES8) return WEARABLES8.remainingPreviewHTML(COLLECTIBLE_PREVIEW);
   const TL = { clothes:'衣服', hat:'帽子', decor:'装饰' };
   return `<div class="sec-title">新品图鉴预览（只展示，暂未放进盲盒）</div><div class="item-grid collectible-preview">${COLLECTIBLE_PREVIEW.map(x => `<div class="item preview-only" data-preview-item="${x.id}"><span class="t">${TL[x.type]}${x.hidden ? ' · 隐藏' : ''}</span><span class="item-art"><img data-item-art="${x.id}" src="${x.src}?v=collectibles-1" alt="${x.alt}" width="512" height="512" loading="lazy"><span class="item-art-status" hidden>图示暂不可用</span></span>${x.name}<small class="preview-note">${x.shop}${x.hidden ? ' · ' + x.unlock + '（条件未接入）' : ''}</small></div>`).join('')}</div><div class="note">外观收藏，不影响收益、概率和战斗。本批 8 件为图鉴预览，尚未加入盲盒、不能抽到。</div>`;
 }
@@ -1287,6 +1313,7 @@ function itemThumb(id) {
   return (thumbCache[id]=o.toDataURL());
 }
 function itemIcon(id) {
+  if (WEARABLES8?.has(id)) return WEARABLES8.iconHTML(E, state, id);
   const it=E.ITEM_BY_ID[id];
   if(it&&it.type==='card')return '<span class="ii">📜</span>';
   if(Object.hasOwn(COLLECTIBLE_ART,id)){const x=COLLECTIBLE_ART[id];return `<span class="item-art"><img data-item-art="${id}" src="${x.src}?v=collectibles-1" alt="${x.alt}"><span class="item-art-status" hidden>图示暂不可用</span></span>`;}
@@ -1425,10 +1452,11 @@ function renderGacha() {
     return `<div class="card super ${has ? '' : 'dim'}"><div class="ava sq">${has ? itemIcon(it.id) : '❓'}</div><div class="info"><div class="name">${it.name}<span class="tag ${has ? 'match' : 'idle'}">${E.SHOPS[it.shop].short}</span></div><div class="desc">${it.desc}</div></div></div>`; }).join('');
   h += `<div class="sec-title">普通收藏 ${ownR}/${E.REGULAR_ITEMS.length}</div>`;
   h += `<div class="item-grid">${E.REGULAR_ITEMS.map(it => { const has = state.gacha.owned.includes(it.id);
+    if (WEARABLES8?.has(it.id)) return WEARABLES8.catalogHTML(E, state, it.id);
     if (has && it.type === 'card') return `<button type="button" class="item story-open" data-act="card" data-arg="${it.id}" aria-label="重看故事卡：${it.name}"><span class="t">故事卡</span>${storyArt(it.id)}<span>${it.name}</span><span class="story-replay-hint">点击重看 ›</span></button>`;
     return `<div class="item ${has ? '' : 'no'}"><span class="t">${TYPE_LABEL[it.type]}</span>${itemIcon(it.id)}${has ? it.name : '？？？'}</div>`; }).join('')}</div>`;
   h += collectiblePreviewHTML();
-  h += `<div class="note">规则：不重复收藏盒，共 ${total} 件：普通收藏 ${E.REGULAR_ITEMS.length} 件（衣服 8 / 帽子 8 / 装饰 8 / 故事卡 8）+ 超级装饰 ${E.SUPER_ITEMS.length} 件。每抽先定类别：<b>超级装饰 ${P(CFG.SUPER_P)}</b>、普通收藏 ${P(1 - CFG.SUPER_P)}，再从该类<b>还没收集的</b>里等概率抽；连续 ${CFG.SUPER_PITY - 1} 抽没出超级装饰，第 ${CFG.SUPER_PITY} 抽必出。某一类抽完了，就只出另一类。每抽必得新物品，最多 ${total} 抽集齐，集齐后不能再买、不扣金币。普通收藏只是好看，<b>不加产速</b>；超级装饰加本店产量和专属效果，但不抽也能正常开齐店铺。单价 ${fmt(CFG.GACHA_PRICE)}。</div>`;
+  h += `<div class="note">规则：不重复收藏盒，共 ${total} 件：普通收藏 ${E.REGULAR_ITEMS.length} 件（衣服 ${E.ITEMS.filter(it => it.type === 'clothes').length} / 帽子 ${E.ITEMS.filter(it => it.type === 'hat').length} / 装饰 ${E.ITEMS.filter(it => it.type === 'decor').length} / 故事卡 ${E.ITEMS.filter(it => it.type === 'card').length}）+ 超级装饰 ${E.SUPER_ITEMS.length} 件。每抽先定类别：<b>超级装饰 ${P(CFG.SUPER_P)}</b>、普通收藏 ${P(1 - CFG.SUPER_P)}，再从该类<b>还没收集的</b>里等概率抽；连续 ${CFG.SUPER_PITY - 1} 抽没出超级装饰，第 ${CFG.SUPER_PITY} 抽必出。某一类抽完了，就只出另一类。每抽必得新物品，最多 ${total} 抽集齐，集齐后不能再买、不扣金币。普通收藏只是好看，<b>不加产速</b>；超级装饰加本店产量和专属效果，但不抽也能正常开齐店铺。单价 ${fmt(CFG.GACHA_PRICE)}。</div>`;
   return h;
 }
 let wardrobeWho = 'c77';
@@ -1439,7 +1467,7 @@ function renderCol() {
   const clothes = ['none', ...E.ITEMS.filter(i => i.type === 'clothes' && own.has(i.id)).map(i => i.id), ...(setDone ? ['c_gold'] : [])];
   const hats = ['none', ...E.ITEMS.filter(i => i.type === 'hat' && own.has(i.id)).map(i => i.id), ...(setDone ? ['h_gold'] : [])];
   const nameOf = (id, slot) => id === 'none' ? (slot === 'hat' ? '默认帽子' : '默认衣服') : id === 'c_gold' ? '金马甲' : id === 'h_gold' ? '金厨师帽' : E.ITEM_BY_ID[id].name;
-  const cell = (slot, id) => `<button class="item ${((eq[slot] || 'none') === id) ? 'sel' : ''}" data-act="equip" data-arg="${who}:${slot}:${id}">${id === 'none' ? `<span class="ii">${slot === 'hat' ? '🧢' : '👕'}</span>` : itemIcon(id)}${nameOf(id, slot)}</button>`;
+  const cell = (slot, id) => `<button class="item ${((eq[slot] || 'none') === id) ? 'sel' : ''}" data-act="equip" data-arg="${who}:${slot}:${id}">${id === 'none' ? `<span class="ii">${slot === 'hat' ? '🧢' : '👕'}</span>` : itemIcon(id)}${nameOf(id, slot)}${WEARABLES8?.has(id) ? WEARABLES8.descriptionHTML(E, state, id) : ''}</button>`;
   const clothName = eq.clothes ? nameOf(eq.clothes) : '默认衣服';
   const hatName = eq.hat ? nameOf(eq.hat) : '默认帽子';
   let h = `<div class="sec-title">CEO 衣橱（穿在 CEO 身上，换店跟着人走）</div>
@@ -1731,8 +1759,9 @@ function doGacha(b) {
 function showReveal(resumed) {
   const last = state.gacha.last; if (!last) return;
   const it = E.ITEM_BY_ID[last.id]; if (!it) return; const sup = it.type === 'super', total = E.ITEMS.length, done = E.gachaComplete(state);
+  if (WEARABLES8?.has(it.id) && !WEARABLES8.owned(E, state, it.id)) return;
   sfx(sup ? 'mile' : 'reveal'); popWord(sup ? '超级！' : '开！'); if (sup) { focusT = 0.8; shake = 0.5; }
-  const note = it.type === 'card' ? '“' + it.text + '”<br>' : it.type === 'decor' ? '已摆进四家店，开店后可见（收藏页可收起）<br>' : sup ? `<b>${it.desc}</b><br>已经放进${E.SHOPS[it.shop].name}，常驻生效<br>` : '去收藏页给 CEO 换上<br>';
+  const note = it.type === 'card' ? '“' + it.text + '”<br>' : it.type === 'decor' ? '已摆进四家店，开店后可见（收藏页可收起）<br>' : sup ? `<b>${it.desc}</b><br>已经放进${E.SHOPS[it.shop].name}，常驻生效<br>` : (WEARABLES8?.has(it.id) ? WEARABLES8.revealFlavorHTML(E, state, it.id) : '') + '去收藏页给 CEO 换上<br>';
   openModal(`<div class="mbubble">${resumed ? '上次开盒的结果' : sup ? '✨ 超级装饰！✨' : '开盒！'}</div>
     ${it.type === 'card' ? `<div class="reveal-story">${storyArt(it.id, true)}</div>` : `<div class="reveal-item item ${sup ? 'superpop' : ''}">${itemIcon(it.id)}<b>${it.name}</b></div>`}
     <div class="mtitle">${TYPE_LABEL[it.type]}：${it.name}</div>
@@ -2428,7 +2457,7 @@ document.addEventListener('gesturestart', e => e.preventDefault());
 let lastTouchEnd = 0;
 document.addEventListener('touchend', e => { const t = Date.now(); if (t - lastTouchEnd < 300 && !e.target.closest('button')) e.preventDefault(); lastTouchEnd = t; }, { passive:false });
 
-function onHide() { if (frozen || petManual) return; petHiddenAt = now(); tick(); if (order) order = null; /* 离线不结算进行中的团单，避免和离线收益纠缠 */ special = null; state.lastSeen = now(); persist(); audioPause(); }
+function onHide() { if ((COLLECTION.qaProtocol2 && saveBlocked) || frozen || petManual) return; petHiddenAt = now(); tick(); if (order) order = null; /* 离线不结算进行中的团单，避免和离线收益纠缠 */ special = null; state.lastSeen = now(); persist(); audioPause(); }
 function onShow() {
   if (frozen || petManual) return;
   if (!lockMine()) { freeze(); return; }
@@ -2449,7 +2478,7 @@ let lastFrame = performance.now(), dynAcc = 0, saveAcc = 0;
 function frame(ts) {
   requestAnimationFrame(frame);
   const dt = Math.min(0.1, (ts - lastFrame) / 1000); lastFrame = ts; clock = ts / 1000;
-  if (frozen) return;
+  if (frozen || (COLLECTION.qaProtocol2 && saveBlocked)) return;
   if (petManual) { if (dirty) renderTab(); petFrame(0); return; }
   tick(); updateBig(); updateGuests(dt); updateSupers();
   if (focusT > 0) focusT -= dt; if (shake > 0) shake = Math.max(0, shake - dt * 1.5);
@@ -2520,15 +2549,19 @@ function tdCard() {
   return `<div class="card td-card"><div class="ava">♜</div><div class="info"><div class="name">机房塔防<span class="tag">样品</span></div><div class="desc">8 种防御塔 · 4 位统帅 · ${TD.WAVES} 波<br>最佳 ${z.best}/${TD.WAVES} 波 · 升级共用经营金币</div></div><button class="buy" data-act="td">去守</button></div>`;
 }
 const tdController = window.TDHost.create({
-  state:() => state, blocked:() => zbBlocked(), balance:() => E.balance(state),
-  transact:(apply, price) => txn(apply, price, '塔防升级或进度没有生效'),
+  state:() => state, blocked:() => (COLLECTION.qaProtocol2 && qaTDUncertain) || zbBlocked(), balance:() => E.balance(state),
+  transact:(apply, price) => {
+    const r=txn(apply, price, '塔防升级或进度没有生效');
+    if(COLLECTION.qaProtocol2 && COLLECTION.coordinator.failed)qaTDUncertain=true;
+    return r;
+  },
   changed:() => { dirty = true; }, close:() => closeTD(),
-  send:d => { if (tdOpen && tdPort) tdPort.postMessage(d); }
+  send:d => { if (tdOpen && tdPort) tdPort.postMessage(COLLECTION.qaProtocol2 && qaTDUncertain ? {...d,ok:false,uncertain:true,blocked:true,coins:0,why:'结果未知，先核对；本页塔防已冻结，不自动重发'} : d); }
 });
 function openTD() {
   if (frozen || tdOpen || zbOpen || !state.shops[1].open) return;
   tdOpen = true; const f = $('#tdFrame'), generation = ++tdGeneration;
-  const target = new URL('td/index.html?embed=1&v=tea-td-cards-out-20261012-r1', location.href);
+  const target = new URL('td/index.html?embed=1&v=wearables8-on-tea-cards-out-20261012-r1', location.href);
   f.onload = () => {
     if (!tdOpen || generation !== tdGeneration) return;
     // Verify the actual loaded document, not merely an iframe src attribute.
@@ -2537,7 +2570,14 @@ function openTD() {
     if (tdPort) tdPort.close(); tdController.reset();
     const ch = new MessageChannel(); tdPort = ch.port1;
     const port = tdPort;
-    port.onmessage = e => { if (tdOpen && generation === tdGeneration && tdPort === port) tdController.msg(e.data); };
+    port.onmessage = e => {
+      if (!tdOpen || generation !== tdGeneration || tdPort !== port) return;
+      if(COLLECTION.qaProtocol2 && qaTDUncertain && !['hello','close'].includes(e.data?.td)){
+        tdController.reply({ack:e.data?.td,requestId:e.data?.requestId,runId:e.data?.runId,ok:false,uncertain:true});
+        return;
+      }
+      tdController.msg(e.data);
+    };
     f.contentWindow.postMessage({td:'port'}, location.origin, [ch.port2]);
     tdController.reply();
   };
@@ -2642,7 +2682,7 @@ function zbMsg(d) {
     }, ZB.price(d.id, lv), '训练没生效，没扣金币');
     dirty = true;
     if (r.ok) return zbReply('');
-    return zbReply(r.stage === 'pay' || r.stage === 'apply' ? r.why : '存档失败，没扣金币');
+    return zbReply(r.stage === 'pay' || r.stage === 'apply' ? r.why : (COLLECTION.qaProtocol2 && COLLECTION.coordinator.failed ? '存档结果需要核对，请勿重复操作' : '存档失败，没扣金币'));
   }
 }
 Object.defineProperties(window.__tzz, { openZombie:{ value:openZombie }, closeZombie:{ value:closeZombie }, zbOpen:{ get:() => zbOpen }, zbCeo:{ value:zbCeo }, zbLastCeo:{ get:() => zbLastCeo }, zbRun:{ get:() => zbRun }, openAssignTo:{ value:openAssignTo }, zbReply:{ value:zbReply } });

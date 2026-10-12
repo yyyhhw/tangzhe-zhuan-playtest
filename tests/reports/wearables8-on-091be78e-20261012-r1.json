@@ -1,0 +1,399 @@
+{
+  "parent": "091be78e08eae0ef8a12244923585c60af643a3b",
+  "requiredPrerequisitePages": "https://github.com/yyyhhw/tangzhe-zhuan-playtest/actions/runs/38278872086",
+  "inputs": [
+    {
+      "slack": "F0C8FHCCC6N",
+      "bytes": 4624780,
+      "sha256": "e869f9cd5b402057b733b4837473be383cfd71612be6ff1c3e72c4383e630bfc"
+    },
+    {
+      "slack": "F0C89K2SZQB",
+      "bytes": 10235993,
+      "sha256": "3a0ef0983e7f5e8716b0a646cc50dcd12ea114dcf0ad4b4b7bdaa1fa21a82b95"
+    },
+    {
+      "slack": "F0C8FLX2KFF",
+      "bytes": 114942,
+      "sha256": "57dc09b74a6bf494fa2a69f63e77e41487cfefe8b82a5d2c9dffdd1a183e94c1",
+      "actualRoot": "production-collectibles-candidate/"
+    }
+  ],
+  "rejectedInput": "F0C8KLNM4KE never applied/re-downloaded",
+  "cacheToken": "wearables8-on-tea-cards-out-20261012-r1",
+  "candidateProductionFlag": true,
+  "candidateCardEntryFlag": false,
+  "noQueryProductionRouteTested": true,
+  "scope": "Node/VM synthetic Storage/DOM/locks; no real browser/network acceptance",
+  "newTests": {
+    "files": 7,
+    "tests": 139,
+    "pass": 139,
+    "fail": 0,
+    "skip": 0,
+    "command": "node --experimental-vm-modules --test --test-isolation=none tests/wearables8/*.test.mjs"
+  },
+  "commonComparison": [
+    {
+      "path": "tests/formal/protocol.mjs",
+      "command": "node tests/formal/protocol.mjs",
+      "baseline091Exit": 0,
+      "candidateExit": 0
+    },
+    {
+      "path": "tests/formal/economy-v2.test.mjs",
+      "command": "node tests/formal/economy-v2.test.mjs",
+      "baseline091Exit": 0,
+      "candidateExit": 0
+    },
+    {
+      "path": "tests/formal/td-receipts.test.mjs",
+      "command": "node tests/formal/td-receipts.test.mjs",
+      "baseline091Exit": 0,
+      "candidateExit": 0
+    },
+    {
+      "path": "tests/formal/td-fc2.test.mjs",
+      "command": "node tests/formal/td-fc2.test.mjs",
+      "baseline091Exit": 0,
+      "candidateExit": 0
+    },
+    {
+      "path": "tests/formal/fc2-archive.test.mjs",
+      "command": "node tests/formal/fc2-archive.test.mjs",
+      "baseline091Exit": 0,
+      "candidateExit": 0
+    },
+    {
+      "path": "tests/formal/copy52-display.test.mjs",
+      "command": "node tests/formal/copy52-display.test.mjs",
+      "baseline091Exit": 0,
+      "candidateExit": 0
+    },
+    {
+      "path": "tests/formal/carefree-bgm.test.mjs",
+      "command": "node tests/formal/carefree-bgm.test.mjs",
+      "baseline091Exit": 0,
+      "candidateExit": 0
+    },
+    {
+      "path": "test_economy.js",
+      "command": "node test_economy.js",
+      "baseline091Exit": 1,
+      "candidateExit": 1
+    },
+    {
+      "path": "test_coin_safety.js",
+      "command": "node test_coin_safety.js",
+      "baseline091Exit": 1,
+      "candidateExit": 1
+    },
+    {
+      "path": "td/test_tdhost.js",
+      "command": "node td/test_tdhost.js",
+      "baseline091Exit": 1,
+      "candidateExit": 1
+    },
+    {
+      "path": "td/test_td_bridge.js",
+      "command": "node td/test_td_bridge.js",
+      "baseline091Exit": 1,
+      "candidateExit": 1
+    },
+    {
+      "path": "td/test_td_protocol.js",
+      "command": "node td/test_td_protocol.js",
+      "baseline091Exit": 1,
+      "candidateExit": 1
+    },
+    {
+      "path": "preview/td/test_tdhost.js",
+      "command": "node preview/td/test_tdhost.js",
+      "baseline091Exit": 1,
+      "candidateExit": 1
+    },
+    {
+      "path": "preview/td/test_td_bridge.js",
+      "command": "node preview/td/test_td_bridge.js",
+      "baseline091Exit": 0,
+      "candidateExit": 0
+    },
+    {
+      "path": "cards/tests/save.test.mjs",
+      "command": "node cards/tests/save.test.mjs",
+      "baseline091Exit": 0,
+      "candidateExit": 0
+    },
+    {
+      "path": "cards/tests/saved-decks.test.mjs",
+      "command": "node cards/tests/saved-decks.test.mjs",
+      "baseline091Exit": 0,
+      "candidateExit": 0
+    },
+    {
+      "path": "preview/cards/tests/save.test.mjs",
+      "command": "node preview/cards/tests/save.test.mjs",
+      "baseline091Exit": 1,
+      "candidateExit": 1
+    },
+    {
+      "path": "preview/cards/tests/saved-decks.test.mjs",
+      "command": "node preview/cards/tests/saved-decks.test.mjs",
+      "baseline091Exit": 0,
+      "candidateExit": 0
+    },
+    {
+      "path": "tests/formal/tea-entry-cards-out.test.mjs",
+      "command": "node tests/formal/tea-entry-cards-out.test.mjs",
+      "baseline091Exit": 0,
+      "candidateExit": 0
+    }
+  ],
+  "comparisonBaselineEvidence": "Previously executed exact091 per-file logs reused; not re-running prerequisite browser/67 tests",
+  "literalImports": [
+    {
+      "from": "qa-protocol2/wearables8-display.mjs",
+      "specifier": "./wearables8/first-eight.mjs?v=wearables8-on-tea-cards-out-20261012-r1",
+      "exists": true,
+      "sameRoot": true,
+      "token": true
+    },
+    {
+      "from": "qa-protocol2/wearables8-display.mjs",
+      "specifier": "./wearables8/bbq-six.mjs?v=wearables8-on-tea-cards-out-20261012-r1",
+      "exists": true,
+      "sameRoot": true,
+      "token": true
+    },
+    {
+      "from": "qa-protocol2/host-storage.mjs",
+      "specifier": "./guard/config.mjs?v=wearables8-on-tea-cards-out-20261012-r1",
+      "exists": true,
+      "sameRoot": true,
+      "token": true
+    },
+    {
+      "from": "qa-protocol2/entry.mjs",
+      "specifier": "./guard/storage-boundary.mjs?v=wearables8-on-tea-cards-out-20261012-r1",
+      "exists": true,
+      "sameRoot": true,
+      "token": true
+    },
+    {
+      "from": "qa-protocol2/entry.mjs",
+      "specifier": "./host-storage.mjs?v=wearables8-on-tea-cards-out-20261012-r1",
+      "exists": true,
+      "sameRoot": true,
+      "token": true
+    },
+    {
+      "from": "qa-protocol2/entry.mjs",
+      "specifier": "./real-page-facade.mjs?v=wearables8-on-tea-cards-out-20261012-r1",
+      "exists": true,
+      "sameRoot": true,
+      "token": true
+    },
+    {
+      "from": "qa-protocol2/entry.mjs",
+      "specifier": "./vendor/planner/migration.mjs?v=wearables8-on-tea-cards-out-20261012-r1",
+      "exists": true,
+      "sameRoot": true,
+      "token": true
+    },
+    {
+      "from": "qa-protocol2/entry.mjs",
+      "specifier": "./vendor/codec/snapshot-codec.mjs?v=wearables8-on-tea-cards-out-20261012-r1",
+      "exists": true,
+      "sameRoot": true,
+      "token": true
+    },
+    {
+      "from": "qa-protocol2/entry.mjs",
+      "specifier": "./vendor/runtime/pet-domain.mjs?v=wearables8-on-tea-cards-out-20261012-r1",
+      "exists": true,
+      "sameRoot": true,
+      "token": true
+    },
+    {
+      "from": "qa-protocol2/entry.mjs",
+      "specifier": "./vendor/runtime/validator.mjs?v=wearables8-on-tea-cards-out-20261012-r1",
+      "exists": true,
+      "sameRoot": true,
+      "token": true
+    },
+    {
+      "from": "qa-protocol2/entry.mjs",
+      "specifier": "./vendor/cards/card-coordinator.mjs?v=wearables8-on-tea-cards-out-20261012-r1",
+      "exists": true,
+      "sameRoot": true,
+      "token": true
+    },
+    {
+      "from": "qa-protocol2/entry.mjs",
+      "specifier": "./vendor/host/host-model.mjs?v=wearables8-on-tea-cards-out-20261012-r1",
+      "exists": true,
+      "sameRoot": true,
+      "token": true
+    },
+    {
+      "from": "qa-protocol2/entry.mjs",
+      "specifier": "./eight-catalog.mjs?v=wearables8-on-tea-cards-out-20261012-r1",
+      "exists": true,
+      "sameRoot": true,
+      "token": true
+    },
+    {
+      "from": "qa-protocol2/entry.mjs",
+      "specifier": "./wearables8-display.mjs?v=wearables8-on-tea-cards-out-20261012-r1",
+      "exists": true,
+      "sameRoot": true,
+      "token": true
+    },
+    {
+      "from": "qa-protocol2/guard/storage-boundary.mjs",
+      "specifier": "./config.mjs?v=wearables8-on-tea-cards-out-20261012-r1",
+      "exists": true,
+      "sameRoot": true,
+      "token": true
+    },
+    {
+      "from": "qa-protocol2/guard/storage-boundary.mjs",
+      "specifier": "./config.mjs?v=wearables8-on-tea-cards-out-20261012-r1",
+      "exists": true,
+      "sameRoot": true,
+      "token": true
+    },
+    {
+      "from": "qa-protocol2/guard/deck-storage-scope.mjs",
+      "specifier": "./config.mjs?v=wearables8-on-tea-cards-out-20261012-r1",
+      "exists": true,
+      "sameRoot": true,
+      "token": true
+    },
+    {
+      "from": "qa-protocol2/vendor/cards/card-coordinator.mjs",
+      "specifier": "./card-transition.mjs?v=wearables8-on-tea-cards-out-20261012-r1",
+      "exists": true,
+      "sameRoot": true,
+      "token": true
+    },
+    {
+      "from": "qa-protocol2/vendor/planner/migration.mjs",
+      "specifier": "./lib/json.mjs?v=wearables8-on-tea-cards-out-20261012-r1",
+      "exists": true,
+      "sameRoot": true,
+      "token": true
+    },
+    {
+      "from": "qa-protocol2/vendor/planner/migration.mjs",
+      "specifier": "./lib/sha256.mjs?v=wearables8-on-tea-cards-out-20261012-r1",
+      "exists": true,
+      "sameRoot": true,
+      "token": true
+    },
+    {
+      "from": "qa-protocol2/vendor/codec/snapshot-codec.mjs",
+      "specifier": "./lib/json.mjs?v=wearables8-on-tea-cards-out-20261012-r1",
+      "exists": true,
+      "sameRoot": true,
+      "token": true
+    },
+    {
+      "from": "qa-protocol2/vendor/codec/snapshot-codec.mjs",
+      "specifier": "./lib/sha256.mjs?v=wearables8-on-tea-cards-out-20261012-r1",
+      "exists": true,
+      "sameRoot": true,
+      "token": true
+    },
+    {
+      "from": "collectibles/entry.mjs",
+      "specifier": "./storage.mjs?v=wearables8-on-tea-cards-out-20261012-r1",
+      "exists": true,
+      "sameRoot": true,
+      "token": true
+    },
+    {
+      "from": "collectibles/entry.mjs",
+      "specifier": "./legacy-entry.mjs?v=wearables8-on-tea-cards-out-20261012-r1",
+      "exists": true,
+      "sameRoot": true,
+      "token": true
+    },
+    {
+      "from": "collectibles/entry.mjs",
+      "specifier": "./release.mjs?v=wearables8-on-tea-cards-out-20261012-r1",
+      "exists": true,
+      "sameRoot": true,
+      "token": true
+    },
+    {
+      "from": "collectibles/entry.mjs",
+      "specifier": "../qa-protocol2/real-page-facade.mjs?v=wearables8-on-tea-cards-out-20261012-r1",
+      "exists": true,
+      "sameRoot": true,
+      "token": true
+    },
+    {
+      "from": "collectibles/entry.mjs",
+      "specifier": "../qa-protocol2/vendor/planner/migration.mjs?v=wearables8-on-tea-cards-out-20261012-r1",
+      "exists": true,
+      "sameRoot": true,
+      "token": true
+    },
+    {
+      "from": "collectibles/entry.mjs",
+      "specifier": "../qa-protocol2/vendor/codec/snapshot-codec.mjs?v=wearables8-on-tea-cards-out-20261012-r1",
+      "exists": true,
+      "sameRoot": true,
+      "token": true
+    },
+    {
+      "from": "collectibles/entry.mjs",
+      "specifier": "../qa-protocol2/vendor/runtime/pet-domain.mjs?v=wearables8-on-tea-cards-out-20261012-r1",
+      "exists": true,
+      "sameRoot": true,
+      "token": true
+    },
+    {
+      "from": "collectibles/entry.mjs",
+      "specifier": "../qa-protocol2/vendor/runtime/validator.mjs?v=wearables8-on-tea-cards-out-20261012-r1",
+      "exists": true,
+      "sameRoot": true,
+      "token": true
+    },
+    {
+      "from": "collectibles/entry.mjs",
+      "specifier": "../qa-protocol2/vendor/cards/card-coordinator.mjs?v=wearables8-on-tea-cards-out-20261012-r1",
+      "exists": true,
+      "sameRoot": true,
+      "token": true
+    },
+    {
+      "from": "collectibles/entry.mjs",
+      "specifier": "../qa-protocol2/vendor/host/host-model.mjs?v=wearables8-on-tea-cards-out-20261012-r1",
+      "exists": true,
+      "sameRoot": true,
+      "token": true
+    },
+    {
+      "from": "collectibles/entry.mjs",
+      "specifier": "../qa-protocol2/eight-catalog.mjs?v=wearables8-on-tea-cards-out-20261012-r1",
+      "exists": true,
+      "sameRoot": true,
+      "token": true
+    },
+    {
+      "from": "collectibles/entry.mjs",
+      "specifier": "../qa-protocol2/wearables8-display.mjs?v=wearables8-on-tea-cards-out-20261012-r1",
+      "exists": true,
+      "sameRoot": true,
+      "token": true
+    }
+  ],
+  "syntaxChecked": 44,
+  "authorPackageReplay": {
+    "tests": 188,
+    "pass": 188,
+    "attribution": "original supplied disabled package reconstructed/replayed; separate from final candidate evidence"
+  }
+}

@@ -8,7 +8,7 @@ const root=path.resolve(new URL('../..',import.meta.url).pathname);
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const require=createRequire(import.meta.url);
 const apps=['app.js','preview/app.js','pet/game/app.js','preview/pet/game/app.js'];
-const token='tea-td-cards-out-20261012-r1';
+const token='wearables8-on-tea-cards-out-20261012-r1';
 const cases=[
  ['Asia/Tokyo','2026-10-05T06:00:00Z','06:00'],
  ['Asia/Kuala_Lumpur','2026-10-05T06:00:00Z','05:00'],
@@ -66,8 +66,8 @@ else{
  for(const p of boots){const b=read(p);assert(b.includes('app.js?'+(p.startsWith('preview/')?'collectionHost=1c&':'')+'v='+token));}
  assert.equal((read(boots[0]).match(new RegExp('pet/game/app\\.js\\?v='+token,'g'))||[]).length,2);
  for(const p of apps){const html=read(p.replace(/app\.js$/,'index.html')),kind=p.startsWith('preview/')?'preview':'formal';
-  assert(html.includes("var B='"+kind+'-'+token+"'"));
-  assert.equal(JSON.parse(read(p.replace(/app\.js$/,'version.json'))).v,kind+'-'+token);
+  assert(html.includes("var B='"+kind+'-'+(p==='preview/pet/game/app.js'?'tea-td-cards-out-20261012-r1':token)+"'"));
+  assert.equal(JSON.parse(read(p.replace(/app\.js$/,'version.json'))).v,kind+'-'+(p==='preview/pet/game/app.js'?'tea-td-cards-out-20261012-r1':token));
   const entry=p==='preview/pet/game/app.js'?'app.js':p==='pet/game/app.js'?'../../collection/bootstrap.mjs':'collection/bootstrap.mjs';
   assert(html.includes(entry+'?v='+(p==='preview/pet/game/app.js'?'home35-td46-home22-copy52-20261012-r1':token)));
  }
