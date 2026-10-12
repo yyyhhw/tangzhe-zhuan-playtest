@@ -49,3 +49,7 @@ Pure JSON validation requires dense own array indices 0..length-1 and no extra k
 ## r3 cross-engine native formatting
 
 Intrinsic constructor source recognition ignores whitespace (including JSC newlines/indentation) while retaining the exact Object/Array name/native body and constructor/prototype identity closure. No dirty synchronization logic, schema or save transaction changes. tests/space01a/native-format.test.mjs reconstructs the exact r2 domain preimage and checks SHA256, then compares r2 failure/r3 success under an isolated Node/VM native-format shim. The shim is a format simulation, not JavaScriptCore/WebKit/browser evidence.
+
+## r4 native marker token boundary
+
+Normalize each whitespace run to one space and trim the native signature; do not delete all whitespace. The native body must remain [native code] with its two-word boundary. A valid user function named Object or Array with body [nativecode] must be rejected even when its actual constructor/prototype closure matches. tests/space01a/native-collision.test.mjs pins the exact r3 preimage and compares its acceptance with r4 refusal. Fake functions are never called and rejected structures are never cleaned; genuine V8/JSC-format and cross-realm controls remain in the suite. Dirty-host protection and all schema/storage boundaries remain unchanged.
