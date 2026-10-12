@@ -56,8 +56,16 @@ export async function assembly({scope='formal',path,query='',projectRoot='/',ena
   const backing=new WeakMap();
   class Storage {
     constructor(initial=new Map()){backing.set(this,initial);}
-    getItem(key){calls.push({operation:'getItem',key});if(storageFault?.operation==='getItem'&&storageFault.key===key){if(storageFault.afterWrite){storageFault.armed&&=storageFault.armed===true;if(storageFault.armed)throw Error('MODEL_READBACK_UNCERTAIN');}else throw Error('MODEL_STORAGE_READ_FAILED');}return backing.get(this).get(key)??null;}
-    setItem(key,value){calls.push({operation:'setItem',key,value});if(storageFault?.operation==='setItem'&&storageFault.key===key)throw Error('MODEL_STORAGE_WRITE_FAILED');backing.get(this).set(key,value);if(storageFault?.operation==='getItem'&&storageFault.key===key&&storageFault.afterWrite)storageFault.armed=true;}
+    getItem(key){calls.push({operation:'getItem',key});if(storageFault?.operation==='getItem'&&storageFault.key===key){if(storageFault.afterWrite){if(storageFault.armed){if(storageFault.mismatch)return '{\"foreign\":true}';throw Error('MODEL_READBACK_UNCERTAIN');}}else throw Error('MODEL_STORAGE_READ_FAILED');}return backing.get(this).get(key)??null;}
+    setItem(key,value){
+      calls.push({operation:'setItem',key,value});const match=storageFault?.key===key;
+      if(match)storageFault.attempt=(storageFault.attempt||0)+1;
+      const triggered=match&&(!storageFault.nth||storageFault.attempt===storageFault.nth);
+      if(triggered&&storageFault.operation==='setItem'&&!storageFault.writeThenThrow)throw Error('MODEL_STORAGE_WRITE_FAILED');
+      backing.get(this).set(key,value);
+      if(triggered&&storageFault.operation==='getItem'&&storageFault.afterWrite)storageFault.armed=true;
+      if(triggered&&storageFault.operation==='setItem'&&storageFault.writeThenThrow)throw Error('MODEL_WRITE_CONFIRMED_THEN_THROW');
+    }
     removeItem(key){calls.push({operation:'removeItem',key});backing.get(this).delete(key);}
     key(index){calls.push({operation:'key'});return [...backing.get(this).keys()][index]??null;}
     clear(){calls.push({operation:'clear'});backing.get(this).clear();}
@@ -93,7 +101,9 @@ export async function assembly({scope='formal',path,query='',projectRoot='/',ena
   const economySource=readFileSync(new URL(support+'economy.js',ROOT),'utf8');
   new vm.Script(readFileSync(new URL(support+'zombie/zbcore.js',ROOT),'utf8')).runInContext(context);
   new vm.Script(economySource).runInContext(context);instrumentEconomy(context.Economy);const initialE=context.Economy;
+  const appendHead=document.head.append.bind(document.head);
   document.head.append=script=>{
+    if(script.tagName!=='script'){appendHead(script);return;}
     const url=new URL(script.src);classicLoads.push(url.href);
     assert.equal(url.pathname,`${projectRoot}${support}economy.js`);assert.equal(url.searchParams.get('collectiblesLegacy'),'1');
     const run=()=>{try{if(rejectClassic)throw Error('MODEL_CLASSIC_404');if(!classicReuse){new vm.Script(economySource,{filename:url.href}).runInContext(context);instrumentEconomy(context.Economy);}script.onload();}catch(e){script.onerror(e);}};
@@ -112,8 +122,8 @@ export async function assembly({scope='formal',path,query='',projectRoot='/',ena
   }
   function actualAppHooks(url){
     const text=getSource(url),persist=text.match(/function persist\(\) \{[\s\S]*?\n\}/)?.[0],txn=text.match(/function txn\([^\n]+[\s\S]*?\n\}/)?.[0];
-    let hooks=text.split('\n').find(line=>line.startsWith('Object.defineProperties(window.__tzz, { collectionReplaceState:'));
-    if(!hooks){const match=text.match(/window\.__tzz = \{ (collectionReplaceState:[\s\S]*?), upgradeGate,/);assert.ok(match,'pet hook boundary');hooks='Object.assign(window.__tzz, {'+match[1]+'});';}
+    let hooks=text.split('\n').find(line=>line.startsWith('Object.defineProperties(window.__tzz, {')&&line.includes('collectionReplaceState:'));
+    if(!hooks){const match=text.match(/window\.__tzz = \{ ([\s\S]*?collectionReplaceState:[\s\S]*?), upgradeGate,/);assert.ok(match,'pet hook boundary');hooks='Object.assign(window.__tzz, {'+match[1]+'});';}
     assert.ok(persist&&txn&&hooks,'actual app hook extraction');
     const extract=name=>text.match(new RegExp(`function ${name}\\([^\\n]*\\) \\{[\\s\\S]*?\\n\\}`))?.[0];
     const atomic=extract('atomic'),doGacha=extract('doGacha'),saveFailNote=extract('saveFailNote');assert.ok(atomic&&doGacha&&saveFailNote);

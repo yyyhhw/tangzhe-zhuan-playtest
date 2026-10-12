@@ -1,16 +1,16 @@
 /** Production composition candidate; activation remains gated by release.mjs.
  * Synthetic review only until the independent browser/activation gate passes. */
-import {createCollectibleStorage} from './storage.mjs?v=wearables8-on-tea-cards-out-20261012-r1';
-import {ensureLegacyReady} from './legacy-entry.mjs?v=wearables8-on-tea-cards-out-20261012-r1';
-import {COLLECTIBLES_PRODUCTION_ENABLED,COLLECTIBLES_RELEASE} from './release.mjs?v=wearables8-on-tea-cards-out-20261012-r1';
-import {createRealPageQAFacade} from '../qa-protocol2/real-page-facade.mjs?v=wearables8-on-tea-cards-out-20261012-r1';
-import {createMigrationPlanner} from '../qa-protocol2/vendor/planner/migration.mjs?v=wearables8-on-tea-cards-out-20261012-r1';
-import * as codec from '../qa-protocol2/vendor/codec/snapshot-codec.mjs?v=wearables8-on-tea-cards-out-20261012-r1';
-import {createPetDomain} from '../qa-protocol2/vendor/runtime/pet-domain.mjs?v=wearables8-on-tea-cards-out-20261012-r1';
-import {createProtocol2Validator} from '../qa-protocol2/vendor/runtime/validator.mjs?v=wearables8-on-tea-cards-out-20261012-r1';
-import {createCardAwareSession} from '../qa-protocol2/vendor/cards/card-coordinator.mjs?v=wearables8-on-tea-cards-out-20261012-r1';
-import {createHostModel} from '../qa-protocol2/vendor/host/host-model.mjs?v=wearables8-on-tea-cards-out-20261012-r1';
-import {prepareEightWearableCatalog} from '../qa-protocol2/eight-catalog.mjs?v=wearables8-on-tea-cards-out-20261012-r1';
+import {createCollectibleStorage} from './storage.mjs?v=space01b04-moon-on-wearables8-20261012-r1';
+import {ensureLegacyReady} from './legacy-entry.mjs?v=space01b04-moon-on-wearables8-20261012-r1';
+import {COLLECTIBLES_PRODUCTION_ENABLED,COLLECTIBLES_RELEASE} from './release.mjs?v=space01b04-moon-on-wearables8-20261012-r1';
+import {createRealPageQAFacade} from '../qa-protocol2/real-page-facade.mjs?v=space01b04-moon-on-wearables8-20261012-r1';
+import {createMigrationPlanner} from '../qa-protocol2/vendor/planner/migration.mjs?v=space01b04-moon-on-wearables8-20261012-r1';
+import * as codec from '../qa-protocol2/vendor/codec/snapshot-codec.mjs?v=space01b04-moon-on-wearables8-20261012-r1';
+import {createPetDomain} from '../qa-protocol2/vendor/runtime/pet-domain.mjs?v=space01b04-moon-on-wearables8-20261012-r1';
+import {createProtocol2Validator} from '../qa-protocol2/vendor/runtime/validator.mjs?v=space01b04-moon-on-wearables8-20261012-r1';
+import {createCardAwareSession} from '../qa-protocol2/vendor/cards/card-coordinator.mjs?v=space01b04-moon-on-wearables8-20261012-r1';
+import {createHostModel} from '../qa-protocol2/vendor/host/host-model.mjs?v=space01b04-moon-on-wearables8-20261012-r1';
+import {prepareEightWearableCatalog} from '../qa-protocol2/eight-catalog.mjs?v=space01b04-moon-on-wearables8-20261012-r1';
 
 const clone=x=>JSON.parse(JSON.stringify(x));
 async function loadClassic(url){await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=url.href;s.onload=resolve;s.onerror=()=>reject(Error('QA_LEGACY_ECONOMY_LOAD_FAILED'));document.head.append(s);});}
@@ -86,15 +86,18 @@ export async function launchProductionCollectibles(options){
           const current=facade.coordinator.current();if(!current.ok)throw Error(current.code);
           const qaWearables8=!!wearableCatalog&&current.state._collectionProtocol===2;
           wearableCatalog?.setActive(qaWearables8);
-          if(qaWearables8){const display=await import('../qa-protocol2/wearables8-display.mjs?v=wearables8-on-tea-cards-out-20261012-r1');if(!lease.owns())throw Error('QA_DISPLAY_LOADED_AFTER_REVOKE');globalThis.QAWearables8Display=display.default;}
+          if(qaWearables8){const display=await import('../qa-protocol2/wearables8-display.mjs?v=space01b04-moon-on-wearables8-20261012-r1');if(!lease.owns())throw Error('QA_DISPLAY_LOADED_AFTER_REVOKE');globalThis.QAWearables8Display=display.default;}
           const runtime={keys,storage,model,qaWearables8,qa:false,qaScope:scope,qaProtocol2:true,entryEnabled:cardEntryEnabled===true,ownsLock:lease.owns,coordinator:facade.coordinator,
-            logicalStorageKey:storage.logicalKey,handle:message=>facade.card(message),snapshot:()=>facade.snapshot(),reconcile:()=>facade.reconcile()};
+            logicalStorageKey:storage.logicalKey,handle:message=>facade.card(message),snapshot:()=>facade.snapshot(),reconcile:()=>{const result=facade.reconcile();if(result.ok)globalThis.XingTu?.resume();return result;}};
           globalThis[scope==='formal'?'FormalCollectionRuntime':'PreviewCollectionRuntime']=runtime;
           const pet=scope==='formal'&&location.pathname.startsWith(new URL('pet/game/',sourceBase).pathname);
           await import(new URL((pet?'pet/game/app.js':'app.js')+'?v='+COLLECTIBLES_RELEASE,sourceBase));
           if(!lease.owns())throw Error('QA_APP_LOADED_AFTER_REVOKE');
           const attached=facade.attachApp(globalThis.__tzz,{enabled:walletBridgeApproved===true,randomInt:n=>secureRandomInt(crypto,n),makeId:()=>`tx:${crypto.randomUUID()}`});
-          if(!attached.ok)throw Error(attached.code);appStarted=true;
+          if(!attached.ok)throw Error(attached.code);
+          const {installMoonOverlay}=await import('../space/overlay.mjs?v=space01b04-moon-on-wearables8-20261012-r1');
+          if(!lease.owns())throw Error('SPACE_LOADED_AFTER_REVOKE');
+          installMoonOverlay({app:globalThis.__tzz,runtime});appStarted=true;
           if(facade.view().canPlay)document.getElementById('collectionStartup')?.remove();render(facade.view());
         }catch(error){revoke(error.message||'QA_GAMEPLAY_IMPORT_FAILED');throw error;}
         finally{appStarting=false;}
@@ -111,7 +114,7 @@ export async function launchProductionCollectibles(options){
         const warning=document.createElement('p');warning.textContent=prompt?'升级前请关闭或刷新其他旧页面。新版无法阻止已打开的旧脚本写回；旧版不识别新物品。':'请保留原档和备份，不要清除浏览器数据或另开新档。';box.append(warning);
         const details=document.createElement('details'),summary=document.createElement('summary'),body=document.createElement('p');summary.textContent='查看存档保护说明';body.textContent=prompt?'新增8件普通衣帽后共44件：40普通、4超级。空收藏且非保底时，普通单件概率由90%/32变为90%/40；每次20万金币、超级10%、15抽保底与不重复规则保留。将先保存完整原文与备份，逐项核对后才提交协议2主档；升级不赠物品、不扣金币。确认弹窗等待与取消不会写入升级，取消后正常经营可以保存旧协议。正式与预览存档彼此独立。写入或读回不确定时保持只读，需明确核对并替换内存，不会自动回滚、重抽或伪造历史达成时间。':`状态：${view.code||view.phase}。准备阶段原文不能改动；提交结果不明时只读核对，不重放经营。核对成功后才替换内存并继续。恢复文件含本机游戏进度，请妥善保存，仅在需要时提供给维护者。`;details.append(summary,body);box.append(details);
         if(prompt||prepared){button(box,'collectibleUpgradeConfirm',prompt?'保留备份并升级':'明确重试升级',async()=>{const result=facade.confirmMigration();if(result.ok)await startApp().catch(()=>{});});if(prompt)button(box,'collectibleUpgradeCancel','先不升级，继续原版',async()=>{const result=facade.cancelMigration();if(result.ok)await startApp().catch(()=>{});});}
-        if(prepared||view.phase==='protected')button(box,'collectibleReconcile','只读核对结果',()=>{const result=facade.reconcile();if(result.ok&&facade.view().canPlay&&!appStarted)startApp().catch(()=>{});});
+        if(prepared||view.phase==='protected')button(box,'collectibleReconcile','只读核对结果',()=>{const result=facade.reconcile();if(result.ok&&facade.view().canPlay&&!appStarted)startApp().catch(()=>{});if(result.ok&&appStarted)globalThis.XingTu?.resume();});
         button(box,'collectibleExport','保存本机恢复文件',exportEvidence);
         button(box,'collectibleReload','刷新重读',()=>location.reload());
         const confirm=document.getElementById('collectibleUpgradeConfirm');if(confirm)confirm.disabled=!view.canConfirm;

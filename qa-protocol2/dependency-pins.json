@@ -3,11 +3,11 @@
     "path": "qa-protocol2/vendor/planner/migration.mjs",
     "sourcePackage": "collectible-compat-candidate-v2",
     "sourcePath": "module/migration.mjs",
-    "bytes": 12633,
-    "sha256": "1cf6d290f33f6f4963f62a8f683694b8db806ede8d12c2032b37ce16d1db49d0",
+    "bytes": 12637,
+    "sha256": "858db5e97fc52f9773da2a631c1aecb18b85c1e45f03e3f1f32ac6759d00094c",
     "reviewedInputSha256": "5bc0536dacecbaca2f910def14ac7410a7b8c19495625604688156cb89848c49",
     "reviewedInputBytes": 12549,
-    "integrationChange": "only final cache import URLs; business logic unchanged"
+    "integrationChange": "Moon candidate unified dependency URL token; business validators unchanged"
   },
   {
     "path": "qa-protocol2/vendor/planner/lib/json.mjs",
@@ -27,11 +27,11 @@
     "path": "qa-protocol2/vendor/codec/snapshot-codec.mjs",
     "sourcePackage": "collectible-snapshot-codec-v1",
     "sourcePath": "module/snapshot-codec.mjs",
-    "bytes": 4383,
-    "sha256": "14a65ebbc4f8db3f5872f8ceac19e1a169f07ba753cf7c4d6e78818495507c5c",
+    "bytes": 4387,
+    "sha256": "30468c631c88f4410b3631185e3ca709cab7f1de7e9e8310cf0193bf38548bcb",
     "reviewedInputSha256": "420e687372a697b79e65da6776088234b9a0e6fbd39154b2582bdbe42b4b156b",
     "reviewedInputBytes": 4299,
-    "integrationChange": "only final cache import URLs; business logic unchanged"
+    "integrationChange": "Moon candidate unified dependency URL token; business validators unchanged"
   },
   {
     "path": "qa-protocol2/vendor/codec/lib/json.mjs",
@@ -51,24 +51,24 @@
     "path": "qa-protocol2/vendor/runtime/validator.mjs",
     "sourcePackage": "collectible-protocol2-runtime-v1",
     "sourcePath": "module/validator.mjs",
-    "bytes": 12187,
-    "sha256": "d75feca373df98a4aaa0ee89c872399d1ba14a2683d36c1635dcfb2ed53f6518",
+    "bytes": 12189,
+    "sha256": "7d2d833ca895e3a99a8f98d7f68f0aaf2d82f83f293202dacb908dfe45daaceb",
     "sourceSha256": "b710aa9da4c979036e980ffdbdf2f8ed46259d13c5d7ac90bf07ea42a806511a",
     "sourceBytes": 8201,
     "derivation": "Revision 2 exact boot migration markers, formal leaderboard mirror, optional source-bound pet roster transition guard; original reviewed archive unchanged.",
     "reviewedInputSha256": "5451c77f06364b6f0084692157e740d5683c4383f5815c604e18d909983811af",
     "reviewedInputBytes": 12029,
-    "integrationChange": "01a optional space validation / capability-bound missing-to-default initialization; no global mutable extension"
+    "integrationChange": "Moon candidate unified dependency URL token; business validators unchanged"
   },
   {
     "path": "qa-protocol2/vendor/cards/card-coordinator.mjs",
     "sourcePackage": "collectible-card-adapter-v1",
     "sourcePath": "module/card-coordinator.mjs",
-    "bytes": 9345,
-    "sha256": "ded07f7f14fde95651004f38b7c2f4b6d629b9544e9f809539a1fe853bd6325f",
+    "bytes": 11257,
+    "sha256": "148633739e0ca77082b676a20f799918530095bc43935f14c4430e5b0c951e59",
     "reviewedInputSha256": "c39527224902c835f2cc611527a5fcec2a23293adebd3b78bbb8684d2b41a034",
     "reviewedInputBytes": 8203,
-    "integrationChange": "01a optional space validation / capability-bound missing-to-default initialization; no global mutable extension"
+    "integrationChange": "Moon candidate unified dependency URL token; coordinator additionally adds private bounded moon intents, preserves opaque and evidence protections"
   },
   {
     "path": "qa-protocol2/vendor/cards/card-transition.mjs",
@@ -92,5 +92,53 @@
     "derivation": "Narrow transition schema tested against exact PetGame and engine serializers; no original dependency archive modified.",
     "bytes": 7607,
     "sha256": "1f2733a6bad1a01187b95afdd5d75b49ceeb9d41d60315d07de3e2c76687f1d1"
+  },
+  {
+    "path": "space/domain.mjs",
+    "sourcePackage": "space01b04-author-increment",
+    "sourceCommit": "472349b5f31df4446e79694b6be5bd6f66bd6db4",
+    "derivation": "Reviewed01a domain unchanged; new authored candidate moon intent/overlay increment; artwork selectively from pinned a1bc784b demo",
+    "bytes": 4878,
+    "sha256": "345e277f8564c444f17100b7e080ec3c81ca1a050546debff7cea277f63affbe"
+  },
+  {
+    "path": "space/moon.mjs",
+    "sourcePackage": "space01b04-author-increment",
+    "sourceCommit": "472349b5f31df4446e79694b6be5bd6f66bd6db4",
+    "derivation": "Reviewed01a domain unchanged; new authored candidate moon intent/overlay increment; artwork selectively from pinned a1bc784b demo",
+    "bytes": 5501,
+    "sha256": "0eaf1829a099ba425a03d5693a2040c0d9e9afbbc96e6a7c051af4a312cf7a7b"
+  },
+  {
+    "path": "space/host.mjs",
+    "sourcePackage": "space01b04-author-increment",
+    "sourceCommit": "472349b5f31df4446e79694b6be5bd6f66bd6db4",
+    "derivation": "Reviewed01a domain unchanged; new authored candidate moon intent/overlay increment; artwork selectively from pinned a1bc784b demo",
+    "bytes": 2906,
+    "sha256": "d9e5204f427f326ae25d000cdf72d0c783fef0f99ee254baef0a4b4b2810853b"
+  },
+  {
+    "path": "space/overlay.mjs",
+    "sourcePackage": "space01b04-author-increment",
+    "sourceCommit": "472349b5f31df4446e79694b6be5bd6f66bd6db4",
+    "derivation": "Reviewed01a domain unchanged; new authored candidate moon intent/overlay increment; artwork selectively from pinned a1bc784b demo",
+    "bytes": 4788,
+    "sha256": "d44a19b4e66a3b1099a0c2ab1412b430c3329cfc30a821a37f70293437df6550"
+  },
+  {
+    "path": "space/art.mjs",
+    "sourcePackage": "space01b04-author-increment",
+    "sourceCommit": "472349b5f31df4446e79694b6be5bd6f66bd6db4",
+    "derivation": "Reviewed01a domain unchanged; new authored candidate moon intent/overlay increment; artwork selectively from pinned a1bc784b demo",
+    "bytes": 1808,
+    "sha256": "69d4f618363cd4774999b3d277eae2654ce0899a9338c4759be9b2a8908b29b6"
+  },
+  {
+    "path": "space/styles.mjs",
+    "sourcePackage": "space01b04-author-increment",
+    "sourceCommit": "472349b5f31df4446e79694b6be5bd6f66bd6db4",
+    "derivation": "Reviewed01a domain unchanged; new authored candidate moon intent/overlay increment; artwork selectively from pinned a1bc784b demo",
+    "bytes": 1519,
+    "sha256": "fde2e3e7043dcb0872dca81b79dfe3f9fe15095233522a40f2365b18872fd4ab"
   }
 ]

@@ -7,7 +7,7 @@ const COLLECTION = window.FormalCollectionRuntime;
 if (!COLLECTION?.ownsLock()) {
   // Stale HTML can fetch a new script before bootstrap. No storage access here.
   const url=new URL(location.href);
-  if(url.searchParams.get('v')!=='formal-wearables8-on-tea-cards-out-20261012-r1') {url.searchParams.set('v','formal-wearables8-on-tea-cards-out-20261012-r1');location.replace(url.href);}
+  if(url.searchParams.get('v')!=='formal-space01b04-moon-on-wearables8-20261012-r1') {url.searchParams.set('v','formal-space01b04-moon-on-wearables8-20261012-r1');location.replace(url.href);}
   else {const notice=document.createElement('p');notice.textContent='页面资源尚未更新完整，存档未写入。请关闭此页后重新打开。';document.body.prepend(notice);}
   return;
 }
@@ -111,6 +111,7 @@ function claimLock() { if (TEST_MODE || saveBlocked) return; try { STORAGE.setIt
 function lockMine() { if (TEST_MODE) return true; try { const v = JSON.parse(STORAGE.getItem(LOCK_KEY) || 'null'); return !v || v.tab === TAB; } catch (e) { return true; } }
 function freeze() {
   if (frozen) return; frozen = true;
+  window.XingTu?.invalidate();
   $('#lockOverlay').classList.remove('hidden'); audioPause();
 }
 window.addEventListener('storage', e => {
@@ -150,13 +151,13 @@ function audioInit() {
   AU.sfx = AU.ctx.createGain(); AU.sfx.gain.value = 0.5; AU.sfx.connect(AU.master);
   AU.master.gain.value = state.muted ? 0 : 1;
 }
-function audioUnlock() { // 只能在用户手势里调用（iOS）
+function audioUnlock() { if(window.XingTu?.isOpen())return; // 只能在用户手势里调用（iOS）
   audioInit(); if (!AU.ctx) return;
   if (AU.ctx.state !== 'running' && !document.hidden && !state.muted) AU.ctx.resume().catch(() => {});
   if (!AU.started) { AU.started = true; startBgm(); }
 }
 function audioPause() { if (AU.ctx && AU.ctx.state === 'running') AU.ctx.suspend().catch(() => {}); stopBgm(); }
-function audioResume() { if (!AU.ctx || state.muted || document.hidden || frozen) return; AU.ctx.resume().catch(() => {}); if (AU.started) startBgm(); }
+function audioResume() { if (!AU.ctx || state.muted || document.hidden || frozen || window.XingTu?.isOpen()) return; AU.ctx.resume().catch(() => {}); if (AU.started) startBgm(); }
 function tone(f, t, dur, type = 'sine', vol = 0.3, dest = AU.sfx, f2) {
   const c = AU.ctx, o = c.createOscillator(), g = c.createGain();
   o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
@@ -184,7 +185,7 @@ function sfx(name) {
 const N = s => 440 * Math.pow(2, (s - 69) / 12);
 const CHORDS = [[48, 55, 64], [45, 52, 60], [41, 48, 57], [43, 50, 59]];
 const MEL = [72, 0, 74, 76, 0, 79, 76, 0, 74, 0, 72, 74, 0, 0, 69, 0, 72, 0, 74, 76, 0, 81, 79, 0, 76, 0, 74, 72, 0, 0, 0, 0];
-function startBgm() { if (AU.timer || !AU.ctx) return; AU.nextT = AU.ctx.currentTime + 0.1; AU.timer = setInterval(scheduleBgm, 120); }
+function startBgm() { if(window.XingTu?.isOpen())return; if (AU.timer || !AU.ctx) return; AU.nextT = AU.ctx.currentTime + 0.1; AU.timer = setInterval(scheduleBgm, 120); }
 function stopBgm() { if (AU.timer) { clearInterval(AU.timer); AU.timer = null; } }
 function scheduleBgm() {
   if (!AU.ctx || AU.ctx.state !== 'running') return;
@@ -1226,6 +1227,7 @@ function act(a, arg, btn) {
   if (persist.pending) return false;
   const i = state.cur;
   switch (a) {
+    case 'xingtu': window.XingTu?.open(); return;
     case 'open': { const r = atomic(() => E.openShop(state, +arg), '开张没有生效，金币已退回'); if (!buyOk(r, btn)) return; afterBuy(btn, E.SHOPS[+arg].name + ' 开张啦！'); signAnim = { shop:+arg, from:'招租中', t0:clock }; handleUnlocks(r.unlocked); break; }
     case 'up': return doUpgradeShop(+arg, btn);
     case 'hire': { const r = atomic(() => E.hireEmp(state, +arg), '雇人没有生效，金币已退回'); if (!buyOk(r, btn)) return; afterBuy(btn, '雇到 ' + E.SHOPS[+arg].emp.name + '！开始自动赚钱'); sayLine('e', E.SHOPS[+arg].emp.line, 3); if (+arg === 3) queueModal(showGachaOpen); break; }
@@ -1399,7 +1401,13 @@ function renderShop() {
     h += `<div class="card hl"><div class="ava">👔</div><div class="info"><div class="name">CEO 空缺</div><div class="desc">派一位 CEO 来：专长对口 ×${CFG.MATCH_MULT}，跨行 ×${CFG.CROSS_MULT} + 专属事件</div></div>
       <button class="buy" data-act="assignTo" data-arg="${i}">派 CEO</button></div>`;
   }
+  h += xingtuCard(i);
   return h;
+}
+function xingtuCard(i) {
+  if(i!==3)return '';
+  const ready=!!state.shops[3].open&&state.shops[3].lv>=50;
+  return `<div class="card"><div class="ava">${SHOP_ICON[3]}</div><div class="info"><div class="name">星途 · 发射台</div><div class="desc">月面基地往返 · 候选测试6秒／8探索点（非正式参数）</div><div class="desc">科技公司Lv50测试门槛</div></div><button class="buy" data-act="xingtu" ${ready?'':'disabled'}>打开星图</button></div>`;
 }
 function ceoPost(id) { const s = state.ceos[id]; return s.at >= 0 ? E.signOf(state, s.at).name : '休息中（空着）'; }
 function jobGallery(id) {
@@ -2580,7 +2588,7 @@ if (PG) { const migration=PG.migrateRoster(state,E,{save:petSave,blocked:saveBlo
 petInit();
 
 // 测试/调试钩子（不影响玩家）
-window.__tzz = { collectionReplaceState:s=>{state=s;lastGood=COLLECTION.coordinator.raw;if(COLLECTION.qaProtocol2&&!COLLECTION.coordinator.failed&&COLLECTION.ownsLock())saveBlocked=false;dirty=true;},collectionReadOnly:()=>{saveBlocked=true;}, upgradeGate, TEST_MODE, TEST_LV, SAVE_KEY, BAK_KEY, get saveBlocked() { return saveBlocked; }, get loadInfo() { return loadInfo; }, restoreGood, earn, doUpgradeShop, goPage, txn, atomic, showOffline, homeAutoPlace, showReveal, shopUpgradeCount, get buyAmt() { return buyAmt; }, E, FURN_SIDE, furnInner, get combo() { return combo; }, get critFx() { return critFx; }, critLine, refreshCrit, showComic, showCrossBig, queueModal, CROSS_ART, crossURL, showCeoJoin, get state() { return state; }, set state(v) { state = v; }, persist, onReturn, tapShop, act, setTab, switchShop, renderTab,
+window.__tzz = { xingtuContext:()=>({blocked:frozen||saveBlocked||!!persist.pending||!!state.pending||E.isBlocked(state)||!E.walletOk(state)||!!(typeof loadInfo!=='undefined'&&loadInfo&&(loadInfo.unsafe||loadInfo.blocked))||document.hidden||!COLLECTION.ownsLock(),otherGame:false,muted:!!state.muted}), xingtuAudioPause:()=>audioPause(), xingtuAudioResume:()=>audioResume(), collectionReplaceState:s=>{state=s;lastGood=COLLECTION.coordinator.raw;if(COLLECTION.qaProtocol2&&!COLLECTION.coordinator.failed&&COLLECTION.ownsLock())saveBlocked=false;dirty=true;},collectionReadOnly:()=>{saveBlocked=true;}, upgradeGate, TEST_MODE, TEST_LV, SAVE_KEY, BAK_KEY, get saveBlocked() { return saveBlocked; }, get loadInfo() { return loadInfo; }, restoreGood, earn, doUpgradeShop, goPage, txn, atomic, showOffline, homeAutoPlace, showReveal, shopUpgradeCount, get buyAmt() { return buyAmt; }, E, FURN_SIDE, furnInner, get combo() { return combo; }, get critFx() { return critFx; }, critLine, refreshCrit, showComic, showCrossBig, queueModal, CROSS_ART, crossURL, showCeoJoin, get state() { return state; }, set state(v) { state = v; }, persist, onReturn, tapShop, act, setTab, switchShop, renderTab,
   forceBig() { nextBigAt = 0; if (order) order = null; }, clearVisitors() { order = null; special = null; nextBigAt = clock + 9999; nextSpecialAt = clock + 9999; }, forceSpecial() { nextSpecialAt = 0; special = null; },
   forceSupers() { for (const k in superNext) superNext[k] = 0; updateSupers(); renderTab(); },
   get big() { return order; }, get order() { return order; }, get special() { return special; }, get guests() { return guests; },

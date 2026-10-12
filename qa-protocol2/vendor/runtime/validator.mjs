@@ -1,4 +1,4 @@
-import {readSpace} from '../../../space/domain.mjs?v=wearables8-on-tea-cards-out-20261012-r1';
+import {readSpace} from '../../../space/domain.mjs?v=space01b04-moon-on-wearables8-20261012-r1';
 /** Default-disabled pure validation candidate; supported domain is legacy36 gameplay,
  * protocol2 identity and empty hidden ledgers. No normalization or awards. */
 export const PROTOCOL2_RUNTIME_ENABLED=false;
