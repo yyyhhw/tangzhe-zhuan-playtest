@@ -187,9 +187,9 @@ function renderMenu() {
   $('#stageGrid').innerHTML=Campaign.STAGES.map(s=>`<button type="button" data-stage="${s.n}" aria-label="第${s.n}关，${s.n>progress().unlocked?'未解锁':progress().stages[s.n]?.cleared?'已通关':'可挑战'}" aria-pressed="${s.n===lvSel}" class="${s.n===lvSel?'on':''} ${progress().stages[s.n]?.cleared?'cleared':''}" ${s.n>progress().unlocked?'disabled':''}>${s.n}${s.n===50?' ♛':''}</button>`).join('');
   $('#menuEndlessBtn').disabled=!Progress.endUnlocked(progress())||!proto.ready||proto.blocked||pend||protoPending||!!localBuy;
   $('#campaignNotice').textContent=`第1–10关每关10波；11–20关11波；21–30关12波；31–40关13波；41–50关14波。每十关更换地图，第50关独立Boss地图。旧50波进度及榜单保留归档，不折算为新关卡。${Progress.endUnlocked(progress())?' 无尽已解锁：每次进入随机一张普通地图，重新布阵。':''}`;
-  $('#walletLbl').textContent = EMBED ? '经营金币' : '模拟余额';
+  $('#walletLbl').textContent = EMBED ? '金币' : '模拟余额';
   $('#walletTxt').textContent = proto.ready ? fmt(proto.coins) : '…';
-  $('#upNote').textContent = !EMBED ? '单独打开是原型模式：用模拟金币，不碰经营存档。局内造塔用建设点，每局重置；局内Lv3解锁特效，永久等级上限30。' : proto.blocked ? '存档异常（只读），现在不能升级' : '花的是经营金币；塔防本身不产金币。局内Lv3解锁特效，永久等级上限30。';
+  $('#upNote').textContent = !EMBED ? '单独打开是原型模式：用模拟金币，不碰经营存档。局内造塔用建设点，每局重置；局内Lv3解锁特效，永久等级上限30。' : proto.blocked ? '存档异常（只读），现在不能升级' : '花的是经营赚的金币；塔防本身不产金币。局内Lv3解锁特效，永久等级上限30。';
   $('#protoStatus').textContent=EMBED?protoNotice:protoPending?'正在安全保存…':protoNotice;
   $('#upTowers').innerHTML = TIDS.map(upRow).join('');
   $('#legacyCmdNote').textContent = T.CEO_IDS.some(id => proto.lv['cmd_'+id] > 0) ? '77与火箭的建设点能力自动生效；阿宅与珍珠需点击战斗顶部技能键。同名塔增强自动生效。旧攻击/技能升级记录保留但不再生效，不折算为新能力或塔加成；不提供统帅升级。' : '77与火箭的建设点能力自动生效；阿宅与珍珠需点击战斗顶部技能键。同名塔增强自动生效，不提供统帅升级。';
@@ -395,7 +395,7 @@ function renderResult() {
   $('#resTitle').textContent = G.wait ? '正在记下这一局' : !saved ? '这一局还没记上' : G.win ? '这一轮守住了，辛苦啦' : '这次没守住';
   $('#resStats').textContent = `第${G.n}关 · ${mapLabel(Campaign.getMap(G.mapId))} · 守了 ${G.completedWave}/${G.W} 波 · 击倒 ${G.kills} · 剩余生命 ${G.lives}`;
   $('#resNote').textContent = G.wait ? '记好之前，暂时不能开始下一局或回升级。' : !saved ? `结果还没保存成功，请重试。保存好之前，不能开始下一局或回升级。${G.why ? '（' + G.why + '）' : ''}` : G.win ? `第${G.n}关 ${G.W} 波打完了。门口的奶茶还在，歇一下再出发。${G.n===50?'终极Boss已击败，无尽已解锁。':''}` : `本关最佳 ${progress().stages[G.n]?.best||0}/${G.W} 波 · 没关系，换个摆法再来一次。`;
-  if(G.endless){$('#resStats').textContent=`无尽守住 ${G.completedWave} 波 · 击倒 ${G.resMsg?.kills||0}`;$('#resNote').textContent=G.wait?'保存无尽纪录中':saved?`无尽最高 ${progress().endless?.best||0} 波；不发经营金币`:G.why||'无尽纪录未保存';}
+  if(G.endless){$('#resStats').textContent=`无尽守住 ${G.completedWave} 波 · 击倒 ${G.resMsg?.kills||0}`;$('#resNote').textContent=G.wait?'保存无尽纪录中':saved?`无尽最高 ${progress().endless?.best||0} 波；不发金币`:G.why||'无尽纪录未保存';}
   else if(G.pendingEndless||G.why)$('#resNote').textContent=G.pendingEndless?'无尽登记中…':G.why;
   const board=$('#endlessBoard');board.classList.toggle('hidden',!G.endless);
   if(G.endless){const top=progress().endless?.top||[],rank=top.findIndex(e=>e.runId===G.runId),points=T.score(G.resMsg.waves,G.resMsg.kills);board.innerHTML=`<h3>50关战役 · 无尽 TOP 10</h3><p class="note">分数＝完成无尽波数×1000＋无尽击杀数<br>同分先取得优先</p><ol>${top.map(e=>`<li${e.runId===G.runId?' class="current-score"':''}>${e.score} 分 · ${e.waves} 波 / ${e.kills} 击杀</li>`).join('')}</ol>${!top.length?'<p>暂无已保存历史分数</p>':''}<p>旧10波与旧50波榜单另存，未计入此榜</p><p class="current-score">本次 ${points} 分 · ${!saved?'尚未保存，名次待确认':rank>=0?'历史第 '+(rank+1)+' 名':'未上榜'}</p>`;}

@@ -11,7 +11,7 @@ export function mountCollection({document:doc=document,send,pause,getMuted=()=>f
   let confirmKind = null;
   const $ = id=>doc.getElementById(id);
   const shell = doc.createElement('dialog');shell.id='collection-dialog';shell.className='cc-shell';shell.setAttribute('aria-labelledby','cc-title');
-  shell.innerHTML = `<header class="cc-top"><div class="cc-brand"><span class="cc-mark" aria-hidden="true">册</span><div><small>书页之间 · 收藏试验</small><h2 id="cc-title">街巷牌册</h2></div></div><div class="cc-wallet"><span>经营金币 <strong id="cc-coins">未连接</strong></span><span>星尘 <strong id="cc-dust">— / 3200</strong></span></div><button id="cc-close" aria-label="关闭牌册，返回已暂停的对局">返回对局</button></header>
+  shell.innerHTML = `<header class="cc-top"><div class="cc-brand"><span class="cc-mark" aria-hidden="true">册</span><div><small>书页之间 · 收藏试验</small><h2 id="cc-title">牌册</h2></div></div><div class="cc-wallet"><span>金币 <strong id="cc-coins">未连接</strong></span><span>星尘 <strong id="cc-dust">— / 3200</strong></span></div><button id="cc-close" aria-label="关闭牌册，返回已暂停的对局">返回对局</button></header>
     <div class="cc-layout"><nav class="cc-nav" aria-label="牌册页面"><button data-cc-tab="draw" aria-current="page"><span aria-hidden="true">✦</span>抽卡</button><button data-cc-tab="collection"><span aria-hidden="true">▤</span>牌册</button><button data-cc-tab="deck"><span aria-hidden="true">▥</span>组牌</button><button data-cc-tab="settings"><span aria-hidden="true">⚙</span>设置</button></nav><main id="cc-content" class="cc-content"></main></div>
     <footer class="cc-status"><span id="cc-status" role="status" aria-live="polite"></span><button id="cc-refresh">刷新状态</button></footer><div class="cc-rotate"><span aria-hidden="true">↻</span><h3>横过手机，展开牌册</h3><p>对局已暂停。横屏后可抽卡、查看收藏和组牌。</p><button id="cc-portrait-deck">竖屏编辑牌组</button><button id="cc-portrait-close">返回对局</button></div>`;
   const confirm = doc.createElement('dialog');confirm.id='cc-confirm';confirm.className='cc-confirm';confirm.setAttribute('aria-labelledby','cc-confirm-title');
@@ -35,7 +35,7 @@ export function mountCollection({document:doc=document,send,pause,getMuted=()=>f
     if (next.pending && ['confirmed','selected','debited'].includes(next.pending.stage)) status='有一笔已确认操作等待恢复。点击「恢复原操作」，不会重新扣费或重抽。';
     else if (next.pending?.stage==='awaiting-decision') status='有一笔操作等待确认。可继续查看费用，或取消。';
     else if (!canTransact(next)) status=next.code==='migration-required'?'经营预览尚未启用收藏存档，请先在书店完成预览迁移确认。':'收藏暂不可交易。已有对局照常保留；这里只展示父页面返回的状态。';
-    else status='收藏由书店预览保存。每次单抽 500万经营金币；普通与金色共用同名上限。';
+    else status='收藏由书店预览保存。每抽一张 500万金币；普通与金色共用同名上限。';
     render();
   }
   async function refresh() {
@@ -45,7 +45,7 @@ export function mountCollection({document:doc=document,send,pause,getMuted=()=>f
     catch(e){setStatus(errorText(e));}
   }
   function errorText(e) {
-    const codes={'insufficient-funds':'经营金币不足，需要 500万。','insufficient-dust':'星尘不足，无法镀金。','read-only':'目前只读，尚未启用收藏交易。','wallet-disabled':'经营钱包尚未启用。','busy':'有一笔操作仍在处理，请刷新状态恢复。','unavailable':'存档暂不可用；请刷新状态确认结果。','migration-required':'请先在经营预览确认收藏存档迁移。','wallet-bridge-disabled':'当前收藏交易尚未启用。','active-transaction-pending':'有一笔原操作尚未完成，请刷新状态后恢复。','no-normal-copy-to-gild':'需要先拥有一张普通卡才能镀金。','lock-not-owned':'另一个预览页面正在保存，请关闭另一个页面后重新进入。','write-failed':'存档未确认成功，请刷新状态恢复原操作。','capacity-read-only':'收藏存档已达到容量限制，已停止交易以保护原数据。'};
+    const codes={'insufficient-funds':'金币不足，需要 500万。','insufficient-dust':'星尘不足，无法镀金。','read-only':'目前只读，尚未启用收藏交易。','wallet-disabled':'经营钱包尚未启用。','busy':'有一笔操作仍在处理，请刷新状态恢复。','unavailable':'存档暂不可用；请刷新状态确认结果。','migration-required':'请先在经营预览确认收藏存档迁移。','wallet-bridge-disabled':'当前收藏交易尚未启用。','active-transaction-pending':'有一笔原操作尚未完成，请刷新状态后恢复。','no-normal-copy-to-gild':'需要先拥有一张普通卡才能镀金。','lock-not-owned':'另一个预览页面正在保存，请关闭另一个页面后重新进入。','write-failed':'存档未确认成功，请刷新状态恢复原操作。','capacity-read-only':'收藏存档已达到容量限制，已停止交易以保护原数据。'};
     const code=String(e?.code||'').toLowerCase().replaceAll('_','-');
     return codes[code] || e?.message || '操作未完成，请刷新状态检查。';
   }
@@ -58,7 +58,7 @@ export function mountCollection({document:doc=document,send,pause,getMuted=()=>f
     const usable=canTransact(snapshot)&&!busy;
     shell.classList.toggle('cc-deck-mode',tab==='deck');
     $('cc-coins').textContent=formatCoins(snapshot?.balance?.coins);
-    $('cc-coins').title=Number.isSafeInteger(snapshot?.balance?.coins)?`${snapshot.balance.coins.toLocaleString('zh-CN')} 经营金币`:'';
+    $('cc-coins').title=Number.isSafeInteger(snapshot?.balance?.coins)?`${snapshot.balance.coins.toLocaleString('zh-CN')} 金币`:'';
     $('cc-dust').textContent=Number.isSafeInteger(snapshot?.dust)?`${snapshot.dust} / 3200`:'— / 3200';
     $('cc-status').textContent=status;$('cc-refresh').disabled=busy;
     shell.querySelectorAll('[data-cc-tab]').forEach(b=>b.setAttribute('aria-current',b.dataset.ccTab===tab?'page':'false'));
@@ -71,7 +71,7 @@ export function mountCollection({document:doc=document,send,pause,getMuted=()=>f
   }
   function renderDraw(usable) {
     const pending=snapshot?.pending;
-    $('cc-content').innerHTML=`<section class="cc-draw"><div class="cc-draw-art" aria-hidden="true"><div class="cc-orbit"></div><div class="cc-pack"><span class="cc-pack-star">✦</span><small>街巷拾光</small><strong>封存的<br>一页故事</strong><i>39 张原创卡牌</i></div></div><div class="cc-draw-copy"><small class="cc-eyebrow">街巷拾光 · 单张卡牌</small><h3>下一页，会遇见谁？</h3><p>一张卡，一段街巷故事。抽到满额同名牌会转为星尘；星尘能把普通卡镀成金色。</p><div class="cc-odds" aria-label="稀有度概率"><span class="cc-rarity-common">普通 <b>68%</b></span><span class="cc-rarity-rare">稀有 <b>22%</b></span><span class="cc-rarity-epic">史诗 <b>7%</b></span><span class="cc-rarity-legendary">传说 <b>3%</b></span></div><p class="cc-fine">传说中有 10% 为金色传说，即总概率 0.3%。无保底。只有金色传说可直接抽出；其他金色卡由镀金获得。</p><button id="cc-draw" class="cc-primary cc-draw-button" ${!usable||pending?'disabled':''}>${busy?'等待书店确认…':'单抽 · 500万经营金币'}</button><p class="cc-fine">先查看父页面费用，再确认单抽。扣费与结果已保存后才播放揭晓。</p>${pending?`<button id="cc-resume" class="cc-secondary" ${busy?'disabled':''}>${pending.stage==='awaiting-decision'?'查看待确认操作':'恢复原操作 · 不会重抽'}</button>`:''}${queued.length?'<button id="cc-view-pending" class="cc-secondary">查看已入账卡牌</button>':''}${!snapshot?'<p class="cc-offline">浏览模式：请从书店预览入口连接。</p>':''}</div></section>`;
+    $('cc-content').innerHTML=`<section class="cc-draw"><div class="cc-draw-art" aria-hidden="true"><div class="cc-orbit"></div><div class="cc-pack"><span class="cc-pack-star">✦</span><small>抽卡</small><strong>封存的<br>一页故事</strong><i>39 张原创卡牌</i></div></div><div class="cc-draw-copy"><small class="cc-eyebrow">抽卡 · 单张卡牌</small><h3>下一页，会遇见谁？</h3><p>一张卡，一段街巷故事。抽到满额同名牌会转为星尘；星尘能把普通卡镀成金色。</p><div class="cc-odds" aria-label="稀有度概率"><span class="cc-rarity-common">普通 <b>68%</b></span><span class="cc-rarity-rare">稀有 <b>22%</b></span><span class="cc-rarity-epic">史诗 <b>7%</b></span><span class="cc-rarity-legendary">传说 <b>3%</b></span></div><p class="cc-fine">传说中有 10% 为金色传说，即总概率 0.3%。无保底。只有金色传说可直接抽出；其他金色卡由镀金获得。</p><button id="cc-draw" class="cc-primary cc-draw-button" ${!usable||pending?'disabled':''}>${busy?'等待书店确认…':'抽一张 · 500万金币'}</button><p class="cc-fine">先查看父页面费用，再确认抽卡。扣费与结果已保存后才播放揭晓。</p>${pending?`<button id="cc-resume" class="cc-secondary" ${busy?'disabled':''}>${pending.stage==='awaiting-decision'?'查看待确认操作':'恢复原操作 · 不会重抽'}</button>`:''}${queued.length?'<button id="cc-view-pending" class="cc-secondary">查看已入账卡牌</button>':''}${!snapshot?'<p class="cc-offline">浏览模式：请从书店预览入口连接。</p>':''}</div></section>`;
     $('cc-draw')?.addEventListener('click',()=>beginQuote({kind:'draw'}));$('cc-resume')?.addEventListener('click',resumePending);$('cc-view-pending')?.addEventListener('click',showNextReceipt);
   }
   function filteredCards() {
@@ -121,8 +121,8 @@ export function mountCollection({document:doc=document,send,pause,getMuted=()=>f
     if(!quoteState?.txId||!quoteState.quote)return;confirmKind='transaction';
     const q=quoteState.quote,isDraw=quoteState.request.kind==='draw',name=policy(quoteState.request.cardId)?.name||'普通卡';
     const overflow=q.requiresOverflowConfirmation===true;
-    const cost=isDraw?`${formatCoins(q.goldCost)}经营金币（${Number(q.goldCost).toLocaleString('zh-CN')}）`:`${q.dustCost} 星尘`;
-    confirm.innerHTML=confirmMarkup(isDraw?'确认单抽':'确认镀金',`${isDraw?'抽取 1 张卡牌':`将「${esc(name)}」的一张普通卡升为金色`}，本次消耗 <strong>${esc(cost)}</strong>。${overflow?`<br><span class="cc-warning">本次最多获得 ${q.maximumDustEarned} 星尘，最多 ${q.maximumDustDiscarded} 星尘可能超过 3200 上限而丢弃。</span>`:''}`,'<button id="cc-confirm-cancel">取消</button><button id="cc-confirm-continue" class="cc-primary">继续</button>',overflow?'<label class="cc-checkbox cc-overflow-choice"><input id="cc-suppress" type="checkbox">下次不再提醒（仅本次点继续后生效）</label>':'');
+    const cost=isDraw?`${formatCoins(q.goldCost)}金币（${Number(q.goldCost).toLocaleString('zh-CN')}）`:`${q.dustCost} 星尘`;
+    confirm.innerHTML=confirmMarkup(isDraw?'确认抽卡':'确认镀金',`${isDraw?'抽取 1 张卡牌':`将「${esc(name)}」的一张普通卡升为金色`}，本次消耗 <strong>${esc(cost)}</strong>。${overflow?`<br><span class="cc-warning">本次最多获得 ${q.maximumDustEarned} 星尘，最多 ${q.maximumDustDiscarded} 星尘可能超过 3200 上限而丢弃。</span>`:''}`,'<button id="cc-confirm-cancel">取消</button><button id="cc-confirm-continue" class="cc-primary">继续</button>',overflow?'<label class="cc-checkbox cc-overflow-choice"><input id="cc-suppress" type="checkbox">下次不再提醒（仅本次点继续后生效）</label>':'');
     if(!confirm.open)confirm.showModal();$('cc-confirm-cancel').onclick=()=>decideQuote(false);$('cc-confirm-continue').onclick=()=>decideQuote(true);
   }
   async function decideQuote(proceed) {

@@ -1217,7 +1217,7 @@ function avaCacheClear() { for (const k of Object.keys(avaCache)) delete avaCach
 /* ================= 界面：标签页 ================= */
 // 12c 漫画 UI：统一线稿图标（index.html 里的 <symbol>，导航 / 翻页签 / 模式签共用同一套）
 const ic = n => `<svg class="ic" aria-hidden="true"><use href="#ic-${n}"/></svg>`;
-const SHOP_ICON = ['bbq', 'tea', 'book', 'tech'].map(n => ic(n)), LOCK_IC = ic('lock'), TAB_NAME = ['烧烤摊', '奶茶店', '漫画店', '科技'];
+const SHOP_ICON = ['bbq', 'tea', 'book', 'tech'].map(n => ic(n)), LOCK_IC = ic('lock'), TAB_NAME = ['烧烤', '奶茶', '漫画', '科技'];
 const DECOR_SPOT = { d_stool:'门口左侧的小椅', d_lights:'遮阳棚下的辣椒串灯', d_neon:'招牌右侧的霓虹牌', d_board:'门口左侧的黑板', d_balloon:'店面左边的气球', d_poster:'柜台右边的海报', d_cat:'柜台上的招财猫', d_plant:'门口右侧的绿植' };
 const DECOR_ICON = { d_stool:'🪑', d_lights:'🌶️', d_neon:'🏮', d_board:'🪧', d_balloon:'🎈', d_poster:'📰', d_cat:'🐱', d_plant:'🪴' };
 const TYPE_LABEL = { clothes:'衣服', hat:'帽子', decor:'装饰', card:'故事卡', super:'超级装饰' };
@@ -1272,7 +1272,7 @@ const COLLECTIBLE_PREVIEW = Object.freeze([{"id": "c_charcoal_vest", "name": "�
 const COLLECTIBLE_ART = Object.freeze(Object.fromEntries(COLLECTIBLE_PREVIEW.map(x => [x.id, x])));
 function collectiblePreviewHTML() {
   const TL = { clothes:'衣服', hat:'帽子', decor:'装饰' };
-  return `<div class="sec-title">新品图鉴预览（只展示，暂未放进盲盒）</div><div class="item-grid collectible-preview">${COLLECTIBLE_PREVIEW.map(x => `<div class="item preview-only" data-preview-item="${x.id}"><span class="t">${TL[x.type]}${x.hidden ? ' · 隐藏' : ''}</span><span class="item-art"><img data-item-art="${x.id}" src="${x.src}?v=collectibles-1" alt="${x.alt}" width="512" height="512" loading="lazy"><span class="item-art-status" hidden>图示暂不可用</span></span>${x.name}<small class="preview-note">${x.shop}${x.hidden ? ' · ' + x.unlock + '（条件未接入）' : ''}</small></div>`).join('')}</div><div class="note">外观收藏，不影响收益、概率和战斗。本批 8 件为图鉴预览，尚未加入盲盒、不能抽到。</div>`;
+  return `<div class="sec-title">新品预览（只展示，暂未放进盲盒）</div><div class="item-grid collectible-preview">${COLLECTIBLE_PREVIEW.map(x => `<div class="item preview-only" data-preview-item="${x.id}"><span class="t">${TL[x.type]}${x.hidden ? ' · 隐藏' : ''}</span><span class="item-art"><img data-item-art="${x.id}" src="${x.src}?v=collectibles-1" alt="${x.alt}" width="512" height="512" loading="lazy"><span class="item-art-status" hidden>图示暂不可用</span></span>${x.name}<small class="preview-note">${x.shop}${x.hidden ? ' · ' + x.unlock + '（条件未接入）' : ''}</small></div>`).join('')}</div><div class="note">外观收藏，不影响收益、概率和战斗。本批 8 件只是预览，尚未加入盲盒、不能抽到。</div>`;
 }
 function itemThumb(id) {
   if (thumbCache[id]) return thumbCache[id];
@@ -1349,7 +1349,7 @@ function renderShop() {
     h += `<div class="card super"><div class="ava sq">${itemIcon(sp.id)}</div><div class="info"><div class="name">${sp.name}<span class="tag match">超级装饰</span></div><div class="desc">${sp.desc}</div></div></div>`; }
   h += `<div class="row-head"><div class="sec-title">店铺</div><div class="buyamt">${[1, 10, 'max'].map(a => `<button data-act="amt" data-arg="${a}" class="${buyAmt === a ? 'on' : ''}">${a === 'max' ? 'MAX' : 'x' + a}</button>`).join('')}</div></div>`;
   h += `<div class="card"><div class="ava sq">${SHOP_ICON[i]}</div><div class="info"><div class="name">${S.short}<span class="lv">Lv.${s.lv}</span></div>
-    <div class="desc">当前基础产量 <b>${fmt(E.shopBase(i, s.lv))}</b>/秒原料${nm ? ` · 下一里程碑 Lv${nm} → 收益 ×${E.milestoneMult(nm)}` : ' · 里程碑全拿下 ×8'}</div>
+    <div class="desc">当前基础产量 <b>${fmt(E.shopBase(i, s.lv))}</b>/秒${nm ? ` · 下一里程碑 Lv${nm} → 收益 ×${E.milestoneMult(nm)}` : ' · 里程碑全拿下 ×8'}</div>
     ${nm ? `<div class="mbar"><i style="width:${((s.lv - prevM) / (nm - prevM) * 100).toFixed(0)}%"></i></div>` : ''}
     <div class="gain ${s.emp > 0 || shopTop ? '' : 'warn'}">${shopTop ? `已满级（店铺最高 Lv${E.shopMaxLv(i)}）` : s.emp > 0 ? '升级后 +' + fmt(upGain) + '/秒' : '还没员工：升级后自动收入仍是 +0/秒（先雇佣）· 手点会变强'}</div>
     <details class="details-fold"><summary>倍率怎么算</summary>店铺原料 × 员工 ×${E.empMult(s.emp).toFixed(2)} × CEO ×${info.mult.toFixed(2)}${E.hasSuper(state, i) ? ' × 超级装饰 ×' + CFG.SUPER_RATE : ''} = 每秒 <b>${fmt(sr)}</b></details></div>
@@ -1418,7 +1418,7 @@ function renderGacha() {
   const ownS = E.SUPER_ITEMS.filter(it => state.gacha.owned.includes(it.id)).length, ownR = owned - ownS;
   let h = `<div class="sec-title">77 收藏盲盒</div>`;
   if (!unlocked) {
-    h += `<div class="box-hero"><div class="box-ico">${box}</div><div class="info"><div class="name">还没开放</div><div class="desc">摸鱼科技公司雇到员工后开放。<br>只花游戏金币，不卖真钱。</div></div></div>`;
+    h += `<div class="box-hero"><div class="box-ico">${box}</div><div class="info"><div class="name">还没开放</div><div class="desc">摸鱼科技公司雇到员工后开放。<br>只花金币，不花真钱。</div></div></div>`;
   } else {
     h += `<div class="box-hero"><div class="box-ico" id="boxIco">${box}</div><div class="info"><div class="name">已收集 ${owned}/${total}</div>
       <div class="desc">${rem ? `下一抽：<b>超级装饰 ${P(o.superP)}</b>${o.remSuper ? `（每件 ${P(o.perSuper)}）` : ''} · 普通收藏 ${P(o.regP)}${o.remReg ? `（每件 ${P(o.perReg)}）` : ''}<br>${o.remSuper ? (o.guaranteed ? '<b style="color:var(--red)">这一抽必出超级装饰！</b>' : `保底：再 <b>${o.pityLeft}</b> 抽内必出超级装饰`) : '超级装饰已集齐'}` : `${total} 件全收集！`}</div>
@@ -1466,12 +1466,12 @@ function renderCol() {
     ? `<div class="card decor-card" data-decor="${d.id}"><div class="ava sq">${itemIcon(d.id)}</div><div class="info"><div class="name">${d.name}</div><div class="desc"><b class="decor-state">${decorOn(d.id) ? '已摆出 · 四家店' : '已收起'}</b><br>${DECOR_SPOT[d.id]}</div></div><button class="toggle ${decorOn(d.id) ? 'on' : ''}" aria-label="${decorOn(d.id) ? '收起' : '摆出'}${d.name}" data-act="decor" data-arg="${d.id}">${decorOn(d.id) ? '收起' : '摆出'}</button></div>`
     : `<div class="card dim"><div class="ava sq">❓</div><div class="info"><div class="name">？？？</div><div class="desc">盲盒里抽</div></div></div>`).join('');
   const cards = E.ITEMS.filter(i => i.type === 'card');
-  h += `<div class="sec-title">故事卡图鉴 ${cards.filter(c => own.has(c.id)).length}/${cards.length}</div>`;
+  h += `<div class="sec-title">故事卡 ${cards.filter(c => own.has(c.id)).length}/${cards.length}</div>`;
   h += cards.map((c, k) => own.has(c.id)
     ? `<button type="button" class="story story-open" data-act="card" data-arg="${c.id}" aria-label="重看故事卡：${c.name}"><b>${k + 1}. ${c.name}</b>${storyArt(c.id)}<span class="story-text">${c.text}</span><span class="story-replay-hint">已收集 · 点击重看 ›</span></button>` : `<div class="story no" aria-label="第 ${k + 1} 张故事卡，未收集"><b>${k + 1}. ？？？</b><p>还没收集</p></div>`).join('');
   h += `<div class="note">${setDone ? `✅ 已集齐 ${cards.length} 张故事卡：解锁专属外观「金牌摊主」（金马甲 + 金厨师帽），在衣橱里给任意 CEO 换上。` : `集齐 ${cards.length} 张故事卡，解锁专属外观「金牌摊主」（金马甲 + 金厨师帽）。`}</div>`;
-  h += `<div class="sec-title">设置</div><div class="card"><div class="info"><div class="name">关于／鸣谢</div><div class="desc">经营音乐 · Carefree — Kevin MacLeod</div></div><button type="button" class="buy ghost" data-act="musicCredits">查看鸣谢</button></div><div class="card"><div class="info"><div class="name">存档</div><div class="desc">版本 v${state.v} · 自动保存在本机浏览器 · 每日双倍按马来西亚时间早上 5 点重置</div></div>
-    <button class="buy ghost" data-act="reset" data-arg="">重新开始</button></div><div class="note">试玩版 · 只花游戏金币，没有任何真钱购买。</div>`;
+  h += `<div class="sec-title">设置</div><div class="card"><div class="info"><div class="name">关于／鸣谢</div><div class="desc">经营音乐 · Carefree — Kevin MacLeod</div></div><button type="button" class="buy ghost" data-act="musicCredits">查看鸣谢</button></div><div class="card"><div class="info"><div class="name">设置</div><div class="desc">版本 v${state.v} · 自动保存在本机浏览器 · 每日双倍按马来西亚时间早上 5 点重置</div></div>
+    <button class="buy ghost" data-act="reset" data-arg="">重新开始</button></div><div class="note">试玩版 · 只花金币，没有任何真钱购买。</div>`;
   return h;
 }
 function renderTab() {
@@ -1520,7 +1520,7 @@ function updateCompactHead() {
     const owned = state.gacha.owned.length, total = E.ITEMS.length;
     el.innerHTML = `<div class="ch-title">77 收藏盲盒</div><div class="ch-note">已收集 <b>${owned}/${total}</b>（普通 ${E.REGULAR_ITEMS.length} + 超级 ${E.SUPER_ITEMS.length}）。店景在「经营」页；这里专心开盒。</div>`;
   } else {
-    el.innerHTML = `<div class="ch-title">收藏与穿搭</div><div class="ch-note">衣服 / 帽子分区给 CEO 换装；装饰摆店里；故事卡集齐解锁金牌摊主。</div>`;
+    el.innerHTML = `<div class="ch-title">收藏</div><div class="ch-note">衣服 / 帽子分区给 CEO 换装；装饰摆店里；故事卡集齐解锁金牌摊主。</div>`;
   }
 }
 function switchShop(i) { if (i < 0 || i > 3) return; if (state.cur !== i) combo.n = 0; state.cur = i; dirty = true; renderTabs(); }
@@ -1717,7 +1717,7 @@ function showCeoJoin(id) {
   $('#mOk').addEventListener('click', () => { closeModal(); dirty = true; }, { once:true });
 }
 function showGachaOpen() {
-  openModal(`<div class="mbubble">新玩法开放！</div><div class="mtitle">77 收藏盲盒</div><div class="mnote">${E.ITEMS.length} 件不重复：衣服、帽子（给 CEO 穿）、店铺装饰、故事卡，还有 4 件<b>超级装饰</b>（每店一件，加产量和专属效果）。每抽必出新的，概率和保底公开。只花游戏金币，不抽也照样开店升级。</div>
+  openModal(`<div class="mbubble">新玩法开放！</div><div class="mtitle">77 收藏盲盒</div><div class="mnote">${E.ITEMS.length} 件不重复：衣服、帽子（给 CEO 穿）、店铺装饰、故事卡，还有 4 件<b>超级装饰</b>（每店一件，加产量和专属效果）。每抽必出新的，概率和保底公开。只花金币，不抽也照样开店升级。</div>
     <div class="mbtns two"><button class="buy ghost" id="mNo">等会儿</button><button class="buy red" id="mGo">去看看</button></div>`);
   $('#mNo').addEventListener('click', closeModal, { once:true });
   $('#mGo').addEventListener('click', () => { closeModal(); setTab('gacha'); }, { once:true });
@@ -1769,7 +1769,7 @@ function showCard(id) {
   if (!it || it.type !== 'card' || !state.gacha.owned.includes(id)) return;
   const opener = document.activeElement, panel = $('#panel'), sourceTab = tab;
   const scroll = {top:panel.scrollTop, x:window.scrollX, y:window.scrollY};
-  openModal(`<section id="storyReplay" aria-labelledby="storyReplayTitle"><div class="mtitle" id="storyReplayTitle">${it.name}</div>${storyArt(id, true)}<div class="mnote">${it.text}</div><button type="button" class="buy big" id="mOk">${sourceTab === 'gacha' ? '返回盲盒图鉴' : '返回收藏'}</button></section>`, false);
+  openModal(`<section id="storyReplay" aria-labelledby="storyReplayTitle"><div class="mtitle" id="storyReplayTitle">${it.name}</div>${storyArt(id, true)}<div class="mnote">${it.text}</div><button type="button" class="buy big" id="mOk">${sourceTab === 'gacha' ? '返回盲盒' : '返回收藏'}</button></section>`, false);
   $('#mOk').addEventListener('click', () => {
     closeModal();
     // A legitimate collection update can replace the opener while the dialog is
@@ -1783,10 +1783,10 @@ function showCard(id) {
 }
 function confirmReset() {
   openModal(`<div class="mtitle">确定重新开始？</div><div class="mnote">所有店铺、CEO、员工、金币和收藏都会清空，不能恢复。</div>
-    <div class="mbtns two"><button class="buy ghost" id="mNo">取消</button><button class="buy red" id="mYes">清空重来</button></div>`, false);
+    <div class="mbtns two"><button class="buy ghost" id="mNo">取消</button><button class="buy red" id="mYes">重新开始</button></div>`, false);
   $('#mNo').addEventListener('click', closeModal, { once:true });
   $('#mYes').addEventListener('click', () => {
-    if (saveBlocked) { closeModal(); toast('存档异常（只读模式）：不能清空重来，原存档保留', 2800); return; }   // 12d3：只读不覆盖原文
+    if (saveBlocked) { closeModal(); toast('存档异常（只读模式）：不能重新开始，原存档保留', 2800); return; }   // 12d3：只读不覆盖原文
     const old = state, rev = state.rev; state = E.newState(now()); state.rev = Math.max(rev, storedRev());
     if (!persist()) { state = old; closeModal(); dirty = true; toast('保存失败：没有清空，进度原样保留', 2800); return; }   // 12d3：存不上不刷新
     location.reload(); }, { once:true });
@@ -1970,7 +1970,7 @@ function renderMall() {
   // 留白：即使滤完也保留空位提示，方便以后加商品
   if (list.length < 4) for (let i = list.length; i < 4; i++) h += `<div class="card mall-card mall-ghost" aria-hidden="true"><div class="ava sq">+</div><div class="info"><div class="name">敬请期待</div><div class="desc">商城还会加新家具，先把分类和搜索用起来。</div></div></div>`;
   if (!list.length) h += `<div class="note">没有符合条件的家具，试试清除筛选。</div>`;
-  h += `</div><div class="note">商城只花游戏金币，和经营共用一个钱包。家具进公共仓库；一件同时只在一家，想多家都有就多买。家具只加豪华度，不加产速、不影响开店。</div>`;
+  h += `</div><div class="note">商城只花金币，和经营共用一个钱包。家具进公共仓库；一件同时只在一家，想多家都有就多买。家具只加豪华度，不加产速、不影响开店。</div>`;
   return h;
 }
 function confirmHomeBuy(fid) {
@@ -2518,7 +2518,7 @@ window.__tzz = { TEST_MODE, TEST_LV, SAVE_KEY, BAK_KEY, get saveBlocked() { retu
 /* ================= 科技公司塔防：与主钱包同一存档、同一原子交易 ================= */
 function tdCard() {
   const z = TD.norm(state.td);
-  return `<div class="card td-card"><div class="ava">♜</div><div class="info"><div class="name">机房塔防<span class="tag">样品</span></div><div class="desc">8 种防御塔 · 4 位统帅 · ${TD.WAVES} 波<br>最佳 ${z.best}/${TD.WAVES} 波 · 升级共用经营金币</div></div><button class="buy" data-act="td">去守</button></div>`;
+  return `<div class="card td-card"><div class="ava">♜</div><div class="info"><div class="name">机房塔防<span class="tag">样品</span></div><div class="desc">8 种防御塔 · 4 位统帅 · ${TD.WAVES} 波<br>最佳 ${z.best}/${TD.WAVES} 波 · 升级和经营共用金币</div></div><button class="buy" data-act="td">去守</button></div>`;
 }
 const tdController = window.TDHost.create({
   state:() => state, blocked:() => zbBlocked(), balance:() => E.balance(state),
@@ -2556,7 +2556,7 @@ Object.defineProperties(window.__tzz, {openTD:{value:openTD}, closeTD:{value:clo
 /* ================= 书店卡牌（cards/ui/?embed=1，全屏 iframe，preview 试玩）=================
    父页只放进入按钮、开关浮层、同步静音；不读也不解析卡牌存档，不碰钱包，不发奖励。端口只认 ready / close / stay。 */
 function cardsCard() {
-  return `<div class="card cards-card"><div class="ava">🃏</div><div class="info"><div class="name">卡牌对战<span class="tag">试玩</span></div><div class="desc">风格试玩 · 不影响经营<br>进度在卡牌页里查看</div></div><button class="buy" data-act="cards">进入</button></div>`;
+  return `<div class="card cards-card"><div class="ava">🃏</div><div class="info"><div class="name">书页之间<span class="tag">试玩</span></div><div class="desc">卡牌对战 · 风格试玩 · 不影响经营<br>进度在卡牌页里查看</div></div><button class="buy" data-act="cards">进入</button></div>`;
 }
 function cardsSend(d) { if (cardsOpen && cardsPort) cardsPort.postMessage(d); }
 function openCards() {

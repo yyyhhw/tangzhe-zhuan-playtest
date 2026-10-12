@@ -127,9 +127,9 @@ function renderMenu() {
   $('#lvProg').textContent = proto.cleared ? '已通关 ✓' : `最佳 ${proto.best}/${T.WAVES} 波`;
   $('#lvPrev').classList.toggle('hidden', T.MAX_LV <= 1); $('#lvNext').classList.toggle('hidden', T.MAX_LV <= 1);
   $('#lvPrev').disabled = lvSel <= 1; $('#lvNext').disabled = lvSel >= Math.min(T.MAX_LV, proto.cleared + 1);
-  $('#walletLbl').textContent = EMBED ? '经营金币' : '模拟余额';
+  $('#walletLbl').textContent = EMBED ? '金币' : '模拟余额';
   $('#walletTxt').textContent = proto.ready ? fmt(proto.coins) : '…';
-  $('#upNote').textContent = !EMBED ? '单独打开是原型模式：用模拟金币，不碰经营存档。局内造塔用建设点，每局重置。' : proto.blocked ? '存档异常（只读），现在不能升级' : '花的是经营金币；塔防本身不产金币。';
+  $('#upNote').textContent = !EMBED ? '单独打开是原型模式：用模拟金币，不碰经营存档。局内造塔用建设点，每局重置。' : proto.blocked ? '存档异常（只读），现在不能升级' : '花的是经营赚的金币；塔防本身不产金币。';
   $('#upTowers').innerHTML = TIDS.map(upRow).join('');
   $('#upCmds').innerHTML = T.CEO_IDS.map(id => upRow('cmd_' + id)).join('');
   $('#exitBtn').classList.toggle('hidden', !EMBED);
