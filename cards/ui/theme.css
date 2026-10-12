@@ -7,7 +7,7 @@
 :root{
   --tz-panel:#fffaf0; --tz-ink:#141414; --tz-yellow:#ffd23f; --tz-red:#e63946; --tz-muted:#5d564a;
   --tz-sh-2:3px 3px 0 var(--tz-ink); --tz-sh-4:7px 7px 0 var(--tz-ink);
-  --tz-r-md:8px; --tz-r-lg:12px;
+  --tz-sel:#fff1c4; --tz-r-md:8px; --tz-r-lg:12px;
   --tz-font:-apple-system,"PingFang SC","Hiragino Sans GB","Microsoft YaHei","Noto Sans CJK SC",sans-serif;
 }
 dialog:where(#menu-dialog,#recent-dialog,#detail-dialog,#setup-dialog,#snapshot-dialog,#resume-dialog,#save-dialog){background:var(--tz-panel);color:var(--tz-ink);border:3px solid var(--tz-ink);border-radius:var(--tz-r-lg);box-shadow:var(--tz-sh-4);font-family:var(--tz-font)}
@@ -19,4 +19,9 @@ dialog:where(#menu-dialog,#recent-dialog,#detail-dialog,#setup-dialog,#snapshot-
 dialog:where(#menu-dialog,#recent-dialog,#detail-dialog,#setup-dialog,#snapshot-dialog,#resume-dialog,#save-dialog) button:not(.icon-button):active:not(:disabled){transform:translate(2px,2px);box-shadow:1px 1px 0 var(--tz-ink)}
 dialog:where(#menu-dialog,#recent-dialog,#detail-dialog,#setup-dialog,#snapshot-dialog,#resume-dialog,#save-dialog) .icon-button{border:3px solid var(--tz-ink);border-radius:50%;background:#fff;color:var(--tz-ink);font-weight:900}
 dialog:where(#menu-dialog,#recent-dialog,#detail-dialog,#setup-dialog,#snapshot-dialog,#resume-dialog,#save-dialog) input,dialog:where(#menu-dialog,#recent-dialog,#detail-dialog,#setup-dialog,#snapshot-dialog,#resume-dialog,#save-dialog) select{border:2px solid var(--tz-ink);border-radius:var(--tz-r-md);background:#fff;color:var(--tz-ink)}
+/* 视觉-12 第二步：新对局里的角色选择卡跟弹窗同一套样子（2px 墨线、硬阴影；选中用主游戏的选中色 --sel #fff1c4 + 3px 墨线）。 */
+dialog:where(#menu-dialog,#recent-dialog,#detail-dialog,#setup-dialog,#snapshot-dialog,#resume-dialog,#save-dialog) .hero-option{border:2px solid var(--tz-ink);border-radius:var(--tz-r-md);background:#fff;box-shadow:2px 2px 0 var(--tz-ink);font-weight:800}
+dialog:where(#menu-dialog,#recent-dialog,#detail-dialog,#setup-dialog,#snapshot-dialog,#resume-dialog,#save-dialog) .hero-option:has(:checked){background:var(--tz-sel);border:3px solid var(--tz-ink);box-shadow:var(--tz-sh-2);padding:10px}
+dialog:where(#menu-dialog,#recent-dialog,#detail-dialog,#setup-dialog,#snapshot-dialog,#resume-dialog,#save-dialog) .hero-option input{accent-color:var(--tz-ink)}
+dialog:where(#menu-dialog,#recent-dialog,#detail-dialog,#setup-dialog,#snapshot-dialog,#resume-dialog,#save-dialog) .hero-option span small{color:var(--tz-muted);font-weight:600}
 @media (prefers-reduced-motion:reduce){dialog:where(#menu-dialog,#recent-dialog,#detail-dialog,#setup-dialog,#snapshot-dialog,#resume-dialog,#save-dialog) button:not(.icon-button){transition:none}}

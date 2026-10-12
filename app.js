@@ -14,7 +14,7 @@ const STORAGE = COLLECTION.storage;
 const TD = window.TDCore; let tdOpen = false, tdPort = null, tdGeneration = 0;
 const ZB = window.ZBCore; var zbOpen = false, zbPort = null;
 let cardsOpen=false,cardsPort=null,cardsGeneration=0,cardsCloseTimer=null;
-const CARDS_SHOP=2,CARDS_V='formal-saved-decks-1-visual12b';
+const CARDS_SHOP=2,CARDS_V='formal-saved-decks-1-visual12c';
 const ZB_SHOP = 0; var zbLastCeo = null, zbRun = null; const zbUsedRuns = new Set();   // 13d：用过的 runId（本页内存），重复 / 过期的 start 不能把旧局重新激活   // 13a：打僵尸 = 烧烤摊（店 0）；zbLastCeo = 最近一次成功结算的上场 CEO（只在内存）
 // 13c：zbRun = 父页开局登记 { runId, ceoId, startedAt, settled }——结算只认这份记录、同一局只结一次；中途调岗不要求仍在任
 const SAVE_KEY = COLLECTION.keys.main, BAK_KEY = COLLECTION.keys.backup, LOCK_KEY = COLLECTION.keys.tab;
