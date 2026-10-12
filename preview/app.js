@@ -1121,7 +1121,7 @@ function showSpecialComic(meta, paid) {
   openModal(`<div class="mbubble">特殊客人！</div><div class="mtitle">${meta.emoji} ${meta.name}</div>
     <div class="comic two">${meta.panels.map((p, n) => `<div class="panel4"><span class="pn">${n + 1}</span><div class="pchar"><div class="pimg">${faceImg(p[0])}</div><span class="pe">${p[1]}</span></div><div class="pt">${p[2]}</div></div>`).join('')}</div>
     <div class="mreward">${coinSm}+${fmt(paid)}</div>
-    <div class="mnote">小奖励：本店 ${CFG.SPECIAL_REWARD_SEC} 秒产量（占位文案，熊大可再换）</div>
+    <div class="mnote">小奖励：本店 ${CFG.SPECIAL_REWARD_SEC} 秒产量</div>
     <button class="buy big" id="mOk">收下</button>`);
   burstCoins(W / 2, H * 0.5, 10); bumpCoins(); dirty = true;
   $('#mOk').addEventListener('click', closeModal, { once:true });
