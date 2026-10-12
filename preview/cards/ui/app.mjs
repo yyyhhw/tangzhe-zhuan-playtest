@@ -33,6 +33,9 @@ let aiTimer = null;
 let aiGeneration = 0;
 let commandSerial = 0;
 let notice = '';
+const ACTION_ERROR_TEXT = {NOT_ENOUGH_MANA:'法力不足',BOARD_FULL:'战场已满',NOT_YOUR_TURN:'还没轮到你',NOT_MAIN_PHASE:'现在不能操作',SUMMONING_SICK:'刚上场的随从下回合才能攻击',NO_ATTACKS_LEFT:'这个随从本回合已攻击过',ZERO_ATTACK:'攻击力为 0，不能攻击',TAUNT_BLOCKS_TARGET:'先处理嘲讽随从',POWER_USED:'英雄技能本回合已用过',FROZEN:'被冻结，本回合不能攻击',INVALID_TARGET:'这个目标不可选',WRONG_CARD_CLASS:'这张卡不属于当前职业',STALE_REVISION:'局面已更新，请重新操作'};
+let noticeDetail = {text:'',code:''};
+function setNotice(text, code) { notice = text; noticeDetail = {text, code:String(code || '')}; }
 let resultRecoveryNote = '';
 let uiLog = [];
 let recentPlayedCards = [];
@@ -367,12 +370,12 @@ function commitAction(action, fromAI=false, inputEvent=null) {
   let result;
   try { result = apply(game, command); }
   catch (err) {
-    notice = `规则执行失败：${err.message || '未知错误'}`;
+    setNotice('规则执行失败，请导出快照后反馈', err.message || err);
     pause('规则执行失败，请检查快照后再继续');
     return false;
   }
   if (!result.ok) {
-    notice = `操作未执行：${result.error?.message || result.error?.code || '动作已失效'}`;
+    setNotice(`操作未执行：${ACTION_ERROR_TEXT[result.error?.code] || '这一步不能执行，请按绿色指引重新选择'}`, result.error?.code || result.error?.message);
     if (fromAI) pause('AI 操作未通过校验，请检查快照');
     else render();
     return false;
@@ -410,7 +413,7 @@ function scheduleAI() {
       if (!command) { pause('AI 无可执行动作，等待人工检查'); return; }
       commitAction(command,true);
     } catch (err) {
-      notice = `AI 已停止：${err.message || '未知错误'}`;
+      setNotice('AI 已停止，请导出快照后反馈', err.message || err);
       pause('AI 发生异常，请检查快照后再继续');
     }
   }, Math.max(uiLog.at(-1)?.player === 1 && uiLog.at(-1)?.playedCardId ? AI_CARD_READ_MS : AI_ACTION_INTERVAL_MS,spellFX.remaining()));
@@ -553,6 +556,8 @@ function render() {
   for (const [id,left] of scrollPositions) $(id).scrollLeft = left;
   if (focusMarker) document.querySelector(`[${focusMarker[0]}="${CSS.escape(focusMarker[1])}"]`)?.focus({preventScroll:true});
   $('notice').textContent = [notice, saveNote].filter(Boolean).join(' · ');
+  const noticeCode = noticeDetail.text === notice ? noticeDetail.code : '';
+  $('notice').title = noticeCode ? `维护详情：${noticeCode}` : ''; $('notice').dataset.code = noticeCode;
   $('revision-label').textContent = `状态 #${game.revision} · ${game.rulesVersion} · 卡池 ${game.cardPoolVersion}`;
   renderCombatStatus(); renderRecentPlays(); renderResult();
   $('log').innerHTML = uiLog.length ? uiLog.slice().reverse().map((l) => `<li>#${l.revision} · ${esc(l.text)}${l.eventCount ? ` · ${l.eventCount} 个规则事件` : ''}</li>`).join('') : '<li>新对局已准备好。完整动作记录见「下载回放」。</li>';
