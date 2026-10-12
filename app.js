@@ -1209,7 +1209,7 @@ function act(a, arg, btn) {
   const i = state.cur;
   switch (a) {
     case 'td': openTD(); return;
-    case 'xingtu': if (!xingtuGate(state).ready) return; if (window.XingTu && typeof window.XingTu.open === 'function') window.XingTu.open(); else toast('飞船还在组装，下个版本就能起飞'); return;
+    case 'xingtu': if (!xingtuGate(state).ready || !xingtuReady()) return; window.XingTu.open(); return;
     case 'cards': openCards(); return;
     case 'zombie': if (!zbCeo()) return openAssignTo(ZB_SHOP); openZombie(); return;   // 12e 打僵尸入口（板砖 b640f25）；13a：烧烤摊没 CEO → 打开派 CEO 选单
     case 'zbAssign': return openAssignTo(ZB_SHOP);   // 13a「先派 CEO」
@@ -1397,7 +1397,7 @@ function renderShop() {
   h += shopGameCard(i);   // 13h（杨总 11:30 经营优先）：小游戏入口统一放店铺页最下面（CEO 任职 / 调离区块之后），顶部不再放大入口
   return h;
 }
-// ---- 星途-03：发射台入口 + 开放条件（四家店都开张、并且都过 Lv50）----
+// ---- 星途-03：发射台入口 + 开放条件（四家店都开张、并且都达到 Lv50）----
 // 只读 state.shops 的 open / lv，不读不写存档，不碰 space（星途-01 未做）。起飞后的星途本体由后续任务挂 window.XingTu.open。
 const XT_SHOP = 3, XT_NEED = 50, XT_NAMES = ['烧烤摊', '奶茶店', '漫画书店', '科技公司'];
 function xingtuGate(st) {
@@ -1406,10 +1406,13 @@ function xingtuGate(st) {
 }
 const XT_PAD = `<svg class="xt-pad" viewBox="0 0 96 96" aria-hidden="true"><rect width="96" height="96" rx="10" fill="#14213d"/><g class="xt-beam" fill="#ffd23f" opacity=".28"><path d="M14 84 L4 8 L22 8z"/><path d="M84 84 L74 8 L92 8z"/></g><g fill="#e9f1ff"><rect x="34" y="10" width="2" height="2"/><rect x="62" y="16" width="2" height="2"/><rect x="72" y="40" width="2" height="2"/><rect x="18" y="34" width="2" height="2"/></g><g stroke="#141414" stroke-width="2.2" stroke-linejoin="round"><path d="M22 84 V26 h8 V84" fill="none" stroke="#cfd8e3"/><path d="M22 34 l8 8 M30 34 l-8 8 M22 50 l8 8 M30 50 l-8 8 M22 66 l8 8 M30 66 l-8 8" stroke="#cfd8e3" stroke-width="1.6"/><path d="M30 44 h8" stroke="#cfd8e3"/><path d="M48 14 q11 14 11 36 v16 h-22 v-16 q0-22 11-36z" fill="#fffaf0"/><path d="M48 14 q6 7 9 16 h-18 q3-9 9-16z" fill="#e63946"/><circle cx="48" cy="44" r="5" fill="#2f6fb5"/><path d="M37 58 l-8 14 h8z M59 58 l8 14 h-8z" fill="#e63946"/><path class="xt-flame" d="M41 66 h14 l-7 16z" fill="#ffd23f"/><rect x="10" y="82" width="76" height="8" rx="2" fill="#3a4556"/><circle cx="14" cy="84" r="3" fill="#ffd23f"/><circle cx="82" cy="84" r="3" fill="#ffd23f"/></g></svg>`;
 function xingtuCard() {
-  const g = xingtuGate(state);
+  const g = xingtuGate(state), go = g.ready && xingtuReady();
   const req = g.rows.map(r => `<li class="${r.open && r.gap === 0 ? 'ok' : ''}"><span>${r.n}${r.open ? ` Lv${r.lv}` : ''}${r.open && r.gap === 0 ? ' ✓' : ''}</span>${!r.open ? ' · <span>还没开张</span>' : r.gap ? ` · <span>还差 ${r.gap} 级</span>` : ''}</li>`).join('');
-  return `<div class="card xt-card${g.ready ? ' ready' : ' locked'}">${XT_PAD}<div class="info"><div class="name">星途<span class="tag">发射台</span></div><div class="desc">${g.ready ? '四家店都过 Lv50 了，飞船可以起飞。' : '四家店都开张、都过 Lv50，发射台才会亮。'}</div><ul class="xt-req">${req}</ul></div><button class="buy" data-act="xingtu"${g.ready ? '' : ' disabled'}>${g.ready ? '出发 →' : '未开放'}</button></div>`;
+  const desc = !g.ready ? '四家店都开张、都达到 Lv50，发射台才会亮。' : go ? '四家店都达到 Lv50 了，飞船可以起飞。' : '四家店都达到 Lv50 了。';
+  return `<div class="card xt-card${g.ready ? ' ready' : ' locked'}">${XT_PAD}<div class="info"><div class="name">星途<span class="tag">发射台</span></div><div class="desc">${desc}</div><ul class="xt-req">${req}</ul></div><button class="buy" data-act="xingtu"${go ? '' : ' disabled'}>${go ? '出发 →' : g.ready ? '已达标' : '未开放'}</button></div>`;
 }
+// 星途本体（星途-04 起）挂上 window.XingTu.open 之前，达标也不给可点的「出发」，不对玩家承诺上线时间
+function xingtuReady() { return !!(window.XingTu && typeof window.XingTu.open === 'function'); }
 // 13h：每家店自己的小游戏入口（只在店铺页最底部）；烧烤摊 = 打僵尸，其余三家以后各有自己的游戏，加在这里
 function shopGameCard(i) {
   const card = i === ZB_SHOP ? zbCard() : i === CARDS_SHOP && COLLECTION.entryEnabled ? cardsCard() : i === 3 ? tdCard() : '';
