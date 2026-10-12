@@ -33,6 +33,7 @@ export async function launchProductionCollectibles(options){
   const abort=new AbortController();let current=true,owns=false,release,facade,foreignListener,appStarted=false,appStarting=false;
   const lease=Object.freeze({owns:()=>owns&&current});
   const revoke=reason=>{if(!current)return;current=false;try{facade?.invalidate(reason);}finally{owns=false;abort.abort();release?.();}};
+  let cleaned=false;const cleanup=reason=>{if(cleaned)return;cleaned=true;owns=false;try{revoke(reason);}finally{try{globalThis.XingTu?.invalidate();}finally{if(foreignListener)removeEventListener('storage',foreignListener);}}};
   // Let the existing synchronous onHide save finish before lifetime ownership ends.
   addEventListener('pagehide',()=>queueMicrotask(()=>revoke('PAGE_CLOSED_RELOAD_REQUIRED')),{once:true});
   addEventListener('pageshow',event=>{if(event.persisted)location.reload();});
@@ -41,7 +42,7 @@ export async function launchProductionCollectibles(options){
   makePanel('正在打开存档','同一作用域只能一个页面经营。若另一页仍在运行，请先关闭或刷新它。当前未读取或写入存档。');
   const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(canonical(config))))).map(x=>x.toString(16).padStart(2,'0')).join('');
   if(digest!==expectedConfigHash)throw Error('QA_TRIAL_CONFIG_HASH_MISMATCH');
-  await navigator.locks.request(expectedLock,{mode:'exclusive',signal:abort.signal},async()=>{
+  try{await navigator.locks.request(expectedLock,{mode:'exclusive',signal:abort.signal},async()=>{
     if(!current)throw Error('QA_STALE_LOCK_CALLBACK');owns=true;
     const lifetime=new Promise(resolve=>{release=resolve;});
     try{
@@ -126,6 +127,6 @@ export async function launchProductionCollectibles(options){
       // No production fault-injection or raw-save console export surface.
       const result=facade.start();if(result.ok&&facade.view().canPlay)await startApp();
       await lifetime;
-    }finally{try{facade?.invalidate('QA_LOCK_LIFETIME_ENDED');}finally{if(foreignListener)removeEventListener('storage',foreignListener);owns=false;current=false;abort.abort();release?.();}}
-  });
+    }finally{cleanup('QA_LOCK_LIFETIME_ENDED');}
+  });}finally{cleanup('QA_LOCK_LIFETIME_ENDED');}
 }

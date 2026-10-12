@@ -22,7 +22,7 @@ function eventTarget() {
 }
 export async function assembly({scope='formal',path,query='',projectRoot='/',enabled=true,fullBoot=true,dataMode='initialized',configure=null,protocol=1,missing=false,raw=null,prepared=false,
   rejectClassic=false,rejectModule=null,classicReuse=false,delayClassic=false,pendingLock=false,secure=true,
-  mode='entry',hashMismatch=false,observeDirty=false,loadPetDomain=false,storageFault=null,walletBridgeApproved=true,cardEntryEnabled=false,entryOptions={}}={}) {
+  mode='entry',hashMismatch=false,observeDirty=false,loadPetDomain=false,storageFault=null,walletBridgeApproved=true,cardEntryEnabled=false,entryOptions={},clockNow=1700000001000,entrySourceOverride=null}={}) {
   const t=await setup('4c45f0b',scope);t.init();
   if(dataMode==='source'){for(const k of ['main','backup','tab','original'])if(t.keys[k])t.data.delete(t.keys[k]);}
   if(dataMode==='empty')t.data.clear();
@@ -34,7 +34,7 @@ export async function assembly({scope='formal',path,query='',projectRoot='/',ena
   const data=new Map([...t.data].map(([key,value])=>[prefix+key,value]));
   const calls=[],classicLoads=[],economies=[],moduleLoads=[],dynamicImports=[],installed=[],errors=[],loadedSources=new Map();
   const lock={requests:[],active:false,released:0,pending:false};
-  const context=vm.createContext({URL,URLSearchParams,TextEncoder,TextDecoder,AbortController,Blob,console,queueMicrotask,setTimeout,clearTimeout,Date:class extends Date{static now(){return 1700000001000;}}});
+  const context=vm.createContext({URL,URLSearchParams,TextEncoder,TextDecoder,AbortController,Blob,console,queueMicrotask,setTimeout,clearTimeout,Date:class extends Date{static now(){return clockNow;}}});
   const winEvents=eventTarget(),docEvents=eventTarget();
   let reloads=0,classicContinuation=null,grantLock=null,bootError=null,settled=false;
   class Node {
@@ -76,7 +76,8 @@ export async function assembly({scope='formal',path,query='',projectRoot='/',ena
       if(typeof opts==='function'){fn=opts;opts={};}
       lock.requests.push({name,options:opts});
       return new Promise((resolve,reject)=>{
-        const onAbort=()=>{if(!lock.active){lock.pending=false;reject(Error('MODEL_ABORTED'));}};const run=async()=>{if(opts.signal?.aborted){reject(Error('MODEL_ABORTED'));return;}lock.pending=false;opts.signal?.removeEventListener('abort',onAbort);lock.active=true;
+        lock.rejectOuter=reject;
+        const onAbort=()=>{if(!lock.active){lock.pending=false;reject(Error('MODEL_ABORTED'));}};const run=async({ignoreAbort=false}={})=>{if(opts.signal?.aborted&&!ignoreAbort){reject(Error('MODEL_ABORTED'));return;}lock.pending=false;opts.signal?.removeEventListener('abort',onAbort);lock.active=true;
           try{resolve(await fn({name,mode:'exclusive'}));}catch(e){reject(e);}finally{lock.active=false;lock.released++;}};
         if(pendingLock){lock.pending=true;grantLock=run;opts.signal?.addEventListener('abort',onAbort,{once:true});}
         else queueMicrotask(run);
@@ -114,7 +115,7 @@ export async function assembly({scope='formal',path,query='',projectRoot='/',ena
     const u=new URL(url);assert.equal(u.origin,ORIGIN);assert.ok(u.pathname.startsWith(projectRoot));const relative=u.pathname.slice(projectRoot.length);
     let file=new URL(relative,ROOT),kind='candidate';
     if(!existsSync(file))throw Error('MODEL_MISSING_SOURCE:'+url);
-    let text=readFileSync(file,'utf8');const originalSha256=createHash('sha256').update(text).digest('hex');let transform=null;
+    let text=readFileSync(file,'utf8');if(relative==='collectibles/entry.mjs'&&entrySourceOverride!==null)text=entrySourceOverride;const originalSha256=createHash('sha256').update(text).digest('hex');let transform=null;
     if(relative==='collectibles/release.mjs'){assert.ok(text.includes('COLLECTIBLES_PRODUCTION_ENABLED = true'));if(!enabled){text=text.replace('COLLECTIBLES_PRODUCTION_ENABLED = true','COLLECTIBLES_PRODUCTION_ENABLED = false');transform='NEGATIVE_CONTROL_ONLY_DISABLE';}}
     if(relative==='qa-protocol2/real-page-facade.mjs'){assert.ok(text.includes('export function createRealPageQAFacade('));text=text.replace('export function createRealPageQAFacade(','function createActualFacade(')+'\nexport function createRealPageQAFacade(options){return globalThis.__reviewFacade=createActualFacade(options);}' ;transform='TEST_ONLY_FACADE_OBSERVER';}
     if(relative.endsWith('collection/bootstrap.mjs')){text=text.replace(".catch(()=>notice('COLLECTIBLES_BOOT_FAILED_READ_ONLY'))", ".catch(error=>{globalThis.__modelErrors.push(error?.message||'BOOT_ERROR');notice('COLLECTIBLES_BOOT_FAILED_READ_ONLY');})");transform='OBSERVER_ONLY_BOOT_ERROR';}
@@ -174,7 +175,7 @@ export async function assembly({scope='formal',path,query='',projectRoot='/',ena
     async click(id){assert.ok(h.node(id),id+' exists');await h.node(id).onclick({isTrusted:false});},
     hide(){document.hidden=true;document.visibilityState='hidden';docEvents.dispatch('visibilitychange');},
     storageEvent(event){winEvents.dispatch('storage',event);},listenerCount:type=>winEvents.count(type),pagehide(){winEvents.dispatch('pagehide');},pageshow(persisted){winEvents.dispatch('pageshow',{persisted});},
-    continueClassic(){classicContinuation?.();},grantLock(){grantLock?.();},evaluate,modules,
+    continueClassic(){classicContinuation?.();},grantLock(){grantLock?.();},lateLockCallback(){grantLock?.({ignoreAbort:true});},stealLock(){lock.active=false;lock.stolen=true;lock.rejectOuter?.(Object.assign(new Error('Lock stolen'),{name:'AbortError'}));},evaluate,modules,
     async close(){winEvents.dispatch('pagehide');classicContinuation?.();await completion;await new Promise(r=>setImmediate(r));},
   };
   return h;

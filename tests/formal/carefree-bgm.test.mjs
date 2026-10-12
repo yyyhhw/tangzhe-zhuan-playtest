@@ -38,10 +38,10 @@ function setup(prefix, options={}){
 for(const prefix of ['', 'preview/']){
  const assetVersion='space01b04-moon-on-wearables8-20261012-r1';
  const uiVersion='space01b04-moon-startup-20261012-r4';
- const version=(prefix?'preview-':'formal-')+uiVersion;
+ const pageVersion='space01b04-moon-lock-lifetime-20261012-r5';const version=(prefix?'preview-':'formal-')+pageVersion;
  const app=read(prefix+'app.js'),html=read(prefix+'index.html'),boot=read(prefix+'collection/bootstrap.mjs');
  assert.equal(JSON.parse(read(prefix+'version.json')).v,version);
- assert(html.includes("var B='"+version+"'"));assert(html.includes('collection/bootstrap.mjs?v='+uiVersion));
+ assert(html.includes("var B='"+version+"'"));assert(html.includes('collection/bootstrap.mjs?v='+pageVersion));
  assert(boot.includes('app.js?'+(prefix?'collectionHost=1c&':'')+'v='+uiVersion));
  assert(!app.includes('hot-springs-town.mp3'));assert(!app.includes('Wallpaper.mp3'));
  assert(html.includes('id="settings"'));assert(html.includes('aria-label="设置与关于／鸣谢"'));

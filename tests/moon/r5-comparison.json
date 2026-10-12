@@ -1,0 +1,138 @@
+{
+  "baseline": "9ff50e1b30c527377cedc1acd22ad95fead5d2a5",
+  "main": "3a96a86a1c854bd681c0ff033de1e71ef724640e",
+  "commands": [
+    {
+      "file": "tests/formal/protocol.mjs",
+      "r4": 0,
+      "r5": 0,
+      "command": "node tests/formal/protocol.mjs"
+    },
+    {
+      "file": "tests/formal/economy-v2.test.mjs",
+      "r4": 0,
+      "r5": 0,
+      "command": "node tests/formal/economy-v2.test.mjs"
+    },
+    {
+      "file": "tests/formal/td-receipts.test.mjs",
+      "r4": 0,
+      "r5": 0,
+      "command": "node tests/formal/td-receipts.test.mjs"
+    },
+    {
+      "file": "tests/formal/td-fc2.test.mjs",
+      "r4": 0,
+      "r5": 0,
+      "command": "node tests/formal/td-fc2.test.mjs"
+    },
+    {
+      "file": "tests/formal/fc2-archive.test.mjs",
+      "r4": 0,
+      "r5": 0,
+      "command": "node tests/formal/fc2-archive.test.mjs"
+    },
+    {
+      "file": "tests/formal/copy52-display.test.mjs",
+      "r4": 0,
+      "r5": 0,
+      "command": "node tests/formal/copy52-display.test.mjs"
+    },
+    {
+      "file": "tests/formal/carefree-bgm.test.mjs",
+      "r4": 0,
+      "r5": 0,
+      "command": "node tests/formal/carefree-bgm.test.mjs"
+    },
+    {
+      "file": "test_economy.js",
+      "r4": 1,
+      "r5": 1,
+      "command": "node test_economy.js"
+    },
+    {
+      "file": "test_coin_safety.js",
+      "r4": 1,
+      "r5": 1,
+      "command": "node test_coin_safety.js"
+    },
+    {
+      "file": "td/test_tdhost.js",
+      "r4": 1,
+      "r5": 1,
+      "command": "node td/test_tdhost.js"
+    },
+    {
+      "file": "td/test_td_bridge.js",
+      "r4": 1,
+      "r5": 1,
+      "command": "node td/test_td_bridge.js"
+    },
+    {
+      "file": "td/test_td_protocol.js",
+      "r4": 1,
+      "r5": 1,
+      "command": "node td/test_td_protocol.js"
+    },
+    {
+      "file": "preview/td/test_tdhost.js",
+      "r4": 1,
+      "r5": 1,
+      "command": "node preview/td/test_tdhost.js"
+    },
+    {
+      "file": "preview/td/test_td_bridge.js",
+      "r4": 0,
+      "r5": 0,
+      "command": "node preview/td/test_td_bridge.js"
+    },
+    {
+      "file": "cards/tests/save.test.mjs",
+      "r4": 0,
+      "r5": 0,
+      "command": "node cards/tests/save.test.mjs"
+    },
+    {
+      "file": "cards/tests/saved-decks.test.mjs",
+      "r4": 0,
+      "r5": 0,
+      "command": "node cards/tests/saved-decks.test.mjs"
+    },
+    {
+      "file": "preview/cards/tests/save.test.mjs",
+      "r4": 1,
+      "r5": 1,
+      "command": "node preview/cards/tests/save.test.mjs"
+    },
+    {
+      "file": "preview/cards/tests/saved-decks.test.mjs",
+      "r4": 0,
+      "r5": 0,
+      "command": "node preview/cards/tests/saved-decks.test.mjs"
+    },
+    {
+      "file": "tests/formal/tea-entry-cards-out.test.mjs",
+      "r4": 0,
+      "r5": 0,
+      "command": "node tests/formal/tea-entry-cards-out.test.mjs"
+    },
+    {
+      "file": "test_root_keys.js",
+      "r4": 1,
+      "r5": 1,
+      "command": "node test_root_keys.js"
+    },
+    {
+      "file": "pet/game/test_petgame.js",
+      "r4": 1,
+      "r5": 1,
+      "command": "node pet/game/test_petgame.js"
+    },
+    {
+      "file": "preview/pet/game/test_petgame.js",
+      "r4": 1,
+      "r5": 1,
+      "command": "node preview/pet/game/test_petgame.js"
+    }
+  ]
+}
