@@ -1,11 +1,12 @@
 // Deterministic natural simulation: public build/upgrade/skill APIs, default zero upgrades.
 // No enemy/health/cash/victory injection. Node DOM/audio mocks, not a browser playthrough.
-const fs=require('fs'),path=require('path');
-let harness=fs.readFileSync(path.join(__dirname,'test_td_energy.js'),'utf8').split('check(()=>')[0];
+// Awaits real local startPromise before the simulation loop; unconfirmed starts must not advance.
+const fs=require('fs'),path=require('path'),assert=require('node:assert/strict');
+let harness=fs.readFileSync(path.join(__dirname,'test_td_energy.js'),'utf8').split('// HARNESS_END')[0];
 harness=harness.replace("fs.readFileSync(__dirname+'/td.js','utf8')","fs.readFileSync(process.env.TD_SOURCE||__dirname+'/td.js','utf8')");
 const create=new Function('require','__dirname','process',harness+';return game;')(require,__dirname,process);
-function run(cmd,strategy){
- const f=create(cmd),a=f.api,g=a.G,rows=[];
+async function run(cmd,strategy){
+ const f=await create(cmd),a=f.api,g=a.G,rows=[];
  const same={c77:'t77',pearl:'tpearl',otaku:'totaku',rocket:'trocket'}[cmd];
  const ids=strategy==='dps'?['trocket','book','tech','t77','tpearl','trocket','book','tech']:[same,'tea','tech','book','trocket','tea','t77','tpearl'];
  const limit=strategy==='minimal'?3:8;
@@ -20,5 +21,7 @@ function run(cmd,strategy){
  rows.push({cmd,strategy,wave:g.wave,result:g.win?'win':'lose',lives:g.lives,cash:Math.floor(g.cash),towers:g.tw.size,seconds:Math.round(g.t)});
  return {cmd,strategy,win:g.win,lives:g.lives,wave:g.wave,rows,layout:[...g.tw.values()].map(t=>({id:t.id,x:t.x,y:t.y,lv:t.lv}))};
 }
-const out=[];for(const cmd of ['c77','pearl','otaku','rocket'])for(const strategy of (['c77','pearl'].includes(cmd)?['balanced','minimal','dps']:['balanced']))out.push(run(cmd,strategy));
-if(process.env.BALANCE_OUT)fs.writeFileSync(process.env.BALANCE_OUT,JSON.stringify(out,null,2));console.log(out.map(({rows,layout,...s})=>s));
+(async()=>{
+ const out=[];for(const cmd of ['c77','pearl','otaku','rocket'])for(const strategy of (['c77','pearl'].includes(cmd)?['balanced','minimal','dps']:['balanced']))out.push(await run(cmd,strategy));
+ if(process.env.BALANCE_OUT)fs.writeFileSync(process.env.BALANCE_OUT,JSON.stringify(out,null,2));console.log(out.map(({rows,layout,...s})=>s));
+})().catch(e=>{console.error(e);process.exitCode=1;});

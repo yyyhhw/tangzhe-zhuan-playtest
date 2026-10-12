@@ -16,7 +16,7 @@ The manifest has exactly 82 unique paths: 57 Node and 25 browser. It preserves p
 
 Observed environment: Node v24.19.0, Python 3.12.14. Original export has no .git directory; test_economy.js internally skipped two historical artwork SHA checks. Full product blobs were independently pinned to the base Git tree. File PASS means exit zero, not browser or all historical coverage.
 
-Baseline: 31 pass / 26 fail / 25 not-run. Stage 1: 31 pass / 24 fail / 27 incomplete (25 browser + two simulation timeouts). Both runner exits are 1. This is not a claim of two repaired/green tests.
+Baseline: 31 pass / 26 fail / 25 not-run. Stage 1: 31 pass / 24 fail / 27 incomplete (25 browser + two simulation timeouts). Stage 2: 33 pass / 23 fail / 26 incomplete (25 browser + budget_experiment compute timeout). Runner exit remains 1 while failures exist.
 
 Supplemental td/test_vm_runtime_contract.js passed separately. It is intentionally outside the frozen 82 denominator. It executes dependencies in TD HTML order, real host handshake/state messages and accepted parent ports; rejects wrong source/origin/protocol/ruleset/schema/start identity; awaits real local startPromise before proving clock progress. Node/VM only.
 
@@ -26,19 +26,26 @@ Supplemental td/test_vm_runtime_contract.js passed separately. It is intentional
 - Both bridge fixtures extract current parent boundaries and supply current globals. Wallet writes use isolated memory plus the actual formal/preview save coordinator and model. Valid formal hello/ruleset is sent before purchases; production origin/source guards remain intact.
 - No original failing assertion is removed or rewritten. Formal bridge cases 1–5 and preview cases 1–4 now complete before old cache/entry assertions fail.
 
+## Stage 2 (async start confirmation)
+
+- Shared `confirmStart` in `td/test_td_energy.js`: refuse clock advance while `pendStart`, then `await G.startPromise` before returning from `game`/`fresh`.
+- `td/test_balance_sweep.js`, `td/test_budget_experiment.js` (+ shipping/verify callers) await the shared async `game`/`run` before their simulation loops.
+- Product and cache files untouched. No Cards64 / TD54. Browser entries still not-run.
+- Fixed 82-entry denominator unchanged. Supplemental `td/test_vm_runtime_contract.js` still outside the denominator and still passes.
+
 ## Remaining blockers and categories
 
-All ten original STAGE_COUNT bootstrap exceptions are gone. Current tests now expose old timing/budget/wave/protocol object-identity expectations and synchronous callers that fail to await G.startPromise. No product defect has been established from these failures.
+All ten original STAGE_COUNT bootstrap exceptions are gone. Stage 2 removed the missing-await startPromise class for the sweep/budget runners and the shared energy `game` helper. Remaining failures are old timing/budget/wave/protocol object-identity expectations, continueEndless/progress gates, and budget_experiment compute volume under the fixed 25s cap. No product defect has been established from these failures.
 
-Two scripts, td/test_balance_sweep.js and td/test_budget_experiment.js, exhausted the fixed 25-second budget. Their synchronous simulation loops do not await real prototype registration. They are incomplete, not passes. They were not repeatedly retried. Next infrastructure step is async fixture/caller adaptation with every safety assertion retained; do not force pendStart false or fabricate confirmation.
+Stage 2 awaits real local G.startPromise (via shared confirmStart) before simulation loops, and keeps the unconfirmed zero-advance negative control. td/test_balance_sweep.js now completes under 25s (pass). td/test_budget_verify.js now pass. td/test_budget_experiment.js still exceeds the fixed 25s budget because the finite strategy×count binary search is ~220s wall after real start; a longer local run exits 0 and writes evidence. This remaining incomplete is compute volume, not missing startPromise. Safety assertions were not deleted; pendStart was not forced false.
 
-Root bridge still expects version 15c; preview bridge still expects no cards at shop 2. Old cache/asset/formal-candidate assertions, future dataVersion=2 fixtures (preview adapter is version 2), and older coin/host/pet fixtures without the installed save coordinator remain. R4 room-capacity semantics remain independently unresolved. Stage 2 was not implemented.
+Root bridge still expects version 15c; preview bridge still expects no cards at shop 2. Old cache/asset/formal-candidate assertions, future dataVersion=2 fixtures (preview adapter is version 2), and older coin/host/pet fixtures without the installed save coordinator remain. R4 room-capacity semantics remain independently unresolved. Stage 2 async start confirmation is implemented for the energy harness and sweep/budget runners; further callers and old expectation updates remain.
 
 Real browsers remain unrun under known socket/network restrictions. The earlier 69/51 report has no supplied original runner manifest and is not reproduced by this explicit denominator.
 
 ## Per-file comparison
 
-| File | Baseline | Stage 1 | Evidence |
+| File | Baseline | Current (Stage 2) | Evidence |
 |---|---|---|---|
 | cards/tests/save.test.mjs | pass | pass |  |
 | cards/tests/saved-decks.test.mjs | pass | pass |  |
@@ -74,21 +81,21 @@ Real browsers remain unrun under known socket/network restrictions. The earlier 
 | preview/zombie/test_zbtop_browser.mjs | not-run | not-run | browser execution requires separate supported environment; not launched |
 | preview/zombie/test_zbtop_layout.mjs | not-run | not-run | browser execution requires separate supported environment; not launched |
 | td/test_balance_browser.mjs | not-run | not-run | browser execution requires separate supported environment; not launched |
-| td/test_balance_contract.js | fail | fail | STAGE_COUNT exception removed; current assertion/async caller remains |
-| td/test_balance_sweep.js | fail | not-run | STAGE_COUNT exception removed; current assertion/async caller remains |
+| td/test_balance_contract.js | fail | fail | Stage2: await create(); spawn still needs waveSpec / old HP formula expectations |
+| td/test_balance_sweep.js | fail | pass | Stage2: await startPromise + unconfirmed zero-advance; sim completes under 25s |
 | td/test_budget_browser.mjs | not-run | not-run | browser execution requires separate supported environment; not launched |
-| td/test_budget_experiment.js | fail | not-run | STAGE_COUNT exception removed; current assertion/async caller remains |
-| td/test_budget_shipping.js | fail | fail | STAGE_COUNT exception removed; current assertion/async caller remains |
-| td/test_budget_verify.js | fail | fail | STAGE_COUNT exception removed; current assertion/async caller remains |
-| td/test_energy_budget.js | fail | fail | STAGE_COUNT exception removed; current assertion/async caller remains |
+| td/test_budget_experiment.js | fail | not-run | Stage2: await startPromise fixed; still timeout under 25s (~220s search volume); long-run exit 0 |
+| td/test_budget_shipping.js | fail | fail | Stage2: sims now win after await; old granted<=expected budget caps still fail |
+| td/test_budget_verify.js | fail | pass | Stage2: await startPromise in shared run(); seeds verify under 25s |
+| td/test_energy_budget.js | fail | fail | Stage2: await game(); old normalBudget constants (1616…) still mismatch current 1950… |
 | td/test_formal_candidate.js | fail | fail |  |
 | td/test_speed_browser.mjs | not-run | not-run | browser execution requires separate supported environment; not launched |
-| td/test_speed_build.js | fail | fail | STAGE_COUNT exception removed; current assertion/async caller remains |
+| td/test_speed_build.js | fail | fail | Stage2: await game(); old TIMING.initial=20 expectations vs current 10 remain |
 | td/test_speed_parent.mjs | not-run | not-run | browser execution requires separate supported environment; not launched |
 | td/test_td_bridge.js | fail | fail | 5 lifecycle/purchase guard cases pass; old 15c cache assertion |
 | td/test_td_endless_host.js | fail | fail |  |
 | td/test_td_endless_parent.mjs | not-run | not-run | browser execution requires separate supported environment; not launched |
-| td/test_td_energy.js | fail | fail | STAGE_COUNT exception removed; current assertion/async caller remains |
+| td/test_td_energy.js | fail | fail | Stage2: await startPromise in game(); continueEndless/progress expectations remain |
 | td/test_td_passive.js | fail | fail | STAGE_COUNT exception removed; current assertion/async caller remains |
 | td/test_td_proto_browser.mjs | not-run | not-run | browser execution requires separate supported environment; not launched |
 | td/test_td_protocol.js | fail | fail | STAGE_COUNT exception removed; current assertion/async caller remains |
@@ -123,4 +130,4 @@ Real browsers remain unrun under known socket/network restrictions. The earlier 
 | zombie/test_zbtop_browser.mjs | not-run | not-run | browser execution requires separate supported environment; not launched |
 | zombie/test_zbtop_layout.mjs | not-run | not-run | browser execution requires separate supported environment; not launched |
 
-Raw summaries, command paths, environment and representative output heads are in c9a6cda-results.json and stage1-results.json. Full command stdout/stderr is emitted by the reproducible runner to the selected external output directory.
+Raw summaries, command paths, environment and representative output heads are in c9a6cda-results.json, stage1-results.json and stage2-results.json. Full command stdout/stderr is emitted by the reproducible runner to the selected external output directory.
