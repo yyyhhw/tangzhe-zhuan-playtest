@@ -1,0 +1,30 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {installMoonOverlay} from '../../space/overlay.mjs';
+function fixture(){
+ const listeners=new Map(),timers=new Map();let count=0,blocked=false,phase='ready',remaining=6000,writes=0;
+ const doc={hidden:false,activeElement:null,addEventListener(k,f){listeners.set('doc:'+k,f);}};
+ class Element{
+  constructor(tag){this.tagName=tag;this.children=[];this.parentNode=null;this.attributes={};this.disabled=false;this.inert=false;this.tabIndex=tag==='button'?0:-1;}
+  get isConnected(){let n=this;while(n.parentNode)n=n.parentNode;return n===doc.body||n===doc.head;}
+  append(...ns){for(const n of ns){n.parentNode=this;this.children.push(n);}}
+  remove(){if(this.parentNode)this.parentNode.children=this.parentNode.children.filter(n=>n!==this);this.parentNode=null;}
+  get firstChild(){return this.children[0];}
+  setAttribute(k,v){this.attributes[k]=v;}getAttribute(k){return this.attributes[k]??null;}removeAttribute(k){delete this.attributes[k];}
+  focus(){doc.activeElement=this;}
+  querySelectorAll(){const out=[];const walk=n=>{for(const c of n.children){if(c.tagName==='button'||c.tabIndex>=0)out.push(c);walk(c);}};walk(this);return out;}
+ }
+ doc.createElement=t=>new Element(t);doc.body=new Element('body');doc.head=new Element('head');doc.getElementById=id=>{let result;const walk=n=>{if(n.id===id)result=n;for(const c of n.children)walk(c);};walk(doc.body);return result;};
+ const origin=new Element('button'),pre=new Element('div');pre.inert=true;pre.setAttribute('inert','');doc.body.append(origin,pre);origin.focus();
+ const win={setTimeout(f){timers.set(++count,f);return count;},clearTimeout(id){timers.delete(id);},addEventListener(k,f){listeners.set('win:'+k,f);}};
+ const view=()=>({ok:true,unlocked:true,phase,remaining,arrival:1700000006000,voyage:{voyageId:'moon:test:1'},space:{pts:0,visits:{}}});
+ const coordinator={readOnly:false,spaceView:view,spacePreview:()=>({ok:true}),spaceIntent:()=>{writes++;return {ok:true};}};
+ const app={state:{},persist:()=>true,xingtuContext:()=>({blocked}),xingtuAudioPause(){},xingtuAudioResume(){}};
+ const host=installMoonOverlay({app,runtime:{coordinator,reconcile:()=>({ok:true})},document:doc,window:win});
+ return {doc,host,origin,pre,get writes(){return writes;},phase(x){phase=x;},block(){blocked=true;},tick(){remaining-=1000;const [id,fn]=timers.entries().next().value;timers.delete(id);fn();},event(k,e={}){listeners.get(k)?.(e);},key(shiftKey){const e={key:'Tab',shiftKey,preventDefault(){this.prevented=true;}};listeners.get('doc:keydown')(e);return e;}};
+}
+test('open focus, stable close and countdown retain focused control',()=>{const h=fixture();h.phase('flying');h.host.open();const close=h.doc.getElementById('xingtuClose');assert.equal(h.doc.activeElement,close);h.tick();assert.equal(h.doc.getElementById('xingtuClose'),close);assert.equal(h.doc.activeElement,close);assert.equal(h.doc.getElementById('xingtuRemaining').textContent,'剩余 5 秒');assert.equal(h.doc.getElementById('xingtuProgress').value,1000);h.host.close();});
+test('Tab and Shift+Tab wrap both boundaries and outside focus',()=>{const h=fixture();h.host.open();const close=h.doc.getElementById('xingtuClose'),depart=h.doc.getElementById('xingtuDepart');depart.focus();assert(h.key(false).prevented);assert.equal(h.doc.activeElement,close);assert(h.key(true).prevented);assert.equal(h.doc.activeElement,depart);h.origin.focus();assert(h.key(false).prevented);assert.equal(h.doc.activeElement,close);h.host.close();});
+test('normal close restores origin and original background state; repeated lifecycle',()=>{const h=fixture();for(let i=0;i<2;i++){h.host.open();const close=h.doc.getElementById('xingtuClose');h.host.open();assert.equal(h.doc.getElementById('xingtuClose'),close);assert.equal(h.origin.inert,true);h.host.close();h.host.close();assert.equal(h.doc.activeElement,h.origin);assert.equal(h.origin.inert,false);assert.equal(h.origin.getAttribute('inert'),null);assert.equal(h.pre.inert,true);assert.equal(h.pre.getAttribute('inert'),'');}});
+for(const mode of ['detached','disabled','hidden','inert'])test('unusable origin not restored: '+mode,()=>{const h=fixture();if(mode==='inert')h.origin.inert=true;h.host.open();if(mode==='detached')h.origin.remove();else if(mode!=='inert')h.origin[mode]=true;h.host.close();assert.notEqual(h.doc.activeElement,h.origin);});
+for(const mode of ['freeze','pagehide','bfcache'])test(mode+' revokes callbacks without refocus',()=>{const h=fixture();h.host.open();const action=h.doc.getElementById('xingtuDepart'),close=h.doc.activeElement;if(mode==='freeze'){h.block();h.host.invalidate();}else h.event(mode==='pagehide'?'win:pagehide':'win:pageshow',{persisted:true});assert.equal(h.doc.activeElement,close);assert.equal(h.origin.inert,false);assert.equal(action.onclick().code,'SPACE_CALLBACK_REVOKED');assert.equal(h.writes,0);assert.equal(h.host.open().ok,false);});
+test('phase transition retains close node and focus',()=>{const h=fixture();h.phase('flying');h.host.open();const close=h.doc.activeElement;h.phase('arrived');h.host.refresh();assert.equal(h.doc.getElementById('xingtuClose'),close);assert.equal(h.doc.activeElement,close);assert(h.doc.getElementById('xingtuClaim'));h.host.close();});
+test('changed overlay exact import token and pin reject stale r1 URL',async()=>{const {readFileSync}=await import('node:fs'),{createHash}=await import('node:crypto');const read=p=>readFileSync(new URL('../../'+p,import.meta.url),'utf8');const expected='space/overlay.mjs?v=space01b04-moon-accessibility-20261012-r2';const check=s=>assert(s.includes(expected));check(read('collectibles/entry.mjs'));assert.throws(()=>check(read('collectibles/entry.mjs').replace(expected,'space/overlay.mjs?v=space01b04-moon-on-wearables8-20261012-r1')));const pin=JSON.parse(read('qa-protocol2/dependency-pins.json')).find(p=>p.path==='space/overlay.mjs'),b=readFileSync(new URL('../../space/overlay.mjs',import.meta.url));assert.equal(pin.sha256,createHash('sha256').update(b).digest('hex'));assert.equal(pin.bytes,b.length);});
