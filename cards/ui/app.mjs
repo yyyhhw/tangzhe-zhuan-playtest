@@ -17,7 +17,6 @@ import {createActionInputGuard} from './action-input-guard.mjs?v=card-s1';
 import {attachBattleGestures} from './gesture-input.mjs?v=formal-cards-audio-candidate-8-r3';
 const actionInputGuard = createActionInputGuard();
 let gestures = null;
-const portrait = matchMedia('(orientation: portrait)');
 
 const $ = (id) => document.getElementById(id);
 const HEROES = {
@@ -32,11 +31,12 @@ let game = createGame({rulesSeed:123,aiSeed:456,heroes:['warrior','mage']});
 let selected = null;
 let handExpanded = false;
 let paused = document.visibilityState === 'hidden';
-let pauseReason = paused ? '页面不可见，点击继续后恢复' : '';
+let pauseReason = paused ? '页面在后台' : '';
 // Settings is a removable hold; safety holds survive every settings lifecycle.
 const pauseReasons=new Map(paused?[['visibility',pauseReason]]:[]);
 let resumeAfterSettings=false,foregroundPending=false,foregroundTimer=null,foregroundGeneration=0;
 function syncPauseReasons(){paused=pauseReasons.size>0;pauseReason=[...pauseReasons].filter(([key])=>key!=='settings').at(-1)?.[1]??pauseReasons.get('settings')??'';}
+function blockedStatusLabel(){if(matchScope.selected===null||pauseReasons.has('loading'))return '加载中';if(!store.writable)return '只读';if(saveBusy)return '正在保存';if(saveFailure||pauseReasons.has('error')||pauseReasons.has('system')||pauseReasons.has('save'))return '错误待处理';if(pauseReasons.has('restore'))return '请选择旧局';if(pauseReasons.has('settings'))return '设置中';return document.hidden?'后台':'状态待处理';}
 let aiTimer = null;
 let aiGeneration = 0;
 let commandSerial = 0;
@@ -61,10 +61,10 @@ document.addEventListener('error',event=>{if(event.target?.matches?.('.hero-port
 const freshGame = () => createGame({rulesSeed:123,aiSeed:456,heroes:['warrior','mage']});
 
 function actions() { return game.phase === 'main' ? legalActions(game) : []; }
-function humanTurn() { return !spellFX.active() && game.phase === 'main' && game.active === 0 && !paused && !saveBusy && !saveFailure && !portrait.matches; }
+function humanTurn() { return !spellFX.active() && game.phase === 'main' && game.active === 0 && !paused && !saveBusy && !saveFailure && store.writable && matchScope.selected !== null; }
 // Availability comes only from legalActions; explanations never enable a move.
 function inactiveLabel() {
-  return game.phase !== 'main' ? '已结束' : spellFX.active() ? '反馈中' : paused || portrait.matches ? '已暂停' : saveBusy || saveFailure ? '保存中' : game.active !== 0 ? '等回合' : '';
+  return game.phase !== 'main' ? '已结束' : spellFX.active() ? '反馈中' : paused ? blockedStatusLabel() : saveBusy || saveFailure ? '保存中' : game.active !== 0 ? '等回合' : '';
 }
 function handAvailability(item, card, legal) {
   const inactive = inactiveLabel();
@@ -97,7 +97,7 @@ const AI_ACTION_INTERVAL_MS = 1600;
 const AI_CARD_READ_MS = 2800;
 let combatFX = null;
 const heavyFX = createHeavyFeedback({document,matchMedia});
-const spellFX = createSpellFeedback({document,matchMedia,isBlocked:()=>paused || portrait.matches || !!saveFailure || document.visibilityState === 'hidden',onFinish:()=>{render();scheduleAI();}});
+const spellFX = createSpellFeedback({document,matchMedia,isBlocked:()=>paused || !!saveFailure || document.visibilityState === 'hidden',onFinish:()=>{render();scheduleAI();}});
 function clearCombatFX() {
   heavyFX.clear();
   spellFX.clear();
@@ -119,7 +119,7 @@ function captureCombat(action) {
   return nodes;
 }
 function showCombat(action,events,captured,actionStartedAt=null) {
-  if (!captured || paused || portrait.matches || saveFailure || document.visibilityState === 'hidden') return;
+  if (!captured || paused || saveFailure || document.visibilityState === 'hidden') return;
   clearCombatFX();
   const spellPlan = planSpellFeedback(events,captured,cardInfo);
   const soundTiming=spellPlan ? (spellPlan.kind==='attack' ? SHIELD_ATTACK_TIMING : SPELL_TIMING) : null;
@@ -242,7 +242,7 @@ function cancelAITimer() {
   if (aiTimer !== null) clearTimeout(aiTimer);
   aiTimer = null;
 }
-function pause(reason='对局已暂停',owner='system') {
+function pause(reason='对局状态待处理',owner='system') {
   pauseReasons.set(owner,reason);if(owner==='settings')resumeAfterSettings=false;
   clearTimeout(foregroundTimer);foregroundTimer=null;foregroundGeneration++;
   clearCombatFX();
@@ -261,10 +261,11 @@ function invalidatePendingImport() {
   $('import-file').value = '';
 }
 function resume() {
-  if (document.visibilityState === 'hidden' || saveBusy || portrait.matches || closing || closeSent || document.querySelector('dialog[open]')) return;
+  if (document.visibilityState === 'hidden' || saveBusy || closing || closeSent || document.querySelector('dialog[open]')) return;
   if (saveFailure) { showSaveFail(); return; }
   invalidatePendingImport();
-  pauseReasons.clear();resumeAfterSettings=false;foregroundPending=true;syncPauseReasons();
+  if (matchScope.selected === null || !store.writable || pauseReasons.has('loading')) return;
+  pauseReasons.delete('restore'); pauseReasons.delete('settings');resumeAfterSettings=false;foregroundPending=true;syncPauseReasons();
   notice = '';
   render();
   bgm.unlock();combatAudio.unlock();
@@ -364,7 +365,7 @@ function renderRecentPlays() {
   }
   const reveal = $('played-reveal');
   const current = uiLog.at(-1);
-  const show = current?.player === 1 && !!current.playedCardId && game.active === 1 && game.phase === 'main' && !paused && !portrait.matches && !saveFailure && document.visibilityState !== 'hidden';
+  const show = current?.player === 1 && !!current.playedCardId && game.active === 1 && game.phase === 'main' && !paused && !saveFailure && document.visibilityState !== 'hidden';
   reveal.hidden = !show;
   button.hidden = !!selected || !!show;
   if (!show) delete reveal.dataset.revision;
@@ -380,7 +381,7 @@ function renderRecentPlays() {
   }
 }
 function commitAction(action, fromAI=false, inputEvent=null) {
-  if (spellFX.active() || paused || portrait.matches || saveBusy || saveFailure || document.visibilityState === 'hidden' || game.phase !== 'main') return false;
+  if (!store.writable || matchScope.selected === null || spellFX.active() || paused || saveBusy || saveFailure || document.visibilityState === 'hidden' || game.phase !== 'main') return false;
   if (fromAI ? game.active !== 1 : game.active !== 0) return false;
   let command = action;
   if (!fromAI) command = {...action,commandId:`ui-${game.revision}-${++commandSerial}`,expectedRevision:game.revision};
@@ -391,12 +392,12 @@ function commitAction(action, fromAI=false, inputEvent=null) {
   try { result = apply(game, command); }
   catch (err) {
     notice = `规则执行失败：${err.message || '未知错误'}`;
-    pause('规则执行失败，请检查快照后再继续');
+    pause('规则执行失败，请检查快照','error');
     return false;
   }
   if (!result.ok) {
     notice = `操作未执行：${result.error?.message || result.error?.code || '动作已失效'}`;
-    if (fromAI) pause('AI 操作未通过校验，请检查快照');
+    if (fromAI) pause('AI 操作未通过校验，请检查快照','error');
     else render();
     return false;
   }
@@ -414,7 +415,7 @@ function commitAction(action, fromAI=false, inputEvent=null) {
   return true;
 }
 function scheduleAI() {
-  if (aiTimer !== null || paused || portrait.matches || saveBusy || saveFailure || document.visibilityState === 'hidden' || game.phase !== 'main' || game.active !== 1) return;
+  if (!store.writable || matchScope.selected === null || aiTimer !== null || paused || saveBusy || saveFailure || document.visibilityState === 'hidden' || game.phase !== 'main' || game.active !== 1) return;
   const generation = aiGeneration;
   const revision = game.revision;
   const timer = setTimeout(() => {
@@ -422,19 +423,19 @@ function scheduleAI() {
     // timer's handle or issue a command after pause/resume or a save cycle.
     if (generation !== aiGeneration || aiTimer !== timer) return;
     aiTimer = null;
-    if (generation !== aiGeneration || paused || portrait.matches || saveBusy || saveFailure || document.visibilityState === 'hidden' || game.revision !== revision || game.phase !== 'main' || game.active !== 1) return;
+    if (!store.writable || matchScope.selected === null || generation !== aiGeneration || paused || saveBusy || saveFailure || document.visibilityState === 'hidden' || game.revision !== revision || game.phase !== 'main' || game.active !== 1) return;
     let command;
     try {
       if (actionsThisTurn(game,1) >= 30) {
         const safeEnd = actions().find((a) => a.player === 1 && a.type === 'end');
-        if (!safeEnd) { pause('AI 达到安全步数上限，等待人工检查'); return; }
+        if (!safeEnd) { pause('AI 达到安全步数上限，等待人工检查','error'); return; }
         command = {...safeEnd,commandId:`ui-guard-${game.revision}-${++commandSerial}`,expectedRevision:game.revision,_ai:{algorithm:'greedy-v1',before:game.rng.aiState,after:nextRandom(game.rng.aiState)}};
       } else command = chooseAIAction(game);
-      if (!command) { pause('AI 无可执行动作，等待人工检查'); return; }
+      if (!command) { pause('AI 无可执行动作，等待人工检查','error'); return; }
       commitAction(command,true);
     } catch (err) {
       notice = `AI 已停止：${err.message || '未知错误'}`;
-      pause('AI 发生异常，请检查快照后再继续');
+      pause('AI 发生异常，请检查快照','error');
     }
   }, Math.max(uiLog.at(-1)?.player === 1 && uiLog.at(-1)?.playedCardId ? AI_CARD_READ_MS : AI_ACTION_INTERVAL_MS,spellFX.remaining()));
   aiTimer = timer;
@@ -564,15 +565,15 @@ function renderSelection() {
   const noTarget = legal.find((a) => !a.target);
   let content;
   if (info) {
-    const hint = selected?.type === 'inspect' ? '查看随从信息；点击取消后继续行动。' : paused ? '已暂停。点击「继续」恢复后操作。' : !humanTurn() ? '可查看卡牌，等待你的回合。' : legal.some((a) => a.target) ? '点击绿色箭头指向的合法目标。' : noTarget ? '随从再点己方绿色战场；其他无目标牌再点确认使用。' : '当前无法使用：可能受法力、场位、次数或目标限制。';
+    const hint = selected?.type === 'inspect' ? '查看随从信息；点击取消后继续行动。' : paused ? '当前状态待处理，请查看加载或错误提示。' : !humanTurn() ? '可查看卡牌，等待你的回合。' : legal.some((a) => a.target) ? '点击绿色箭头指向的合法目标。' : noTarget ? '随从再点己方绿色战场；其他无目标牌再点确认使用。' : '当前无法使用：可能受法力、场位、次数或目标限制。';
     const statsText = cardStatsText(info, info.entity);
     const stats = statsText ? ` · ${statsText}` : '';
     const selectedArt = artForCard(info) ? artMarkup(info, 'selection-art') : '';
     content = `<div class="selection-detail">${selectedArt}<div class="selection-copy"><strong>${esc(info.name)}</strong>${info.cost !== undefined ? ` · ${info.cost} 法力` : ''}${esc(stats)}<p>${esc(info.text || '原创测试随从')}</p>${mechanismText({...info,keywords:info.entity?.keywords??info.keywords})?`<p class="mechanism-explanation">${esc(mechanismText({...info,keywords:info.entity?.keywords??info.keywords}))}</p>`:''}${spellDamageText(info)?`<p class="effective-spell-damage">${esc(spellDamageText(info))}</p>`:''}${info.metadata ? `<p class="source-info">来源 ${esc(info.metadata.sourceId)} · ${esc(info.metadata.classLabel)}${info.metadata.tribe ? ` · 种族 ${esc(info.metadata.tribe)}（仅保留元数据）` : ''}<br>原始效果：${esc(info.metadata.sourceEffectText)}</p>` : ''}<p class="selection-hint">${hint}</p></div></div>`;
   } else if (game.phase === 'ended') content = `<strong>${esc(resultText())}</strong><p>${esc(game.result?.reason || '')} · 可下载快照或开始新对局。</p>`;
-  else if (paused) content = `<strong>对局已暂停</strong><p>${esc(pauseReason)}。点击上方「继续」恢复。</p>`;
-  else if (spellFX.active()) content = '<strong>正在展示施法</strong><p>结算已完成，命中反馈结束后可继续行动；仍可暂停或返回。</p>';
-  else if (game.active === 1) content = '<strong>对手正在思考</strong><p>随时可以暂停。你的操作不会由计时器代替。</p>';
+  else if (paused) content = `<strong>${esc(blockedStatusLabel())}</strong><p>${esc(pauseReason)}</p>`;
+  else if (spellFX.active()) content = '<strong>正在展示施法</strong><p>结算已完成，命中反馈结束后可继续行动；仍可返回。</p>';
+  else if (game.active === 1) content = '<strong>对手正在思考</strong><p>可打开设置或返回。你的操作不会由计时器代替。</p>';
   else content = '<strong>轮到你了</strong><p>点选手牌查看全文，或选择可攻击的随从。</p>';
   $('selection').innerHTML = content;
   const noTargetPlay = isMinionPlacement() && !!noTarget;
@@ -587,7 +588,7 @@ function renderSelection() {
   const empty = $('friendly-board').querySelector('.empty-board');
   if (empty && noTargetPlay) empty.textContent = '点击这里让随从上场';
   $('detail-open').disabled = !info;
-  $('battle-hint').textContent = info ? `${info.name} · ${selected?.type === 'inspect' ? '点击牌面详情查看' : legal.some(a => a.target) ? '点击轮廓目标（敌红／我绿）' : noTarget ? selected.type === 'power' ? '点击确认使用技能' : isMinionPlacement() ? '点击己方绿色战场出牌' : '点击确认使用后生效' : '当前不可使用，可查看详情'}` : game.phase === 'ended' ? resultText() : paused ? `${pauseReason} · 点击继续` : spellFX.active() ? '正在展示命中 · 反馈结束后可继续行动' : game.active === 1 ? '对手回合' : handExpanded ? '手牌完整浏览 · 左右滑动，点牌进入第二步' : '点「手牌 ↑」完整浏览，选牌后再确认';
+  $('battle-hint').textContent = info ? `${info.name} · ${selected?.type === 'inspect' ? '点击牌面详情查看' : legal.some(a => a.target) ? '点击轮廓目标（敌红／我绿）' : noTarget ? selected.type === 'power' ? '点击确认使用技能' : isMinionPlacement() ? '点击己方绿色战场出牌' : '点击确认使用后生效' : '当前不可使用，可查看详情'}` : game.phase === 'ended' ? resultText() : paused ? `${pauseReason}` : spellFX.active() ? '正在展示命中 · 反馈结束后可继续行动' : game.active === 1 ? '对手回合' : handExpanded ? '手牌完整浏览 · 左右滑动，点牌进入第二步' : '点「手牌 ↑」完整浏览，选牌后再确认';
   $('confirm').hidden = !noTarget || isMinionPlacement();
   $('confirm').textContent = selected?.type === 'power' ? '确认使用技能' : '确认使用';
   $('cancel').hidden = !selected;
@@ -605,30 +606,26 @@ function renderResult() {
   $('result-replay').disabled = saveBusy || !!saveFailure || closing || closeSent;
 }
 function render() {
-  if(resumeAfterSettings&&!saveBusy&&!document.querySelector('dialog[open]')){pauseReasons.delete('settings');resumeAfterSettings=false;syncPauseReasons();if(!paused&&!saveFailure&&!closing&&!closeSent&&!document.hidden&&!portrait.matches)scheduleAI();}
+  if(resumeAfterSettings&&!saveBusy&&!document.querySelector('dialog[open]')){pauseReasons.delete('settings');resumeAfterSettings=false;syncPauseReasons();if(!paused&&!saveFailure&&!closing&&!closeSent&&!document.hidden)scheduleAI();}
   syncPauseReasons();
   bgm.update({muted,paused:paused||closing||closeSent,hidden:document.hidden});
-  combatAudio.update({muted,paused:paused||closing||closeSent||portrait.matches||!!saveFailure,hidden:document.hidden});
+  combatAudio.update({muted,paused:paused||closing||closeSent||!!saveFailure,hidden:document.hidden});
   recoverForegroundAudio();
   $('app').classList.toggle('blocked-aim',notice.startsWith('先处理嘲讽'));
   $('app').dataset.interactionMode = handExpanded ? 'inspect-hand' : selected ? 'aim' : 'battle';
   const focus = document.activeElement;
   const focusMarker = focus?.dataset?.card ? ['data-card',focus.dataset.card] : focus?.dataset?.entity ? ['data-entity',focus.dataset.entity] : focus?.id ? ['id',focus.id] : null;
   const scrollPositions = ['hand','enemy-board','friendly-board'].map((id) => [id,$(id).scrollLeft]);
-  $('pause').textContent = '继续';
-  $('pause').hidden = !paused;
-  $('pause').setAttribute('aria-pressed',String(paused));
-  $('pause').disabled = game.phase === 'ended' && !spellFX.active();
-  const status = game.phase === 'ended' ? resultText() : paused ? '已暂停' : game.active === 0 ? '你的回合' : '对手回合';
-  $('turn-bar').innerHTML = `<span>第 ${game.turn} 回合 · <strong>${esc(status)}</strong></span><span class="${paused ? 'paused-pill' : ''}">${paused ? 'AI 已停止 · 手动继续' : '规则与 AI 随机流独立'}</span>`;
+  const status = game.phase === 'ended' ? resultText() : paused ? blockedStatusLabel() : game.active === 0 ? '你的回合' : '对手回合';
+  $('turn-bar').innerHTML = `<span>第 ${game.turn} 回合 · <strong>${esc(status)}</strong></span><span class="${paused ? 'paused-pill' : ''}">${paused ? '加载／错误状态待处理' : '规则与 AI 随机流独立'}</span>`;
   const config = game.config || {};
   $('rules-label').textContent = `${config.heroHealth ?? 30} HP / ${config.deckSize ?? 30} 牌 / ${config.boardLimit ?? config.maxBoard ?? 7} 场`;
   targetHints=targetPreview(game,selected,humanTurn());
   renderPlayer(1); renderBoard(1); renderBoard(0); renderPlayer(0); renderHand(); renderSelection();
   const p = game.players[0];
   const overflow = Math.max(0,p.mana-p.maxMana);
-  const manaHint = game.phase !== 'main' ? '对局结束' : paused ? '已暂停 · 点继续' : saveBusy ? '正在保存' : game.active === 0 ? '可用 / 上限' : `下回合恢复 ${Math.min(p.maxMana+1,game.config.maxMana)}`;
-  const compactManaHint = paused ? '已暂停' : saveBusy ? '保存中' : game.active === 1 ? `下回合 ${Math.min(p.maxMana+1,game.config.maxMana)}` : overflow ? `临时 +${overflow}` : '';
+  const manaHint = game.phase !== 'main' ? '对局结束' : paused ? blockedStatusLabel() : saveBusy ? '正在保存' : game.active === 0 ? '可用 / 上限' : `下回合恢复 ${Math.min(p.maxMana+1,game.config.maxMana)}`;
+  const compactManaHint = paused ? blockedStatusLabel() : saveBusy ? '保存中' : game.active === 1 ? `下回合 ${Math.min(p.maxMana+1,game.config.maxMana)}` : overflow ? `临时 +${overflow}` : '';
   $('mana-rail').setAttribute('aria-label',`我的法力：可用 ${p.mana}，上限 ${p.maxMana}。${manaHint}。蓝色可用，空心已用${overflow ? `，紫色临时 ${overflow}` : ''}`);
   $('mana-rail').title = `${manaHint}；蓝色可用，空心已用${overflow ? `；紫色临时 +${overflow}` : ''}`;
   $('mana-rail').innerHTML = `法力<strong>${p.mana}/${p.maxMana}</strong><span class="mana-dots" aria-hidden="true">${manaDots(p)}</span>${compactManaHint ? `<small class="mana-hint">${compactManaHint}</small>` : ''}`;
@@ -712,7 +709,6 @@ $('recent-open').addEventListener('click',() => {
   if (!publicPlays().length) return;
   $('recent-dialog').showModal();
 });
-$('pause').addEventListener('click',() => { if(paused)resume(); });
 for(const [id,dir] of [['hand-prev',-1],['hand-next',1]]) $(id).addEventListener('click',()=>$('hand').scrollBy({left:dir*286,behavior:'instant'}));
 $('cancel').addEventListener('click',() => { actionInputGuard.reset();clearCombatFX(); selected = null; handExpanded = false; render(); });
 $('hand-count').addEventListener('click',() => { actionInputGuard.reset();gestures?.cancel(); handExpanded = !handExpanded; selected = null; notice = ''; render(); });
@@ -751,7 +747,7 @@ $('setup-form').addEventListener('submit',(event) => {
     const nextGame = createGame({rulesSeed:Number(data.get('rulesSeed')),aiSeed:Number(data.get('aiSeed')),heroes:[data.get('hero'),data.get('opponentHero')],config});
     clearCombatFX(); cancelAITimer(); invalidatePendingImport();
     actionInputGuard.reset();
-    resultRecoveryNote = ''; game = nextGame; if(portrait.matches)pauseReasons.set('orientation','请横过手机再继续'); selected = null; uiLog = []; recentPlayedCards = []; notice = '';
+    resultRecoveryNote = ''; game = nextGame;  selected = null; uiLog = []; recentPlayedCards = []; notice = '';
     $('setup-dialog').close(); render(); persist();
   } catch (err) { $('setup-error').textContent = `无法开始：${err.message || '实验参数无效'}`; }
 });
@@ -787,7 +783,7 @@ $('import-file').addEventListener('change',async (event) => {
   finally { if (generation === importGeneration) { importBusy = false; $('import-button').disabled = false; } }
 });
 function recoverForegroundAudio(){
-  if(!foregroundPending||foregroundTimer!==null||paused||saveBusy||saveFailure||closing||closeSent||document.hidden||portrait.matches)return;
+  if(!foregroundPending||foregroundTimer!==null||paused||saveBusy||saveFailure||closing||closeSent||document.hidden)return;
   if(muted){foregroundPending=false;return;}
   combatAudio.resumeExisting();
   const generation=foregroundGeneration;
@@ -795,7 +791,7 @@ function recoverForegroundAudio(){
     foregroundTimer=null;
     if(generation!==foregroundGeneration||!foregroundPending||paused||document.hidden)return;
     foregroundPending=false;
-    if(bgm.status.state!=='running'||combatAudio.status.state!=='running')pause('声音恢复受浏览器限制，点击继续解锁','audio');
+    // Audio may still be locked before a trusted child-frame gesture; it must not pause gameplay.
   },600);
 }
 function hidePage(){foregroundPending=true;pause('页面已隐藏','visibility');}
@@ -817,7 +813,7 @@ function failText(r) {
   if (r.kind === 'rollback-failed') return '存档异常：主档状态不确定' + (r.backupVerified ? '。已验证的备份可以恢复' : '，也没有可用的备份');
   if (r.kind === 'conflict') return r.step === 'main-readable' ? '主档已能读取，是有效存档，请重新读取存档' : '另一个页面更新了这局，请重新读取存档';
   if (r.kind === 'readonly') return '存档版本不兼容，本页只读、不会写入，请刷新到新版。';
-  if (r.kind === 'unreadable') return '主档仍然读不出来，本页保持暂停、不写任何存档，请稍后再试';
+  if (r.kind === 'unreadable') return '主档仍然读不出来，当前为读取错误、不写任何存档，请稍后再试';
   if (r.kind === 'reconfirm') return '主档已能读取但已损坏' + (r.backupVerified ? '。确认后用已验证的备份覆盖主档' : '，也没有可用的备份');
   const last = store.lastSaved;
   return '保存失败，进度还在本页' + (last ? `；存档仍是第 ${last.revision} 步` : '；还没有成功的存档');
@@ -858,10 +854,10 @@ $('save-retry').addEventListener('click',async () => {
   saveFailure = null;
   $('save-dialog').close();
   const saved = await persist();
-  // Retain the pause; only replace the stale failure text after verified success.
-  // A newer visibility, rotation or exit reason during the await takes precedence.
-  if (saved && paused && pauseReason === failedPauseReason) {
-    pauseReasons.set('save',`已保存到第 ${store.lastSaved.revision} 步`);
+  // Release only this verified save error; retain independent safety and background holds.
+  if (saved && pauseReasons.get('save') === failedPauseReason) {
+    pauseReasons.delete('save');
+    if (pauseReasons.get('system') === '正在保存收藏牌组新对局') pauseReasons.delete('system');
     notice = '';
     render();
   } else if (!saved && !saveFailure) flushClose();
@@ -879,7 +875,7 @@ async function restoreFromBackup() {
   if (!r.ok) { saveFailure = r; pause(failText(r),'save'); showSaveFail(); return; }
   saveFailure = null; actionInputGuard.reset();
   game = r.game; uiLog = []; recentPlayedCards = []; selected = null; notice = ''; saveNote = '';
-  pause('已从备份恢复，点击继续');
+  pauseReasons.delete('save'); pause('请选择是否恢复备份对局','restore');
   showResume(`已从备份恢复：第 ${r.turn} 回合 / 第 ${r.revision} 步。`, {resume:true});
 }
 $('save-download').addEventListener('click',() => download(`bookcard-snapshot-r${game.revision}.json`,serialize(game)));
@@ -894,9 +890,10 @@ function showResume(text, {resume=false, abandon=false, fresh=false}) {
 $('resume-dialog').addEventListener('cancel',(e) => e.preventDefault());
 $('resume-continue').addEventListener('click',() => { $('resume-dialog').close(); resume(); });
 function startFresh() {
+  if (matchScope.selected === null || !store.writable || saveBusy || saveFailure) { notice = '尚未确认安全保存，不能新开对局。'; render(); return; }
   clearCombatFX(); $('resume-dialog').close(); cancelAITimer(); actionInputGuard.reset();
   resultRecoveryNote = ''; game = freshGame(); uiLog = []; recentPlayedCards = []; selected = null; notice = '';
-  pauseReasons.clear();resumeAfterSettings=false;if(document.hidden)pauseReasons.set('visibility','页面不可见，点击继续后恢复');if(portrait.matches)pauseReasons.set('orientation','请横过手机再继续');syncPauseReasons();
+  pauseReasons.clear();resumeAfterSettings=false;if(document.hidden)pauseReasons.set('visibility','页面在后台');syncPauseReasons();
   render(); persist();
 }
 $('resume-abandon').addEventListener('click',() => {
@@ -912,19 +909,20 @@ async function boot() {
   const r = await store.load();
   pauseReasons.delete('loading');
   if (closeSent) return; // Async load/quarantine may complete after an exit.
+  if ((r.status === 'ok' || r.status === 'recovered') && store.writable) pauseReasons.delete('save');
   const q = r.quarantine === 'saved' ? '原数据已另存。' : r.quarantine === 'occupied' ? '原数据未另存（隔离区已占用）。' : r.quarantine ? '原数据未能备份。' : '';
   const noWrite = r.writable === false ? ' 当前浏览器无法写存档。' : '';
   if (r.status === 'empty') { startFresh(); return; }
   if (r.status === 'ok' || r.status === 'recovered') {
     actionInputGuard.reset(); game = r.game; uiLog = []; recentPlayedCards = []; selected = null; notice = '';
-    pause('上一局已恢复，点击继续');
+    pause('请选择是否恢复上一局','restore');
     const head = r.status === 'recovered' ? `存档损坏，已回到最后一次成功存档（第 ${r.revision} 步）。${q}` : '';
     if (game.phase === 'ended') { resultRecoveryNote = `${head}${noWrite}`; pause('上一局已结束'); return; }
     showResume(`${head}继续上一局：第 ${r.turn} 回合 / 第 ${r.revision} 步。${noWrite}`, {resume:true, abandon:true});
     return;
   }
-  if (r.status === 'future') { pause('只读'); showResume(`${r.why}，请刷新到新版。本页不会写存档。`, {fresh:true}); return; }
-  pause('存档无法恢复');
+  if (r.status === 'future') { pause('存档版本较新，当前只读','readonly'); showResume(`${r.why}，请刷新到新版。本页不会写存档。`, {fresh:true}); return; }
+  pause('存档无法恢复，请处理错误','error');
   showResume(`存档无法恢复（${r.why}）。${q}${noWrite}`, {fresh:true});
 }
 // Embedded in the business page: the parent only opens, closes and syncs mute. It never reads card saves.
@@ -999,13 +997,12 @@ gestures = attachBattleGestures({
   commit(action,event) { commitAction(action,false,{detail:1,clientX:event.clientX,clientY:event.clientY}); },
   cancel() { clearCombatFX(); selected = null; render(); },
 });
-portrait.addEventListener('change',() => { gestures.cancel(); selected = null; actionInputGuard.reset(); pause(portrait.matches ? '请横过手机再继续' : '方向已改变，点击继续','orientation'); });
 window.addEventListener('resize',() => { clearCombatFX(); gestures.cancel(); selected = null; render(); });
 // Collection drafts never replace an active game without parent ownership validation
 // and the collection's explicit replacement confirmation. Save the candidate before
 // switching the in-memory game, using the unchanged v10a atomic save adapter.
 async function startCollectionDeck(candidate) {
-  if (candidate?.validated !== true || saveBusy || saveFailure || closing || closeSent || !store.writable) throw new Error('当前对局尚不能安全保存，请先处理存档状态。');
+  if (matchScope.selected === null || candidate?.validated !== true || saveBusy || saveFailure || closing || closeSent || !store.writable) throw new Error('当前对局尚不能安全保存，请先处理存档状态。');
   cardcore.validateDeck(candidate.cards,candidate.classId,30);
   const nextGame = createGame({rulesSeed:123,aiSeed:456,heroes:[candidate.classId,'mage'],decks:[[...candidate.cards],cardcore.defaultDeck('mage')]});
   pause('正在保存收藏牌组新对局'); saveBusy = true; render();
@@ -1015,9 +1012,11 @@ async function startCollectionDeck(candidate) {
   lastSave = result;
   if (!result.ok) { saveFailure = result; pause(failText(result),'save'); showSaveFail(); throw new Error('新对局尚未确认安全保存，当前画面保留原对局。请处理存档提示。'); }
   if (result.tmpLeft) tmpLeftCount += 1;
+  pauseReasons.delete('restore');
   clearCombatFX(); cancelAITimer(); invalidatePendingImport(); actionInputGuard.reset();
   resultRecoveryNote = ''; game = nextGame; selected = null; uiLog = []; recentPlayedCards = []; notice = ''; saveNote = '';
-  pauseReasons.set('system','收藏牌组已保存，点击继续开始'); render(); flushClose();
+  if (pauseReasons.get('system') === '正在保存收藏牌组新对局') pauseReasons.delete('system');
+  render(); flushClose();
 }
 collection = mountCollection({document,send:message=>{if(!parentPort)throw new Error('尚未连接书店');parentPort.postMessage(message);},pause:()=>pause('牌册已打开','settings'),getMuted:()=>muted,startDeck:startCollectionDeck});
 // Native close/cancel fires after nested dialogs have had a chance to open.

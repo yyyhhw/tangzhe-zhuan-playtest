@@ -36,7 +36,7 @@ function setup(prefix, options={}){
  return {c,calls,events,devents,api:c.audioAPI,app};
 }
 for(const prefix of ['', 'preview/']){
- const assetVersion='home35-td46-home22-copy52-20261012-r1';
+ const assetVersion=prefix?'home35-td46-home22-copy52-20261012-r1':'cards-no-pause-over-c9a6cda-20261012-r1';
  const version=(prefix?'preview-':'formal-')+assetVersion;
  const app=read(prefix+'app.js'),html=read(prefix+'index.html'),boot=read(prefix+'collection/bootstrap.mjs');
  assert.equal(JSON.parse(read(prefix+'version.json')).v,version);

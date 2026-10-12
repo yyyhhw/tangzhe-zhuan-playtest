@@ -9,7 +9,7 @@
   <title>书店卡牌</title>
   <link rel="stylesheet" href="./styles.css?v=card-s1">
   <link rel="stylesheet" href="./bookspine.css?v=card-s1">
-  <link rel="stylesheet" href="./battlefield.css?v=card-art-8c">
+  <link rel="stylesheet" href="./battlefield.css?v=cards-no-pause-over-c9a6cda-20261012-r1">
   <link rel="stylesheet" href="./spell-feedback.css?v=card-shield-10a">
   <link rel="stylesheet" href="./collection.css?v=saved-decks-1">
   <link rel="stylesheet" href="./readable-effects.css?v=formal-cards-candidate-7">
@@ -22,12 +22,12 @@
     <header class="topbar">
       <div class="brand"><h1>书页之间 <span>卡牌对战</span></h1></div>
       <div id="turn-bar" class="turn-bar" aria-live="polite"></div>
-      <div class="top-actions"><button id="exit-embed" class="quiet" hidden>返回</button><button id="pause" class="quiet" hidden>继续</button><button id="menu-open" class="quiet" aria-haspopup="dialog">设置</button></div>
+      <div class="top-actions"><button id="exit-embed" class="quiet" hidden>返回</button><button id="menu-open" class="quiet" aria-haspopup="dialog">设置</button></div>
     </header>
     <div id="last-action-status" class="last-action-status" role="status" aria-live="polite" aria-atomic="true" hidden></div>
     <button id="recent-open" class="recent-open quiet" aria-haspopup="dialog" disabled><span>最近出牌</span></button>
     <aside id="played-reveal" class="played-reveal" aria-label="对手刚刚打出的牌" hidden></aside>
-    <section class="table" aria-label="横屏卡牌战场">
+    <section class="table" aria-label="卡牌战场">
       <div id="opponent" class="player-bar opponent"></div>
       <div id="enemy-board" class="board enemy-board" aria-label="对手随从"></div>
       <div class="table-divider" aria-hidden="true"><span>书 页 之 间</span></div>
@@ -54,7 +54,6 @@
       <p id="result-note" role="status"></p>
       <div class="result-actions"><button id="result-finish" class="primary">结束游戏 · 返回书店</button><button id="result-replay" class="quiet" aria-haspopup="dialog">再来一局</button></div>
     </section>
-    <div class="rotate-prompt" role="status"><span aria-hidden="true">↻</span><strong>横过手机，展开战场</strong><p>菜单、存档和返回仍可使用。对局已暂停。</p></div>
   </main>
   <dialog id="menu-dialog" aria-labelledby="menu-title">
     <div class="dialog-heading"><h2 id="menu-title">对局设置</h2><button data-close="menu-dialog" class="icon-button" aria-label="关闭设置">×</button></div>
@@ -96,7 +95,7 @@
   </dialog>
   <dialog id="snapshot-dialog" aria-labelledby="snapshot-title">
     <div class="dialog-heading"><div><small>本地 JSON · 另有每步自动存档</small><h2 id="snapshot-title">对局快照</h2></div><button type="button" data-close="snapshot-dialog" class="icon-button" aria-label="关闭快照">×</button></div>
-    <p class="dialog-note">对局每步自动存档，刷新后可继续上一局。快照包含完整技术状态，包括双方牌库、手牌和随机状态，请仅用于测试。导入时会暂停 AI；导入失败不会替换当前对局。</p>
+    <p class="dialog-note">对局每步自动存档，刷新后可继续上一局。快照包含完整技术状态，包括双方牌库、手牌和随机状态，请仅用于测试。导入时会停止内部调度；导入失败不会替换当前对局。</p>
     <div class="snapshot-actions"><button id="download" class="primary">下载 JSON 快照</button><button id="download-replay" class="quiet">下载回放</button></div>
     <label class="file-label">从文件导入<input id="import-file" type="file" accept="application/json,.json"></label>
     <label>或粘贴快照 JSON<textarea id="import-text" rows="6" spellcheck="false" placeholder="粘贴已下载的完整 JSON 快照"></textarea></label>
@@ -109,12 +108,12 @@
     <div class="snapshot-actions"><button id="resume-continue" class="primary">继续上一局</button><button id="resume-abandon" class="quiet">放弃</button><button id="resume-new" class="primary" hidden>新开一局</button></div>
   </dialog>
   <dialog id="save-dialog" aria-labelledby="save-title">
-    <div class="dialog-heading"><div><small>对局已暂停</small><h2 id="save-title">保存没有成功</h2></div></div>
+    <div class="dialog-heading"><div><small>保存错误 · 操作暂不可用</small><h2 id="save-title">保存没有成功</h2></div></div>
     <p id="save-text" class="dialog-note" role="alert"></p><details><summary>查看维护详情</summary><p id="save-error-info"></p></details>
     <div class="snapshot-actions"><button id="save-retry" class="primary">重试保存</button><button id="save-restore" class="quiet">回到最后成功档</button><button id="save-download" class="quiet">下载快照</button><button id="save-finish" class="quiet" hidden>结束游戏…</button><button id="save-exit" class="quiet" hidden>仍要退出</button></div>
   </dialog>
   <noscript><p>游戏需要启用 JavaScript。</p></noscript>
-  <script type="module" src="./app.mjs?v=saved-decks-1"></script>
+  <script type="module" src="./app.mjs?v=cards-no-pause-over-c9a6cda-20261012-r1"></script>
 </body>
 </html>
 
