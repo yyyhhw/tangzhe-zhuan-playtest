@@ -1,7 +1,7 @@
 // Node/VM and isolated in-memory storage only; not real browser evidence.
 import {test} from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';import {createRequire} from 'node:module';
 import {createSaveCoordinator,KEYS} from '../../collection/host-save.mjs';import {createApprovedTrialModel} from '../../collection/domain/model.mjs';import {TRIAL_CONFIG} from '../../collection/domain/trial-config.mjs';import {canonical} from '../../collection/domain/json.mjs';
-const uiToken='space01b04-moon-accessibility-20261012-r2';
+const uiToken='space01b04-moon-accessibility-20261012-r3';
 const root=new URL('../../',import.meta.url),read=p=>fs.readFileSync(new URL(p,root),'utf8'),require=createRequire(import.meta.url),token='space01b04-moon-on-wearables8-20261012-r1';
 function fn(src,name){const start=src.indexOf('function '+name+'(');assert(start>=0);const next=src.indexOf('\nfunction ',start+1);return src.slice(start,next===-1?undefined:next);}
 for(const prefix of ['', 'preview/']){

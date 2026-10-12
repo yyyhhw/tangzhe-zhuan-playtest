@@ -93,7 +93,7 @@ if((new URLSearchParams(location.search).has('collectionQA')||new URLSearchParam
     sourceBase:new URL('../',import.meta.url),notice,
   })).catch(()=>notice('QA_PROTOCOL2_BOOT_FAILED_READ_ONLY'));
 } else if(COLLECTIBLES_PRODUCTION_ENABLED && new URLSearchParams(location.search).get('test')!=='homes') {
-  import('../collectibles/entry.mjs?v=space01b04-moon-accessibility-20261012-r2').then(module=>module.launchProductionCollectibles({
+  import('../collectibles/entry.mjs?v=space01b04-moon-accessibility-20261012-r3').then(module=>module.launchProductionCollectibles({
     walletBridgeApproved:WALLET_BRIDGE_APPROVED,cardEntryEnabled:false,
     scope:'formal',E,keys:KEYS,lockName:LOCK_NAME,createLegacyCoordinator:createSaveCoordinator,
     createCollectionHost,secureRandomInt,createApprovedTrialModel,config:TRIAL_CONFIG,canonical,

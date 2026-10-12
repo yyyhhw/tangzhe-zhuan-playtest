@@ -1,6 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import {createHash} from 'node:crypto';import {createRequire} from 'node:module';
 import display from '../../qa-protocol2/wearables8-display.mjs';import {prepareEightWearableCatalog,EIGHT_WEARABLES} from '../../qa-protocol2/eight-catalog.mjs';import {assembly,until,source,RELEASE,ROOT} from './production-harness.mjs';
-const UI_TOKEN="space01b04-moon-accessibility-20261012-r2";
+const UI_TOKEN="space01b04-moon-accessibility-20261012-r3";
 const root=path.fileURLToPath?path.fileURLToPath(ROOT):decodeURIComponent(ROOT.pathname),require=createRequire(import.meta.url);const sha=b=>createHash('sha256').update(b).digest('hex');
 test('actual candidate production flag/token, root/preview/rootpet version chain and separate unchanged previewpet',()=>{
  assert(source('collectibles/release.mjs').includes('COLLECTIBLES_PRODUCTION_ENABLED = true'));assert.equal(RELEASE,'space01b04-moon-on-wearables8-20261012-r1');

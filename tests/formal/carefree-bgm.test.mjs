@@ -37,7 +37,7 @@ function setup(prefix, options={}){
 }
 for(const prefix of ['', 'preview/']){
  const assetVersion='space01b04-moon-on-wearables8-20261012-r1';
- const uiVersion='space01b04-moon-accessibility-20261012-r2';
+ const uiVersion='space01b04-moon-accessibility-20261012-r3';
  const version=(prefix?'preview-':'formal-')+uiVersion;
  const app=read(prefix+'app.js'),html=read(prefix+'index.html'),boot=read(prefix+'collection/bootstrap.mjs');
  assert.equal(JSON.parse(read(prefix+'version.json')).v,version);

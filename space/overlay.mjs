@@ -3,10 +3,10 @@ import {moonArt} from './art.mjs?v=space01b04-moon-on-wearables8-20261012-r1';
 import {MOON_CSS} from './styles.mjs?v=space01b04-moon-on-wearables8-20261012-r1';
 export function installMoonOverlay({app,runtime,document:doc=globalThis.document,window:win=globalThis}){
  if(win.XingTu)throw Error('SPACE_HOST_ALREADY_INSTALLED');
- let cover=null,body=null,content=null,timer=null,host,closeButton=null,origin=null,signature=null,revoked=false;
+ let cover=null,body=null,content=null,timer=null,host,closeButton=null,origin=null,signature=null,revoked=false,renderFailed=false;
  let background=[];
  const connected=n=>!!n&&(n.isConnected===undefined?!!n.parentNode:n.isConnected);
- const usable=n=>{if(!connected(n)||n.disabled)return false;for(let p=n;p;p=p.parentNode){if(p.hidden||p.inert||p.getAttribute?.('aria-hidden')==='true')return false;const style=win.getComputedStyle?.(p);if(style&&(style.display==='none'||style.visibility==='hidden'||style.visibility==='collapse'))return false;}return true;};
+ const usable=n=>{if(!connected(n)||n.disabled)return false;for(let p=n;p;p=p.parentNode){if(p.nodeType!==undefined&&p.nodeType!==1)break;if(p.hidden||p.inert||p.getAttribute?.('aria-hidden')==='true')return false;const style=win.getComputedStyle?.(p);if(style&&(style.display==='none'||style.visibility==='hidden'||style.visibility==='collapse'))return false;}return true;};
  const focus=n=>{if(usable(n))n.focus?.();};
  const controls=()=>[...(cover?.querySelectorAll?.('button, a[href], input, select, textarea, [tabindex]')??[])].filter(n=>usable(n)&&n.tabIndex!==-1);
  const isolate=()=>{background=[...(doc.body.children??[])].filter(n=>n!==cover).map(n=>({n,inert:n.inert,attribute:n.getAttribute?.('inert')}));for(const {n} of background)n.inert=true;};
@@ -14,7 +14,7 @@ export function installMoonOverlay({app,runtime,document:doc=globalThis.document
  const node=(tag,id,text)=>{const n=doc.createElement(tag);if(id)n.id=id;if(text!==undefined)n.textContent=text;return n;};
  const clearTimer=()=>{if(timer!==null){win.clearTimeout(timer);timer=null;}};
  const closeView=()=>{clearTimer();cover?.remove();restoreBackground();cover=null;body=null;content=null;signature=null;closeButton=null;const saved=origin;origin=null;
-  let allowed=false;try{allowed=!revoked&&!doc.hidden&&!app.xingtuContext().blocked&&!runtime.coordinator.readOnly;}catch{}
+  let allowed=false;try{allowed=!renderFailed&&!revoked&&!doc.hidden&&!app.xingtuContext().blocked&&!runtime.coordinator.readOnly;}catch{}
   if(allowed)focus(saved);
  };
  const button=(id,label,fn)=>{const b=node('button',id,label);b.type='button';b.onclick=fn;return b;};
@@ -24,7 +24,8 @@ export function installMoonOverlay({app,runtime,document:doc=globalThis.document
   content=node('div','xingtuContent');body.append(content);doc.body.append(cover);isolate();return true;
  }
  const schedule=view=>{if(view.ok&&view.phase==='flying')timer=win.setTimeout(()=>{timer=null;if(host.isOpen()&&!doc.hidden)host.refresh();},1000);};
- function render(view){
+ function render(view){try{return renderView(view);}catch(error){renderFailed=true;try{host.close();}finally{renderFailed=false;}throw error;}}
+ function renderView(view){
   if(!host?.isOpen())return;const created=ensure();clearTimer();
   const next=JSON.stringify([view.ok,view.code,view.phase,view.voyage?.voyageId,view.receipt,view.space?.pts,view.space?.visits,host.token]);
   if(signature===next){if(view.phase==='flying'){doc.getElementById('xingtuRemaining').textContent=`剩余 ${Math.ceil(view.remaining/1000)} 秒`;doc.getElementById('xingtuProgress').value=6000-view.remaining;const p=1-view.remaining/6000;doc.getElementById('xingtuStarMap').querySelector?.('use')?.setAttribute('transform',`translate(${72+p*160} ${84-Math.sin(p*Math.PI)*38}) rotate(65)`);}schedule(view);return;}
