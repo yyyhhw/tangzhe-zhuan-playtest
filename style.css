@@ -789,3 +789,8 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 /* 首批盲盒 6+2 图鉴预览（只展示） */
 .collectible-preview .item-art img{width:100%;height:auto;object-fit:contain;aspect-ratio:1}
 .collectible-preview .preview-note{display:block;font-size:11px;opacity:.75}
+
+/* 家宅-56：CEO 自主活动时，远距离换位或「减少动态效果」打开时淡入；换衣服停下时闪一下 */
+.home-actor.ha-fade{animation:haFade .5s ease}
+@keyframes haFade{0%{opacity:0}100%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.home-actor.ha-fade{animation-duration:.01s}}
