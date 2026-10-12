@@ -180,7 +180,7 @@ function cardInfo(cardId) { return (CARDS[cardId] ? {...CARDS[cardId],metadata:C
 // Assets are looked up by immutable metadata source ID; engine art stays "placeholder".
 function artMarkup(card, slot='card-art') {
   const art = artForCard(card);
-  if (!art) return `<span class="${slot} placeholder-art ${card.type === 'minion' ? 'art-type-minion' : esc(card.type)}" aria-hidden="true"><span class="art-fallback">插画待补</span></span>`;
+  if (!art) return `<span class="${slot} placeholder-art ${card.type === 'minion' ? 'art-type-minion' : esc(card.type)}" aria-hidden="true"></span>`;
   return `<span class="${slot} original-art" data-art-source="${esc(card.metadata?.sourceId || card.id)}" aria-hidden="true"><img src="${esc(art.src)}" width="${art.width}" height="${art.height}" alt="" decoding="async" draggable="false"></span>`;
 }
 function cardStatsText(card, entity=null) {
@@ -474,7 +474,7 @@ function renderHand() {
     const c = cardInfo(item.cardId);
     const availability = handAvailability(item,c,legal);
     const playable = availability.ready;
-    return `<button class="${selectableClass(item.uid,'hand-card')}${playable ? ' playable' : ''}" data-class="${presentationClass(c.metadata)}" data-card="${esc(item.uid)}" aria-label="${esc(c.name)}，${c.cost} 点法力，${esc(cardStatsText(c))}，${esc(c.text || '')}${spellDamageText(c)?'，'+esc(spellDamageText(c)):''}，${availability.label}，点击查看" aria-pressed="${selected?.source === item.uid}"><span class="card-heading"><span class="cost"><small>费</small>${c.cost}</span><span class="hand-readiness readiness-${availability.kind}">${availability.label}</span><strong>${esc(c.name)}</strong></span><span class="card-type">${esc(TYPES[c.type] || c.type)} · ${esc(c.metadata?.classLabel || '实验生成物')}${playable ? ' · 可出牌' : ''}</span>${artMarkup(c)}${artMarkup(c,'hand-peek')}<span class="card-preview">${esc(c.text || '原创测试卡牌')}</span>${spellDamageText(c)?`<span class="effective-spell-damage">${esc(spellDamageText(c))}</span>`:''}<span class="card-bottom">${handStatsMarkup(c)}</span></button>`;
+    return `<button class="${selectableClass(item.uid,'hand-card')}${playable ? ' playable' : ''}" data-class="${presentationClass(c.metadata)}" data-card="${esc(item.uid)}" aria-label="${esc(c.name)}，${c.cost} 点法力，${esc(cardStatsText(c))}，${esc(c.text || '')}${spellDamageText(c)?'，'+esc(spellDamageText(c)):''}，${availability.label}，点击查看" aria-pressed="${selected?.source === item.uid}"><span class="card-heading"><span class="cost"><small>费</small>${c.cost}</span><span class="hand-readiness readiness-${availability.kind}">${availability.label}</span><strong>${esc(c.name)}</strong></span><span class="card-type">${esc(TYPES[c.type] || c.type)} · ${esc(c.metadata?.classLabel || '衍生牌')}${playable ? ' · 可出牌' : ''}</span>${artMarkup(c)}${artMarkup(c,'hand-peek')}<span class="card-preview">${esc(c.text || '原创测试卡牌')}</span>${spellDamageText(c)?`<span class="effective-spell-damage">${esc(spellDamageText(c))}</span>`:''}<span class="card-bottom">${handStatsMarkup(c)}</span></button>`;
   }).join('') : '<span class="empty-board">手牌为空</span>';
   [...$('hand').querySelectorAll('[data-card]')].forEach((el,i) => {
     el.style.setProperty('--fan-angle',(i-(p.hand.length-1)/2)*2);
@@ -493,7 +493,7 @@ function renderSelection() {
     const statsText = cardStatsText(info, info.entity);
     const stats = statsText ? ` · ${statsText}` : '';
     const selectedArt = artForCard(info) ? artMarkup(info, 'selection-art') : '';
-    content = `<div class="selection-detail">${selectedArt}<div class="selection-copy"><strong>${esc(info.name)}</strong>${info.cost !== undefined ? ` · ${info.cost} 法力` : ''}${esc(stats)}<p>${esc(info.text || '原创测试随从')}</p>${spellDamageText(info)?`<p class="effective-spell-damage">${esc(spellDamageText(info))}</p>`:''}${info.metadata ? `<p class="source-info">来源 ${esc(info.metadata.sourceId)} · ${esc(info.metadata.classLabel)}${info.metadata.tribe ? ` · 种族 ${esc(info.metadata.tribe)}（仅保留元数据）` : ''}<br>原始效果：${esc(info.metadata.sourceEffectText)}</p>` : ''}<p class="selection-hint">${hint}</p></div></div>`;
+    content = `<div class="selection-detail">${selectedArt}<div class="selection-copy"><strong>${esc(info.name)}</strong>${info.cost !== undefined ? ` · ${info.cost} 法力` : ''}${esc(stats)}<p>${esc(info.text || '原创测试随从')}</p>${spellDamageText(info)?`<p class="effective-spell-damage">${esc(spellDamageText(info))}</p>`:''}${info.metadata ? `<details class="source-info dev-details"><summary>开发者</summary>来源 ${esc(info.metadata.sourceId)} · ${esc(info.metadata.classLabel)}${info.metadata.tribe ? ` · 种族 ${esc(info.metadata.tribe)}（仅保留元数据）` : ''}<br>原始效果：${esc(info.metadata.sourceEffectText)}</details>` : ''}<p class="selection-hint">${hint}</p></div></div>`;
   } else if (game.phase === 'ended') content = `<strong>${esc(resultText())}</strong><p>${esc(game.result?.reason || '')} · 可下载快照或开始新对局。</p>`;
   else if (paused) content = `<strong>对局已暂停</strong><p>${esc(pauseReason)}。点击上方「继续」恢复。</p>`;
   else if (spellFX.active()) content = '<strong>正在展示施法</strong><p>结算已完成，命中反馈结束后可继续行动；仍可暂停或返回。</p>';
@@ -541,7 +541,7 @@ function render() {
   const status = game.phase === 'ended' ? resultText() : paused ? '已暂停' : game.active === 0 ? '你的回合' : '对手回合';
   $('turn-bar').innerHTML = `<span>第 ${game.turn} 回合 · <strong>${esc(status)}</strong></span><span class="${paused ? 'paused-pill' : ''}">${paused ? 'AI 已停止 · 手动继续' : '规则与 AI 随机流独立'}</span>`;
   const config = game.config || {};
-  $('rules-label').textContent = `${config.heroHealth ?? 30} HP / ${config.deckSize ?? 30} 牌（实验） / ${config.boardLimit ?? config.maxBoard ?? 7} 场`;
+  $('rules-label').textContent = `${config.heroHealth ?? 30} HP / ${config.deckSize ?? 30} 牌 / ${config.boardLimit ?? config.maxBoard ?? 7} 场`;
   renderPlayer(1); renderBoard(1); renderBoard(0); renderPlayer(0); renderHand(); renderSelection();
   const p = game.players[0];
   const overflow = Math.max(0,p.mana-p.maxMana);
