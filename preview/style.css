@@ -438,7 +438,7 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 
 /* 商城：分类 + 搜索 + 筛选（留白给以后加商品） */
 .mall-search{display:flex;gap:6px;position:sticky;top:0;z-index:5;background:var(--paper,#f7f1e3);padding:4px 0 8px;margin-bottom:2px}
-.mall-search input{flex:1;min-height:40px;border:2px solid var(--ink);border-radius:10px;padding:0 12px;font:inherit;font-weight:800;font-size:14px;background:#fff}
+.mall-search input{flex:1;min-width:0;min-height:44px;border:2px solid var(--ink);border-radius:10px;padding:0 12px;font:inherit;font-weight:800;font-size:14px;background:#fff}
 .mall-cats,.mall-subs{display:flex;gap:6px;overflow-x:auto;padding:0 0 8px;-webkit-overflow-scrolling:touch}
 .mall-cats .mc,.mall-subs .ms{flex:0 0 auto;min-height:34px;padding:0 12px;border:2px solid var(--ink);border-radius:999px;background:#fff;font-weight:900;font-size:12px}
 .mall-cats .mc.on,.mall-subs .ms.on{background:var(--yellow);box-shadow:2px 2px 0 var(--ink)}
@@ -537,6 +537,7 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 .job-chip i,.inv-item i{background:var(--red);border:var(--lw-1) solid var(--ink);box-shadow:1px 1px 0 var(--ink)}
 .mall-search input{border:var(--lw-2) solid var(--ink);border-radius:var(--r-md);box-shadow:inset 2px 2px 0 rgba(20,20,20,.08)}
 .mall-search input:focus{outline:3px solid var(--blue);outline-offset:1px}
+.mall-search .buy{min-height:44px}
 
 /* --- 段标题：墨底说明框 + 红错位影（和 logo 同一语言） --- */
 .sec-title{background:var(--ink);color:#fff;border:var(--lw-2) solid var(--ink);border-radius:2px;box-shadow:var(--head-shadow);font-size:var(--fs-h);letter-spacing:1px;padding:2px 12px 2px 9px;margin:4px 0 9px}
