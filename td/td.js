@@ -442,7 +442,7 @@ function hud() {
 function bar() {
   $('#barMain').classList.toggle('hidden', !!G?.adjusting || !!sel && sel.k === 'tower'); $('#barBuild').classList.toggle('hidden', !!G?.adjusting || !!sel && sel.k === 'tower'); $('#barTower').classList.toggle('hidden', !sel || sel.k !== 'tower');
   if (!G) return;
-  if (!sel || sel.k === 'build') { const choice = sel || {}, scroll = $('#twGrid').scrollLeft || 0; $('#twGrid').innerHTML = TIDS.map(id => `<button type="button" data-tw="${id}" class="${T.TOWERS[id].ceo === G.cmd ? 'syn' : ''} ${choice.id === id ? 'chosen' : ''}">${T.TOWERS[id].ceo === G.cmd ? '★' : ''}${T.TOWERS[id].name}<small>${T.TOWERS[id].ceo?'CEO·每种1':'店铺·可重复'} ${T.TOWERS[id].cost}</small></button>`).join('');
+  if (!sel || sel.k === 'build') { const choice = sel || {}, scroll = $('#twGrid').scrollLeft || 0; $('#twGrid').innerHTML = TIDS.map(id => `<button type="button" data-tw="${id}" class="${T.TOWERS[id].ceo === G.cmd ? 'syn' : ''} ${choice.id === id ? 'chosen' : ''}"><span class="tw-top"><canvas class="tw-ico" width="48" height="48" data-ico="${id}" aria-hidden="true"></canvas><b class="tw-cost">${T.TOWERS[id].cost}</b></span>${T.TOWERS[id].ceo === G.cmd ? '★' : ''}${T.TOWERS[id].name}<small>${T.TOWERS[id].ceo?'CEO·每种1':'店铺·可重复'}</small></button>`).join(''); paintTowerIcons($('#twGrid'));
     $('#twGrid').scrollLeft = scroll;
     $('#buildInfo').innerHTML = choice.id ? towerSummary(choice.id) : '';
     $('#buildInspector').classList.toggle('hidden', !choice.id);
@@ -500,7 +500,17 @@ function positionBuildActions() {
 
 const px = x => OX + x * S, py = y => OY + y * S;
 // Small vector emblems keep the paper/comic palette while giving each attack family a silhouette.
-function drawTowerEmblem(id,x,y,r) {
+// 塔防-54：建造栏卡片左上角的小图标，底色和地图上的塔块一致，图案直接复用 drawTowerEmblem。
+function paintTowerIcons(root) {
+  const list = root && root.querySelectorAll ? root.querySelectorAll('canvas[data-ico]') : [];
+  for (const c of list) {
+    const g = c.getContext && c.getContext('2d'), id = c.dataset.ico, s = TW[id]; if (!g || !s) continue;
+    const n = c.width; g.clearRect(0, 0, n, n);
+    g.fillStyle = s.col; g.strokeStyle = INK; g.lineWidth = 3; g.beginPath(); g.roundRect ? g.roundRect(2, 2, n - 4, n - 4, 9) : g.rect(2, 2, n - 4, n - 4); g.fill(); g.stroke();
+    drawTowerEmblem(id, n / 2, n / 2, n * .24, g);
+  }
+}
+function drawTowerEmblem(id,x,y,r,ctx=cx) { const cx = ctx; // ctx 默认画地图，建造栏小图标传自己的画布
   cx.save(); cx.translate(x,y); cx.lineWidth=1.8; cx.strokeStyle=INK; cx.fillStyle='#fffaf0';
   if (id==='tea') { // 冰沙机：搅拌杯 + 冰块 + 底座
     cx.fillStyle='#e3f6fb';cx.beginPath();cx.moveTo(-r*.95,-r*1.05);cx.lineTo(-r*.6,r*.55);cx.lineTo(r*.6,r*.55);cx.lineTo(r*.95,-r*1.05);cx.closePath();cx.fill();cx.stroke();

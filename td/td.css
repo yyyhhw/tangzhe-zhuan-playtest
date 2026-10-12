@@ -46,6 +46,7 @@ p{margin:0;font-size:14px;line-height:1.5}
 .tw-grid{display:flex;gap:5px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;padding:2px 1px 4px;scroll-snap-type:x proximity}
 .tw-grid button{flex:0 0 69px;min-height:44px;padding:3px 2px;border:2px solid var(--ink);border-radius:8px;background:#fff;font-size:11px;font-weight:800;line-height:1.2;scroll-snap-align:start}
 .tw-grid button small{display:block;font-size:11px;color:#6b6457;margin-top:2px}
+.tw-grid .tw-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:2px}.tw-grid .tw-ico{width:24px;height:24px;flex:0 0 24px;display:block}.tw-grid .tw-cost{font-size:12px;font-weight:900;padding-right:2px}
 .tw-grid button.syn{background:#fff3c4}.tw-grid .chosen{outline:3px solid var(--red);outline-offset:-3px;background:#ffe7ca}
 .compact-inspector{display:flex;gap:4px;align-items:center;min-height:44px;border-top:1px solid #d9cfb8;padding-top:3px}
 .build-info{flex:1;min-width:0;font-size:11px;line-height:17px}.build-info b{font-weight:800}.core-line{display:block;white-space:nowrap}
