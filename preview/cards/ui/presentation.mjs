@@ -50,8 +50,8 @@ export const ART_BY_SOURCE_ID = Object.freeze({
   TZZ_ORIGINAL_CARD_000006: Object.freeze({"src": "./assets/original/TZZ_ORIGINAL_CARD_000006_original_v1.webp", "width": 448, "height": 560, "name": "修车铺老周", "alt": "留胡须的修车师傅穿着蓝衬衫和棕围裙，笑着举起扳手，另一只手扶着绿色自行车的车把。"}),
 });
 export const ART_BY_RUNTIME_ID = Object.freeze({
-  spareMinute: Object.freeze({"src": "./assets/original/spareMinute_original_v1.webp", "width": 448, "height": 560, "name": "加班书签 · 测试"}),
-  paperHelper: Object.freeze({"src": "./assets/original/paperHelper_original_v1.webp", "width": 448, "height": 560, "name": "折纸助手 · 测试衍生"}),
+  spareMinute: Object.freeze({"src": "./assets/original/spareMinute_original_v1.webp", "width": 448, "height": 560, "name": "加班书签"}),
+  paperHelper: Object.freeze({"src": "./assets/original/paperHelper_original_v1.webp", "width": 448, "height": 560, "name": "折纸助手"}),
 });
 // Unknown and unsupported source IDs deliberately have no artwork mapping.
 export function artForSource(sourceId) {

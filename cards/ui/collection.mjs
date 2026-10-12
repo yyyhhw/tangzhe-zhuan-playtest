@@ -1,4 +1,4 @@
-import {createDeckEditor} from './deck-editor.mjs?v=saved-decks-1';
+import {createDeckEditor} from './deck-editor.mjs?v=copy44-card-names-20261012-r1';
 import {DISPLAY_CARDS} from './collection-cards.mjs';
 import {RARITY_LABELS,CLASS_LABELS,TYPE_LABELS,escapeHTML as esc,formatCoins,copiesFor,canTransact,addToDraft,inspectDraft,receiptSummary,createCollectionClient} from './collection-state.mjs?v=saved-decks-1';
 

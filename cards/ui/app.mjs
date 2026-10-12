@@ -1,17 +1,17 @@
-import {targetPreview} from './target-preview.mjs?v=formal-cards-audio-candidate-8-r3';
+import {targetPreview} from './target-preview.mjs?v=copy44-card-names-20261012-r1';
 import {createCombatAudio} from './combat-audio.mjs?v=formal-cards-audio-candidate-8-r3';
 import {createCardBgm} from './bgm.mjs?v=formal-cards-candidate-7';
 import {mechanismText, mechanismLabels, powerDescription, createHeavyFeedback} from './readable-effects.mjs?v=formal-cards-candidate-7';
 import {createMatchStorageScope} from './match-storage-scope.mjs?v=formal-cards-candidate-7';
-import {mountCollection} from './collection.mjs?v=saved-decks-1';
+import {mountCollection} from './collection.mjs?v=copy44-card-names-20261012-r1';
 import {
   createGame, legalActions, apply, serialize, deserialize,
   chooseAIAction, getReplay, hashState, CARDS, CARD_METADATA, nextRandom, actionsThisTurn, spellDamageBonus, effectiveSpellDamage,
-} from '../cardcore.mjs?v=card-shield-10';
-import * as cardcore from '../cardcore.mjs?v=card-shield-10';
+} from '../cardcore.mjs?v=copy44-card-names-20261012-r1';
+import * as cardcore from '../cardcore.mjs?v=copy44-card-names-20261012-r1';
 import {createCardSave} from './save.mjs?v=formal-cards-candidate-7';
 
-import {artForCard, presentationClass} from './presentation.mjs?v=card-shield-10';
+import {artForCard, presentationClass} from './presentation.mjs?v=copy44-card-names-20261012-r1';
 import {createSpellFeedback, planSpellFeedback, keywordLabels, clonePublicCharacter, addShieldBreak, SPELL_TIMING, SHIELD_ATTACK_TIMING} from './spell-feedback.mjs?v=card-shield-10a';
 import {createActionInputGuard} from './action-input-guard.mjs?v=card-s1';
 import {attachBattleGestures} from './gesture-input.mjs?v=formal-cards-audio-candidate-8-r3';

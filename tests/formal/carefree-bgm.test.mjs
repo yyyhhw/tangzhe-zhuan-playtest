@@ -36,7 +36,7 @@ function setup(prefix, options={}){
  return {c,calls,events,devents,api:c.audioAPI,app};
 }
 for(const prefix of ['', 'preview/']){
- const assetVersion=prefix?'guest-copy34-clean01-20261012':'tower39-copy34-clean01-20261012-r1';
+ const assetVersion='copy44-card-names-20261012-r1';
  const version=(prefix?'preview-':'formal-')+assetVersion;
  const app=read(prefix+'app.js'),html=read(prefix+'index.html'),boot=read(prefix+'collection/bootstrap.mjs');
  assert.equal(JSON.parse(read(prefix+'version.json')).v,version);

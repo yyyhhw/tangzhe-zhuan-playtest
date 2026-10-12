@@ -17,8 +17,8 @@ const deepFreeze = o => { if (o && typeof o === 'object') { Object.freeze(o); fo
 deepFreeze(frozenDefaultDecks);
 // These two existing laboratory generated cards are never legal deck entries.
 export const SYSTEM_CARDS = deepFreeze({
-  spareMinute: {id:'spareMinute',name:'加班书签 · 测试',type:'spell',cost:0,text:'本回合增加 1 点可用法力，不超过实验上限。',effect:{kind:'mana',n:1,target:'none'},art:'placeholder'},
-  paperHelper: {id:'paperHelper',name:'折纸助手 · 测试衍生',type:'minion',cost:1,attack:1,health:1,text:'英雄技能的测试衍生随从。',art:'placeholder'}
+  spareMinute: {id:'spareMinute',name:'加班书签',type:'spell',cost:0,text:'本回合增加 1 点可用法力，不超过实验上限。',effect:{kind:'mana',n:1,target:'none'},art:'placeholder'},
+  paperHelper: {id:'paperHelper',name:'折纸助手',type:'minion',cost:1,attack:1,health:1,text:'珍珠姐用英雄技能折出来的小帮手。',art:'placeholder'}
 });
 export const CARDS = deepFreeze({...RUNTIME_CARDS,...SYSTEM_CARDS});
 export const HEROES = deepFreeze({warrior:'77 战士',mage:'阿宅 法师',paladin:'珍珠姐 圣骑士',warlock:'火箭 术士'});

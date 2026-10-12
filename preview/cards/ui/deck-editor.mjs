@@ -1,4 +1,4 @@
-import {defaultDeck} from '../cardcore.mjs?v=card-shield-10';
+import {defaultDeck} from '../cardcore.mjs?v=copy44-card-names-20261012-r1';
 import {createSavedDeckStore,emptyLibrary,deckStorageKey} from './saved-decks.mjs?v=saved-decks-1';
 import {CLASS_LABELS,escapeHTML as esc,copiesFor,inspectDraft} from './collection-state.mjs?v=saved-decks-1';
 

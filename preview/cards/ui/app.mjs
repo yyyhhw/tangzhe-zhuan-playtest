@@ -1,13 +1,13 @@
 import {createMatchStorageScope} from './match-storage-scope.mjs?v=collection-trial-1b';
-import {mountCollection} from './collection.mjs?v=saved-decks-1';
+import {mountCollection} from './collection.mjs?v=copy44-card-names-20261012-r1';
 import {
   createGame, legalActions, apply, serialize, deserialize,
   chooseAIAction, getReplay, hashState, CARDS, CARD_METADATA, nextRandom, actionsThisTurn, spellDamageBonus, effectiveSpellDamage,
-} from '../cardcore.mjs?v=card-shield-10';
-import * as cardcore from '../cardcore.mjs?v=card-shield-10';
+} from '../cardcore.mjs?v=copy44-card-names-20261012-r1';
+import * as cardcore from '../cardcore.mjs?v=copy44-card-names-20261012-r1';
 import {createCardSave} from './save.mjs?v=card-shield-10';
 
-import {artForCard, presentationClass} from './presentation.mjs?v=card-shield-10';
+import {artForCard, presentationClass} from './presentation.mjs?v=copy44-card-names-20261012-r1';
 import {createSpellFeedback, planSpellFeedback, keywordLabels, clonePublicCharacter, addShieldBreak} from './spell-feedback.mjs?v=card-shield-10a';
 import {createActionInputGuard} from './action-input-guard.mjs?v=card-s1';
 import {attachBattleGestures} from './gesture-input.mjs?v=card-feedback-6a';
@@ -203,7 +203,7 @@ function selectedInfo() {
   if (!selected) return null;
   if (selected.type === 'power') {
     const p = game.config.powers;
-    const descriptions = {warrior:`获得 ${p.warriorArmor} 点护甲。`,mage:`向一个角色施加 ${p.mageDamage} 点伤害，可选择己方角色。`,paladin:'召唤一个折纸助手测试随从。',warlock:`抽 ${p.warlockDraw} 张牌，并对自己施加 ${p.warlockDamage} 点伤害。`};
+    const descriptions = {warrior:`获得 ${p.warriorArmor} 点护甲。`,mage:`向一个角色施加 ${p.mageDamage} 点伤害，可选择己方角色。`,paladin:'召唤一个折纸助手。',warlock:`抽 ${p.warlockDraw} 张牌，并对自己施加 ${p.warlockDamage} 点伤害。`};
     return {name:`${friendlyHero().name} · 英雄技能`,text:descriptions[game.players[0].classId],cost:p.cost};
   }
   const player = game.players[0];

@@ -1,4 +1,4 @@
-import {legalActions,apply,CARDS,effectiveSpellDamage} from '../cardcore.mjs?v=card-shield-10';
+import {legalActions,apply,CARDS,effectiveSpellDamage} from '../cardcore.mjs?v=copy44-card-names-20261012-r1';
 // Read-only view of legal choices. Area effects are resolved by the existing
 // engine on its copied state, not inferred from the spell's allegiance text.
 export function targetPreview(game,selection,enabled=true){
