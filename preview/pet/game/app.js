@@ -1347,7 +1347,7 @@ function renderShop() {
     h += `<div class="card super"><div class="ava sq">${itemIcon(sp.id)}</div><div class="info"><div class="name">${sp.name}<span class="tag match">超级装饰</span></div><div class="desc">${sp.desc}</div></div></div>`; }
   h += `<div class="row-head"><div class="sec-title">店铺</div><div class="buyamt">${[1, 10, 'max'].map(a => `<button data-act="amt" data-arg="${a}" class="${buyAmt === a ? 'on' : ''}">${a === 'max' ? 'MAX' : 'x' + a}</button>`).join('')}</div></div>`;
   h += `<div class="card"><div class="ava sq">${SHOP_ICON[i]}</div><div class="info"><div class="name">${S.short}<span class="lv">Lv.${s.lv}</span></div>
-    <div class="desc">当前基础产量 <b>${fmt(E.shopBase(i, s.lv))}</b>/秒${nm ? ` · 下一里程碑 Lv${nm} → 收益 ×${E.milestoneMult(nm)}` : ' · 里程碑全拿下 ×8'}</div>
+    <div class="desc">基础原料 <b>${fmt(E.shopBase(i, s.lv))}</b>/秒${nm ? ` · 下一里程碑 Lv${nm} → 收益 ×${E.milestoneMult(nm)}` : ' · 里程碑全拿下 ×8'}</div>
     ${nm ? `<div class="mbar"><i style="width:${((s.lv - prevM) / (nm - prevM) * 100).toFixed(0)}%"></i></div>` : ''}
     <div class="gain ${s.emp > 0 || shopTop ? '' : 'warn'}">${shopTop ? `已满级（店铺最高 Lv${E.shopMaxLv(i)}）` : s.emp > 0 ? '升级后 +' + fmt(upGain) + '/秒' : '还没员工：升级后自动收入仍是 +0/秒（先雇佣）· 手点会变强'}</div>
     <details class="details-fold"><summary>倍率怎么算</summary>店铺原料 × 员工 ×${E.empMult(s.emp).toFixed(2)} × CEO ×${info.mult.toFixed(2)}${E.hasSuper(state, i) ? ' × 超级装饰 ×' + CFG.SUPER_RATE : ''} = 每秒 <b>${fmt(sr)}</b></details></div>
