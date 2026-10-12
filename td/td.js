@@ -181,7 +181,7 @@ function renderMenu() {
   $('#heroDesc').innerHTML = `${cmdDetail(cmdSel)}<br>统帅不上地图；8种防御塔。开局10秒、波间5秒，倍速同时加快战斗与倒计时。持有建设点上限400，本关累计收入预算${NORMAL_BUDGET(lvSel,cmdSel)}（含初始；退款不恢复额度）。普通无总塔数限制；无尽上限为地图总格数÷3向下取整。CEO每种1座，共4种。`;
   $('#cmdPick').innerHTML = T.CEO_IDS.map(id => `<button type="button" data-cmd="${id}" class="${id === cmdSel ? 'on' : ''}"><img src="../art/face_${id}.webp" alt="">${T.HEROES[id].name}</button>`).join('');
   $('#lvTxt').textContent=`第 ${lvSel} 关 · ${mapLabel(map)}`;
-  $('#lvInfo').textContent=`本关 ${stage.waves} 波${stage.ultimate?' · 末波终极Boss（阶段数值实验版）':''} · 重玩不重复解锁`;
+  $('#lvInfo').textContent=`本关 ${stage.waves} 波${stage.ultimate?' · 最后一波是酸腐大王':''} · 重玩不重复解锁`;
   $('#lvProg').textContent=`已通关 ${progress().highestCleared}/50 · 本关${record.cleared?'已通关':`最佳 ${record.best}/${stage.waves} 波`}`;
   $('#lvPrev').disabled=lvSel<=1;$('#lvNext').disabled=lvSel>=progress().unlocked;
   $('#stageGrid').innerHTML=Campaign.STAGES.map(s=>`<button type="button" data-stage="${s.n}" aria-label="第${s.n}关，${s.n>progress().unlocked?'未解锁':progress().stages[s.n]?.cleared?'已通关':'可挑战'}" aria-pressed="${s.n===lvSel}" class="${s.n===lvSel?'on':''} ${progress().stages[s.n]?.cleared?'cleared':''}" ${s.n>progress().unlocked?'disabled':''}>${s.n}${s.n===50?' ♛':''}</button>`).join('');
@@ -281,7 +281,7 @@ function hit(e, dmg, o, source) {
   if (!e || e.hp <= 0 || !TIDS.includes(source) || !Number.isFinite(dmg) || dmg < 0) return false;
   dmg *= burstMultiplier();
   G.damageByTower[source] = (G.damageByTower[source] || 0) + dmg;
-  e.hp -= dmg; if(e.ultimate&&e.phase===1&&e.hp>0&&e.hp/e.max<=e.phaseAt){e.phase=2;e.sp*=e.phaseSpeed;toast('终极Boss进入第二阶段（实验数值）');} if (!o || !o.dot) { SFX.hit(); e.flash = 0.12; }
+  e.hp -= dmg; if(e.ultimate&&e.phase===1&&e.hp>0&&e.hp/e.max<=e.phaseAt){e.phase=2;e.sp*=e.phaseSpeed;toast('酸腐大王急了，跑得更快了！');} if (!o || !o.dot) { SFX.hit(); e.flash = 0.12; }
   if (o && o.slow) { e.slowT = Math.max(e.slowT, o.slowT || 1); e.slowK = Math.min(e.slowK === 1 ? 1 : e.slowK, 1 - o.slow); }
   if (o && o.stun && e.type !== 'boss' && e.type !== 'mini') e.stunT = Math.max(e.stunT, o.stun);
   if (o && o.burn) { e.burnT = Math.max(e.burnT, o.burnT || 3); if (o.burn >= e.burnD) e.burnSource = source; e.burnD = Math.max(e.burnD, o.burn); }
@@ -394,7 +394,7 @@ function renderResult() {
   $('#endlessBtn').classList.toggle('hidden',!Progress.endUnlocked(progress()));$('#endlessBtn').disabled=!G.saveOk||G.wait||!!G.pendingEndless;
   $('#resTitle').textContent = G.wait ? '正在记下这一局' : !saved ? '这一局还没记上' : G.win ? '这一轮守住了，辛苦啦' : '这次没守住';
   $('#resStats').textContent = `第${G.n}关 · ${mapLabel(Campaign.getMap(G.mapId))} · 守了 ${G.completedWave}/${G.W} 波 · 击倒 ${G.kills} · 剩余生命 ${G.lives}`;
-  $('#resNote').textContent = G.wait ? '记好之前，暂时不能开始下一局或回升级。' : !saved ? `结果还没保存成功，请重试。保存好之前，不能开始下一局或回升级。${G.why ? '（' + G.why + '）' : ''}` : G.win ? `第${G.n}关 ${G.W} 波打完了。门口的奶茶还在，歇一下再出发。${G.n===50?'终极Boss已击败，无尽已解锁。':''}` : `本关最佳 ${progress().stages[G.n]?.best||0}/${G.W} 波 · 没关系，换个摆法再来一次。`;
+  $('#resNote').textContent = G.wait ? '记好之前，暂时不能开始下一局或回升级。' : !saved ? `结果还没保存成功，请重试。保存好之前，不能开始下一局或回升级。${G.why ? '（' + G.why + '）' : ''}` : G.win ? `第${G.n}关 ${G.W} 波打完了。门口的奶茶还在，歇一下再出发。${G.n===50?'酸腐大王倒下了，无尽已解锁。':''}` : `本关最佳 ${progress().stages[G.n]?.best||0}/${G.W} 波 · 没关系，换个摆法再来一次。`;
   if(G.endless){$('#resStats').textContent=`无尽守住 ${G.completedWave} 波 · 击倒 ${G.resMsg?.kills||0}`;$('#resNote').textContent=G.wait?'保存无尽纪录中':saved?`无尽最高 ${progress().endless?.best||0} 波；不发经营金币`:G.why||'无尽纪录未保存';}
   else if(G.pendingEndless||G.why)$('#resNote').textContent=G.pendingEndless?'无尽登记中…':G.why;
   const board=$('#endlessBoard');board.classList.toggle('hidden',!G.endless);
@@ -500,6 +500,33 @@ function positionBuildActions() {
 
 const px = x => OX + x * S, py = y => OY + y * S;
 // Small vector emblems keep the paper/comic palette while giving each attack family a silhouette.
+// 细菌外形（只是画法，不影响数值）：黏黏菌6根菌毛、冲冲菌身后两道速度线、头目头顶冒酸泡。
+const germLast = new WeakMap();
+function drawGermBack(e, x, y, r) {
+  cx.save(); cx.strokeStyle = INK; cx.lineCap = 'round';
+  if (e.type === 'walk') {
+    cx.lineWidth = 2;
+    for (let i = 0; i < 6; i++) { const a = i * Math.PI / 3 + Math.PI / 6; cx.beginPath(); cx.moveTo(x + Math.cos(a) * r * 0.9, y + Math.sin(a) * r * 0.9); cx.lineTo(x + Math.cos(a) * r * 1.35, y + Math.sin(a) * r * 1.35); cx.stroke(); }
+  } else if (e.type === 'fast') {
+    const last = germLast.get(e) || { x: e.x, y: e.y, dx: 1, dy: 0 };
+    let dx = e.x - last.x, dy = e.y - last.y; const len = Math.hypot(dx, dy);
+    if (len > 1e-4) { dx /= len; dy /= len; } else { dx = last.dx; dy = last.dy; }
+    germLast.set(e, { x: e.x, y: e.y, dx, dy });
+    const nx = -dy, ny = dx; cx.lineWidth = 2;
+    for (const k of [-0.45, 0.45]) { const sx = x - dx * r * 1.2 + nx * r * k, sy = y - dy * r * 1.2 + ny * r * k; cx.beginPath(); cx.moveTo(sx, sy); cx.lineTo(sx - dx * r * 1.1, sy - dy * r * 1.1); cx.stroke(); }
+  }
+  cx.restore();
+}
+function drawAcidBubbles(x, y, u) {
+  const t = G ? G.t : 0;
+  cx.save(); cx.strokeStyle = INK; cx.lineWidth = 1.5; cx.fillStyle = '#c6e94b';
+  for (const [ox, oy, k, ph] of [[-1.3, 0.2, 0.9, 0], [0.2, -0.9, 1.2, 1.7], [1.4, 0.4, 0.7, 3.1]]) {
+    const bob = Math.sin(t * 3 + ph) * u * 0.35;
+    cx.beginPath(); cx.arc(x + ox * u, y + oy * u + bob, u * k, 0, 7); cx.fill(); cx.stroke();
+  }
+  cx.restore();
+}
+
 function drawTowerEmblem(id,x,y,r) {
   cx.save(); cx.translate(x,y); cx.lineWidth=1.8; cx.strokeStyle=INK; cx.fillStyle='#fffaf0';
   if (id==='tea' || id==='tpearl') { cx.beginPath(); cx.moveTo(-r,-r*.65);cx.lineTo(-r*.7,r);cx.lineTo(r*.7,r);cx.lineTo(r,-r*.65);cx.closePath();cx.fill();cx.stroke();cx.beginPath();cx.moveTo(0,-r*.5);cx.lineTo(r*.4,-r*1.4);cx.stroke(); for(let i=0;i<3;i++){cx.beginPath();cx.arc((i-1)*r*.4,r*.5,r*.15,0,7);cx.fillStyle='#6d4c41';cx.fill();} }
@@ -548,12 +575,14 @@ function draw() {
   }
   for (const e of G.es) {
     const b = EN[e.type], x = px(e.x), y = py(e.y), r = e.r * S;
-    cx.fillStyle = e.flash > 0 ? '#fff' : e.stunT > 0 ? '#b3e5fc' : b.col; cx.strokeStyle = INK; cx.lineWidth = 2; cx.beginPath(); cx.arc(x, y, r, 0, 7); cx.fill(); cx.stroke(); cx.lineWidth = 1;
+    drawGermBack(e, x, y, r);
+    cx.fillStyle = e.flash > 0 ? '#fff' : e.stunT > 0 ? '#b3e5fc' : b.col; cx.strokeStyle = INK; cx.lineWidth = e.type === 'tank' ? 4 : 2; cx.beginPath(); cx.arc(x, y, r, 0, 7); cx.fill(); cx.stroke(); cx.lineWidth = 1;
+    if (e.type === 'tank') { cx.strokeStyle = 'rgba(20,20,20,.45)'; cx.lineWidth = 1.5; cx.beginPath(); cx.arc(x, y, r * 0.72, 0, 7); cx.stroke(); cx.lineWidth = 1; }
     cx.fillStyle = INK; cx.fillRect(x - r * 0.45, y - r * 0.2, r * 0.25, r * 0.25); cx.fillRect(x + r * 0.2, y - r * 0.2, r * 0.25, r * 0.25);
     if (e.burnT > 0) { cx.fillStyle = '#ff9800'; cx.beginPath(); cx.arc(x, y - r, r * 0.3, 0, 7); cx.fill(); }
     cx.fillStyle = '#fff'; cx.fillRect(x - r, y - r - 7, r * 2, 4); cx.fillStyle = RED; cx.fillRect(x - r, y - r - 7, r * 2 * Math.max(0, e.hp / e.max), 4);
-    if(e.ultimate){cx.fillStyle=RED;cx.font=`900 ${Math.max(9,Math.round(S*.25))}px sans-serif`;cx.fillText(`终极·${e.phase}阶段`,x,y+r+10);}
-    if (e.type === 'boss' || e.type === 'mini') { cx.fillStyle = YEL; cx.font = `900 ${Math.round(S * 0.4)}px sans-serif`; cx.fillText('♛', x, y - r - 16); }
+    if(e.ultimate){cx.fillStyle=RED;cx.font=`900 ${Math.max(9,Math.round(S*.25))}px sans-serif`;cx.fillText(`酸腐大王·第${e.phase}阶段`,x,y+r+10);}
+    if (e.type === 'boss' || e.type === 'mini') drawAcidBubbles(x, y - r - 15, S * (e.type === 'boss' ? 0.13 : 0.1));
   }
   for (const f of G.fx) {
     const a = Math.max(0, f.t / (f.t0 || 0.3));
