@@ -51,7 +51,9 @@
  // 没有寻路：直线穿过任何实体家具（非墙面、非地毯层）就算被挡 → 淡入，不穿模。
  function needsFade(dist,reducedMotion,opts){
   const o=opts||{},max=o.pace?PACE.walk[1]:MOVE_MAX_SEC;
-  return !!reducedMotion||!!o.blocked||dist/WALK_SPEED>max;
+  // r3：自主踱步自带本段时长 sec（2–5 秒，已按距离调速），就按 sec 判；不再按 2.8 格/秒换算
+  const sec=o.sec!=null?o.sec:dist/WALK_SPEED;
+  return !!reducedMotion||!!o.blocked||sec>max;
  }
  // 直线 a→b（格子中心坐标）是否穿过某个家具矩形内部 {x,y,w,h}；贴边不算（Liang–Barsky，矩形内缩 eps）
  function segmentBlocked(a,b,rects,eps){
@@ -79,7 +81,9 @@
   let top=want>=maxD?far.filter(c=>c.d>=maxD-.01):far.filter(c=>Math.abs(c.d-want)<=.75);
   if(!top.length)top=[far.reduce((p,q)=>Math.abs(q.d-want)<Math.abs(p.d-want)?q:p)];
   const c=top[Math.floor(rng()*top.length)];
-  return {x:c.x,y:c.y,want,dist:c.d};
+  // r3：本段实际走 sec 秒（就是抽到的 2–5 秒），速度按真实距离反推；手动走路、去家具的走路不用这个速度
+  const sec=want/WALK_SPEED;
+  return {x:c.x,y:c.y,want,dist:c.d,sec,speed:c.d/sec};
  }
  // 规则 5：停下时 50%（空房 25%）冒一句；同一句 10 分钟内不重复；冷却后没有可用句就不说
  function chooseLine(pool,said,{now,rng,emptyRoom}){

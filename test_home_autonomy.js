@@ -81,6 +81,24 @@ ok('r2 踱步：用 PACE.walk 2–5 秒定距离，永不原地；踱步上限�
   assert.strictEqual(HA.paceTarget([{ x:3, y:3 }], { x:3, y:3 }, Math.random), null);
   assert.strictEqual(HA.paceTarget([], { x:3, y:3 }, Math.random), null);
 });
+ok('r3 踱步实际时长 2–5 秒：按本段时长反推速度，逐帧模拟走完所用时间（含熊大三个反例）', () => {
+  const grid = (cols, rows, low) => { const a = []; for (let y = low ? Math.floor(rows / 2) : 0; y < rows; y++) for (let x = 0; x < cols; x++) a.push({ x, y }); return a; };
+  // 照 app.js homeAdvanceActor 的推进：step=min(speed*dt,d)，d<.05 视为到达；dt=1/60
+  const walk = (from, t) => { let x = from.x, y = from.y, time = 0; const dt = 1 / 60;
+    for (;;) { const d = Math.hypot(t.x - x, t.y - y); if (d < .05) return time; const st = Math.min(t.speed * dt, d); x += (t.x - x) / d * st; y += (t.y - y) / d * st; time += dt; } };
+  const cases = [['小屋 6×4 (3,3) rng=.5', 6, 4, { x:3, y:3 }, () => .5], ['公寓 8×5', 8, 5, { x:4, y:4 }, () => .5], ['别墅 10×6', 10, 6, { x:5, y:5 }, () => .5]];
+  for (const [name, c, r, from, rng] of cases) {
+    const t = HA.paceTarget(grid(c, r, true), from, rng), sec = walk(from, t);
+    assert(t.dist >= 1 && sec >= 2 - 1 / 60 && sec <= 5 + 1 / 60, name + ' ' + JSON.stringify({ ...t, sec }));
+  }
+  for (const [c, r] of [[6, 4], [8, 5], [10, 6]]) { const cells = grid(c, r, true);
+    for (let i = 0; i < 3000; i++) { const from = cells[i % cells.length], t = HA.paceTarget(cells, from, Math.random);
+      assert(t.sec >= 2 && t.sec <= 5, JSON.stringify(t)); assert(Math.abs(t.speed * t.sec - t.dist) < 1e-9);
+      if (i % 50 === 0) { const s = walk(from, t); assert(s >= 2 - 1 / 60 && s <= 5 + 1 / 60, c + 'x' + r + ' ' + s); } } }
+  // 时长自带 → 只看被挡 / 减少动态效果，不按距离判
+  assert.strictEqual(HA.needsFade(1, false, { pace:true, sec:5 }), false); assert.strictEqual(HA.needsFade(1, false, { pace:true, sec:5, blocked:true }), true);
+  assert.strictEqual(HA.needsFade(1, true, { pace:true, sec:3 }), true);
+});
 ok('台词：50% 概率、10 分钟内同一句不重复、没有可用句就静默', () => {
   const said = {}, pool = ['甲', '乙'];
   assert.strictEqual(HA.chooseLine(pool, said, { now:0, rng:() => .6 }), null);   // 没抽中 50%
