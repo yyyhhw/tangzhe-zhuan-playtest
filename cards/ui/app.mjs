@@ -415,15 +415,15 @@ function commitAction(action, fromAI=false, inputEvent=null) {
   return true;
 }
 function scheduleAI() {
-  if (!store.writable || matchScope.selected === null || aiTimer !== null || paused || saveBusy || saveFailure || document.visibilityState === 'hidden' || game.phase !== 'main' || game.active !== 1) return;
+  if (closing || closeSent || !store.writable || matchScope.selected === null || aiTimer !== null || paused || saveBusy || saveFailure || document.visibilityState === 'hidden' || game.phase !== 'main' || game.active !== 1) return;
   const generation = aiGeneration;
-  const revision = game.revision;
+  const revision = game.revision, scheduledGame = game, scheduledScope = matchScope.selected;
   const timer = setTimeout(() => {
     // A cancelled callback may already be queued. It must never clear a newer
     // timer's handle or issue a command after pause/resume or a save cycle.
     if (generation !== aiGeneration || aiTimer !== timer) return;
     aiTimer = null;
-    if (!store.writable || matchScope.selected === null || generation !== aiGeneration || paused || saveBusy || saveFailure || document.visibilityState === 'hidden' || game.revision !== revision || game.phase !== 'main' || game.active !== 1) return;
+    if (closing || closeSent || game !== scheduledGame || matchScope.selected !== scheduledScope || !store.writable || matchScope.selected === null || generation !== aiGeneration || paused || saveBusy || saveFailure || document.visibilityState === 'hidden' || game.revision !== revision || game.phase !== 'main' || game.active !== 1) return;
     let command;
     try {
       if (actionsThisTurn(game,1) >= 30) {
@@ -819,12 +819,14 @@ function failText(r) {
   return '保存失败，进度还在本页' + (last ? `；存档仍是第 ${last.revision} 步` : '；还没有成功的存档');
 }
 async function persist() {
-  if (!store.writable) {
+  if (matchScope.selected === null || !store.writable) {
     saveNote = store.readOnly ? '只读：本页不会保存，请重新读取存档或刷新页面' : '当前浏览器无法安全保存，本局不会存档';
     render(); scheduleAI(); flushClose(); return false;
   }
   saveBusy = true; cancelAITimer(); render();
-  const r = await store.save(game);
+  const savingGame = game, savingRevision = game.revision, savingScope = matchScope.selected;
+  const r = await store.save(savingGame);
+  if (game !== savingGame || game.revision !== savingRevision || matchScope.selected !== savingScope || closeSent) return false;
   saveBusy = false; lastSave = r;
   if (r.ok) {
     if (r.tmpLeft) tmpLeftCount += 1;
@@ -849,31 +851,41 @@ function showSaveFail(exiting = closing) {
 }
 $('save-dialog').addEventListener('cancel',(e) => e.preventDefault());
 $('save-retry').addEventListener('click',async () => {
-  if (saveBusy) return;
-  const failedPauseReason = pauseReason;
+  if (saveBusy || closeSent || !saveFailure || matchScope.selected === null || !store.writable) return;
+  const failedSaveHold = pauseReasons.get('save');
+  if (failedSaveHold === undefined) return;
+  const retryGame = game, retryRevision = game.revision, retryScope = matchScope.selected;
+  const retrySystemHold = pauseReasons.get('system');
   saveFailure = null;
   $('save-dialog').close();
   const saved = await persist();
   // Release only this verified save error; retain independent safety and background holds.
-  if (saved && pauseReasons.get('save') === failedPauseReason) {
+  if (saved && failedSaveHold !== undefined && game === retryGame && game.revision === retryRevision && matchScope.selected === retryScope && retryScope !== null && store.writable && !saveBusy && !saveFailure && !closeSent && pauseReasons.get('save') === failedSaveHold) {
     pauseReasons.delete('save');
-    if (pauseReasons.get('system') === '正在保存收藏牌组新对局') pauseReasons.delete('system');
+    if (retrySystemHold === '正在保存收藏牌组新对局' && pauseReasons.get('system') === retrySystemHold) pauseReasons.delete('system');
     notice = '';
-    render();
+    render(); scheduleAI();
   } else if (!saved && !saveFailure) flushClose();
 });
+function releaseRecoveredOperationHold(ownedHold) {
+  if (['正在保存收藏牌组新对局','正在返回书店'].includes(ownedHold) && pauseReasons.get('system') === ownedHold) pauseReasons.delete('system');
+}
 $('save-restore').addEventListener('click',() => {
+  if (saveBusy || closeSent) return;
   if (!restoreArmed && saveFailure?.kind !== 'conflict') { restoreArmed = true; $('save-restore').textContent = '确定？本页没存上的步数会丢失'; return; }
+  const recoveryHold = pauseReasons.get('system');
   $('save-dialog').close();
-  if (closing) { closing = false; parentPort?.postMessage({card:'stay'}); }
-  if (['rollback-failed','unreadable','reconfirm'].includes(saveFailure?.kind)) restoreFromBackup(); else boot();
+  if (closing) { closing = false; if (recoveryHold === '正在返回书店') releaseRecoveredOperationHold(recoveryHold); parentPort?.postMessage({card:'stay'}); }
+  if (['rollback-failed','unreadable','reconfirm'].includes(saveFailure?.kind)) restoreFromBackup(recoveryHold); else boot(recoveryHold);
 });
-async function restoreFromBackup() {
+async function restoreFromBackup(recoveryHold) {
   saveBusy = true; cancelAITimer();
+  const recoveryGame = game, recoveryRevision = game.revision, recoveryScope = matchScope.selected;
   const r = await store.restoreBackup();
+  if (game !== recoveryGame || game.revision !== recoveryRevision || matchScope.selected !== recoveryScope || closeSent) return;
   saveBusy = false;
   if (!r.ok) { saveFailure = r; pause(failText(r),'save'); showSaveFail(); return; }
-  saveFailure = null; actionInputGuard.reset();
+  saveFailure = null; releaseRecoveredOperationHold(recoveryHold); actionInputGuard.reset();
   game = r.game; uiLog = []; recentPlayedCards = []; selected = null; notice = ''; saveNote = '';
   pauseReasons.delete('save'); pause('请选择是否恢复备份对局','restore');
   showResume(`已从备份恢复：第 ${r.turn} 回合 / 第 ${r.revision} 步。`, {resume:true});
@@ -901,15 +913,17 @@ $('resume-abandon').addEventListener('click',() => {
   startFresh();
 });
 $('resume-new').addEventListener('click',startFresh);
-async function boot() {
+async function boot(recoveryHold) {
   clearCombatFX(); resultRecoveryNote = ''; cancelAITimer(); saveFailure = null; closing = false; closeSent = false; pauseReasons.set('loading','正在读取存档'); render();
   // A missing or mismatched QA handshake stays paused and never falls back to live keys.
   await matchScope.ready;
   if (closeSent) return; // An exit queued before the handshake must not start a new save.
+  const loadingGame = game, loadingRevision = game.revision, loadingScope = matchScope.selected;
   const r = await store.load();
+  if (game !== loadingGame || game.revision !== loadingRevision || matchScope.selected !== loadingScope || closeSent) return;
   pauseReasons.delete('loading');
   if (closeSent) return; // Async load/quarantine may complete after an exit.
-  if ((r.status === 'ok' || r.status === 'recovered') && store.writable) pauseReasons.delete('save');
+  if ((r.status === 'ok' || r.status === 'recovered') && store.writable) { pauseReasons.delete('save'); releaseRecoveredOperationHold(recoveryHold); }
   const q = r.quarantine === 'saved' ? '原数据已另存。' : r.quarantine === 'occupied' ? '原数据未另存（隔离区已占用）。' : r.quarantine ? '原数据未能备份。' : '';
   const noWrite = r.writable === false ? ' 当前浏览器无法写存档。' : '';
   if (r.status === 'empty') { startFresh(); return; }

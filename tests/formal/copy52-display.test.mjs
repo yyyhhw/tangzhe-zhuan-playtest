@@ -8,7 +8,7 @@ const root=path.resolve(new URL('../..',import.meta.url).pathname);
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const require=createRequire(import.meta.url);
 const apps=['app.js','preview/app.js','pet/game/app.js','preview/pet/game/app.js'];
-const token='cards-no-pause-over-c9a6cda-20261012-r1';
+const token='cards64-owned-retry-over-9ad9000-20261012-r1';
 const preservedToken='home35-td46-home22-copy52-20261012-r1';
 const cases=[
  ['Asia/Tokyo','2026-10-05T06:00:00Z','06:00'],

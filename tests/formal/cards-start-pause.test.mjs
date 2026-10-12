@@ -76,13 +76,8 @@ assert(src.includes("e.origin !== location.origin || e.source !== window.parent"
  for(const event of [{origin:'https://other.invalid',source:trustedParent},{origin:'https://qa.invalid',source:{}}])handler({...event,data:{card:'port'},ports:[port]});
  assert.equal(authorized,0);handler({origin:'https://qa.invalid',source:trustedParent,data:{card:'port'},ports:[port]});assert.equal(authorized,1);assert.equal(context.parentPort,port);
 }
-// Verified retry releases only its own save error, never a concurrent unrelated safety error.
-{let handler;const h=harness();h.closeDialogs();h.c.pauseReasons.set('save','failed');h.c.pauseReason='failed';h.c.saveFailure={kind:'before-commit'};
- h.c.$=()=>({close(){},addEventListener(type,fn){handler=fn;}});h.c.persist=async()=>true;
- vm.runInContext(extract("$('save-retry').addEventListener", "\n$('save-restore').addEventListener"),h.c);
- h.c.pauseReasons.set('error','rule error');await handler();assert(!h.c.pauseReasons.has('save'));assert.equal(h.c.pauseReasons.get('error'),'rule error');assert(h.c.paused);
-}
-const token='cards-no-pause-over-c9a6cda-20261012-r1';
+// Retry and recovery scheduling use the real adapter chain in cards-save-retry.test.mjs.
+const token='cards64-owned-retry-over-9ad9000-20261012-r1';
 assert.equal(JSON.parse(read('version.json')).v,'formal-'+token);assert(read('index.html').includes('collection/bootstrap.mjs?v='+token));
 assert(read('collection/bootstrap.mjs').includes('../app.js?v='+token));assert(parent.includes("CARDS_V='"+token+"'"));assert(read('cards/ui/index.html').includes('./app.mjs?v='+token));
 console.log('PASS Node/VM: first/reopen, verified/pending/failed save, concurrent safety holds, saved-match Continue, foreground locked audio, handshake negative controls and root-to-card module cache chain; browser acceptance unrun.');
