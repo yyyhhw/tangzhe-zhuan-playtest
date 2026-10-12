@@ -1294,7 +1294,7 @@ const COLLECTIBLE_PREVIEW = Object.freeze([{"id": "c_charcoal_vest", "name": "�
 const COLLECTIBLE_ART = Object.freeze(Object.fromEntries(COLLECTIBLE_PREVIEW.map(x => [x.id, x])));
 function collectiblePreviewHTML() {
   const TL = { clothes:'衣服', hat:'帽子', decor:'装饰' };
-  return `<div class="sec-title">新品图鉴预览（只展示，暂未放进盲盒）</div><div class="item-grid collectible-preview">${COLLECTIBLE_PREVIEW.map(x => `<div class="item preview-only" data-preview-item="${x.id}"><span class="t">${TL[x.type]}${x.hidden ? ' · 隐藏' : ''}</span><span class="item-art"><img data-item-art="${x.id}" src="${x.src}?v=collectibles-1" alt="${x.alt}" width="512" height="512" loading="lazy"><span class="item-art-status" hidden>图示暂不可用</span></span>${x.name}<small class="preview-note">${x.shop}${x.hidden ? ' · ' + x.unlock : ''}</small></div>`).join('')}</div><div class="note">外观收藏，不影响收益、概率和战斗。本批 8 件为图鉴预览，尚未加入盲盒、不能抽到。</div>`;
+  return `<div class="sec-title">新品图鉴预览（只展示，暂未放进盲盒）</div><div class="item-grid collectible-preview">${COLLECTIBLE_PREVIEW.map(x => `<div class="item preview-only" data-preview-item="${x.id}"><span class="t">${TL[x.type]}${x.hidden ? ' · 隐藏' : ''}</span><span class="item-art"><img data-item-art="${x.id}" src="${x.src}?v=collectibles-1" alt="${x.alt}" width="512" height="512" loading="lazy"><span class="item-art-status" hidden>图示暂不可用</span></span>${x.name}<small class="preview-note">${x.shop}${x.hidden ? ' · 暂未开放获取' : ''}</small></div>`).join('')}</div><div class="note">外观收藏，不影响收益、概率和战斗。本批 8 件为图鉴预览，尚未加入盲盒、不能抽到。</div>`;
 }
 function itemThumb(id) {
   if (thumbCache[id]) return thumbCache[id];
