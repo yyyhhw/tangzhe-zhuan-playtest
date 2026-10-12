@@ -2585,15 +2585,27 @@ function cardsMsg(d) {
   }
   if (d.card === 'close') return closeCards();
   if (d.card === 'ready') cardsSend({ card:'hello', muted: !!state.muted, collectionProtocol:1 });
-  if (d.card === 'stay') { clearTimeout(cardsCloseTimer); cardsCloseTimer = null; }   // 子页保存失败后玩家选了留下
+  if (d.card === 'stay') { clearTimeout(cardsCloseTimer); cardsCloseTimer = null; dismissForceClose(); }   // 子页保存失败后玩家选了留下
 }
 // 请卡牌页先存档再关；3 秒没回应就问是否强制关闭
 function requestCloseCards() {
   if (!cardsOpen) return; if (!cardsPort) return closeCards();
   cardsSend({ card:'requestClose' }); clearTimeout(cardsCloseTimer);
-  cardsCloseTimer = setTimeout(() => { cardsCloseTimer = null; if (cardsOpen && confirm('卡牌页未响应，强制关闭？')) closeCards(); }, 3000);
+  cardsCloseTimer = setTimeout(() => { cardsCloseTimer = null; if (cardsOpen) askForceCloseCards(); }, 3000);
 }
+// 体验-07：用游戏弹窗代替原生 confirm，压在卡牌层之上；主界面已有未处理的弹窗时不顶掉它，退回系统确认框
+function askForceCloseCards() {
+  if (modalOpen()) { if (confirm('卡牌页没有回应，要强制关闭吗？')) closeCards(); return; }
+  openModal(`<div class="mtitle">卡牌页没有回应</div>
+    <div class="mnote">可能还在保存。可以再等一会儿；现在强制关闭，最近一步可能来不及保存。</div>
+    <div class="mbtns two"><button class="buy ghost" id="mNo">再等等</button><button class="buy red" id="ccForce">强制关闭</button></div>`, false);
+  modal.classList.add('over-cards');
+  $('#mNo').addEventListener('click', () => { dismissForceClose(); requestCloseCards(); }, { once:true });
+  $('#ccForce').addEventListener('click', () => { dismissForceClose(); closeCards(); }, { once:true });
+}
+function dismissForceClose() { if (!$('#ccForce')) return; modal.classList.remove('over-cards'); closeModal(); }
 function closeCards() {
+  dismissForceClose();
   if (!cardsOpen) return;
   cardsOpen = false; cardsGeneration++; clearTimeout(cardsCloseTimer); cardsCloseTimer = null;
   if (cardsPort) { cardsPort.close(); cardsPort = null; }

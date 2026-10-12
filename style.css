@@ -183,6 +183,7 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 
 /* ---------- modal ---------- */
 .modal{position:fixed;inset:0;z-index:50;display:grid;place-items:center;background:rgba(20,20,20,.55);padding:16px}
+.modal.over-cards{z-index:95} /* 体验-07：卡牌页无响应时的确认弹窗要压在卡牌层（.zb-ov z-index:90）之上 */
 .modal .burst{position:absolute;inset:-50%;background:repeating-conic-gradient(rgba(255,210,63,.18) 0 8deg,transparent 8deg 16deg);animation:spin 30s linear infinite;pointer-events:none}
 @keyframes spin{to{transform:rotate(360deg)}}
 .mpanel{position:relative;width:min(92vw,400px);max-height:calc(100dvh - 40px - var(--sat) - var(--sab));overflow-y:auto;background:#fff;border:3px solid var(--ink);border-radius:12px;box-shadow:7px 7px 0 var(--ink);
