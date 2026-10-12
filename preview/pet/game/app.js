@@ -110,15 +110,16 @@ window.addEventListener('storage', e => {
 $('#lockResume').addEventListener('click', () => location.reload());
 
 /* ================= 数字/时间格式 ================= */
+// 金币显示：1万起用「万/亿/万亿」，最多一位小数、去末尾零、向下取整（不多显示）。与 cards/ui/collection-state.mjs formatCoins 同规则。
 function fmt(n) {
   if (!isFinite(n)) return '∞';
   const a = Math.abs(n);
   if (a < 100) return (Math.round(n * 10) / 10).toLocaleString('en-US');
-  if (a < 1e5) return Math.floor(n).toLocaleString('en-US');
-  if (a < 1e8) return (n / 1e4).toFixed(a < 1e6 ? 2 : 1) + '万';
-  if (a < 1e12) return (n / 1e8).toFixed(2) + '亿';
-  return (n / 1e12).toFixed(2) + '万亿';
+  if (a < 1e4) return Math.floor(n).toLocaleString('en-US');
+  const [u, label] = a < 1e8 ? [1e4, '万'] : a < 1e12 ? [1e8, '亿'] : [1e12, '万亿'];
+  return (n < 0 ? '-' : '') + Math.floor(a / (u / 10) + 1e-9) / 10 + label;
 }
+const MALL_PRICE_LOW = 3000, MALL_PRICE_HIGH = 15000; // 家具商店价格筛选分档
 function fmtDur(sec) {
   sec = Math.max(0, Math.floor(sec));
   const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60;
@@ -1768,7 +1769,7 @@ function confirmReset() {
 function showIntro() {
   openModal(`<div class="mbubble">欢迎来到《躺着也能赚》</div><div style="display:flex;justify-content:center;margin:6px 0"><div class="ava art bust">${bustImg('c77')}</div></div>
     <div class="mtitle">77：巴适得很，串串烤起走！</div>
-    <div class="mnote">① 点画面里的烧烤摊赚第一桶金：每一下都有<b>暴击</b>机会（暴击 ×5 / 超级 ×10 / 超超超级 ×20），1 秒内连点越点越容易暴击<br>② 攒 50 雇员工阿炭，之后<b>躺着也能赚</b><br>③ 开新店、升级店铺/员工/CEO，把 CEO 调去别的店试试跨行事件<br>离线也有收益（50%，最多 8 小时），每天还有一次免费双倍。</div>
+    <div class="mnote">① 点画面里的烧烤摊赚第一桶金：每一下都有<b>暴击</b>机会（暴击 ×5 / 超级 ×10 / 超超超级 ×20），1 秒内连点越点越容易暴击<br>② 攒 ${fmt(E.SHOPS[0].hire)} 雇员工阿炭，之后<b>躺着也能赚</b><br>③ 开新店、升级店铺/员工/CEO，把 CEO 调去别的店试试跨行事件<br>离线也有收益（${Math.round(CFG.OFFLINE_RATE * 100)}%，最多 ${CFG.OFFLINE_CAP / 3600} 小时），每天还有一次免费双倍。</div>
     <button class="buy big red" id="mOk" data-x="close">开摊！</button>`);
   $('#mOk').addEventListener('click', () => { audioUnlock(); closeModal(); sayLine('c', '巴适得很，串串烤起走！', 3); }, { once:true });
 }
@@ -1908,9 +1909,9 @@ function mallMatch(f) {
   const stt = E.furnStats(state, f.id);
   if (mallFilter.afford && !E.canAfford(state, f.price)) return false;
   if (mallFilter.owned && stt.owned <= 0) return false;
-  if (mallFilter.price === 'low' && f.price >= 3000) return false;
-  if (mallFilter.price === 'mid' && (f.price < 3000 || f.price >= 15000)) return false;
-  if (mallFilter.price === 'high' && f.price < 15000) return false;
+  if (mallFilter.price === 'low' && f.price >= MALL_PRICE_LOW) return false;
+  if (mallFilter.price === 'mid' && (f.price < MALL_PRICE_LOW || f.price >= MALL_PRICE_HIGH)) return false;
+  if (mallFilter.price === 'high' && f.price < MALL_PRICE_HIGH) return false;
   const area = f.w * f.h, long = Math.max(f.w, f.h);
   if (mallFilter.size === '1' && !(f.w === 1 && f.h === 1)) return false;
   if (mallFilter.size === '2' && long !== 2) return false;
@@ -1931,7 +1932,7 @@ function renderMall() {
   h += `<div class="mall-filters">
     <label class="mf"><input type="checkbox" data-act="mallAff" ${mallFilter.afford ? 'checked' : ''}>买得起</label>
     <label class="mf"><input type="checkbox" data-act="mallOwn" ${mallFilter.owned ? 'checked' : ''}>已拥有</label>
-    <select data-act="mallPrice"><option value="any"${mallFilter.price==='any'?' selected':''}>价格</option><option value="low"${mallFilter.price==='low'?' selected':''}>3千以下</option><option value="mid"${mallFilter.price==='mid'?' selected':''}>3千–1.5万</option><option value="high"${mallFilter.price==='high'?' selected':''}>1.5万+</option></select>
+    <select data-act="mallPrice"><option value="any"${mallFilter.price==='any'?' selected':''}>价格</option><option value="low"${mallFilter.price==='low'?' selected':''}>${fmt(MALL_PRICE_LOW)}以下</option><option value="mid"${mallFilter.price==='mid'?' selected':''}>${fmt(MALL_PRICE_LOW)}–${fmt(MALL_PRICE_HIGH)}</option><option value="high"${mallFilter.price==='high'?' selected':''}>${fmt(MALL_PRICE_HIGH)}+</option></select>
     <select data-act="mallSize"><option value="any"${mallFilter.size==='any'?' selected':''}>占地</option><option value="1"${mallFilter.size==='1'?' selected':''}>1×1</option><option value="2"${mallFilter.size==='2'?' selected':''}>含 2 格边</option><option value="3p"${mallFilter.size==='3p'?' selected':''}>3 格+</option></select>
   </div>`;
   h += `<div class="mall-count"><span class="mc-num">显示<b>${list.length}</b>/ ${E.FURNITURE.length} 件</span><span class="mall-spacer">后期还会加</span></div>`;

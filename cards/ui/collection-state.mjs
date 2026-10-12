@@ -3,11 +3,12 @@ export const RARITY_LABELS = Object.freeze({common:'普通',rare:'稀有',epic:'
 export const CLASS_LABELS = Object.freeze({neutral:'公共',warrior:'77 · 战士',mage:'阿宅 · 法师',paladin:'珍珠姐 · 圣骑士',warlock:'火箭 · 术士'});
 export const TYPE_LABELS = Object.freeze({minion:'随从',spell:'法术',weapon:'武器'});
 export const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+// 与经营页 app.js fmt 同规则：1万起用「万/亿/万亿」，最多一位小数、去末尾零、向下取整。
 export function formatCoins(value) {
   if (!Number.isSafeInteger(value) || value < 0) return '未连接';
-  if (value >= 100000000) return `${Number((value / 100000000).toFixed(2))}亿`;
-  if (value >= 10000) return `${Number((value / 10000).toFixed(2))}万`;
-  return value.toLocaleString('zh-CN');
+  if (value < 1e4) return value.toLocaleString('en-US');
+  const [u, label] = value < 1e8 ? [1e4, '万'] : value < 1e12 ? [1e8, '亿'] : [1e12, '万亿'];
+  return `${Math.floor(value / (u / 10) + 1e-9) / 10}${label}`;
 }
 export function copiesFor(snapshot,id) {
   const held = snapshot?.holdings?.[id];

@@ -1446,7 +1446,7 @@
   /* ================= 成就 / 下一步提示 ================= */
   function nextGoal(st) {
     const S = st.shops, c = st.coins;
-    if (S[0].emp <= 0) return { text:'点烧烤摊赚钱，攒 50 雇员工阿炭', cur:c, need:SHOPS[0].hire };
+    if (S[0].emp <= 0) return { text:'点烧烤摊赚钱，攒 ' + SHOPS[0].hire + ' 雇员工阿炭', cur:c, need:SHOPS[0].hire };
     if (S[0].lv < 5) return { text:'升级烧烤摊，赚得更快', cur:c, need:upgradeCost(0, S[0].lv) };
     if (!S[1].open) return { text:'攒钱开第 2 家：奶茶店（珍珠姐加入）', cur:c, need:SHOPS[1].open };
     if (S[1].emp <= 0) return { text:'给奶茶店雇员工小满', cur:c, need:SHOPS[1].hire };
