@@ -20,3 +20,18 @@ for(const scope of ['formal','preview'])test(scope+': actual no-query bootstrap 
  const h=await assembly({scope,projectRoot:'/tangzhe-zhuan-playtest/',mode:'bootstrap'});t.after(()=>h.close());await until(()=>h.view()?.phase==='prompt','prompt');await h.click('collectibleUpgradeConfirm');await until(()=>h.app,'app');assert.equal(h.runtime.qa,false);assert.equal(h.runtime.entryEnabled,false);
  for(const [url,row]of h.loadedSources){assert(row.file.startsWith(root));assert.equal(row.sha256,sha(fs.readFileSync(row.file)));if(/\/(?:collectibles|qa-protocol2)\//.test(new URL(url).pathname))assert.equal(new URL(url).searchParams.get('v'),RELEASE,url);}
 });
+
+// The shared renderer changed in this candidate; existence alone cannot detect stale HTTP URLs.
+const homeEntries=['index.html','pet/game/index.html'];
+function assertHomeRenderer(html,entry){
+ const scripts=[...html.matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)].map(m=>new URL(m[1],new URL(entry,'https://example.test/tangzhe-zhuan-playtest/'))).filter(u=>u.pathname==='/tangzhe-zhuan-playtest/home-interaction.js');
+ assert.equal(scripts.length,1,entry+' must load the shared renderer exactly once');assert.equal(scripts[0].searchParams.get('v'),RELEASE,entry+' changed renderer must use the production combination token');
+}
+test('changed shared home renderer: every actual HTML entry uses the exact production token',()=>{
+ for(const entry of homeEntries)assertHomeRenderer(source(entry),entry);
+ const walk=p=>fs.readdirSync(p,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(path.join(p,e.name)):[path.join(p,e.name)]);
+ const references=walk(root).filter(p=>p.endsWith('.html')&&/<script\b[^>]*\bsrc="[^"]*home-interaction\.js(?:\?|")/.test(fs.readFileSync(p,'utf8'))).map(p=>path.relative(root,p).split(path.sep).join('/')).sort();assert.deepEqual(references,[...homeEntries].sort(),'complete actual HTML reference inventory');
+});
+test('negative control: old v=15c renderer URL is rejected for both root and formal pet',()=>{
+ for(const entry of homeEntries){const html=source(entry),stale=html.replace('home-interaction.js?v='+RELEASE,'home-interaction.js?v=15c');assert.notEqual(stale,html);assert.throws(()=>assertHomeRenderer(stale,entry),{code:'ERR_ASSERTION'});}
+});
