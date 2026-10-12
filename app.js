@@ -2628,7 +2628,7 @@ const tdController = window.TDHost.create({
 function openTD() {
   if (frozen || tdOpen || zbOpen || cardsOpen || !state.shops[3].open) return;
   tdOpen = true; const f = $('#tdFrame'), generation = ++tdGeneration;
-  const target = new URL('td/index.html?embed=1&v=home35-td46-home22-copy52-20261012-r1', location.href);
+  const target = new URL('td/index.html?embed=1&v=td54-buildbar-over-35-46-22-copy52-20261012-r1', location.href);
   f.onload = () => {
     if (!tdOpen || generation !== tdGeneration) return;
     // Verify the actual loaded document, not merely an iframe src attribute.
