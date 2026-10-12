@@ -1797,7 +1797,7 @@ const furnSide = (fid, rot) => ((rot & 1) && FURN_SIDE[furnName(fid)]) || 0;
 const HOME_ICON = ['home', 'apt', 'villa'].map(n => ic(n)); // 12c1：家宅升级三档用同套 SVG（原系统 emoji）
 let homeWho = 'c77', homeSub = 'room', homeMode = 'live', homeSel = null, homeDrag = null;
 const homeActor = {}; // ceoId -> {x,y,tx,ty,act,line,until,walk}
-let mallQ = '', mallCat = 'all', mallSub = 'all', mallFilter = { afford:false, owned:false, price:'any', size:'any' };
+let mallQ = '', mallCat = 'all', mallSub = 'all', mallStyle = 'all', mallFilter = { afford:false, owned:false, price:'any', size:'any' };
 // price: any|low|mid|high ；size: any|1|2|3p （1×1 / 2 格边 / 3+）
 const homeUndo = {}; // 每位 CEO 一条撤销栈（只在本次打开有效，不存档）
 const undoStack = id => homeUndo[id] || (homeUndo[id] = []);
@@ -1951,6 +1951,7 @@ function mallMatch(f) {
   if (q && !(f.name.toLowerCase().includes(q) || (f.cat && f.cat.includes(q)) || (f.sub && f.sub.includes(q)))) return false;
   if (mallCat !== 'all' && f.cat !== mallCat) return false;
   if (mallCat === 'cabinet' && mallSub !== 'all' && f.sub !== mallSub) return false;
+  if (mallStyle !== 'all' && !E.furnStyles(f.id).some(s => s.id === mallStyle)) return false;
   const stt = E.furnStats(state, f.id);
   if (mallFilter.afford && !E.canAfford(state, f.price)) return false;
   if (mallFilter.owned && stt.owned <= 0) return false;
@@ -1968,12 +1969,13 @@ function renderMall() {
   const list = E.FURNITURE.filter(mallMatch);
   let h = `<div class="mall-head"><div>公共仓库 · ${open ? `现看 <b>${nm}</b> 的家` : `<b>${nm}</b> 还没加入，买的先进仓库`}</div><div>余额 ${coinSm}<b id="mallBal">${fmt(E.balance(state))}</b></div></div>`;
   h += petMallCard();
-  h += `<div class="mall-search"><input id="mallSearch" type="search" enterkeyhint="search" placeholder="搜索家具…" value="${mallQ.replace(/"/g, '&quot;')}" autocomplete="off"><button type="button" class="buy alt" data-act="mallClear" ${mallQ || mallCat !== 'all' || mallFilter.afford || mallFilter.owned || mallFilter.price !== 'any' || mallFilter.size !== 'any' ? '' : 'disabled'}>清除</button></div>`;
+  h += `<div class="mall-search"><input id="mallSearch" type="search" enterkeyhint="search" placeholder="搜索家具…" value="${mallQ.replace(/"/g, '&quot;')}" autocomplete="off"><button type="button" class="buy alt" data-act="mallClear" ${mallQ || mallCat !== 'all' || mallStyle !== 'all' || mallFilter.afford || mallFilter.owned || mallFilter.price !== 'any' || mallFilter.size !== 'any' ? '' : 'disabled'}>清除</button></div>`;
   h += `<div class="mall-cats" role="tablist"><button class="mc ${mallCat === 'all' ? 'on' : ''}" data-act="mallCat" data-arg="all">全部</button>${E.MALL_CATS.map(c => `<button class="mc ${mallCat === c.id ? 'on' : ''}" data-act="mallCat" data-arg="${c.id}">${c.name}</button>`).join('')}</div>`;
   if (mallCat === 'cabinet') {
     const subs = E.MALL_CATS.find(c => c.id === 'cabinet').subs;
     h += `<div class="mall-subs">${[{ id:'all', name:'全部柜架' }, ...subs].map(c => `<button class="ms ${mallSub === c.id ? 'on' : ''}" data-act="mallSub" data-arg="${c.id}">${c.name}</button>`).join('')}</div>`;
   }
+  h += `<div class="mall-styles" role="group" aria-label="按风格筛选"><button class="mst ${mallStyle === 'all' ? 'on' : ''}" data-act="mallStyle" data-arg="all">全部风格</button>${E.FURN_STYLES.map(s => `<button class="mst ${mallStyle === s.id ? 'on' : ''}" data-act="mallStyle" data-arg="${s.id}" style="--sc:${s.color}"><i class="sdot"></i>${s.name}</button>`).join('')}</div>`;
   h += `<div class="mall-filters">
     <label class="mf"><input type="checkbox" data-act="mallAff" ${mallFilter.afford ? 'checked' : ''}>买得起</label>
     <label class="mf"><input type="checkbox" data-act="mallOwn" ${mallFilter.owned ? 'checked' : ''}>已拥有</label>
@@ -1985,11 +1987,12 @@ function renderMall() {
   h += list.map(f => { const stt = E.furnStats(state, f.id);
     const where = stt.where.length ? stt.where.map(w => w.name).join('、') : '未摆出';
     const cat = E.MALL_CATS.find(c => c.id === f.cat);
-    return `<div class="card mall-card" data-fid="${f.id}"><div class="ava sq furn-ico" style="--fc:${f.color}">${furnInner(f.id, 0)}</div><div class="info"><div class="name">${f.name}<span class="tag match">豪华 +${f.lux}</span></div>
+    return `<div class="card mall-card" data-fid="${f.id}"><div class="ava sq furn-ico" style="--fc:${f.color}">${furnInner(f.id, 0)}</div><div class="info">${E.furnStyles(f.id).length ? `<div class="fstyles">${E.furnStyles(f.id).map(s => `<span class="fst" style="--sc:${s.color}"><i class="sdot"></i>${s.name}</span>`).join('')}</div>` : ''}<div class="name">${f.name}<span class="tag match">豪华 +${f.lux}</span></div>
       <div class="desc">${cat ? cat.name + (f.sub ? ' · ' + (((cat.subs || []).find(x => x.id === f.sub) || {}).name || '') : '') + ' · ' : ''}占地 ${f.w}×${f.h} 格${f.layer === 'rug' ? ' · 可垫在家具下' : ''}${f.wall ? ' · 挂墙面（不占地板）' : ''}<br>已拥有 ${stt.owned}（摆出 ${stt.placed} / 仓库 ${stt.warehouse}）<br>摆在：${where}</div></div>${btn('homeBuy', f.id, '购买', f.price)}</div>`; }).join('');
   // 留白：即使滤完也保留空位提示，方便以后加商品
   if (list.length < 4) for (let i = list.length; i < 4; i++) h += `<div class="card mall-card mall-ghost" aria-hidden="true"><div class="ava sq">+</div><div class="info"><div class="name">敬请期待</div><div class="desc">商城还会加新家具，先把分类和搜索用起来。</div></div></div>`;
-  if (!list.length) h += `<div class="note">没有符合条件的家具，试试清除筛选。</div>`;
+  const styleEmpty = mallStyle !== 'all' && !E.FURNITURE.some(f => E.furnStyles(f.id).some(s => s.id === mallStyle));
+  if (!list.length) h += styleEmpty ? `<div class="note">「${E.FURN_STYLES.find(s => s.id === mallStyle).name}」的家具还在画，上架后在这里就能找到。</div>` : `<div class="note">没有符合条件的家具，试试清除筛选。</div>`;
   h += `</div><div class="note">商城只花游戏金币，和经营共用一个钱包。家具进公共仓库；一件同时只在一家，想多家都有就多买。家具只加豪华度，不加产速、不影响开店。</div>`;
   return h;
 }
@@ -2282,7 +2285,8 @@ function homeAct(a, arg, b) {
     case 'homeBuy': return confirmHomeBuy(arg);
     case 'mallCat': mallCat = arg; if (arg !== 'cabinet') mallSub = 'all'; dirty = true; return;
     case 'mallSub': mallSub = arg; dirty = true; return;
-    case 'mallClear': mallQ = ''; mallCat = 'all'; mallSub = 'all'; mallFilter = { afford:false, owned:false, price:'any', size:'any' }; dirty = true; return;
+    case 'mallStyle': { const row = $('.mall-styles'), x = row ? row.scrollLeft : 0; mallStyle = arg; dirty = true; requestAnimationFrame(() => { const r = $('.mall-styles'); if (r) r.scrollLeft = x; }); return; } // 重画后保留风格栏横向位置
+    case 'mallClear': mallQ = ''; mallCat = 'all'; mallSub = 'all'; mallStyle = 'all'; mallFilter = { afford:false, owned:false, price:'any', size:'any' }; dirty = true; return;
     case 'mallAff': mallFilter.afford = !!(typeof arg === 'boolean' ? arg : !mallFilter.afford); dirty = true; return;
     case 'mallOwn': mallFilter.owned = !!(typeof arg === 'boolean' ? arg : !mallFilter.owned); dirty = true; return;
     case 'mallPrice': mallFilter.price = arg || 'any'; dirty = true; return;

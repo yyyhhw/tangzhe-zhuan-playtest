@@ -843,6 +843,32 @@
     { id:'furn_rocket_pipe_vase', name:'铜管苔藓瓶', emoji:'🪴', color:'#523b2f', w:1, h:1, price:2400, lux:2, cat:'plant' },
   ];
   const FURN_BY_ID = {}; FURNITURE.forEach(f => FURN_BY_ID[f.id] = f);
+  // 家宅-35：家具风格标签，只用于商城筛选和小色点——不加收益、不改价格、不进存档。
+  // 归类按家宅-26 画布 F0C8KALKSVA 逐件表（188 件带标签，其中 11 件双标签；通用 12 件不带）；
+  // 第 8 种「烟火小馆」杨总 10/12 14:24 定，家具（furn_s77_ 新 24 件）还没上架，先空着。
+  const FURN_STYLES = [
+    { id:'cozy', name:'拼布暖屋', color:'#c98a4b' },
+    { id:'tea', name:'茶室清雅', color:'#6f9461' },
+    { id:'sweet', name:'甜点珍珠', color:'#e07fa8' },
+    { id:'pixel', name:'像素游戏', color:'#7a5ce0' },
+    { id:'comic', name:'漫画书房', color:'#3a78d6' },
+    { id:'space', name:'星际航天', color:'#24477e' },
+    { id:'industrial', name:'工业机舱', color:'#7b7f86' },
+    { id:'diner', name:'烟火小馆', color:'#c8442f' },
+  ];
+  const FURN_STYLE_IDS = {
+    cozy: ['s77_cloud_canopy', 's77_quilt_daybed', 's77_drawer_bed', 's77_peg_cubby', 's77_ladder_shelf', 's77_basket_cabinet', 's77_round_corner_chest', 's77_sewing_cabinet', 's77_pantry_hutch', 's77_attic_trunk', 's77_rocking_chair', 's77_heart_bench', 's77_folding_tray', 's77_quilt_ottoman', 's77_window_bench', 's77_sewing_desk', 's77_curved_sectional', 's77_lantern_stand', 's77_mushroom_lamp', 's77_petal_uplight', 's77_quilt_shade_lamp', 's77_hearth_light', 's77_box_fan', 's77_toaster_cart', 's77_record_console', 's77_sewing_machine_stand', 's77_stove_oven', 's77_laundry_pair', 's77_braided_runner', 's77_patchwork_flower_rug', 's77_quilt_island_rug', 's77_embroidery_hoops', 's77_wood_cuckoo', 's77_quilt_wall', 's77_pressed_flower_frame', 's77_family_silhouette', 's77_watering_stand', 's77_knitting_basket', 's77_olive_planter', 's77_mini_greenhouse', 'pearl_tea_cubby'],
+    tea: ['s77_mushroom_lamp', 'pearl_tea_daybed', 'pearl_cup_carousel', 'pearl_sideboard_island', 'pearl_archive_apothecary', 'pearl_conversation_pit', 'pearl_tea_gongfu_desk', 'pearl_paper_pear_lamp', 'pearl_tea_glass_lamp', 'pearl_tea_mat', 'pearl_tea_river_runner', 'pearl_tea_loft', 'pearl_canopy_lounge', 'pearl_tea_cat_hammock', 'pearl_tea_cubby', 'pearl_tea_trolley_shelf', 'pearl_tea_stool', 'pearl_round_tea_table', 'pearl_tea_bar', 'pearl_fan_shade_lamp', 'pearl_tea_arc_lamp', 'pearl_fountain_light', 'pearl_tea_kettle_cart', 'pearl_tea_brewer', 'pearl_tea_menu_board', 'pearl_cup_wall_rack', 'pearl_sunburst_mirror', 'pearl_tea_leaf_relief', 'pearl_moon_window_art', 'pearl_herb_crate', 'pearl_tea_bonsai', 'pearl_ceramic_cup_stack', 'pearl_tea_tree_screen'],
+    sweet: ['pearl_pearl_bed', 'pearl_cup_carousel', 'pearl_bakery_display', 'pearl_boba_globe_lamp', 'pearl_scallop_rug', 'pearl_capsule_daybed', 'pearl_glass_wardrobe', 'pearl_tea_trolley_shelf', 'pearl_cafe_chair', 'pearl_scallop_sofa', 'pearl_tea_bar', 'pearl_bar_stool', 'pearl_picnic_table', 'pearl_egg_swing', 'pearl_juice_press', 'pearl_milk_frother_bar', 'pearl_dessert_chiller', 'pearl_marble_pearl_rug', 'pearl_ceramic_cup_stack', 'pearl_terrarium_orb', 'otaku_mini_fridge', 'rocket_coffee_pressure_unit'],
+    pixel: ['otaku_floor_chair', 'otaku_modular_couch', 'otaku_arcade_bench', 'otaku_streaming_desk', 'otaku_controller_rug', 'otaku_pixel_succulent', 'otaku_robot_planter', 'otaku_aquatic_pixel_tank', 'otaku_sofa_sleeper', 'otaku_gaming_pod', 'otaku_projector_bed', 'otaku_cat_keyboard_cave', 'otaku_locker_wardrobe', 'otaku_disc_tower', 'otaku_controller_drawers', 'otaku_modular_pixel_shelf', 'otaku_server_display_rack', 'otaku_beanbag', 'otaku_gaming_chair', 'otaku_snack_sidecar', 'otaku_pixel_cube_light', 'otaku_arcade_marquee_lamp', 'otaku_sleep_timer_totem', 'otaku_console_station', 'otaku_arcade_cabinet', 'otaku_projector_cart', 'otaku_triple_monitor_station', 'otaku_pixel_map_rug', 'otaku_controller_wall_mount', 'otaku_pixel_city_lightbox', 'otaku_cactus_cartridge', 'rocket_planetarium_console'],
+    comic: ['s77_book_nook_bed', 's77_reading_stool', 's77_window_bench', 'otaku_panel_rug', 'otaku_speed_runner', 'otaku_manga_book_stack', 'pearl_rattan_bookcase', 'otaku_floor_futon', 'otaku_bunk_manga', 'otaku_figure_vitrine', 'otaku_comic_wheel_cart', 'otaku_modular_pixel_shelf', 'otaku_kotatsu', 'otaku_manga_desk', 'otaku_cocoon_lounger', 'otaku_panel_lamp', 'otaku_gooseneck_stand', 'otaku_orbital_neon_floor', 'otaku_speech_bubble_board', 'otaku_manga_page_triptych', 'rocket_pipe_bookcase'],
+    space: ['rocket_rocket_model', 'rocket_meteor_stand', 'rocket_biosphere_dome', 'rocket_capsule_bunk', 'rocket_airlock_wardrobe', 'rocket_mission_table', 'rocket_rocket_nozzle_light', 'rocket_cryo_rest_pod', 'rocket_observatory_bed', 'rocket_landing_cat_pod', 'rocket_specimen_drawer', 'rocket_orbital_archive', 'rocket_captain_chair', 'rocket_orbital_ring_lamp', 'rocket_solar_array_lamp', 'rocket_hydroponic_unit', 'rocket_planetarium_console', 'rocket_orbit_rug', 'rocket_runway_runner', 'rocket_lunar_relief_rug', 'rocket_blueprint_frame', 'rocket_mission_patch_board', 'rocket_moon_sample_relief', 'rocket_orbital_map_panel'],
+    industrial: ['rocket_field_cot', 'rocket_cargo_crate', 'rocket_mesh_rack', 'rocket_rail_bench', 'rocket_zero_g_lounger', 'rocket_cage_lamp', 'rocket_tripod_searchlight', 'rocket_pipe_valve_lamp', 'rocket_steel_platform_bed', 'rocket_steel_locker', 'rocket_pipe_bookcase', 'rocket_tool_chest', 'rocket_bolt_stool', 'rocket_workbench', 'rocket_drafting_chair', 'rocket_pipe_sofa', 'rocket_oil_drum_table', 'rocket_cantilever_desk', 'rocket_industrial_fan', 'rocket_vacuum_dock', 'rocket_coffee_pressure_unit', 'rocket_air_purifier', 'rocket_workshop_mat', 'rocket_gear_clock', 'rocket_concrete_succulent', 'rocket_pipe_vase'],
+    diner: [],
+  };
+  const FURN_STYLE_OF = {};
+  FURN_STYLES.forEach(s => FURN_STYLE_IDS[s.id].forEach(k => (FURN_STYLE_OF['furn_' + k] = FURN_STYLE_OF['furn_' + k] || []).push(s.id)));
+  const furnStyles = fid => (FURN_STYLE_OF[fid] || []).map(id => FURN_STYLES.find(s => s.id === id));
   const HOME_MAX = HOME_TIERS.length;
   function newHome() { return { lv:1, placed:[], next:1 }; }
   function homeTier(lv) { return HOME_TIERS[Math.max(1, Math.min(HOME_MAX, lv | 0)) - 1]; }
@@ -1473,6 +1499,6 @@
     canOpen, openShop, hireEmp, upgradeEmp, upgradeCeo, upgradeShop,
     dayKey, nextResetTs, clockRolledBack, computeOffline, settleOffline, canDouble, claimOffline,
     gachaUnlocked, gachaRemaining, gachaOdds, gachaPrice, gachaDraw, cardsComplete, newState, migrate, nextGoal, testHomesState,
-    HOME_TIERS, HOME_MAX, WALL_ROWS, WALL_BLOCK, wallBlockedCells, MALL_CATS, FURNITURE, FURN_BY_ID, newHome, homeTier, homeOf, furnInvOf, homeOpen, furnLiveAct, furnSize, itemSurf, canPlace, findFree, homeUpgradeCost,
+    HOME_TIERS, HOME_MAX, WALL_ROWS, WALL_BLOCK, wallBlockedCells, MALL_CATS, FURNITURE, FURN_BY_ID, FURN_STYLES, furnStyles, newHome, homeTier, homeOf, furnInvOf, homeOpen, furnLiveAct, furnSize, itemSurf, canPlace, findFree, homeUpgradeCost,
     buyFurniture, upgradeHome, placeItem, moveItem, rotateItem, storeItem, undoHome, migrateWallPaintings, reconcileWall, WALL_BLOCK, migrateFootprint11w, migrateFootprint11z, migrateFootprints, FP_OLD_11Z, homeLuxury, invCount, furnStats, normHomes, normFurnInv, normHomeBundle };
 });
