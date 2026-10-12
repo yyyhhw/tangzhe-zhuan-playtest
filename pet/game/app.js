@@ -490,7 +490,7 @@ function jobShown(id) {
 function showJobArt(id, i) {
   const c = E.CEO_BY_ID[id], ready = hasJobArt(id, i);
   openModal(`<div class="mtitle">${c.name} × ${E.SHOPS[i].short}</div><div class="job-big">${jobImg(id, i)}</div>
-    ${ready ? '' : '<div class="mnote">这家店的形象画师还在赶稿，先放本行形象。</div>'}<button class="buy big" id="mOk">好</button>`, false);
+    <button class="buy big" id="mOk">好</button>`, false);
   $('#mOk').addEventListener('click', closeModal, { once:true });
 }
 document.addEventListener('error', e => {
@@ -1383,7 +1383,7 @@ function jobGallery(id) {
     const open = !!state.shops[i].open;
     return `<button class="job-chip ${i === v ? 'on' : ''} ${open ? '' : 'lock'}" ${open ? `data-act="jobView" data-arg="${id}:${i}"` : 'disabled'}>${open ? SHOP_ICON[i] : LOCK_IC}${S.short}${s.at === i ? '<i>现任</i>' : ''}</button>`;
   }).join('');
-  return `<div class="job-gal" data-ceo="${id}"><button class="job-pic" data-act="jobBig" data-arg="${id}:${v}">${jobImg(id, v)}${ready ? '' : '<span class="job-wip">画师赶稿中</span>'}</button>
+  return `<div class="job-gal" data-ceo="${id}"><button class="job-pic" data-act="jobBig" data-arg="${id}:${v}">${jobImg(id, v)}${ready ? '' : '<span class="job-wip">新造型绘制中</span>'}</button>
     <div class="job-side"><div class="job-cap">${cur ? '现任形象' : s.at < 0 && v === homeShop(id) ? '本行形象（休息中）' : '换店预览'}：<b>${E.SHOPS[v].short}</b></div>
     <div class="job-chips">${chips}</div><div class="job-hint">点店名看 TA 在别家店的样子，点图放大</div></div></div>`;
 }
