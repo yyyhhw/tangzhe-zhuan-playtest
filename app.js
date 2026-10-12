@@ -496,7 +496,7 @@ function jobShown(id) {
 function showJobArt(id, i) {
   const c = E.CEO_BY_ID[id], ready = hasJobArt(id, i);
   openModal(`<div class="mtitle">${c.name} × ${E.SHOPS[i].short}</div><div class="job-big">${jobImg(id, i)}</div>
-    ${ready ? '' : '<div class="mnote">这家店的形象画师还在赶稿，先放本行形象。</div>'}<button class="buy big" id="mOk">好</button>`, false);
+    <button class="buy big" id="mOk">好</button>`, false);
   $('#mOk').addEventListener('click', closeModal, { once:true });
 }
 document.addEventListener('error', e => {
