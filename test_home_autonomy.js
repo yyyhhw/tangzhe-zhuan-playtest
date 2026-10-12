@@ -81,11 +81,10 @@ ok('r2 踱步：用 PACE.walk 2–5 秒定距离，永不原地；踱步上限�
   assert.strictEqual(HA.paceTarget([{ x:3, y:3 }], { x:3, y:3 }, Math.random), null);
   assert.strictEqual(HA.paceTarget([], { x:3, y:3 }, Math.random), null);
 });
-ok('r3 踱步实际时长 2–5 秒：按本段时长反推速度，逐帧模拟走完所用时间（含熊大三个反例）', () => {
+ok('r3/r4 踱步实际时长 2–5 秒：本段时长 sec 落在 2–5，按 elapsed/sec 到达（含熊大三个反例）', () => {
   const grid = (cols, rows, low) => { const a = []; for (let y = low ? Math.floor(rows / 2) : 0; y < rows; y++) for (let x = 0; x < cols; x++) a.push({ x, y }); return a; };
-  // 照 app.js homeAdvanceActor 的推进：step=min(speed*dt,d)，d<.05 视为到达；dt=1/60
-  const walk = (from, t) => { let x = from.x, y = from.y, time = 0; const dt = 1 / 60;
-    for (;;) { const d = Math.hypot(t.x - x, t.y - y); if (d < .05) return time; const st = Math.min(t.speed * dt, d); x += (t.x - x) / d * st; y += (t.y - y) / d * st; time += dt; } };
+  // r4 口径：按 elapsed/sec 走，elapsed ≥ sec 才到达（原函数逐帧验证见 test_home_autonomy_mover.js）；dt=1/60
+  const walk = (from, t) => { let el = 0; const dt = 1 / 60; while (el < t.sec - 1e-9) el += dt; return el; };
   const cases = [['小屋 6×4 (3,3) rng=.5', 6, 4, { x:3, y:3 }, () => .5], ['公寓 8×5', 8, 5, { x:4, y:4 }, () => .5], ['别墅 10×6', 10, 6, { x:5, y:5 }, () => .5]];
   for (const [name, c, r, from, rng] of cases) {
     const t = HA.paceTarget(grid(c, r, true), from, rng), sec = walk(from, t);
