@@ -1,3 +1,4 @@
+import {canonical} from './vendor/codec/lib/json.mjs?v=wearables8-on-tea-cards-out-20261012-r1';
 /** Default-off QA-only adapter for the actual app coordinator and __tzz hooks.
  * Pure injected orchestration: no browser globals, storage selection, seeding,
  * grants, timer, automatic migration approval, gameplay replay, or publication.
@@ -66,9 +67,19 @@ export function createRealPageQAFacade({enabled = REAL_PAGE_QA_ENABLED, scope, f
   function initializeSpace(...args) {
     if (!writable()) return gate();
     if (args.length) return fail('SPACE_INITIALIZATION_ARGUMENTS_REFUSED');
+    // App dirty is a redraw latch, not a persisted-state guarantee. Never flush
+    // business changes inside this private initialization transaction.
+    if (!app) return fail('SPACE_APP_SYNC_REQUIRED');
+    if (app.persist.pending) return fail('SPACE_APP_SAVE_PENDING');
+    const saved = invoke('current');
+    if (!saved.ok) return protect(saved);
+    try {
+      if (canonical(app.state) !== canonical(saved.state)) return fail('SPACE_APP_SAVE_REQUIRED');
+    } catch { return fail('SPACE_APP_PAYLOAD_INVALID'); }
     const result = invoke('initializeSpace');
     if (!result.ok) return protect(result, {recoverCurrent: !owner.readOnly && !owner.failed});
-    return play(result);
+    // A no-op is not authority to replace even clean application memory.
+    return result.initialized === false ? result : play(result);
   }
   const coordinator = Object.freeze({keys, current, commit, initializeSpace,
     validateCollection: owner.validateCollection,

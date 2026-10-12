@@ -11,7 +11,19 @@ function json(x,seen=new Set()) {
   if(typeof x==='number')return Number.isFinite(x);
   if(typeof x!=='object'||seen.has(x))return false;
   const proto=Object.getPrototypeOf(x);
-  if(!Array.isArray(x)&&proto!==null&&Object.getPrototypeOf(proto)!==null)return false;
+  // Cross-realm intrinsic prototypes are legitimate; arbitrary intermediate
+  // prototypes (including null-prototype ones) are not JSON object structure.
+  const nativePrototype=(p,name)=>{
+    if(!p||Object.hasOwn(p,'toJSON'))return false;
+    const d=Object.getOwnPropertyDescriptor(p,'constructor');
+    if(!d||!own(d,'value')||typeof d.value!=='function')return false;
+    const pd=Object.getOwnPropertyDescriptor(d.value,'prototype');
+    return pd?.value===p && Function.prototype.toString.call(d.value)===`function ${name}() { [native code] }`;
+  };
+  const plainPrototype=p=>p===null||(Object.getPrototypeOf(p)===null&&nativePrototype(p,'Object'));
+  if(Array.isArray(x)) {
+    if(!nativePrototype(proto,'Array')||!plainPrototype(Object.getPrototypeOf(proto)))return false;
+  } else if(!plainPrototype(proto))return false;
   seen.add(x);
   const descriptors=Object.getOwnPropertyDescriptors(x);
   if(Object.getOwnPropertySymbols(x).length)return false;
@@ -19,7 +31,10 @@ function json(x,seen=new Set()) {
     if(Array.isArray(x)&&k==='length')continue;
     if(!d.enumerable||!own(d,'value')||!json(d.value,seen))return false;
   }
-  if(Array.isArray(x)&&Object.keys(x).length!==x.length)return false;
+  if(Array.isArray(x)) {
+    const keys=Object.keys(x);
+    if(keys.length!==x.length||keys.some((key,i)=>key!==String(i)))return false;
+  }
   seen.delete(x);return true;
 }
 function stable(x) {

@@ -22,7 +22,7 @@ function eventTarget() {
 }
 export async function assembly({scope='formal',path,query='',projectRoot='/',enabled=true,fullBoot=true,dataMode='initialized',configure=null,protocol=1,missing=false,raw=null,prepared=false,
   rejectClassic=false,rejectModule=null,classicReuse=false,delayClassic=false,pendingLock=false,secure=true,
-  mode='entry',hashMismatch=false,storageFault=null,walletBridgeApproved=true,cardEntryEnabled=false,entryOptions={}}={}) {
+  mode='entry',hashMismatch=false,observeDirty=false,loadPetDomain=false,storageFault=null,walletBridgeApproved=true,cardEntryEnabled=false,entryOptions={}}={}) {
   const t=await setup('4c45f0b',scope);t.init();
   if(dataMode==='source'){for(const k of ['main','backup','tab','original'])if(t.keys[k])t.data.delete(t.keys[k]);}
   if(dataMode==='empty')t.data.clear();
@@ -86,6 +86,10 @@ export async function assembly({scope='formal',path,query='',projectRoot='/',ena
   for(const name of ['tdcore.js','tdwaves.js','tdcampaign.js','tdprogress.js','tdcampaign-progress.js','tdupgrade-receipts.js']) {
     const file=new URL(support+'td/'+name,ROOT);if(existsSync(file))new vm.Script(readFileSync(file,'utf8'),{filename:fileURLToPath(file)}).runInContext(context);
   }
+  if(loadPetDomain){
+    const paths=['pet/art.js','pet/puppy.js','pet/room.js','pet/engine.js','pet/companions.js',...(scope==='formal'?['home-interaction.js']:[]),'pet/game/petgame.js'];
+    for(const path of paths){const actual=path==='home-interaction.js'?path:support+path;new vm.Script(source(actual),{filename:actual}).runInContext(context);}
+  }
   const economySource=readFileSync(new URL(support+'economy.js',ROOT),'utf8');
   new vm.Script(readFileSync(new URL(support+'zombie/zbcore.js',ROOT),'utf8')).runInContext(context);
   new vm.Script(economySource).runInContext(context);instrumentEconomy(context.Economy);const initialE=context.Economy;
@@ -119,7 +123,7 @@ export async function assembly({scope='formal',path,query='',projectRoot='/',ena
       const now=()=>Date.now(),toast=(message)=>globalThis.__modelToasts.push(message),showCollectionProtection=code=>globalThis.__modelErrors.push(code),restoreGood=()=>{};
       ${persist}\n${txn}\n${saveFailNote}\n${atomic}\nlet drawing=false;const rand=()=>globalThis.__gachaRandom?globalThis.__gachaRandom():0,sfx=()=>{},failBuy=()=>{},showReveal=()=>{globalThis.__revealCalls=(globalThis.__revealCalls||0)+1;};\n${doGacha}
       ${fullBoot?bootPreparation(text):'const petBeforePersist=()=>{};'}
-      window.__tzz={persist,txn,atomic,doGacha,get state(){return state;},set state(s){state=s;},get saveBlocked(){return saveBlocked;},get lastGood(){return lastGood;}};
+      window.__tzz={${observeDirty?'get reviewDirty(){return dirty;},set reviewDirty(value){dirty=value;},':''}persist,txn,atomic,doGacha,get state(){return state;},set state(s){state=s;},get saveBlocked(){return saveBlocked;},get lastGood(){return lastGood;}};
       ${hooks}
       export const reviewOnlyExtractedHooks=true;`;
   }
