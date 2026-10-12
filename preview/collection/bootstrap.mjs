@@ -17,7 +17,10 @@ function panel(title,body,button,run) {
   if(button){const b=document.createElement('button');b.textContent=button;b.style.cssText='font:inherit;padding:10px 18px';b.onclick=()=>{b.disabled=true;run(cover,b);};box.append(b);}
   cover.append(box);document.getElementById('collectionStartup')?.remove();document.body.append(cover);return cover;
 }
-function notice(code) { panel('预览存档已保护',`没有继续写入或回退旧档。状态：${code}。请关闭旧页面，再重新打开本页；如果仍有提示，请保留原存档并反馈。`,'重新检查',()=>location.reload()); }
+function notice(code) {
+  const cover=panel('预览存档已保护','没有继续写入或回退旧档。请关闭旧页面，再重新打开本页；如果仍有提示，请保留原存档并反馈。','重新检查',()=>location.reload());
+  const details=document.createElement('details'),summary=document.createElement('summary'),info=document.createElement('p');summary.textContent='详情';info.textContent=String(code);details.append(summary,info);cover.firstChild.append(details);
+}
 function scopedStorage() {
   // QA may only access a synthetic prefix. Real formal and legacy source keys are not touched.
   const prefix=qa?'qa-collection-trial-v1:':'';

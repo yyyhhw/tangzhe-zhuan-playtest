@@ -36,6 +36,12 @@ function loadState() {
 }
 
 function storedRev() { if (TEST_MODE) return -1; try { const r = JSON.parse(STORAGE.getItem(SAVE_KEY) || 'null'); return r ? (r.rev || 0) : -1; } catch (e) { return -1; } }
+function showCollectionProtection(code) {
+  toast('存档已保护，已停止写入。请保留数据并刷新检查。',3200);
+  let detail=document.getElementById('collectionProtectionDetails');
+  if(!detail){detail=document.createElement('details');detail.id='collectionProtectionDetails';detail.style.cssText='position:fixed;bottom:8px;left:8px;z-index:90;max-width:90vw;background:#fff5dd;color:#422;padding:8px';const title=document.createElement('summary');title.textContent='存档保护 · 查看详情';detail.append(title,document.createElement('p'));document.body.append(detail);}
+  detail.querySelector('p').textContent='维护信息：'+String(code)+ '。未确认的结果不会自动重试或退款，请勿清除浏览器数据。';
+}
 // 保存 = 先确认没有别的页面写过（rev 比我新就冻结本页），再整份原子写入
 // 12d3（熊大 22:08 第 4 条）：只读模式返回 false（不假装保存成功）；写前 E.validState（含序列化后 E.checkSave）；
 //   备份写失败 → 整次保存放弃，主档不动；跨页写档（宠物 / 打僵尸）用 E.commitSave，同一套规矩
@@ -47,7 +53,7 @@ function persist() {
   petBeforePersist();
   const r=COLLECTION.coordinator.commit(state);
   if (r.ok) { lastGood=COLLECTION.coordinator.raw; return true; }
-  if (COLLECTION.coordinator.failed) { saveBlocked=true; toast('预览存档已保护：'+r.code,3200); }
+  if (COLLECTION.coordinator.failed) { saveBlocked=true; showCollectionProtection(r.code); }
   return false;
 }
 
@@ -2490,7 +2496,7 @@ function boot() {
   if (saveBlocked && loadInfo.unsafe) { const sb = document.createElement('div'); sb.id = 'saveBadge'; sb.textContent = '存档余额异常（超出安全整数）：交易已暂停、不保存，原存档未覆盖'; sb.style.cssText = 'position:fixed;left:8px;right:8px;top:calc(env(safe-area-inset-top) + 6px);z-index:60;padding:6px 10px;border:2px solid #141414;border-radius:10px;background:#ffd6d6;font-size:12px;font-weight:700;text-align:center;pointer-events:none';
     document.body.appendChild(sb); queueModal(() => { openModal(`<div class="mbubble">存档余额异常</div><div class="mtitle">余额超出能精确计算的范围</div><div class="mnote">存档里的余额是 <b>${String(loadInfo.rawCoins)}</b>，超过了 ${fmt(E.SAFE_COINS)}（安全整数上限），加减会算不准，不能当正常钱包用。为了不出错：<b>所有买卖和收入都已暂停，这次不会自动保存</b>，原存档原样保留、没有被覆盖。${loadInfo.bakOk ? `备份里有一份正常存档（余额 ${fmt(loadInfo.bakCoins)}），没有自动替换，请联系维护者确认后再恢复。` : '没有找到可用的备份，请联系维护者。'}</div><div class="mbtns"><button class="buy" id="mOk">知道了</button></div>`, false); $('#mOk').addEventListener('click', closeModal, { once:true }); }); }
   else if (saveBlocked) { const sb = document.createElement('div'); sb.id = 'saveBadge'; sb.textContent = (loadInfo.mainMissing ? '主存档不见了、备份读不出来' : '存档损坏、没有可用备份') + '：只读模式，买卖暂停、不保存，原存档未覆盖'; sb.style.cssText = 'position:fixed;left:8px;right:8px;top:calc(env(safe-area-inset-top) + 6px);z-index:60;padding:6px 10px;border:2px solid #141414;border-radius:10px;background:#ffd6d6;font-size:12px;font-weight:700;text-align:center;pointer-events:none';
-    document.body.appendChild(sb); queueModal(() => { openModal(`<div class="mbubble">存档读不出来</div><div class="mtitle">${loadInfo.mainMissing ? '主存档不见了，备份也读不出来' : '存档结构坏了，也没有可用备份'}</div><div class="mnote">为了不把原存档盖掉，这次游戏是<b>只读模式</b>：<b>不会自动保存</b>，开店、升级、雇人、买东西都暂停（坏字段：${loadInfo.bad.slice(0, 4).join('、')}${loadInfo.mainMissing ? '；备份：' + (loadInfo.bakBad || []).slice(0, 3).join('、') : ''}）。原存档原样保留，请联系维护者说明情况。</div><div class="mbtns"><button class="buy" id="mOk">知道了</button></div>`, false); $('#mOk').addEventListener('click', closeModal, { once:true }); }); }
+    document.body.appendChild(sb); queueModal(() => { openModal(`<div class="mbubble">存档读不出来</div><div class="mtitle">${loadInfo.mainMissing ? '主存档不见了，备份也读不出来' : '存档结构坏了，也没有可用备份'}</div><div class="mnote">为了不把原存档盖掉，这次游戏是<b>只读模式</b>：<b>不会自动保存</b>，开店、升级、雇人、买东西都暂停。原存档原样保留，请联系维护者说明情况。<details class="details-fold"><summary>详情</summary>坏字段：${loadInfo.bad.slice(0, 4).join('、')}${loadInfo.mainMissing ? '；备份：' + (loadInfo.bakBad || []).slice(0, 3).join('、') : ''}</details></div><div class="mbtns"><button class="buy" id="mOk">知道了</button></div>`, false); $('#mOk').addEventListener('click', closeModal, { once:true }); }); }
   if (loadInfo.badPending) toast('离线收益数据异常，这一笔没有入账（余额不变）', 3200);
   if (migratedFrom != null) toast('存档已升级到 v' + CFG.SAVE_VERSION + '（新盲盒 + CEO 穿搭，收藏都保留）', 2600);
   if (fpMig && !fpMig.skipped && (fpMig.shifted || fpMig.stored)) toast(fpMig.stored ? `家具占地收紧：${fpMig.shifted} 件按脚底重锚，${fpMig.stored} 件腾不出空位已退回仓库` : `家具占地收紧：${fpMig.shifted} 件已按脚底重锚`, 3200);
@@ -2599,7 +2605,7 @@ function closeCards() {
   const f = $('#cardsFrame'); f.onload = null; f.src = 'about:blank';
   $('#cardsOverlay').classList.add('hidden'); dirty = true; audioResume();
 }
-Object.defineProperties(window.__tzz, { collectionReplaceState:{value:s=>{state=s;lastGood=COLLECTION.coordinator.raw;if(!COLLECTION.coordinator.failed&&COLLECTION.ownsLock())saveBlocked=false;dirty=true;}}, collectionReadOnly:{value:code=>{saveBlocked=true;toast('预览存档已保护：'+code,3200);}}, openCards:{ value:openCards }, closeCards:{ value:closeCards }, requestCloseCards:{ value:requestCloseCards }, cardsOpen:{ get:() => cardsOpen }, cardsCloseTimer:{ get:() => cardsCloseTimer !== null } });
+Object.defineProperties(window.__tzz, { collectionReplaceState:{value:s=>{state=s;lastGood=COLLECTION.coordinator.raw;if(!COLLECTION.coordinator.failed&&COLLECTION.ownsLock())saveBlocked=false;dirty=true;}}, collectionReadOnly:{value:code=>{saveBlocked=true;showCollectionProtection(code);}}, openCards:{ value:openCards }, closeCards:{ value:closeCards }, requestCloseCards:{ value:requestCloseCards }, cardsOpen:{ get:() => cardsOpen }, cardsCloseTimer:{ get:() => cardsCloseTimer !== null } });
 
 /* ================= 打僵尸（zombie/?embed=1，全屏 iframe）=================
    只和经营共用金币：价格、等级上限、进度校验都在这边按 ZBCore 算，训练扣款和结算进度都走 txn → E.transact（扣款 + 改状态 + persist 一起成功，失败整体回滚）。
