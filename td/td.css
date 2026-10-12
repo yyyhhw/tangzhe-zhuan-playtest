@@ -1,4 +1,4 @@
-:root{--ink:#141414;--paper:#f7f1e3;--panel:#fffaf0;--yellow:#ffd23f;--red:#e63946;--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);--sal:env(safe-area-inset-left,0px)}
+:root{--ink:#141414;--paper:#f7f1e3;--panel:#fffaf0;--yellow:#ffd23f;--red:#e63946;--sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);--sal:env(safe-area-inset-left,0px);--sar:env(safe-area-inset-right,0px)}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;overflow:hidden;background:var(--paper);color:var(--ink);font-family:-apple-system,"PingFang SC","Hiragino Sans GB",sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 #cv{position:fixed;inset:0;width:100vw;height:100dvh;touch-action:none;display:block}
@@ -85,9 +85,9 @@ button:focus-visible{outline:3px solid #1e6ea2;outline-offset:2px}
 .milktea-theme #themeIntro{margin:.2em 0 .4em}
 .enemy-legend{list-style:none;margin:0;padding:0;display:grid;gap:4px;font-size:13px}
 .enemy-legend b{margin-right:6px}.enemy-legend small{display:inline-block;margin-right:6px;padding:0 5px;border-radius:6px;background:#f3e3cf;color:#7a5230}
-/* 塔防-53：手机横屏时地图在左侧占满整高，HUD 和建造栏整块挪到地图右边（--land-x 由 td.js 按地图宽度算）；竖屏不受影响 */
-body.td-land #hud{left:var(--land-x,50%)}
+/* 塔防-53：手机横屏时地图在左侧占满整高，HUD 和建造栏整块挪到地图右边（--land-x 由 td.js 按地图宽度算），右边让开右侧安全区；竖屏不受影响。
+   无尽入场准备框（#endlessPrep）目前 td.js 里没有任何地方把 G.adjusting 置真，两个无尽入口都直接 start(50)，本行不给它写横屏样式 */
+body.td-land #hud{left:var(--land-x,50%);right:var(--sar)}
 body.td-land .tw-grid{flex-wrap:wrap;overflow-x:visible}
 body.td-land .tw-grid button{flex:0 0 calc(25% - 4px)}
 body.td-land #barBuild,body.td-land #barMain,body.td-land #barTower{max-width:none;margin-left:0;margin-right:0}
-body.td-land .endless-prep{left:var(--land-x,8px);top:calc(88px + var(--sat));max-height:calc(100dvh - 96px);overflow-y:auto}
