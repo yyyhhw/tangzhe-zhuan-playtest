@@ -132,7 +132,7 @@ function fmtDur(sec) {
   if (m) return m + '分' + (s && m < 10 ? s + '秒' : '');
   return s + '秒';
 }
-function fmtClockMYT(ts) { const d = new Date(ts + CFG.TZ_OFFSET_MIN * 60000); return String(d.getUTCHours()).padStart(2, '0') + ':' + String(d.getUTCMinutes()).padStart(2, '0'); }
+function fmtClockLocal(ts) { const d = new Date(ts); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
 
 /* ================= 声音（切后台/锁屏立即暂停） ================= */
 const AU = { ctx:null, master:null, bgm:null, sfx:null, timer:null, nextT:0, step:0, started:false };
@@ -1492,7 +1492,7 @@ function renderCol() {
   h += cards.map((c, k) => own.has(c.id)
     ? `<button type="button" class="story story-open" data-act="card" data-arg="${c.id}" aria-label="重看故事卡：${c.name}"><b>${k + 1}. ${c.name}</b>${storyArt(c.id)}<span class="story-text">${c.text}</span><span class="story-replay-hint">已收集 · 点击重看 ›</span></button>` : `<div class="story no" aria-label="第 ${k + 1} 张故事卡，未收集"><b>${k + 1}. ？？？</b><p>还没收集</p></div>`).join('');
   h += `<div class="note">${setDone ? `✅ 已集齐 ${cards.length} 张故事卡：解锁专属外观「金牌摊主」（金马甲 + 金厨师帽），在衣橱里给任意 CEO 换上。` : `集齐 ${cards.length} 张故事卡，解锁专属外观「金牌摊主」（金马甲 + 金厨师帽）。`}</div>`;
-  h += `<div class="sec-title">设置</div><div class="card"><div class="info"><div class="name">关于／鸣谢</div><div class="desc">经营音乐 · Carefree — Kevin MacLeod</div></div><button type="button" class="buy ghost" data-act="musicCredits">查看鸣谢</button></div><div class="card"><div class="info"><div class="name">存档</div><div class="desc">版本 v${state.v} · 自动保存在本机浏览器 · 每日双倍按马来西亚时间早上 5 点重置</div></div>
+  h += `<div class="sec-title">设置</div><div class="card"><div class="info"><div class="name">关于／鸣谢</div><div class="desc">经营音乐 · Carefree — Kevin MacLeod</div></div><button type="button" class="buy ghost" data-act="musicCredits">查看鸣谢</button></div><div class="card"><div class="info"><div class="name">存档</div><div class="desc">版本 v${state.v} · 自动保存在本机浏览器 · 每日双倍每天 ${fmtClockLocal(E.nextResetTs(now()))} 重置（按手机时间）</div></div>
     <button class="buy ghost" disabled title="保留经营进度与永久交易回执">重新开始（暂不可用）</button><div class="note">新版存档暂不支持重置；原档、经营进度和永久交易回执均保留。</div></div><div class="note">试玩版 · 只花游戏金币，没有任何真钱购买。</div>`;
   return h;
 }
@@ -1560,7 +1560,7 @@ function refreshDynamic(force) {
   const cps = '每秒 +' + fmt(r) + (busy ? '（团单服务中）' : ''); if (cpsEl.textContent !== cps) cpsEl.textContent = cps;
   $('#boostTag').classList.toggle('hidden', !busy); if (busy) $('#boostSec').textContent = Math.round(order.progress * 100);
   const dc = $('#dailyChip'), can = E.canDouble(state, t);
-  const dtxt = can ? '今日双倍 ✓' : '双倍 ' + fmtClockMYT(E.nextResetTs(t)) + ' 重置'; if (dc.textContent !== dtxt) dc.textContent = dtxt;
+  const dtxt = can ? '今日双倍 ✓' : '双倍 ' + fmtClockLocal(E.nextResetTs(t)) + ' 重置'; if (dc.textContent !== dtxt) dc.textContent = dtxt;
   dc.className = 'chip ' + (can ? 'on' : 'used');
   // 按钮可买状态
   tabBody.querySelectorAll('[data-cost]').forEach(b => b.classList.toggle('no', !E.canAfford(state, +b.dataset.cost)));
@@ -1628,7 +1628,7 @@ function showOffline() {
     <div class="mreward">${coinSm}+<span id="offGain">${fmt(p.amount)}</span></div>
     <div class="mnote" id="offNote">离线 = 在线每秒收益的 50%，最多 ${capH} 小时${capH > 8 ? '（麻辣服务器 +2 小时）' : ''}；团单收入只算在线（离开时进行中的团单会取消）。按你离开时的店铺、员工和 CEO 安排结算。</div>
     <div class="mbtns">${can ? `<button class="buy big red" id="claimDouble">今日双倍领取 +${fmt(p.amount * 2)}</button><button class="buy ghost" id="claim">直接领取（双倍留到下次）</button>`
-      : `<button class="buy big" id="claim">收下！</button><div class="mnote" style="margin:0">今日双倍已用，${fmtClockMYT(E.nextResetTs(now()))}（马来西亚时间）重置</div>`}</div>`);
+      : `<button class="buy big" id="claim">收下！</button><div class="mnote" style="margin:0">今日双倍已用，${fmtClockLocal(E.nextResetTs(now()))} 重置</div>`}</div>`);
   const go = dbl => {
     const r = atomic(() => E.claimOffline(state, now(), dbl), '离线收益没有到账，下次再领');
     closeModal();
@@ -2497,7 +2497,7 @@ $('#mute').addEventListener('click', () => {
   zbReply();   // 13e：小游戏开着时把静音状态同步过去
   if (!persist() && !saveBlocked && !frozen) toast('声音已切换，但保存失败：刷新后会恢复原设置', 2600);   // 12d3：声音开关是设置不是进度，照常生效（不能让玩家关不掉声音），只提示没存上
 });
-$('#dailyChip').addEventListener('click', () => toast(E.canDouble(state, now()) ? '每日双倍：今天第一次领离线收益可以免费翻倍（先封顶再翻倍）' : '今天的双倍用过啦，马来西亚时间早上 5 点重置', 2600));
+$('#dailyChip').addEventListener('click', () => toast(E.canDouble(state, now()) ? '每日双倍：今天第一次领离线收益可以免费翻倍（先封顶再翻倍）' : '今天的双倍用过啦，' + fmtClockLocal(E.nextResetTs(now())) + ' 重置', 2600));
 document.addEventListener('gesturestart', e => e.preventDefault());
 let lastTouchEnd = 0;
 document.addEventListener('touchend', e => { const t = Date.now(); if (t - lastTouchEnd < 300 && !e.target.closest('button')) e.preventDefault(); lastTouchEnd = t; }, { passive:false });
