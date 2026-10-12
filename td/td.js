@@ -502,10 +502,29 @@ const px = x => OX + x * S, py = y => OY + y * S;
 // Small vector emblems keep the paper/comic palette while giving each attack family a silhouette.
 function drawTowerEmblem(id,x,y,r) {
   cx.save(); cx.translate(x,y); cx.lineWidth=1.8; cx.strokeStyle=INK; cx.fillStyle='#fffaf0';
-  if (id==='tea' || id==='tpearl') { cx.beginPath(); cx.moveTo(-r,-r*.65);cx.lineTo(-r*.7,r);cx.lineTo(r*.7,r);cx.lineTo(r,-r*.65);cx.closePath();cx.fill();cx.stroke();cx.beginPath();cx.moveTo(0,-r*.5);cx.lineTo(r*.4,-r*1.4);cx.stroke(); for(let i=0;i<3;i++){cx.beginPath();cx.arc((i-1)*r*.4,r*.5,r*.15,0,7);cx.fillStyle='#6d4c41';cx.fill();} }
+  if (id==='tea') { // 冰沙机：搅拌杯 + 冰块 + 底座
+    cx.fillStyle='#e3f6fb';cx.beginPath();cx.moveTo(-r*.95,-r*1.05);cx.lineTo(-r*.6,r*.55);cx.lineTo(r*.6,r*.55);cx.lineTo(r*.95,-r*1.05);cx.closePath();cx.fill();cx.stroke();
+    cx.fillStyle='#fffaf0';cx.fillRect(-r*1.05,-r*1.3,r*2.1,r*.3);cx.strokeRect(-r*1.05,-r*1.3,r*2.1,r*.3);
+    cx.fillStyle=YEL;cx.fillRect(-r*.8,r*.55,r*1.6,r*.6);cx.strokeRect(-r*.8,r*.55,r*1.6,r*.6);
+    cx.fillStyle='#9fd8ef';for(const [ix,iy,a] of [[-.3,-.35,.4],[.32,-.05,-.3],[-.05,.25,.15]]){cx.save();cx.translate(ix*r,iy*r);cx.rotate(a);cx.fillRect(-r*.2,-r*.2,r*.4,r*.4);cx.strokeRect(-r*.2,-r*.2,r*.4,r*.4);cx.restore();}
+  }
+  else if (id==='tpearl') { cx.beginPath(); cx.moveTo(-r,-r*.65);cx.lineTo(-r*.7,r);cx.lineTo(r*.7,r);cx.lineTo(r,-r*.65);cx.closePath();cx.fill();cx.stroke();cx.beginPath();cx.moveTo(0,-r*.5);cx.lineTo(r*.4,-r*1.4);cx.stroke(); for(let i=0;i<3;i++){cx.beginPath();cx.arc((i-1)*r*.4,r*.5,r*.15,0,7);cx.fillStyle='#6d4c41';cx.fill();} }
   else if(id==='book' || id==='totaku') { cx.rotate(-.18);cx.fillRect(-r,-r,r*2,r*2);cx.strokeRect(-r,-r,r*2,r*2);cx.beginPath();cx.moveTo(0,-r);cx.lineTo(0,r);cx.moveTo(-r*.7,-r*.35);cx.lineTo(-r*.2,-r*.35);cx.moveTo(r*.2,r*.2);cx.lineTo(r*.7,r*.2);cx.stroke(); }
-  else if(id==='tech') {cx.fillStyle=YEL;cx.beginPath();cx.moveTo(r*.4,-r*1.3);cx.lineTo(-r,r*.15);cx.lineTo(-r*.1,r*.15);cx.lineTo(-r*.4,r*1.3);cx.lineTo(r,-r*.15);cx.lineTo(r*.1,-r*.15);cx.closePath();cx.fill();cx.stroke();}
+  else if(id==='tech') { // 紫外灯：紫色灯管 + 往下照的光线
+    cx.strokeStyle='#7c4dff';cx.lineWidth=1.6;for(let i=-2;i<=2;i++){cx.beginPath();cx.moveTo(i*r*.42,r*.05);cx.lineTo(i*r*.62,r*1.25);cx.stroke();}
+    cx.strokeStyle=INK;cx.lineWidth=1.8;cx.fillStyle='#b388ff';cx.beginPath();cx.roundRect?cx.roundRect(-r*1.05,-r*.75,r*2.1,r*.6,r*.3):cx.rect(-r*1.05,-r*.75,r*2.1,r*.6);cx.fill();cx.stroke();
+    cx.fillStyle='rgba(255,255,255,.7)';cx.fillRect(-r*.75,-r*.62,r*1.3,r*.12);
+    cx.fillStyle='#9e9e9e';cx.fillRect(-r*1.3,-r*.68,r*.28,r*.46);cx.strokeRect(-r*1.3,-r*.68,r*.28,r*.46);cx.fillRect(r*1.02,-r*.68,r*.28,r*.46);cx.strokeRect(r*1.02,-r*.68,r*.28,r*.46);
+  }
   else if(id==='trocket') {cx.beginPath();cx.moveTo(0,-r*1.3);cx.quadraticCurveTo(r*1.1,-r*.2,r*.6,r*.7);cx.lineTo(-r*.6,r*.7);cx.quadraticCurveTo(-r*1.1,-r*.2,0,-r*1.3);cx.fill();cx.stroke();cx.fillStyle=YEL;cx.beginPath();cx.moveTo(-r*.4,r*.7);cx.lineTo(0,r*1.4);cx.lineTo(r*.4,r*.7);cx.fill();cx.fillStyle='#7fd1e8';cx.beginPath();cx.arc(0,-r*.1,r*.28,0,7);cx.fill();cx.stroke();}
+  else if(id==='bbq') { // 高温烤炉：炉身 + 发红的炉门 + 炉顶火苗
+    cx.fillStyle='#ff7043';cx.beginPath();cx.moveTo(-r*.5,-r*.75);cx.quadraticCurveTo(-r*.55,-r*1.15,-r*.3,-r*1.4);cx.quadraticCurveTo(-r*.2,-r*1.05,0,-r*.75);cx.closePath();cx.fill();cx.stroke();
+    cx.beginPath();cx.moveTo(r*.05,-r*.75);cx.quadraticCurveTo(r*.1,-r*1.2,r*.4,-r*1.35);cx.quadraticCurveTo(r*.3,-r*1,r*.55,-r*.75);cx.closePath();cx.fill();cx.stroke();
+    cx.fillStyle='#fffaf0';cx.fillRect(-r*1.05,-r*.75,r*2.1,r*1.85);cx.strokeRect(-r*1.05,-r*.75,r*2.1,r*1.85);
+    cx.fillStyle='#ffb74d';cx.fillRect(-r*.75,-r*.4,r*1.5,r*.95);cx.strokeRect(-r*.75,-r*.4,r*1.5,r*.95);
+    cx.fillStyle=RED;cx.fillRect(-r*.55,r*.15,r*1.1,r*.22);
+    cx.beginPath();cx.moveTo(-r*.7,r*.8);cx.lineTo(r*.7,r*.8);cx.stroke();
+  }
   else {cx.rotate(.35);cx.beginPath();cx.moveTo(0,-r*1.4);cx.lineTo(0,r*1.4);cx.stroke();for(let i=-1;i<=1;i++){cx.fillStyle=i===0?YEL:'#fffaf0';cx.fillRect(-r*.7,i*r*.7-r*.25,r*1.4,r*.5);cx.strokeRect(-r*.7,i*r*.7-r*.25,r*1.4,r*.5);}}
   cx.restore();
 }
