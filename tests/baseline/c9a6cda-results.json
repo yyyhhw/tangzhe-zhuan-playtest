@@ -1,0 +1,1783 @@
+{
+  "manifestBase": "c9a6cda4d92e76207cc469d9d2eaa147489c31ed",
+  "environment": {
+    "node": "v24.19.0",
+    "python": "3.12.14",
+    "timeoutSeconds": 25,
+    "workers": 3
+  },
+  "summary": {
+    "total": 82,
+    "pass": 31,
+    "fail": 26,
+    "not-run": 25
+  },
+  "rows": [
+    {
+      "file": "cards/tests/save.test.mjs",
+      "command": [
+        "node",
+        "cards/tests/save.test.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "pass",
+      "exit": 0,
+      "stage_count_error": false,
+      "evidence_head": [
+        "✔ lock name is separate from storage keys (1.830523ms)",
+        "✔ A1 round trip: revision, hash and state equal; bak holds previous save (27.158095ms)",
+        "✔ A2 before-commit failure at tmp-write: main byte-identical (16.536043ms)",
+        "✔ A2 before-commit failure at tmp-verify: main byte-identical (14.018845ms)",
+        "✔ A2 before-commit failure at bak-write: main byte-identical (27.382966ms)",
+        "✔ A2 before-commit failure at main-write: main byte-identical (20.742655ms)",
+        "✔ A2a main committed but tmp cleanup fails: success with tmpLeft, cleaned next time (13.266092ms)",
+        "✔ A2b main read-back mismatch, rollback succeeds: before-commit main-verify (11.404992ms)",
+        "✔ A2c rollback fails: rollback-failed, never claims saved; bak intact and recoverable (11.701209ms)",
+        "✔ A2d read-back throws after main write: rollback-failed (main really updated), never old step (20.58109ms)",
+        "✔ A2e two tabs: A rollback-failed -> B loads and saves newer -> A restore = conflict, B progress kept (18.265887ms)",
+        "✔ A2h A main write throws + reads fail, B saves r2 with identical bak, A restore never overwrites r2 (24.326116ms)",
+        "✔ A2j main readable again but holds a future dataVersion: read-only, never overwritten by backup (27.415202ms)",
+        "✔ A2i main readable but corrupt after recovery: re-snapshot, confirm, then commit; B save in between = conflict (35.618468ms)",
+        "✔ A2e2 only the main changed after failure (bak same): still conflict (16.033012ms)",
+        "✔ A2e3 restoreBackup without a prior rollback failure is refused (5.823633ms)"
+      ]
+    },
+    {
+      "file": "cards/tests/saved-decks.test.mjs",
+      "command": [
+        "node",
+        "cards/tests/saved-decks.test.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "pass",
+      "exit": 0,
+      "stage_count_error": false,
+      "evidence_head": [
+        "✔ scope keys isolate formal and preview pages/modules, ignore query and hash (2.658334ms)",
+        "✔ root/preview source mirrors are byte-identical (9.257512ms)",
+        "✔ empty load is detached, never initializes or modifies any storage key (2.748759ms)",
+        "✔ explicit save survives reload with per-class selections and active class (2.936331ms)",
+        "✔ all four current base templates are legal cloned recipes (3.534557ms)",
+        "✔ saved recipes permit incomplete counts, unowned and retired card IDs (1.379239ms)",
+        "✔ template changes cannot overwrite saved custom or retired recipes on load (1.095607ms)",
+        "✔ same-class trimmed case-insensitive names are unique, cross-class names allowed (0.595498ms)",
+        "✔ structural boundaries: counts, duplicate IDs, selected class, names, schema (2.956055ms)",
+        "✔ validation never invokes accessor properties or custom serialization (1.241431ms)",
+        "✔ malformed, future, unknown-field and invalid records are never rewritten (3.744322ms)",
+        "✔ missing Web Locks or rejected locks are read-only (0.516592ms)",
+        "✔ stale tabs cannot overwrite a successful write, even with same revision JSON (0.554509ms)",
+        "✔ revision mismatch, omitted expectedRaw, and overflow never write (0.74214ms)",
+        "✔ a queued commit snapshots intent before caller can mutate it (0.386325ms)",
+        "✔ read errors, quota failure, and unverifiable writes are reported without rollback (1.039969ms)"
+      ]
+    },
+    {
+      "file": "pet/game/test_petgame.js",
+      "command": [
+        "node",
+        "pet/game/test_petgame.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "fail",
+      "exit": 1,
+      "stage_count_error": false,
+      "evidence_head": [
+        "== 1. 购买",
+        "/workspace/work/baseline-diagnosis/tree/pet/game/test_petgame.js:28",
+        "  r = PG.buy(st, E, 'c77', T0, M); ok(r.ok && st.coins === 10000 - PG.PET.price && st.pet.owned === true && st.pet.home === 'c77' && st.pet.eng === null && st.pet.boughtAt === T0, '买到：扣 ' + PG.PET.price + '，住进 77 的家');",
+        "                                                                                          ^",
+        "",
+        "TypeError: Cannot read properties of undefined (reading 'owned')",
+        "    at Object.<anonymous> (/workspace/work/baseline-diagnosis/tree/pet/game/test_petgame.js:28:91)",
+        "    at Module._compile (node:internal/modules/cjs/loader:1872:14)",
+        "    at Object..js (node:internal/modules/cjs/loader:2003:10)",
+        "    at Module.load (node:internal/modules/cjs/loader:1594:32)",
+        "    at Module._load (node:internal/modules/cjs/loader:1396:12)",
+        "    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)",
+        "    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)",
+        "    at node:internal/main/run_main_module:33:47",
+        "",
+        "Node.js v24.19.0"
+      ]
+    },
+    {
+      "file": "pet/test_engine.js",
+      "command": [
+        "node",
+        "pet/test_engine.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "pass",
+      "exit": 0,
+      "stage_count_error": false,
+      "evidence_head": [
+        "== 1. 规格数值",
+        "== 2. 美术 manifest 合同",
+        "== 3. 全部 200 件家具当障碍",
+        "== 4. 测试房间 / 互动点",
+        "== 5. 放着不管 2 分钟（多个种子）",
+        "== 6. 呼唤：先扭头，再绕障碍过来",
+        "== 7. 抛球：追 → 叼起 → 真叼回来 → 放下",
+        "== 8. 没路：停下换目标，不穿家具、不瞬移",
+        "== 9. 路被挡：搬家具时停下，放好后绕路",
+        "== 10. 累了：回窝 → 趴下 → 呼吸睡 → 起身",
+        "== 11. 精力 / 亲密",
+        "== 12. 抚摸：连点不无限重播",
+        "== 13. 前后遮挡 / 跳起",
+        "== 14. 离线 / 存档",
+        "== 14b. 回归：叼球中抚摸 / 0 精力读档（熊大 p1 复核）",
+        "== 16. 回归 (a)：互动目标绑定家具，搬走后不在旧位置闻（熊大 p2 复核）"
+      ]
+    },
+    {
+      "file": "preview/cards/tests/save.test.mjs",
+      "command": [
+        "node",
+        "preview/cards/tests/save.test.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "fail",
+      "exit": 1,
+      "stage_count_error": false,
+      "evidence_head": [
+        "✔ lock name is separate from storage keys (2.175777ms)",
+        "✔ A1 round trip: revision, hash and state equal; bak holds previous save (32.730541ms)",
+        "✔ A2 before-commit failure at tmp-write: main byte-identical (20.535603ms)",
+        "✔ A2 before-commit failure at tmp-verify: main byte-identical (18.605494ms)",
+        "✔ A2 before-commit failure at bak-write: main byte-identical (34.775878ms)",
+        "✔ A2 before-commit failure at main-write: main byte-identical (27.583547ms)",
+        "✔ A2a main committed but tmp cleanup fails: success with tmpLeft, cleaned next time (17.461967ms)",
+        "✔ A2b main read-back mismatch, rollback succeeds: before-commit main-verify (13.487154ms)",
+        "✔ A2c rollback fails: rollback-failed, never claims saved; bak intact and recoverable (17.631683ms)",
+        "✔ A2d read-back throws after main write: rollback-failed (main really updated), never old step (49.404567ms)",
+        "✔ A2e two tabs: A rollback-failed -> B loads and saves newer -> A restore = conflict, B progress kept (38.621433ms)",
+        "✔ A2h A main write throws + reads fail, B saves r2 with identical bak, A restore never overwrites r2 (28.161284ms)",
+        "✖ A2j main readable again but holds a future dataVersion: read-only, never overwritten by backup (22.0061ms)",
+        "✔ A2i main readable but corrupt after recovery: re-snapshot, confirm, then commit; B save in between = conflict (46.166008ms)",
+        "✔ A2e2 only the main changed after failure (bak same): still conflict (17.521513ms)",
+        "✔ A2e3 restoreBackup without a prior rollback failure is refused (6.022812ms)"
+      ]
+    },
+    {
+      "file": "preview/cards/tests/saved-decks.test.mjs",
+      "command": [
+        "node",
+        "preview/cards/tests/saved-decks.test.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "pass",
+      "exit": 0,
+      "stage_count_error": false,
+      "evidence_head": [
+        "✔ scope keys isolate formal and preview pages/modules, ignore query and hash (2.067466ms)",
+        "✔ root/preview source mirrors are byte-identical (5.389069ms)",
+        "✔ empty load is detached, never initializes or modifies any storage key (2.179192ms)",
+        "✔ explicit save survives reload with per-class selections and active class (3.092918ms)",
+        "✔ all four current base templates are legal cloned recipes (1.716293ms)",
+        "✔ saved recipes permit incomplete counts, unowned and retired card IDs (1.125476ms)",
+        "✔ template changes cannot overwrite saved custom or retired recipes on load (0.586963ms)",
+        "✔ same-class trimmed case-insensitive names are unique, cross-class names allowed (0.37034ms)",
+        "✔ structural boundaries: counts, duplicate IDs, selected class, names, schema (2.121931ms)",
+        "✔ validation never invokes accessor properties or custom serialization (0.815585ms)",
+        "✔ malformed, future, unknown-field and invalid records are never rewritten (1.517106ms)",
+        "✔ missing Web Locks or rejected locks are read-only (0.483296ms)",
+        "✔ stale tabs cannot overwrite a successful write, even with same revision JSON (2.768448ms)",
+        "✔ revision mismatch, omitted expectedRaw, and overflow never write (1.529287ms)",
+        "✔ a queued commit snapshots intent before caller can mutate it (0.353705ms)",
+        "✔ read errors, quota failure, and unverifiable writes are reported without rollback (4.446243ms)"
+      ]
+    },
+    {
+      "file": "preview/pet/accept2/test_companion_runtime.js",
+      "command": [
+        "node",
+        "preview/pet/accept2/test_companion_runtime.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "pass",
+      "exit": 0,
+      "stage_count_error": false,
+      "evidence_head": [
+        "PASS 21 pairs: unique purchase, same room, individual pet/play interaction, save/reload (synthetic logic fixtures only)",
+        "PASS six species: rollback retains live growth; unknown engine versions stay opaque",
+        "PASS no-walk cat rejects spatial play without sliding or fake completion",
+        "PASS cat locomotion source counts, cross-image S order, groom06-only patch, original pixel hashes, missing-atlas rejection",
+        "PASS actual cat routes: E/W use run_E (W mirrored), N/S use corresponding walks, completed return counts one play",
+        "PASS six autonomous behavior profiles and cat-furniture rest (no canine sniff/fetch): {\"cat\":{\"positions\":87,\"labels\":[\"正在熟悉新家\",\"走到猫窝旁蜷卧\",\"在屋里探索\",\"舔爪理毛\"]},\"red_panda\":{\"positions\":171,\"labels\":[\"正在熟悉新家\",\"抱叶啃食\",\"在屋里探索\"]},\"robot\":{\"positions\":345,\"labels\":[\"正在熟悉新家\",\"转头自检\",\"在屋里探索\"]},\"panda_cub\":{\"positions\":42,\"labels\":[\"正在熟悉新家\",\"抱竹啃食\",\"在屋里探索\"]},\"alpaca\":{\"positions\":283,\"labels\":[\"正在熟悉新家\",\"嚼嚼青草\",\"在屋里探索\"]},\"rabbit\":{\"positions\":162,\"labels\":[\"正在熟悉新家\",\"竖耳洗脸\",\"在屋里探索\"]}}"
+      ]
+    },
+    {
+      "file": "preview/pet/accept2/test_manifest_companions.js",
+      "command": [
+        "node",
+        "preview/pet/accept2/test_manifest_companions.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "pass",
+      "exit": 0,
+      "stage_count_error": false,
+      "evidence_head": [
+        "PASS 13 malformed multi-atlas/semantic cases rejected without exceptions; airborne anchor accepted; no fixed108-frame requirement",
+        "PASS dog-manifest species spoof refused; valid cat/rabbit registration continues and existing assets survive rejection"
+      ]
+    },
+    {
+      "file": "preview/pet/accept2/test_pet_portal_e2e.mjs",
+      "command": [
+        "node",
+        "preview/pet/accept2/test_pet_portal_e2e.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "browser",
+      "status": "not-run",
+      "reason": "browser execution requires separate supported environment; not launched"
+    },
+    {
+      "file": "preview/pet/accept2/test_pet_portal_regressions.js",
+      "command": [
+        "node",
+        "preview/pet/accept2/test_pet_portal_regressions.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "fail",
+      "exit": 1,
+      "stage_count_error": false,
+      "evidence_head": [
+        "<anonymous_script>:1",
+        "undefined",
+        "^",
+        "",
+        "SyntaxError: \"undefined\" is not valid JSON",
+        "    at JSON.parse (<anonymous>)",
+        "    at clone (/workspace/work/baseline-diagnosis/tree/preview/pet/accept2/test_pet_portal_regressions.js:4:58)",
+        "    at /workspace/work/baseline-diagnosis/tree/preview/pet/accept2/test_pet_portal_regressions.js:14:18",
+        "    at test (/workspace/work/baseline-diagnosis/tree/preview/pet/accept2/test_pet_portal_regressions.js:9:32)",
+        "    at Object.<anonymous> (/workspace/work/baseline-diagnosis/tree/preview/pet/accept2/test_pet_portal_regressions.js:10:1)",
+        "    at Module._compile (node:internal/modules/cjs/loader:1872:14)",
+        "    at Object..js (node:internal/modules/cjs/loader:2003:10)",
+        "    at Module.load (node:internal/modules/cjs/loader:1594:32)",
+        "    at Module._load (node:internal/modules/cjs/loader:1396:12)",
+        "    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)",
+        ""
+      ]
+    },
+    {
+      "file": "preview/pet/accept2/test_pets2_core.js",
+      "command": [
+        "node",
+        "preview/pet/accept2/test_pets2_core.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "pass",
+      "exit": 0,
+      "stage_count_error": false,
+      "evidence_head": [
+        "== 读档",
+        "== 调配",
+        "passed 48, failed 0"
+      ]
+    },
+    {
+      "file": "preview/pet/accept2/test_pets2_r4.js",
+      "command": [
+        "node",
+        "preview/pet/accept2/test_pets2_r4.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "fail",
+      "exit": 1,
+      "stage_count_error": false,
+      "evidence_head": [
+        "PASS R4-1 bad wallet / insufficient / save blocked / save failure: purchase refused, coins + roster + growth unchanged",
+        "node:internal/assert/utils:77",
+        "    throw err;",
+        "    ^",
+        "",
+        "AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:",
+        "",
+        "  assert(!PG.hasRoom(st, E, 'pearl', M) && PG.hasRoom(st, E, 'c77', M))",
+        "",
+        "    at /workspace/work/baseline-diagnosis/tree/preview/pet/accept2/test_pets2_r4.js:43:22",
+        "    at test (/workspace/work/baseline-diagnosis/tree/preview/pet/accept2/test_pets2_r4.js:22:31)",
+        "    at Object.<anonymous> (/workspace/work/baseline-diagnosis/tree/preview/pet/accept2/test_pets2_r4.js:37:1)",
+        "    at Module._compile (node:internal/modules/cjs/loader:1872:14)",
+        "    at Object..js (node:internal/modules/cjs/loader:2003:10)",
+        "    at Module.load (node:internal/modules/cjs/loader:1594:32)",
+        "    at Module._load (node:internal/modules/cjs/loader:1396:12)"
+      ]
+    },
+    {
+      "file": "preview/pet/accept2/test_pets2_roster_runtime.js",
+      "command": [
+        "node",
+        "preview/pet/accept2/test_pets2_roster_runtime.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "pass",
+      "exit": 0,
+      "stage_count_error": false,
+      "evidence_head": [
+        "PASS one dog only, different-species purchase, replacement and standby ownership",
+        "PASS failed purchase rolls back wallet, revision, placement, and prepared growth",
+        "PASS roster operations preserve opaque growth across every species",
+        "PASS runtime snapshots are applied inside assignment rollback boundary",
+        "PASS stale replacement picker cannot apply after room occupants change",
+        "PASS stale runtimes cannot overwrite newer engines; clone snapshots stay isolated",
+        "PASS ID repair and normalization preserve roster metadata and omit empty rooms",
+        "PASS failed replacement and retry preserve every active runtime, including other rooms",
+        "PASS multiple snapshots inside one failed transaction retain original rollback baseline",
+        "PASS default persistence and consecutive staged saves preserve live progress after rollback",
+        "PASS resident departure renumbers beds without resetting live world or growth",
+        "11 extra roster/runtime cases passed"
+      ]
+    },
+    {
+      "file": "preview/pet/accept2/test_pets2_ui_vm.js",
+      "command": [
+        "node",
+        "preview/pet/accept2/test_pets2_ui_vm.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "pass",
+      "exit": 0,
+      "stage_count_error": false,
+      "evidence_head": [
+        "PASS ../../app.js collapsed entry has no permanent choices or interaction cards",
+        "PASS ../../app.js unowned selected species only, ready/locked labels",
+        "PASS ../../app.js owned dog management has no interactions; room has one three-button group",
+        "PASS ../../app.js standby and other-room selection cannot interact",
+        "PASS ../../app.js decor and waiting disable interaction controls",
+        "PASS ../../app.js unsupported growth is preserved and labelled without enabling actions",
+        "PASS ../../app.js legacy duplicate selection shows explicit activation, not second purchase",
+        "PASS ../../app.js opaque records and quoted identity escape safely",
+        "PASS ../game/app.js collapsed entry has no permanent choices or interaction cards",
+        "PASS ../game/app.js unowned selected species only, ready/locked labels",
+        "PASS ../game/app.js owned dog management has no interactions; room has one three-button group",
+        "PASS ../game/app.js standby and other-room selection cannot interact",
+        "PASS ../game/app.js decor and waiting disable interaction controls",
+        "PASS ../game/app.js unsupported growth is preserved and labelled without enabling actions",
+        "PASS ../game/app.js legacy duplicate selection shows explicit activation, not second purchase",
+        "PASS ../game/app.js opaque records and quoted identity escape safely"
+      ]
+    },
+    {
+      "file": "preview/pet/accept2/test_room_capacity.js",
+      "command": [
+        "node",
+        "preview/pet/accept2/test_room_capacity.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "pass",
+      "exit": 0,
+      "stage_count_error": false,
+      "evidence_head": [
+        "PASS one-body geometry blocks second purchase without charging or changing any save data",
+        "PASS resident departure invalidates admission result with unchanged furniture",
+        "PASS two-body geometry gives distinct legal footprints; house upgrade enables admission",
+        "PASS move to one-body room is rejected with source room and growth intact; replacement excludes displaced pet",
+        "PASS full-room UI probe considers replacements, but exact assignment still checks the selected pair",
+        "PASS actual integer-grid furniture removal releases legal two-pet room capacity",
+        "PASS geometry changed by preparation and failed storage both roll back whole move transaction",
+        "PASS missing resident manifest fails closed; both entries use generic waiting recovery text",
+        "8 capacity cases passed (narrow synthetic geometry plus real integer furniture); no physical-device claims"
+      ]
+    },
+    {
+      "file": "preview/pet/accept2/test_room_capacity_e2e.mjs",
+      "command": [
+        "node",
+        "preview/pet/accept2/test_room_capacity_e2e.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "browser",
+      "status": "not-run",
+      "reason": "browser execution requires separate supported environment; not launched"
+    },
+    {
+      "file": "preview/pet/accept2/test_spatial_companions.js",
+      "command": [
+        "node",
+        "preview/pet/accept2/test_spatial_companions.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "pass",
+      "exit": 0,
+      "stage_count_error": false,
+      "evidence_head": [
+        "PASS cat complete spatial game",
+        "PASS cat complete spatial game with furniture",
+        "PASS red_panda complete spatial game",
+        "PASS red_panda complete spatial game with furniture",
+        "PASS robot complete spatial game",
+        "PASS robot complete spatial game with furniture",
+        "PASS panda_cub complete spatial game",
+        "PASS panda_cub complete spatial game with furniture",
+        "PASS alpaca complete spatial game",
+        "PASS alpaca complete spatial game with furniture",
+        "PASS rabbit complete spatial game",
+        "PASS rabbit complete spatial game with furniture",
+        "PASS cat repeated clicks return once, then ordered restart; call/pet/layout/pause/restore clean transient state",
+        "PASS red_panda repeated clicks return once, then ordered restart; call/pet/layout/pause/restore clean transient state",
+        "PASS robot repeated clicks return once, then ordered restart; call/pet/layout/pause/restore clean transient state",
+        "PASS panda_cub repeated clicks return once, then ordered restart; call/pet/layout/pause/restore clean transient state"
+      ]
+    },
+    {
+      "file": "preview/pet/accept2/test_spatial_companions_e2e.mjs",
+      "command": [
+        "node",
+        "preview/pet/accept2/test_spatial_companions_e2e.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "browser",
+      "status": "not-run",
+      "reason": "browser execution requires separate supported environment; not launched"
+    },
+    {
+      "file": "preview/pet/accept2/test_species_unique.js",
+      "command": [
+        "node",
+        "preview/pet/accept2/test_species_unique.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "fail",
+      "exit": 1,
+      "stage_count_error": false,
+      "evidence_head": [
+        "PASS one global dog purchase, including standby and other rooms; no extra charges",
+        "PASS legacy dog counts before migration, duplicate records/growth/coins stay intact",
+        "PASS different species coexist and survive save/reload; unknown growth stays opaque",
+        "PASS unimplemented species never charge or create placeholder pets",
+        "PASS failed first purchase rolls back; retry succeeds once",
+        "PASS both renderers collapse to one pet entry and reveal management without interaction controls",
+        "node:assert:152",
+        "  throw new AssertionError(obj);",
+        "  ^",
+        "",
+        "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:",
+        "",
+        "false !== true",
+        "",
+        "    at /workspace/work/baseline-diagnosis/tree/preview/pet/accept2/test_species_unique.js:56:10",
+        "    at test (/workspace/work/baseline-diagnosis/tree/preview/pet/accept2/test_species_unique.js:8:36)"
+      ]
+    },
+    {
+      "file": "preview/pet/game/test_petgame.js",
+      "command": [
+        "node",
+        "preview/pet/game/test_petgame.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "fail",
+      "exit": 1,
+      "stage_count_error": false,
+      "evidence_head": [
+        "== 1. 购买",
+        "  ✗ 13k 双宠：同房第二只可买，新 uid，扣 3000",
+        "  ✗ 13k 双宠：满房（2 只）不选替换 / 待命，再买被拒，不扣钱",
+        "== 2. 旧档兼容（没有 pet 字段）",
+        "== 3. pet 字段往返 / 坏字段",
+        "  ✗ E.migrate + norm 往返：pet 原样保留",
+        "  ✗ 坏 pet（字符串 / 数组 / null / 没 owned）：删掉 = 没买",
+        "== 4. 家宅布局 → 引擎",
+        "== 5. 摆家具压到小狗 / 窝；布置模式暂停",
+        "== 6. 刷新恢复",
+        "== 7. 搬家",
+        "== 8. 三档房子压力测试（随机摆满 + 边玩边换家具）",
+        "== 10. p4b：满屋（合法摆满）= 正常状态，不崩、不扣了钱没狗（熊大 14:14）",
+        "== 11. p4b：坏档逐字段容错（NaN / 无穷 / 字符串 / 负数 / 超界 / 缺字段 / null）（熊大 14:17）",
+        "== 11b. p4c：合法读档边界（熊大 15:20 p4b 复核）——满屋存档读进只空 1 格不穿家具；满屋读档保留疲倦",
+        "== 12. 静态检查：存档键 / 主线不受影响"
+      ]
+    },
+    {
+      "file": "preview/pet/test_engine.js",
+      "command": [
+        "node",
+        "preview/pet/test_engine.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "pass",
+      "exit": 0,
+      "stage_count_error": false,
+      "evidence_head": [
+        "== 1. 规格数值",
+        "== 2. 美术 manifest 合同",
+        "== 3. 全部 200 件家具当障碍",
+        "== 4. 测试房间 / 互动点",
+        "== 5. 放着不管 2 分钟（多个种子）",
+        "== 6. 呼唤：先扭头，再绕障碍过来",
+        "== 7. 抛球：追 → 叼起 → 真叼回来 → 放下",
+        "== 8. 没路：停下换目标，不穿家具、不瞬移",
+        "== 9. 路被挡：搬家具时停下，放好后绕路",
+        "== 10. 累了：回窝 → 趴下 → 呼吸睡 → 起身",
+        "== 11. 精力 / 亲密",
+        "== 12. 抚摸：连点不无限重播",
+        "== 13. 前后遮挡 / 跳起",
+        "== 14. 离线 / 存档",
+        "== 14b. 回归：叼球中抚摸 / 0 精力读档（熊大 p1 复核）",
+        "== 16. 回归 (a)：互动目标绑定家具，搬走后不在旧位置闻（熊大 p2 复核）"
+      ]
+    },
+    {
+      "file": "preview/qa/test_ceo_embedded.mjs",
+      "command": [
+        "node",
+        "preview/qa/test_ceo_embedded.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "browser",
+      "status": "not-run",
+      "reason": "browser execution requires separate supported environment; not launched"
+    },
+    {
+      "file": "preview/qa/test_decor_ceo.mjs",
+      "command": [
+        "node",
+        "preview/qa/test_decor_ceo.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "browser",
+      "status": "not-run",
+      "reason": "browser execution requires separate supported environment; not launched"
+    },
+    {
+      "file": "preview/qa/test_story_cards.mjs",
+      "command": [
+        "node",
+        "preview/qa/test_story_cards.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "browser",
+      "status": "not-run",
+      "reason": "browser execution requires separate supported environment; not launched"
+    },
+    {
+      "file": "preview/qa/test_story_cold_focus.mjs",
+      "command": [
+        "node",
+        "preview/qa/test_story_cold_focus.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "browser",
+      "status": "not-run",
+      "reason": "browser execution requires separate supported environment; not launched"
+    },
+    {
+      "file": "preview/td/test_td_bridge.js",
+      "command": [
+        "node",
+        "preview/td/test_td_bridge.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "fail",
+      "exit": 1,
+      "stage_count_error": false,
+      "evidence_head": [
+        "evalmachine.<anonymous>:13",
+        "  if (frozen || tdOpen || zbOpen || cardsOpen || !state.shops[3].open) return;",
+        "                                    ^",
+        "",
+        "ReferenceError: cardsOpen is not defined",
+        "    at Object.openTD (evalmachine.<anonymous>:13:37)",
+        "    at /workspace/work/baseline-diagnosis/tree/preview/td/test_td_bridge.js:16:36",
+        "    at check (/workspace/work/baseline-diagnosis/tree/preview/td/test_td_bridge.js:7:20)",
+        "    at Object.<anonymous> (/workspace/work/baseline-diagnosis/tree/preview/td/test_td_bridge.js:16:1)",
+        "    at Module._compile (node:internal/modules/cjs/loader:1872:14)",
+        "    at Object..js (node:internal/modules/cjs/loader:2003:10)",
+        "    at Module.load (node:internal/modules/cjs/loader:1594:32)",
+        "    at Module._load (node:internal/modules/cjs/loader:1396:12)",
+        "    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)",
+        "    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)",
+        ""
+      ]
+    },
+    {
+      "file": "preview/td/test_td_protocol.js",
+      "command": [
+        "node",
+        "preview/td/test_td_protocol.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "pass",
+      "exit": 0,
+      "stage_count_error": false,
+      "evidence_head": [
+        "TD child protocol: 9 checks passed (Node VM, not browser E2E)"
+      ]
+    },
+    {
+      "file": "preview/td/test_tdhost.js",
+      "command": [
+        "node",
+        "preview/td/test_tdhost.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "fail",
+      "exit": 1,
+      "stage_count_error": false,
+      "evidence_head": [
+        "node:assert:152",
+        "  throw new AssertionError(obj);",
+        "  ^",
+        "",
+        "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:",
+        "",
+        "false !== true",
+        "",
+        "    at /workspace/work/baseline-diagnosis/tree/preview/td/test_tdhost.js:18:94",
+        "    at check (/workspace/work/baseline-diagnosis/tree/preview/td/test_tdhost.js:4:21)",
+        "    at Object.<anonymous> (/workspace/work/baseline-diagnosis/tree/preview/td/test_tdhost.js:18:24)",
+        "    at Module._compile (node:internal/modules/cjs/loader:1872:14)",
+        "    at Object..js (node:internal/modules/cjs/loader:2003:10)",
+        "    at Module.load (node:internal/modules/cjs/loader:1594:32)",
+        "    at Module._load (node:internal/modules/cjs/loader:1396:12)",
+        "    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)"
+      ]
+    },
+    {
+      "file": "preview/test_coin_safety.js",
+      "command": [
+        "node",
+        "preview/test_coin_safety.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "fail",
+      "exit": 1,
+      "stage_count_error": false,
+      "evidence_head": [
+        "  ✗ 12d3 ④ commitSave：备份 setItem 抛异常 → 返回失败，主档 / 备份逐字节不变，rev 不变",
+        "  ✗ 12d3 ④ commitSave：主档 setItem 抛异常 → 返回失败，主档不变、rev 不变（备份 = 原主档）",
+        "  ✗ 12d3 ④ commitSave 成功：先把原主档整份放进 -bak，rev + 1，写出的档通过 checkSave",
+        "  ✗ 12d3 ④ commitSave：存储里 rev 更新（别的页面写过）→ 拒绝、不覆盖",
+        "  ✗ 12d3 ⑤ 打僵尸训练（跨页）成功：主档余额 −价格、zombie.lv +1、rev +1，-bak = 原主档",
+        "  ✗ 12d3 ⑤ 宠物买狗（跨页）：存不上 → pet 字段不出现、钱不扣；能存上 → pet 写进同一份主档",
+        "coin safety tests: 516 passed, 6 failed"
+      ]
+    },
+    {
+      "file": "preview/test_economy.js",
+      "command": [
+        "node",
+        "preview/test_economy.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "pass",
+      "exit": 0,
+      "stage_count_error": false,
+      "evidence_head": [
+        "  （没有 git 历史，跳过 SHA 常量复核）",
+        "economy tests: 539 passed, 0 failed"
+      ]
+    },
+    {
+      "file": "preview/zombie/test_zbtop.js",
+      "command": [
+        "node",
+        "preview/zombie/test_zbtop.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "pass",
+      "exit": 0,
+      "stage_count_error": false,
+      "evidence_head": [
+        "zombie TOP10 rules: 27 checks passed"
+      ]
+    },
+    {
+      "file": "preview/zombie/test_zbtop_browser.mjs",
+      "command": [
+        "node",
+        "preview/zombie/test_zbtop_browser.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "browser",
+      "status": "not-run",
+      "reason": "browser execution requires separate supported environment; not launched"
+    },
+    {
+      "file": "preview/zombie/test_zbtop_layout.mjs",
+      "command": [
+        "node",
+        "preview/zombie/test_zbtop_layout.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "browser",
+      "status": "not-run",
+      "reason": "browser execution requires separate supported environment; not launched"
+    },
+    {
+      "file": "td/test_balance_browser.mjs",
+      "command": [
+        "node",
+        "td/test_balance_browser.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "browser",
+      "status": "not-run",
+      "reason": "browser execution requires separate supported environment; not launched"
+    },
+    {
+      "file": "td/test_balance_contract.js",
+      "command": [
+        "node",
+        "td/test_balance_contract.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "fail",
+      "exit": 1,
+      "stage_count_error": true,
+      "evidence_head": [
+        "evalmachine.<anonymous>:6",
+        "const STAGE_COUNT = Campaign.STAGE_COUNT, RULESET_ID = Campaign.RULESET_ID;",
+        "                             ^",
+        "",
+        "TypeError: Cannot read properties of undefined (reading 'STAGE_COUNT')",
+        "    at evalmachine.<anonymous>:6:30",
+        "    at evalmachine.<anonymous>:642:3",
+        "    at Script.runInContext (node:vm:149:12)",
+        "    at Object.runInContext (node:vm:301:6)",
+        "    at child (eval at <anonymous> (/workspace/work/baseline-diagnosis/tree/td/test_balance_contract.js:1:191), <anonymous>:15:28)",
+        "    at game (eval at <anonymous> (/workspace/work/baseline-diagnosis/tree/td/test_balance_contract.js:1:191), <anonymous>:28:28)",
+        "    at Object.<anonymous> (/workspace/work/baseline-diagnosis/tree/td/test_balance_contract.js:2:41)",
+        "    at Module._compile (node:internal/modules/cjs/loader:1872:14)",
+        "    at Object..js (node:internal/modules/cjs/loader:2003:10)",
+        "    at Module.load (node:internal/modules/cjs/loader:1594:32)",
+        ""
+      ]
+    },
+    {
+      "file": "td/test_balance_sweep.js",
+      "command": [
+        "node",
+        "td/test_balance_sweep.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "fail",
+      "exit": 1,
+      "stage_count_error": true,
+      "evidence_head": [
+        "evalmachine.<anonymous>:6",
+        "const STAGE_COUNT = Campaign.STAGE_COUNT, RULESET_ID = Campaign.RULESET_ID;",
+        "                             ^",
+        "",
+        "TypeError: Cannot read properties of undefined (reading 'STAGE_COUNT')",
+        "    at evalmachine.<anonymous>:6:30",
+        "    at evalmachine.<anonymous>:642:3",
+        "    at Script.runInContext (node:vm:149:12)",
+        "    at Object.runInContext (node:vm:301:6)",
+        "    at child (eval at <anonymous> (/workspace/work/baseline-diagnosis/tree/td/test_balance_sweep.js:6:14), <anonymous>:15:28)",
+        "    at game (eval at <anonymous> (/workspace/work/baseline-diagnosis/tree/td/test_balance_sweep.js:6:14), <anonymous>:28:28)",
+        "    at run (/workspace/work/baseline-diagnosis/tree/td/test_balance_sweep.js:8:10)",
+        "    at Object.<anonymous> (/workspace/work/baseline-diagnosis/tree/td/test_balance_sweep.js:23:169)",
+        "    at Module._compile (node:internal/modules/cjs/loader:1872:14)",
+        "    at Object..js (node:internal/modules/cjs/loader:2003:10)",
+        ""
+      ]
+    },
+    {
+      "file": "td/test_budget_browser.mjs",
+      "command": [
+        "node",
+        "td/test_budget_browser.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "browser",
+      "status": "not-run",
+      "reason": "browser execution requires separate supported environment; not launched"
+    },
+    {
+      "file": "td/test_budget_experiment.js",
+      "command": [
+        "node",
+        "td/test_budget_experiment.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "fail",
+      "exit": 1,
+      "stage_count_error": true,
+      "evidence_head": [
+        "evalmachine.<anonymous>:6",
+        "const STAGE_COUNT = Campaign.STAGE_COUNT, RULESET_ID = Campaign.RULESET_ID;",
+        "                             ^",
+        "",
+        "TypeError: Cannot read properties of undefined (reading 'STAGE_COUNT')",
+        "    at evalmachine.<anonymous>:6:30",
+        "    at evalmachine.<anonymous>:642:3",
+        "    at Script.runInContext (node:vm:149:12)",
+        "    at Object.runInContext (node:vm:301:6)",
+        "    at child (eval at run (/workspace/work/baseline-diagnosis/tree/td/test_budget_experiment.js:7:15), <anonymous>:15:28)",
+        "    at game (eval at run (/workspace/work/baseline-diagnosis/tree/td/test_budget_experiment.js:7:15), <anonymous>:28:28)",
+        "    at run (/workspace/work/baseline-diagnosis/tree/td/test_budget_experiment.js:7:118)",
+        "    at Object.<anonymous> (/workspace/work/baseline-diagnosis/tree/td/test_budget_experiment.js:17:136)",
+        "    at Module._compile (node:internal/modules/cjs/loader:1872:14)",
+        "    at Object..js (node:internal/modules/cjs/loader:2003:10)",
+        ""
+      ]
+    },
+    {
+      "file": "td/test_budget_shipping.js",
+      "command": [
+        "node",
+        "td/test_budget_shipping.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "fail",
+      "exit": 1,
+      "stage_count_error": true,
+      "evidence_head": [
+        "evalmachine.<anonymous>:6",
+        "const STAGE_COUNT = Campaign.STAGE_COUNT, RULESET_ID = Campaign.RULESET_ID;",
+        "                             ^",
+        "",
+        "TypeError: Cannot read properties of undefined (reading 'STAGE_COUNT')",
+        "    at evalmachine.<anonymous>:6:30",
+        "    at evalmachine.<anonymous>:642:3",
+        "    at Script.runInContext (node:vm:149:12)",
+        "    at Object.runInContext (node:vm:301:6)",
+        "    at child (eval at run (/workspace/work/baseline-diagnosis/tree/td/test_budget_experiment.js:7:15), <anonymous>:15:28)",
+        "    at game (eval at run (/workspace/work/baseline-diagnosis/tree/td/test_budget_experiment.js:7:15), <anonymous>:28:28)",
+        "    at run (/workspace/work/baseline-diagnosis/tree/td/test_budget_experiment.js:7:118)",
+        "    at Object.<anonymous> (/workspace/work/baseline-diagnosis/tree/td/test_budget_shipping.js:3:112)",
+        "    at Module._compile (node:internal/modules/cjs/loader:1872:14)",
+        "    at Object..js (node:internal/modules/cjs/loader:2003:10)",
+        ""
+      ]
+    },
+    {
+      "file": "td/test_budget_verify.js",
+      "command": [
+        "node",
+        "td/test_budget_verify.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "fail",
+      "exit": 1,
+      "stage_count_error": true,
+      "evidence_head": [
+        "evalmachine.<anonymous>:6",
+        "const STAGE_COUNT = Campaign.STAGE_COUNT, RULESET_ID = Campaign.RULESET_ID;",
+        "                             ^",
+        "",
+        "TypeError: Cannot read properties of undefined (reading 'STAGE_COUNT')",
+        "    at evalmachine.<anonymous>:6:30",
+        "    at evalmachine.<anonymous>:642:3",
+        "    at Script.runInContext (node:vm:149:12)",
+        "    at Object.runInContext (node:vm:301:6)",
+        "    at child (eval at run (/workspace/work/baseline-diagnosis/tree/td/test_budget_experiment.js:7:15), <anonymous>:15:28)",
+        "    at game (eval at run (/workspace/work/baseline-diagnosis/tree/td/test_budget_experiment.js:7:15), <anonymous>:28:28)",
+        "    at run (/workspace/work/baseline-diagnosis/tree/td/test_budget_experiment.js:7:118)",
+        "    at Object.<anonymous> (/workspace/work/baseline-diagnosis/tree/td/test_budget_verify.js:4:101)",
+        "    at Module._compile (node:internal/modules/cjs/loader:1872:14)",
+        "    at Object..js (node:internal/modules/cjs/loader:2003:10)",
+        ""
+      ]
+    },
+    {
+      "file": "td/test_energy_budget.js",
+      "command": [
+        "node",
+        "td/test_energy_budget.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "fail",
+      "exit": 1,
+      "stage_count_error": true,
+      "evidence_head": [
+        "evalmachine.<anonymous>:6",
+        "const STAGE_COUNT = Campaign.STAGE_COUNT, RULESET_ID = Campaign.RULESET_ID;",
+        "                             ^",
+        "",
+        "TypeError: Cannot read properties of undefined (reading 'STAGE_COUNT')",
+        "    at evalmachine.<anonymous>:6:30",
+        "    at evalmachine.<anonymous>:642:3",
+        "    at Script.runInContext (node:vm:149:12)",
+        "    at Object.runInContext (node:vm:301:6)",
+        "    at child (eval at <anonymous> (/workspace/work/baseline-diagnosis/tree/td/test_energy_budget.js:2:158), <anonymous>:15:28)",
+        "    at game (eval at <anonymous> (/workspace/work/baseline-diagnosis/tree/td/test_energy_budget.js:2:158), <anonymous>:28:28)",
+        "    at /workspace/work/baseline-diagnosis/tree/td/test_energy_budget.js:5:10",
+        "    at Object.<anonymous> (/workspace/work/baseline-diagnosis/tree/td/test_energy_budget.js:18:3)",
+        "    at Module._compile (node:internal/modules/cjs/loader:1872:14)",
+        "    at Object..js (node:internal/modules/cjs/loader:2003:10)"
+      ]
+    },
+    {
+      "file": "td/test_formal_candidate.js",
+      "command": [
+        "node",
+        "td/test_formal_candidate.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "fail",
+      "exit": 1,
+      "stage_count_error": false,
+      "evidence_head": [
+        "node:assert:152",
+        "  throw new AssertionError(obj);",
+        "  ^",
+        "",
+        "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:",
+        "+ actual - expected",
+        "",
+        "+ 'formal-home35-td46-home22-copy52-20261012-r1'",
+        "- '15c'",
+        "",
+        "    at Object.<anonymous> (/workspace/work/baseline-diagnosis/tree/td/test_formal_candidate.js:5:44)",
+        "    at Module._compile (node:internal/modules/cjs/loader:1872:14)",
+        "    at Object..js (node:internal/modules/cjs/loader:2003:10)",
+        "    at Module.load (node:internal/modules/cjs/loader:1594:32)",
+        "    at Module._load (node:internal/modules/cjs/loader:1396:12)",
+        "    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)"
+      ]
+    },
+    {
+      "file": "td/test_speed_browser.mjs",
+      "command": [
+        "node",
+        "td/test_speed_browser.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "browser",
+      "status": "not-run",
+      "reason": "browser execution requires separate supported environment; not launched"
+    },
+    {
+      "file": "td/test_speed_build.js",
+      "command": [
+        "node",
+        "td/test_speed_build.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "fail",
+      "exit": 1,
+      "stage_count_error": true,
+      "evidence_head": [
+        "evalmachine.<anonymous>:6",
+        "const STAGE_COUNT = Campaign.STAGE_COUNT, RULESET_ID = Campaign.RULESET_ID;",
+        "                             ^",
+        "",
+        "TypeError: Cannot read properties of undefined (reading 'STAGE_COUNT')",
+        "    at evalmachine.<anonymous>:6:30",
+        "    at evalmachine.<anonymous>:642:3",
+        "    at Script.runInContext (node:vm:149:12)",
+        "    at Object.runInContext (node:vm:301:6)",
+        "    at child (eval at <anonymous> (/workspace/work/baseline-diagnosis/tree/td/test_speed_build.js:4:12), <anonymous>:15:28)",
+        "    at game (eval at <anonymous> (/workspace/work/baseline-diagnosis/tree/td/test_speed_build.js:4:12), <anonymous>:28:28)",
+        "    at Object.<anonymous> (/workspace/work/baseline-diagnosis/tree/td/test_speed_build.js:7:10)",
+        "    at Module._compile (node:internal/modules/cjs/loader:1872:14)",
+        "    at Object..js (node:internal/modules/cjs/loader:2003:10)",
+        "    at Module.load (node:internal/modules/cjs/loader:1594:32)",
+        ""
+      ]
+    },
+    {
+      "file": "td/test_speed_parent.mjs",
+      "command": [
+        "node",
+        "td/test_speed_parent.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "browser",
+      "status": "not-run",
+      "reason": "browser execution requires separate supported environment; not launched"
+    },
+    {
+      "file": "td/test_td_bridge.js",
+      "command": [
+        "node",
+        "td/test_td_bridge.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "fail",
+      "exit": 1,
+      "stage_count_error": false,
+      "evidence_head": [
+        "/workspace/work/baseline-diagnosis/tree/td/test_td_bridge.js:16",
+        "check(()=>{const f=fixture();f.api.openTD();assert(f.api.tdOpen);assert(!f.classes.has('hidden'));assert(f.frame.src.includes('/td/index.html?embed=1'));f.frame.contentWindow.location.href='https://evil.test/preview/td/index.html';f.frame.onload();assert.equal(f.ports.length,0);f.frame.contentWindow.location.href='https://game.test/preview/zombie/index.html';f.frame.onload();assert.equal(f.ports.length,0);f.frame.contentWindow.location.href=f.frame.src;f.frame.onload();assert.equal(f.transfers.length,1);assert.equal(f.transfers[0][1],'https://game.test');assert.equal(f.ports[0].messages[0].td,'state');});",
+        "                                   ^",
+        "",
+        "TypeError: f.api.openTD is not a function",
+        "    at /workspace/work/baseline-diagnosis/tree/td/test_td_bridge.js:16:36",
+        "    at check (/workspace/work/baseline-diagnosis/tree/td/test_td_bridge.js:7:20)",
+        "    at Object.<anonymous> (/workspace/work/baseline-diagnosis/tree/td/test_td_bridge.js:16:1)",
+        "    at Module._compile (node:internal/modules/cjs/loader:1872:14)",
+        "    at Object..js (node:internal/modules/cjs/loader:2003:10)",
+        "    at Module.load (node:internal/modules/cjs/loader:1594:32)",
+        "    at Module._load (node:internal/modules/cjs/loader:1396:12)",
+        "    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)",
+        "    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)",
+        "    at node:internal/main/run_main_module:33:47",
+        ""
+      ]
+    },
+    {
+      "file": "td/test_td_endless_host.js",
+      "command": [
+        "node",
+        "td/test_td_endless_host.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "fail",
+      "exit": 1,
+      "stage_count_error": false,
+      "evidence_head": [
+        "node:internal/assert/utils:77",
+        "    throw err;",
+        "    ^",
+        "",
+        "AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:",
+        "",
+        "  assert(f.msg(result()).ok)",
+        "",
+        "    at /workspace/work/baseline-diagnosis/tree/td/test_td_endless_host.js:20:69",
+        "    at check (/workspace/work/baseline-diagnosis/tree/td/test_td_endless_host.js:4:21)",
+        "    at Object.<anonymous> (/workspace/work/baseline-diagnosis/tree/td/test_td_endless_host.js:20:1)",
+        "    at Module._compile (node:internal/modules/cjs/loader:1872:14)",
+        "    at Object..js (node:internal/modules/cjs/loader:2003:10)",
+        "    at Module.load (node:internal/modules/cjs/loader:1594:32)",
+        "    at Module._load (node:internal/modules/cjs/loader:1396:12)",
+        "    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)"
+      ]
+    },
+    {
+      "file": "td/test_td_endless_parent.mjs",
+      "command": [
+        "node",
+        "td/test_td_endless_parent.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "browser",
+      "status": "not-run",
+      "reason": "browser execution requires separate supported environment; not launched"
+    },
+    {
+      "file": "td/test_td_energy.js",
+      "command": [
+        "node",
+        "td/test_td_energy.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "fail",
+      "exit": 1,
+      "stage_count_error": true,
+      "evidence_head": [
+        "evalmachine.<anonymous>:6",
+        "const STAGE_COUNT = Campaign.STAGE_COUNT, RULESET_ID = Campaign.RULESET_ID;",
+        "                             ^",
+        "",
+        "TypeError: Cannot read properties of undefined (reading 'STAGE_COUNT')",
+        "    at evalmachine.<anonymous>:6:30",
+        "    at evalmachine.<anonymous>:642:3",
+        "    at Script.runInContext (node:vm:149:12)",
+        "    at Object.runInContext (node:vm:301:6)",
+        "    at child (/workspace/work/baseline-diagnosis/tree/td/test_td_energy.js:13:28)",
+        "    at game (/workspace/work/baseline-diagnosis/tree/td/test_td_energy.js:26:28)",
+        "    at /workspace/work/baseline-diagnosis/tree/td/test_td_energy.js:27:71",
+        "    at /workspace/work/baseline-diagnosis/tree/td/test_td_energy.js:43:41",
+        "    at Object.<anonymous> (/workspace/work/baseline-diagnosis/tree/td/test_td_energy.js:43:138)",
+        "    at Module._compile (node:internal/modules/cjs/loader:1872:14)"
+      ]
+    },
+    {
+      "file": "td/test_td_passive.js",
+      "command": [
+        "node",
+        "td/test_td_passive.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "fail",
+      "exit": 1,
+      "stage_count_error": true,
+      "evidence_head": [
+        "evalmachine.<anonymous>:6",
+        "const STAGE_COUNT = Campaign.STAGE_COUNT, RULESET_ID = Campaign.RULESET_ID;",
+        "                             ^",
+        "",
+        "TypeError: Cannot read properties of undefined (reading 'STAGE_COUNT')",
+        "    at evalmachine.<anonymous>:6:30",
+        "    at evalmachine.<anonymous>:642:3",
+        "    at Script.runInContext (node:vm:149:12)",
+        "    at Object.runInContext (node:vm:301:6)",
+        "    at child (/workspace/work/baseline-diagnosis/tree/td/test_td_passive.js:13:28)",
+        "    at fresh (/workspace/work/baseline-diagnosis/tree/td/test_td_passive.js:21:26)",
+        "    at /workspace/work/baseline-diagnosis/tree/td/test_td_passive.js:24:20",
+        "    at check (/workspace/work/baseline-diagnosis/tree/td/test_td_passive.js:6:20)",
+        "    at Object.<anonymous> (/workspace/work/baseline-diagnosis/tree/td/test_td_passive.js:24:1)",
+        "    at Module._compile (node:internal/modules/cjs/loader:1872:14)",
+        ""
+      ]
+    },
+    {
+      "file": "td/test_td_proto_browser.mjs",
+      "command": [
+        "node",
+        "td/test_td_proto_browser.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "browser",
+      "status": "not-run",
+      "reason": "browser execution requires separate supported environment; not launched"
+    },
+    {
+      "file": "td/test_td_protocol.js",
+      "command": [
+        "node",
+        "td/test_td_protocol.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "fail",
+      "exit": 1,
+      "stage_count_error": true,
+      "evidence_head": [
+        "evalmachine.<anonymous>:6",
+        "const STAGE_COUNT = Campaign.STAGE_COUNT, RULESET_ID = Campaign.RULESET_ID;",
+        "                             ^",
+        "",
+        "TypeError: Cannot read properties of undefined (reading 'STAGE_COUNT')",
+        "    at evalmachine.<anonymous>:6:30",
+        "    at evalmachine.<anonymous>:642:3",
+        "    at Script.runInContext (node:vm:149:12)",
+        "    at Object.runInContext (node:vm:301:6)",
+        "    at child (/workspace/work/baseline-diagnosis/tree/td/test_td_protocol.js:13:28)",
+        "    at /workspace/work/baseline-diagnosis/tree/td/test_td_protocol.js:20:20",
+        "    at /workspace/work/baseline-diagnosis/tree/td/test_td_protocol.js:29:41",
+        "    at Object.<anonymous> (/workspace/work/baseline-diagnosis/tree/td/test_td_protocol.js:29:138)",
+        "    at Module._compile (node:internal/modules/cjs/loader:1872:14)",
+        "    at Object..js (node:internal/modules/cjs/loader:2003:10)"
+      ]
+    },
+    {
+      "file": "td/test_td_scores.js",
+      "command": [
+        "node",
+        "td/test_td_scores.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "pass",
+      "exit": 0,
+      "stage_count_error": false,
+      "evidence_head": [
+        "TD scores: first/tenth/eleventh/ties/dedup/refresh/old/corrupt/normal isolation passed"
+      ]
+    },
+    {
+      "file": "td/test_tdhost.js",
+      "command": [
+        "node",
+        "td/test_tdhost.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "fail",
+      "exit": 1,
+      "stage_count_error": false,
+      "evidence_head": [
+        "node:assert:152",
+        "  throw new AssertionError(obj);",
+        "  ^",
+        "",
+        "AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:",
+        "",
+        "false !== true",
+        "",
+        "    at /workspace/work/baseline-diagnosis/tree/td/test_tdhost.js:18:94",
+        "    at check (/workspace/work/baseline-diagnosis/tree/td/test_tdhost.js:4:21)",
+        "    at Object.<anonymous> (/workspace/work/baseline-diagnosis/tree/td/test_tdhost.js:18:24)",
+        "    at Module._compile (node:internal/modules/cjs/loader:1872:14)",
+        "    at Object..js (node:internal/modules/cjs/loader:2003:10)",
+        "    at Module.load (node:internal/modules/cjs/loader:1594:32)",
+        "    at Module._load (node:internal/modules/cjs/loader:1396:12)",
+        "    at wrapModuleLoad (node:internal/modules/cjs/loader:255:19)"
+      ]
+    },
+    {
+      "file": "td/test_tdproto.js",
+      "command": [
+        "node",
+        "td/test_tdproto.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "pass",
+      "exit": 0,
+      "stage_count_error": false,
+      "evidence_head": [
+        "TD prototype: isolation/migration/whole-record locking/stale purchase/dedup/failure/corruption/no-lock checks passed"
+      ]
+    },
+    {
+      "file": "td/test_tdsfx.js",
+      "command": [
+        "node",
+        "td/test_tdsfx.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "pass",
+      "exit": 0,
+      "stage_count_error": false,
+      "evidence_head": [
+        "TD audio: gesture unlock, rate gate, mute, pause, visibility and gain checks passed (mock AudioContext; no audible playback claim)",
+        "Recorded BGM intent/mute/single fetch and explicit offline error passed; audible playback is covered by native browser tests"
+      ]
+    },
+    {
+      "file": "test_coin_safety.js",
+      "command": [
+        "node",
+        "test_coin_safety.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "fail",
+      "exit": 1,
+      "stage_count_error": false,
+      "evidence_head": [
+        "  ✗ 12d3 ④ commitSave：备份 setItem 抛异常 → 返回失败，主档 / 备份逐字节不变，rev 不变",
+        "  ✗ 12d3 ④ commitSave：主档 setItem 抛异常 → 返回失败，主档不变、rev 不变（备份 = 原主档）",
+        "  ✗ 12d3 ④ commitSave 成功：先把原主档整份放进 -bak，rev + 1，写出的档通过 checkSave",
+        "  ✗ 12d3 ④ commitSave：存储里 rev 更新（别的页面写过）→ 拒绝、不覆盖",
+        "  ✗ 12d3 ⑤ 打僵尸训练（跨页）成功：主档余额 −价格、zombie.lv +1、rev +1，-bak = 原主档",
+        "  ✗ 12d3 ⑤ 宠物买狗（跨页）：存不上 → pet 字段不出现、钱不扣；能存上 → pet 写进同一份主档",
+        "coin safety tests: 516 passed, 6 failed"
+      ]
+    },
+    {
+      "file": "test_economy.js",
+      "command": [
+        "node",
+        "test_economy.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "fail",
+      "exit": 1,
+      "stage_count_error": false,
+      "evidence_head": [
+        "  （没有 git 历史，跳过 SHA 常量复核）",
+        "  ✗ v14 正式站：整体缓存号 ART_V = 14（预览 12d2 / 13i 换过的图在正式站都是新 URL），单图缓存号清空（12b2）",
+        "  ✗ 13i 落地灯同名换图走单图缓存号（家具正面图 URL 用 artV）",
+        "economy tests: 536 passed, 2 failed"
+      ]
+    },
+    {
+      "file": "test_integration_cross.mjs",
+      "command": [
+        "node",
+        "test_integration_cross.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "browser",
+      "status": "not-run",
+      "reason": "browser execution requires separate supported environment; not launched"
+    },
+    {
+      "file": "test_rc2_cache.mjs",
+      "command": [
+        "node",
+        "test_rc2_cache.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "browser",
+      "status": "not-run",
+      "reason": "browser execution requires separate supported environment; not launched"
+    },
+    {
+      "file": "test_root_keys.js",
+      "command": [
+        "node",
+        "test_root_keys.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "fail",
+      "exit": 1,
+      "stage_count_error": false,
+      "evidence_head": [
+        "  ✗ 根 app.js 存档键 = tangzhe-save / tangzhe-save-bak / tangzhe-tab-lock",
+        "  ✗ 根 app.js 只出现这三个存档键字面量：",
+        "  ✗ 只有 app.js（正式档）/ pet/main.js（原型键）/ zombie/zombie.js（原型键）写 localStorage：pet/main.js,td/td.js,zombie/zombie.js",
+        "  ✗ 正式站不带宠物 12d3 快照页（旧代码不能写正式档）",
+        "  ✗ version.json = 14（formal-home35-td46-home22-copy52-20261012-r1）",
+        "  ✗ index.html 10 个资源缓存号都是 formal-home35-td46-home22-copy52-20261012-r1（home35-td46-home22-copy52-20261012-r1,15c,tower39-copy34-clean01-20261012-r1,15e-td-campaign-exp1-20261008,formal-cards-candidate-7,formal-cards-audio-candidate-8-r3）",
+        "  ✗ ART_V / 打僵尸 iframe 缓存号 = formal-home35-td46-home22-copy52-20261012-r1",
+        "  ✗ 打僵尸父页面 / iframe 子页面引用同一个缓存号 formal-home35-td46-home22-copy52-20261012-r1（子页面：15c,15c,formal-cards-audio-candidate-8,formal-cards-audio-candidate-8,formal-cards-audio-candidate-8）",
+        "  （预览已不是 13i（preview-home35-td46-home22-copy52-20261012-r1），跳过发布核对）",
+        "root key guard: 6 passed, 8 failed"
+      ]
+    },
+    {
+      "file": "test_toast_hold.mjs",
+      "command": [
+        "node",
+        "test_toast_hold.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "browser",
+      "status": "not-run",
+      "reason": "browser execution requires separate supported environment; not launched"
+    },
+    {
+      "file": "test_toast_lifecycle.mjs",
+      "command": [
+        "node",
+        "test_toast_lifecycle.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "browser",
+      "status": "not-run",
+      "reason": "browser execution requires separate supported environment; not launched"
+    },
+    {
+      "file": "test_toast_queue.mjs",
+      "command": [
+        "node",
+        "test_toast_queue.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "pass",
+      "exit": 0,
+      "stage_count_error": false,
+      "evidence_head": [
+        "{",
+        "  \"passed\": 80,",
+        "  \"failed\": 0,",
+        "  \"rows\": [",
+        "    {",
+        "      \"file\": \"app.js\",",
+        "      \"name\": \"error holds over delayed feedback\",",
+        "      \"ok\": true",
+        "    },",
+        "    {",
+        "      \"file\": \"app.js\",",
+        "      \"name\": \"latest error cancels old timer\",",
+        "      \"ok\": true",
+        "    },",
+        "    {",
+        "      \"file\": \"app.js\","
+      ]
+    },
+    {
+      "file": "test_toast_regression.mjs",
+      "command": [
+        "node",
+        "test_toast_regression.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "browser",
+      "status": "not-run",
+      "reason": "browser execution requires separate supported environment; not launched"
+    },
+    {
+      "file": "test_zbtop_commit_failure.mjs",
+      "command": [
+        "node",
+        "test_zbtop_commit_failure.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "browser",
+      "status": "not-run",
+      "reason": "browser execution requires separate supported environment; not launched"
+    },
+    {
+      "file": "test_zbtop_integration.mjs",
+      "command": [
+        "node",
+        "test_zbtop_integration.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "browser",
+      "status": "not-run",
+      "reason": "browser execution requires separate supported environment; not launched"
+    },
+    {
+      "file": "test_zbtop_old_parent.mjs",
+      "command": [
+        "node",
+        "test_zbtop_old_parent.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "browser",
+      "status": "not-run",
+      "reason": "browser execution requires separate supported environment; not launched"
+    },
+    {
+      "file": "test_zbtop_preserve.js",
+      "command": [
+        "node",
+        "test_zbtop_preserve.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "pass",
+      "exit": 0,
+      "stage_count_error": false,
+      "evidence_head": [
+        "formal TOP10 mirror: 10 checks passed"
+      ]
+    },
+    {
+      "file": "tests/formal/bgm-pcm.test.mjs",
+      "command": [
+        "node",
+        "tests/formal/bgm-pcm.test.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "pass",
+      "exit": 0,
+      "stage_count_error": false,
+      "evidence_head": [
+        "✔ decoded PCM joins preserve adjacent waveform at 8000Hz/1ch (9.164321ms)",
+        "✔ decoded PCM joins preserve adjacent waveform at 8000Hz/2ch (1.647661ms)",
+        "✔ decoded PCM joins preserve adjacent waveform at 8000Hz/4ch (10.53765ms)",
+        "✔ decoded PCM joins preserve adjacent waveform at 44100Hz/1ch (8.85111ms)",
+        "✔ decoded PCM joins preserve adjacent waveform at 44100Hz/2ch (10.547503ms)",
+        "✔ decoded PCM joins preserve adjacent waveform at 44100Hz/4ch (9.278012ms)",
+        "✔ decoded PCM joins preserve adjacent waveform at 48000Hz/1ch (5.25788ms)",
+        "✔ decoded PCM joins preserve adjacent waveform at 48000Hz/2ch (3.026123ms)",
+        "✔ decoded PCM joins preserve adjacent waveform at 48000Hz/4ch (6.789366ms)",
+        "✔ decoded PCM joins preserve adjacent waveform at 96000Hz/1ch (6.324878ms)",
+        "✔ decoded PCM joins preserve adjacent waveform at 96000Hz/2ch (17.059721ms)",
+        "✔ decoded PCM joins preserve adjacent waveform at 96000Hz/4ch (18.796915ms)",
+        "✔ short 4-frame PCM stays finite and nonempty (0.445249ms)",
+        "✔ short 5-frame PCM stays finite and nonempty (0.092504ms)",
+        "✔ short 17-frame PCM stays finite and nonempty (0.13403ms)",
+        "✔ short 100-frame PCM stays finite and nonempty (0.118622ms)"
+      ]
+    },
+    {
+      "file": "tests/formal/bgm.test.mjs",
+      "command": [
+        "node",
+        "tests/formal/bgm.test.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "pass",
+      "exit": 0,
+      "stage_count_error": false,
+      "evidence_head": [
+        "✔ network failure only retries on gesture after backoff, clears error (14.74435ms)",
+        "✔ decode failure only retries on gesture after backoff, clears error (7.485987ms)",
+        "✔ late decode after dispose creates no source (2.154984ms)",
+        "✔ muted clicks do not resume existing loop (4.206592ms)",
+        "✔ paused clicks do not resume existing loop (3.843818ms)",
+        "✔ hidden clicks do not resume existing loop (3.757513ms)",
+        "✔ pending asynchronous resume then muted never enables loop gain (3.891716ms)",
+        "✔ pending asynchronous resume then paused never enables loop gain (4.80345ms)",
+        "✔ pending asynchronous resume then hidden never enables loop gain (4.939374ms)",
+        "✔ pending asynchronous resume then dispose never enables loop gain (4.647899ms)",
+        "✔ first pending resume then mute creates no source and concurrent updates coalesce (2.231499ms)",
+        "ℹ tests 11",
+        "ℹ suites 0",
+        "ℹ pass 11",
+        "ℹ fail 0",
+        "ℹ cancelled 0"
+      ]
+    },
+    {
+      "file": "tests/formal/carefree-bgm.test.mjs",
+      "command": [
+        "node",
+        "tests/formal/carefree-bgm.test.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "pass",
+      "exit": 0,
+      "stage_count_error": false,
+      "evidence_head": [
+        "{",
+        "  \"scope\": \"Node/VM behavior + static cache/attribution contracts; no browser or OS playback\",",
+        "  \"cases\": [",
+        "    {",
+        "      \"site\": \"root\",",
+        "      \"pass\": true,",
+        "      \"checks\": [",
+        "        \"exact official bytes\",",
+        "        \"relative asset + helper URLs\",",
+        "        \"cache chain\",",
+        "        \"gesture-only start\",",
+        "        \"one player after repeated input\",",
+        "        \"unchanged volume buses\",",
+        "        \"mute + persisted mute\",",
+        "        \"TD/cards/zombie exclusion\",",
+        "        \"hidden/pagehide/frozen silence\","
+      ]
+    },
+    {
+      "file": "tests/formal/copy52-display.test.mjs",
+      "command": [
+        "node",
+        "tests/formal/copy52-display.test.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "pass",
+      "exit": 0,
+      "stage_count_error": false,
+      "evidence_head": [
+        "Asia/Tokyo 2026-10-05T06:00:00Z R=2026-10-05T21:00:00.000Z => 06:00; four mirrors/four displays unchanged state/dayKey",
+        "Asia/Kuala_Lumpur 2026-10-05T06:00:00Z R=2026-10-05T21:00:00.000Z => 05:00; four mirrors/four displays unchanged state/dayKey",
+        "Asia/Kolkata 2026-10-05T06:00:00Z R=2026-10-05T21:00:00.000Z => 02:30; four mirrors/four displays unchanged state/dayKey",
+        "Asia/Kathmandu 2026-10-05T06:00:00Z R=2026-10-05T21:00:00.000Z => 02:45; four mirrors/four displays unchanged state/dayKey",
+        "America/New_York 2026-03-08T06:30:00Z R=2026-03-08T21:00:00.000Z => 17:00; four mirrors/four displays unchanged state/dayKey",
+        "America/New_York 2026-11-01T05:30:00Z R=2026-11-01T21:00:00.000Z => 16:00; four mirrors/four displays unchanged state/dayKey",
+        "Australia/Lord_Howe 2026-10-03T14:00:00Z R=2026-10-03T21:00:00.000Z => 08:00; four mirrors/four displays unchanged state/dayKey",
+        "Australia/Lord_Howe 2026-04-04T14:00:00Z R=2026-04-04T21:00:00.000Z => 07:30; four mirrors/four displays unchanged state/dayKey",
+        "Copy52 static cache closure: pass; no browser acceptance claimed."
+      ]
+    },
+    {
+      "file": "tests/formal/economy-v2.test.mjs",
+      "command": [
+        "node",
+        "tests/formal/economy-v2.test.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "pass",
+      "exit": 0,
+      "stage_count_error": false,
+      "evidence_head": [
+        "✔ common gold/normal threshold and uniform card selection (71.583942ms)",
+        "✔ common full normal upgraded + normal dust; full golden + gold dust (3.443811ms)",
+        "✔ common normal craft cost/cap/no golden (2.841267ms)",
+        "✔ rare gold/normal threshold and uniform card selection (20.943028ms)",
+        "✔ rare full normal upgraded + normal dust; full golden + gold dust (3.574597ms)",
+        "✔ rare normal craft cost/cap/no golden (0.75106ms)",
+        "✔ epic gold/normal threshold and uniform card selection (5.468528ms)",
+        "✔ epic full normal upgraded + normal dust; full golden + gold dust (3.719915ms)",
+        "✔ epic normal craft cost/cap/no golden (0.750513ms)",
+        "✔ legendary gold/normal threshold and uniform card selection (6.086049ms)",
+        "✔ legendary full normal upgraded + normal dust; full golden + gold dust (8.121129ms)",
+        "✔ legendary normal craft cost/cap/no golden (1.972916ms)",
+        "✔ 50000 exact cap no overflow, max golden compensation before RNG (4.868724ms)",
+        "✔ cancel leaves holdings/dust/preferences unchanged and no tickets (0.715574ms)",
+        "✔ gild removed; replay restores new rules (4.406006ms)",
+        "✔ legacy completed state preserved, pending explicitly protected (9.111152ms)"
+      ]
+    },
+    {
+      "file": "tests/formal/fc2-archive.test.mjs",
+      "command": [
+        "node",
+        "tests/formal/fc2-archive.test.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "pass",
+      "exit": 0,
+      "stage_count_error": false,
+      "evidence_head": [
+        "✔ SHA256 UTF8 and multi-block match node crypto (27.787629ms)",
+        "✔ archive corruption across fresh coordinator cannot adopt or commit (22.263617ms)",
+        "✔ foreign tangzhe-formal-collection-v1-save during original write retained (3.149383ms)",
+        "✔ foreign tangzhe-formal-collection-v1-save-bak during original write retained (4.785027ms)",
+        "✔ foreign tangzhe-formal-collection-v1-tab-lock during original write retained (5.043599ms)",
+        "✔ foreign tangzhe-formal-collection-v1-original during original write retained (2.886021ms)",
+        "✔ valid digest with invalid v15 shape protected {\"format\":1,\"release\":\"15\"} (5.174885ms)",
+        "✔ valid digest with invalid v15 shape protected {\"format\":1,\"release\":\"15\",\"main\":{},\"backup\":7} (2.361542ms)",
+        "✔ valid digest with invalid v15 shape protected {\"format\":1,\"release\":\"15\",\"main\":null} (2.896071ms)",
+        "✔ legacy rules explicit upgrade retains holdings, gold, dust and parent; cancel/inspect writes zero (24.862151ms)",
+        "✔ changed legacy source must reconfirm, no overwrite (10.883467ms)",
+        "✔ legacy active transaction protected with original bytes unchanged (7.940476ms)",
+        "ℹ tests 12",
+        "ℹ suites 0",
+        "ℹ pass 12",
+        "ℹ fail 0"
+      ]
+    },
+    {
+      "file": "tests/formal/protocol.mjs",
+      "command": [
+        "node",
+        "tests/formal/protocol.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "pass",
+      "exit": 0,
+      "stage_count_error": false,
+      "evidence_head": [
+        "PASS cancel/inspection has zero writes",
+        "PASS all formal fields + fractional wallet + raw originals preserved",
+        "PASS source mutation requires new consent without writes",
+        "PASS broken protected",
+        "PASS future protected",
+        "PASS backup-only protected",
+        "PASS migration-trace protected",
+        "PASS v15-only protected",
+        "PASS old writer only modifies old source after migration",
+        "PASS lost lock blocks commits",
+        "PASS backup write failure retains main",
+        "PASS main failure retains old revision",
+        "PASS readback uncertainty reconciles exact commit without another write",
+        "PASS migration interrupted after archive never creates zero save",
+        "PASS archive tamper protects",
+        "PASS business saves preserve collection when trading disabled"
+      ]
+    },
+    {
+      "file": "tests/formal/target-preview.test.mjs",
+      "command": [
+        "node",
+        "tests/formal/target-preview.test.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "pass",
+      "exit": 0,
+      "stage_count_error": false,
+      "evidence_head": [
+        "✔ attack legal set honors taunt and has no friendly targets (23.989353ms)",
+        "✔ real affected group allMinions / bkVanEx1400 (13.44722ms)",
+        "✔ real affected group enemyMinions / bkVanCs2025 (11.112352ms)",
+        "✔ real affected group enemyMinions / bkVanCs2032 (10.911231ms)",
+        "✔ real affected group enemyCharacters / bkVanCs2093 (10.768551ms)",
+        "✔ real affected group allCharacters / bkVanCs2062 (8.850928ms)",
+        "✔ minion-only shield spell excludes heroes and supports both sides (7.869874ms)",
+        "✔ unsupported stealth and area heal are not invented by UI (0.329958ms)",
+        "ℹ tests 8",
+        "ℹ suites 0",
+        "ℹ pass 8",
+        "ℹ fail 0",
+        "ℹ cancelled 0",
+        "ℹ skipped 0",
+        "ℹ todo 0",
+        "ℹ duration_ms 99.91292"
+      ]
+    },
+    {
+      "file": "tests/formal/td-fc2.test.mjs",
+      "command": [
+        "node",
+        "tests/formal/td-fc2.test.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "pass",
+      "exit": 0,
+      "stage_count_error": false,
+      "evidence_head": [
+        "✔ protocol3 50-stage upgrade/results dedup through new coordinator (284.527154ms)",
+        "ℹ tests 1",
+        "ℹ suites 0",
+        "ℹ pass 1",
+        "ℹ fail 0",
+        "ℹ cancelled 0",
+        "ℹ skipped 0",
+        "ℹ todo 0",
+        "ℹ duration_ms 293.212362"
+      ]
+    },
+    {
+      "file": "tests/formal/td-receipts.test.mjs",
+      "command": [
+        "node",
+        "tests/formal/td-receipts.test.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "pass",
+      "exit": 0,
+      "stage_count_error": false,
+      "evidence_head": [
+        "✔ missing receipt extension remains valid and does not invent historical receipts (20.066089ms)",
+        "✔ one atomic debit+level+receipt; full host reload replay and original result (24.351572ms)",
+        "✔ same id different payload, ruleset or extra fields rejected without debit (6.833342ms)",
+        "✔ write failure retry preserves one receipt and one debit (15.299166ms)",
+        "✔ read failure retry preserves one receipt and one debit (10.125833ms)",
+        "✔ ordinary save cannot drop, alter or reorder persisted receipts (12.541937ms)",
+        "✔ invalid/future receipt ledger protects original main (8.013077ms)",
+        "✔ invalid/future receipt ledger protects original main (9.442018ms)",
+        "✔ invalid/future receipt ledger protects original main (8.413099ms)",
+        "✔ invalid/future receipt ledger protects original main (8.350938ms)",
+        "✔ invalid/future receipt ledger protects original main (9.389799ms)",
+        "✔ present null is invalid; old missing field remains valid (8.40752ms)",
+        "✔ invalid or future receipt extension never falls back to valid old backup (11.877547ms)",
+        "ℹ tests 13",
+        "ℹ suites 0",
+        "ℹ pass 13"
+      ]
+    },
+    {
+      "file": "zombie/test_zbtop.js",
+      "command": [
+        "node",
+        "zombie/test_zbtop.js"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "node",
+      "status": "pass",
+      "exit": 0,
+      "stage_count_error": false,
+      "evidence_head": [
+        "zombie TOP10 rules: 27 checks passed"
+      ]
+    },
+    {
+      "file": "zombie/test_zbtop_browser.mjs",
+      "command": [
+        "node",
+        "zombie/test_zbtop_browser.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "browser",
+      "status": "not-run",
+      "reason": "browser execution requires separate supported environment; not launched"
+    },
+    {
+      "file": "zombie/test_zbtop_layout.mjs",
+      "command": [
+        "node",
+        "zombie/test_zbtop_layout.mjs"
+      ],
+      "cwd": "/workspace/work/baseline-diagnosis/tree",
+      "kind": "browser",
+      "status": "not-run",
+      "reason": "browser execution requires separate supported environment; not launched"
+    }
+  ]
+}

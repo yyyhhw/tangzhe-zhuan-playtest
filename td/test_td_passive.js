@@ -2,6 +2,7 @@
 // Executes the actual child script in Node VM with minimal DOM/timer fakes.
 // This tests protocol/state logic, not browser rendering or WebKit behavior.
 const vm=require('node:vm'), fs=require('node:fs'), assert=require('node:assert/strict'), T=require('./tdcore.js');
+const runtime=require('../tests/fixtures/td-runtime.cjs');
 let checks=0;
 function check(fn){fn();checks++;}
 function child(embed=true){
@@ -10,10 +11,10 @@ function child(embed=true){
   function node(id){if(!nodes.has(id)){const cls=new Set();nodes.set(id,{style:{},setAttribute:noop,innerHTML:'',textContent:'',disabled:false,classList:{toggle:(x,on)=>on?cls.add(x):cls.delete(x),add:x=>cls.add(x),remove:x=>cls.delete(x),contains:x=>cls.has(x)},events:{},addEventListener(k,fn){this.events[k]=fn;},getContext:()=>new Proxy({},{get:(_,k)=>k==='arc'?((...args)=>arcs.push(args)):k==='fillText'?((...args)=>drawLabels.push(args)):noop})});}return nodes.get(id);}
   const w={TDCore:T,TDProto:require('./tdproto.js'),navigator:{locks:{request:async(name,opts,fn)=>fn()}},ZBSfx:new Proxy({},{get:()=>noop}),addEventListener:(k,fn)=>listeners[k]=fn};w.parent=embed?{}:w;
   const ctx={window:w,location:{search:embed?'?embed=1':'',origin:'https://local.test'},document:{hidden:false,documentElement:{},querySelector:node,querySelectorAll:()=>[],addEventListener:noop},Image:function(){},innerWidth:390,innerHeight:844,getComputedStyle:()=>({getPropertyValue:()=>0}),addEventListener:noop,performance:{now:()=>0},requestAnimationFrame:fn=>{frame=fn;return 1;},cancelAnimationFrame:noop,setTimeout:(fn,ms)=>{timers.set(++serial,{fn,ms});return serial;},clearTimeout:id=>timers.delete(id),localStorage:{getItem:k=>{writes.push(['read',k]);return store.get(k)??null;},setItem:(k,v)=>{writes.push(['write',k,v]);store.set(k,v);}}};
-  vm.createContext(ctx);vm.runInContext(fs.readFileSync(__dirname+'/td.js','utf8'),ctx);
+  vm.createContext(ctx);runtime.loadRuntime(ctx,w,__dirname);vm.runInContext(fs.readFileSync(__dirname+'/td.js','utf8'),ctx);
   const f={frame:now=>frame(now),arcs,drawLabels,api:w.__td, node, timers, sent, writes, ctx, listeners};
-  f.connect=(source=w.parent,origin=ctx.location.origin)=>listeners.message({source,origin,data:{td:'port'},ports:[{postMessage:d=>sent.push(d)}]});
-  f.state=(extra={})=>f.api.onState(Object.assign({td:'state',coins:5e10,z:T.norm(),blocked:false,muted:true},extra));
+  f.connect=(source=w.parent,origin=ctx.location.origin)=>{const port={postMessage:d=>sent.push(d)};listeners.message({source,origin,data:{td:'port',protocol:3,ruleset:w.TDStageProgress.RULESET_ID},ports:[port]});if(port.onmessage)f.port=port;};
+  f.state=(extra={})=>{if(!f.port)f.connect();assert(f.port?.onmessage,'authenticated parent port required');f.port.onmessage({data:runtime.stateMessage(__dirname,extra,extra.ok===true&&['start','endlessStart'].includes(extra.ack)&&extra.runId===f.api.G?.runId?f.api.G.startMsg:undefined)});};
   f.expire=ms=>{for(const [id,t]of [...timers])if(t.ms===ms){timers.delete(id);t.fn();}};
   return f;
 }

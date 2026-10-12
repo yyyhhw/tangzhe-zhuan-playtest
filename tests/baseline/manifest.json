@@ -1,0 +1,335 @@
+{
+  "schemaVersion": 1,
+  "base": "c9a6cda4d92e76207cc469d9d2eaa147489c31ed",
+  "selection": "81 basename test*.js/test*.mjs/*.test.mjs plus documented tests/formal/protocol.mjs; excludes other browser/Python/helper naming",
+  "entries": [
+    {
+      "file": "cards/tests/save.test.mjs",
+      "kind": "node"
+    },
+    {
+      "file": "cards/tests/saved-decks.test.mjs",
+      "kind": "node"
+    },
+    {
+      "file": "pet/game/test_petgame.js",
+      "kind": "node"
+    },
+    {
+      "file": "pet/test_engine.js",
+      "kind": "node"
+    },
+    {
+      "file": "preview/cards/tests/save.test.mjs",
+      "kind": "node"
+    },
+    {
+      "file": "preview/cards/tests/saved-decks.test.mjs",
+      "kind": "node"
+    },
+    {
+      "file": "preview/pet/accept2/test_companion_runtime.js",
+      "kind": "node"
+    },
+    {
+      "file": "preview/pet/accept2/test_manifest_companions.js",
+      "kind": "node"
+    },
+    {
+      "file": "preview/pet/accept2/test_pet_portal_e2e.mjs",
+      "kind": "browser"
+    },
+    {
+      "file": "preview/pet/accept2/test_pet_portal_regressions.js",
+      "kind": "node"
+    },
+    {
+      "file": "preview/pet/accept2/test_pets2_core.js",
+      "kind": "node"
+    },
+    {
+      "file": "preview/pet/accept2/test_pets2_r4.js",
+      "kind": "node"
+    },
+    {
+      "file": "preview/pet/accept2/test_pets2_roster_runtime.js",
+      "kind": "node"
+    },
+    {
+      "file": "preview/pet/accept2/test_pets2_ui_vm.js",
+      "kind": "node"
+    },
+    {
+      "file": "preview/pet/accept2/test_room_capacity.js",
+      "kind": "node"
+    },
+    {
+      "file": "preview/pet/accept2/test_room_capacity_e2e.mjs",
+      "kind": "browser"
+    },
+    {
+      "file": "preview/pet/accept2/test_spatial_companions.js",
+      "kind": "node"
+    },
+    {
+      "file": "preview/pet/accept2/test_spatial_companions_e2e.mjs",
+      "kind": "browser"
+    },
+    {
+      "file": "preview/pet/accept2/test_species_unique.js",
+      "kind": "node"
+    },
+    {
+      "file": "preview/pet/game/test_petgame.js",
+      "kind": "node"
+    },
+    {
+      "file": "preview/pet/test_engine.js",
+      "kind": "node"
+    },
+    {
+      "file": "preview/qa/test_ceo_embedded.mjs",
+      "kind": "browser"
+    },
+    {
+      "file": "preview/qa/test_decor_ceo.mjs",
+      "kind": "browser"
+    },
+    {
+      "file": "preview/qa/test_story_cards.mjs",
+      "kind": "browser"
+    },
+    {
+      "file": "preview/qa/test_story_cold_focus.mjs",
+      "kind": "browser"
+    },
+    {
+      "file": "preview/td/test_td_bridge.js",
+      "kind": "node"
+    },
+    {
+      "file": "preview/td/test_td_protocol.js",
+      "kind": "node"
+    },
+    {
+      "file": "preview/td/test_tdhost.js",
+      "kind": "node"
+    },
+    {
+      "file": "preview/test_coin_safety.js",
+      "kind": "node"
+    },
+    {
+      "file": "preview/test_economy.js",
+      "kind": "node"
+    },
+    {
+      "file": "preview/zombie/test_zbtop.js",
+      "kind": "node"
+    },
+    {
+      "file": "preview/zombie/test_zbtop_browser.mjs",
+      "kind": "browser"
+    },
+    {
+      "file": "preview/zombie/test_zbtop_layout.mjs",
+      "kind": "browser"
+    },
+    {
+      "file": "td/test_balance_browser.mjs",
+      "kind": "browser"
+    },
+    {
+      "file": "td/test_balance_contract.js",
+      "kind": "node"
+    },
+    {
+      "file": "td/test_balance_sweep.js",
+      "kind": "node"
+    },
+    {
+      "file": "td/test_budget_browser.mjs",
+      "kind": "browser"
+    },
+    {
+      "file": "td/test_budget_experiment.js",
+      "kind": "node"
+    },
+    {
+      "file": "td/test_budget_shipping.js",
+      "kind": "node"
+    },
+    {
+      "file": "td/test_budget_verify.js",
+      "kind": "node"
+    },
+    {
+      "file": "td/test_energy_budget.js",
+      "kind": "node"
+    },
+    {
+      "file": "td/test_formal_candidate.js",
+      "kind": "node"
+    },
+    {
+      "file": "td/test_speed_browser.mjs",
+      "kind": "browser"
+    },
+    {
+      "file": "td/test_speed_build.js",
+      "kind": "node"
+    },
+    {
+      "file": "td/test_speed_parent.mjs",
+      "kind": "browser"
+    },
+    {
+      "file": "td/test_td_bridge.js",
+      "kind": "node"
+    },
+    {
+      "file": "td/test_td_endless_host.js",
+      "kind": "node"
+    },
+    {
+      "file": "td/test_td_endless_parent.mjs",
+      "kind": "browser"
+    },
+    {
+      "file": "td/test_td_energy.js",
+      "kind": "node"
+    },
+    {
+      "file": "td/test_td_passive.js",
+      "kind": "node"
+    },
+    {
+      "file": "td/test_td_proto_browser.mjs",
+      "kind": "browser"
+    },
+    {
+      "file": "td/test_td_protocol.js",
+      "kind": "node"
+    },
+    {
+      "file": "td/test_td_scores.js",
+      "kind": "node"
+    },
+    {
+      "file": "td/test_tdhost.js",
+      "kind": "node"
+    },
+    {
+      "file": "td/test_tdproto.js",
+      "kind": "node"
+    },
+    {
+      "file": "td/test_tdsfx.js",
+      "kind": "node"
+    },
+    {
+      "file": "test_coin_safety.js",
+      "kind": "node"
+    },
+    {
+      "file": "test_economy.js",
+      "kind": "node"
+    },
+    {
+      "file": "test_integration_cross.mjs",
+      "kind": "browser"
+    },
+    {
+      "file": "test_rc2_cache.mjs",
+      "kind": "browser"
+    },
+    {
+      "file": "test_root_keys.js",
+      "kind": "node"
+    },
+    {
+      "file": "test_toast_hold.mjs",
+      "kind": "browser"
+    },
+    {
+      "file": "test_toast_lifecycle.mjs",
+      "kind": "browser"
+    },
+    {
+      "file": "test_toast_queue.mjs",
+      "kind": "node"
+    },
+    {
+      "file": "test_toast_regression.mjs",
+      "kind": "browser"
+    },
+    {
+      "file": "test_zbtop_commit_failure.mjs",
+      "kind": "browser"
+    },
+    {
+      "file": "test_zbtop_integration.mjs",
+      "kind": "browser"
+    },
+    {
+      "file": "test_zbtop_old_parent.mjs",
+      "kind": "browser"
+    },
+    {
+      "file": "test_zbtop_preserve.js",
+      "kind": "node"
+    },
+    {
+      "file": "tests/formal/bgm-pcm.test.mjs",
+      "kind": "node"
+    },
+    {
+      "file": "tests/formal/bgm.test.mjs",
+      "kind": "node"
+    },
+    {
+      "file": "tests/formal/carefree-bgm.test.mjs",
+      "kind": "node"
+    },
+    {
+      "file": "tests/formal/copy52-display.test.mjs",
+      "kind": "node"
+    },
+    {
+      "file": "tests/formal/economy-v2.test.mjs",
+      "kind": "node"
+    },
+    {
+      "file": "tests/formal/fc2-archive.test.mjs",
+      "kind": "node"
+    },
+    {
+      "file": "tests/formal/protocol.mjs",
+      "kind": "node"
+    },
+    {
+      "file": "tests/formal/target-preview.test.mjs",
+      "kind": "node"
+    },
+    {
+      "file": "tests/formal/td-fc2.test.mjs",
+      "kind": "node"
+    },
+    {
+      "file": "tests/formal/td-receipts.test.mjs",
+      "kind": "node"
+    },
+    {
+      "file": "zombie/test_zbtop.js",
+      "kind": "node"
+    },
+    {
+      "file": "zombie/test_zbtop_browser.mjs",
+      "kind": "browser"
+    },
+    {
+      "file": "zombie/test_zbtop_layout.mjs",
+      "kind": "browser"
+    }
+  ]
+}
