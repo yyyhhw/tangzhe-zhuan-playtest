@@ -8,7 +8,7 @@ const root=path.resolve(new URL('../..',import.meta.url).pathname);
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const require=createRequire(import.meta.url);
 const apps=['app.js','preview/app.js','pet/game/app.js','preview/pet/game/app.js'];
-const token='home35-td46-home22-copy52-20261012-r1';
+const token='tea-td-cards-out-20261012-r1';
 const cases=[
  ['Asia/Tokyo','2026-10-05T06:00:00Z','06:00'],
  ['Asia/Kuala_Lumpur','2026-10-05T06:00:00Z','05:00'],
@@ -69,7 +69,7 @@ else{
   assert(html.includes("var B='"+kind+'-'+token+"'"));
   assert.equal(JSON.parse(read(p.replace(/app\.js$/,'version.json'))).v,kind+'-'+token);
   const entry=p==='preview/pet/game/app.js'?'app.js':p==='pet/game/app.js'?'../../collection/bootstrap.mjs':'collection/bootstrap.mjs';
-  assert(html.includes(entry+'?v='+token));
+  assert(html.includes(entry+'?v='+(p==='preview/pet/game/app.js'?'home35-td46-home22-copy52-20261012-r1':token)));
  }
  assert(read('index.html').includes('td/tdcore.js?v=tower39-copy34-clean01-20261012-r1'));
  assert(read('app.js').includes('td/index.html?embed=1&v='+token));

@@ -9,7 +9,7 @@
   function create(o) {
     const runs = new Map(), buys = new Map(); let current = null;
     const snapshot = () => T.norm(o.state().td);
-    const blocked = () => !!o.blocked() || !o.state().shops[3].open;
+    const blocked = () => !!o.blocked() || !o.state().shops[1].open;
     const reply = (extra = {}) => o.send(Object.assign({td:'state', coins:blocked() ? 0 : o.balance(), z:snapshot(), blocked:blocked(), muted:!!o.state().muted}, extra));
     function msg(d) {
       if (!d || typeof d !== 'object' || Array.isArray(d)) return;
@@ -27,7 +27,7 @@
           if (old !== current || old.n !== d.n || old.cmd !== d.cmd || old.settled) return fail('这局编号已用过');
           return reply(Object.assign(ack, {ok:!blocked(), cmd:old.cmd, n:old.n, dup:true, why:blocked() ? '只读模式，不能开局' : ''}));
         }
-        if (blocked()) return fail('只读模式或科技公司未开张，不能开局');
+        if (blocked()) return fail('只读模式或奶茶店未开张，不能开局');
         if (!T.CEO_IDS.includes(d.cmd) || !Number.isInteger(d.n) || d.n < 1 || d.n > Math.min(T.MAX_LV, snapshot().cleared + 1)) return fail('统帅或关卡无效');
         if (runs.size >= 4096) return fail('本页开局次数已满，请刷新后再试');
         current = {runId:d.runId, n:d.n, cmd:d.cmd, settled:false}; runs.set(d.runId, current);
@@ -38,7 +38,7 @@
         let rec = buys.get(d.requestId);
         if (rec && rec.id !== d.id) return fail('升级编号不匹配');
         if (rec && rec.done) return reply(Object.assign(ack, {ok:true, dup:true}));
-        if (blocked()) return fail('只读模式或科技公司未开张，不能升级');
+        if (blocked()) return fail('只读模式或奶茶店未开张，不能升级');
         if (!rec) {
           if (buys.size >= 4096) return fail('本页升级次数已满，请刷新后再试');
           rec = {id:d.id, done:false}; buys.set(d.requestId, rec);

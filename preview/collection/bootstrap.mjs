@@ -56,7 +56,7 @@ async function launch() {
     window.PreviewCollectionRuntime={keys:KEYS,storage:scopedStorage(),coordinator,model,qa,ownsLock:()=>ownsLock,handle:null};
     document.getElementById('collectionStartup')?.remove();
     if(qa){const badge=document.createElement('div');badge.textContent='QA 独立测试存档 · 不读写真正预览或正式存档';badge.style.cssText='position:fixed;top:0;left:0;right:0;z-index:70;background:#ffdf6c;color:#141414;text-align:center;font:12px/1.5 system-ui';document.body.append(badge);}
-    await import('../app.js?collectionHost=1c&v=home35-td46-home22-copy52-20261012-r1');
+    await import('../app.js?collectionHost=1c&v=tea-td-cards-out-20261012-r1');
     const host=createCollectionHost({coordinator,model,economy:E,getState:()=>window.__tzz.state,replaceState:s=>window.__tzz.collectionReplaceState(s),flush:()=>window.__tzz.persist(),enabled:qa||WALLET_BRIDGE_APPROVED,randomInt:n=>secureRandomInt(crypto,n),makeId:()=>`tx:${crypto.randomUUID()}`});
     window.PreviewCollectionRuntime.handle=message=>host.handle(message);
     window.PreviewCollectionRuntime.snapshot=()=>host.snapshot();

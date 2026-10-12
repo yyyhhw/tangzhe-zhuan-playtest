@@ -36,7 +36,7 @@ function setup(prefix, options={}){
  return {c,calls,events,devents,api:c.audioAPI,app};
 }
 for(const prefix of ['', 'preview/']){
- const assetVersion='home35-td46-home22-copy52-20261012-r1';
+ const assetVersion='tea-td-cards-out-20261012-r1';
  const version=(prefix?'preview-':'formal-')+assetVersion;
  const app=read(prefix+'app.js'),html=read(prefix+'index.html'),boot=read(prefix+'collection/bootstrap.mjs');
  assert.equal(JSON.parse(read(prefix+'version.json')).v,version);
@@ -54,7 +54,7 @@ for(const prefix of ['', 'preview/']){
  h.api.audioUnlock();await tick();await tick();assert.equal(h.calls.contexts,1);assert.equal(h.calls.fetch,1);assert.equal(h.calls.starts,1);assert.equal(h.api.AU.bgm.gain.value,.09);assert.equal(h.api.AU.sfx.gain.value,.5);
  assert.equal(h.calls.url,'https://example.test/tangzhe-zhuan-playtest/'+audio);assert.equal(h.api.AU.recorded.status.gain,1);assert.equal(h.api.AU.recorded.status.duration,.4);
  for(let i=0;i<10;i++){h.api.audioUnlock();h.api.audioResume();h.api.startBgm();}await tick();assert.equal(h.calls.contexts,1);assert.equal(h.calls.starts,1);assert.equal(h.calls.fetch,1);assert.equal(h.calls.timers,0,'no synthetic music timer');
- for(const mode of ['tdOpen','cardsOpen','zbOpen']){
+ for(const mode of ['tdOpen','zbOpen']){
   h.c[mode]=true;h.api.audioPause();assert.equal(h.api.AU.ctx.state,'suspended');assert.equal(h.api.AU.recorded.status.gain,0);const n=h.calls.resumes;h.api.audioUnlock();h.api.audioResume();h.api.startBgm();assert.equal(h.calls.resumes,n);assert.equal(h.api.AU.recorded.status.gain,0);h.c[mode]=false;h.api.audioResume();assert.equal(h.api.AU.recorded.status.gain,1);assert.equal(h.calls.starts,1);
  }
  h.c.state.muted=true;h.api.audioPause();h.api.AU.master.gain.value=0;h.api.audioUnlock();h.api.audioResume();assert.equal(h.api.AU.recorded.status.gain,0);assert.equal(h.api.AU.ctx.state,'suspended');h.c.state.muted=false;h.api.AU.master.gain.value=1;h.api.audioUnlock();h.api.audioResume();assert.equal(h.api.AU.recorded.status.gain,1);
@@ -63,7 +63,7 @@ for(const prefix of ['', 'preview/']){
  for(const f of h.events.pagehide)f();assert.equal(h.api.AU.recorded.status.gain,0);assert.equal(h.api.AU.recorded.status.wanted,false);
  const muted=setup(prefix,{muted:true});muted.api.audioUnlock();await tick();assert.equal(muted.calls.fetch,0);assert.equal(muted.calls.starts,0);assert.equal(muted.calls.resumes,0);assert.equal(muted.api.AU.master.gain.value,0);
  // Slow decoding that finishes after entering a minigame must stay silent.
- const delayed=setup(prefix);let finish;delayed.c.AudioContext.prototype.decodeAudioData=function(){return new Promise(r=>{finish=()=>r(this.createBuffer(2,22050,44100));});};delayed.api.audioUnlock();await tick();delayed.c.cardsOpen=true;delayed.api.audioPause();finish();await tick();assert.equal(delayed.calls.starts,0);assert.equal(delayed.api.AU.recorded.status.gain,0);delayed.c.cardsOpen=false;delayed.api.audioResume();assert.equal(delayed.calls.starts,1);
+ const delayed=setup(prefix);let finish;delayed.c.AudioContext.prototype.decodeAudioData=function(){return new Promise(r=>{finish=()=>r(this.createBuffer(2,22050,44100));});};delayed.api.audioUnlock();await tick();delayed.c.tdOpen=true;delayed.api.audioPause();finish();await tick();assert.equal(delayed.calls.starts,0);assert.equal(delayed.api.AU.recorded.status.gain,0);delayed.c.tdOpen=false;delayed.api.audioResume();assert.equal(delayed.calls.starts,1);
  // An HTTP failure stays silent and can retry on a later trusted gesture.
  const failed=setup(prefix);failed.c.fetch=async()=>{failed.calls.fetch++;return {ok:false,status:503};};failed.api.audioUnlock();await tick();assert.equal(failed.api.AU.recorded.status.gain,0);assert(failed.api.AU.recorded.status.error.includes('MUSIC_HTTP_503'));assert.equal(failed.calls.starts,0);
  failed.c.performance.now=()=>7000;failed.c.fetch=async()=>{failed.calls.fetch++;return {ok:true,arrayBuffer:async()=>bytes.buffer};};failed.api.audioUnlock();await tick();assert.equal(failed.calls.fetch,2);assert.equal(failed.calls.starts,1);assert.equal(failed.api.AU.recorded.status.error,null);

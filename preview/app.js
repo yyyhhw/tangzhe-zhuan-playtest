@@ -7,8 +7,6 @@ if (!COLLECTION || !COLLECTION.ownsLock()) throw Error('PREVIEW_WRITER_LEASE_REQ
 const STORAGE = COLLECTION.storage;
 const TD = window.TDCore; let tdOpen = false, tdPort = null, tdGeneration = 0;
 const ZB = window.ZBCore; var zbOpen = false, zbPort = null;
-let cardsOpen = false, cardsPort = null, cardsGeneration = 0, cardsCloseTimer = null;
-const CARDS_SHOP = 2, CARDS_V = 'formal-saved-decks-1';   // 要在 boot() 渲染店铺页之前初始化
 const ZB_SHOP = 0; var zbLastCeo = null, zbRun = null; const zbUsedRuns = new Set();   // 13d：用过的 runId（本页内存），重复 / 过期的 start 不能把旧局重新激活   // 13a：打僵尸 = 烧烤摊（店 0）；zbLastCeo = 最近一次成功结算的上场 CEO（只在内存）
 // 13c：zbRun = 父页开局登记 { runId, ceoId, startedAt, settled }——结算只认这份记录、同一局只结一次；中途调岗不要求仍在任
 const SAVE_KEY = COLLECTION.keys.main, BAK_KEY = COLLECTION.keys.backup, LOCK_KEY = COLLECTION.keys.tab;
@@ -87,7 +85,7 @@ function goPage(url) {
 function claimLock() { if (TEST_MODE) return; try { STORAGE.setItem(LOCK_KEY, JSON.stringify({ tab:TAB, t:now() })); } catch (e) {} }
 function lockMine() { if (TEST_MODE) return true; try { const v = JSON.parse(STORAGE.getItem(LOCK_KEY) || 'null'); return !v || v.tab === TAB; } catch (e) { return true; } }
 function freeze() {
-  if (frozen) return; frozen = true; if (zbOpen) closeZombie(); if (tdOpen) closeTD(); if (cardsOpen) closeCards();
+  if (frozen) return; frozen = true; if (zbOpen) closeZombie(); if (tdOpen) closeTD();
   $('#lockOverlay').classList.remove('hidden'); audioPause();
 }
 window.addEventListener('storage', e => {
@@ -125,15 +123,15 @@ function audioInit() {
   AU.bgm = AU.ctx.createGain(); AU.bgm.gain.value = 0.09; AU.bgm.connect(AU.master);
   AU.sfx = AU.ctx.createGain(); AU.sfx.gain.value = 0.5; AU.sfx.connect(AU.master);
   AU.master.gain.value = state.muted ? 0 : 1;
-  AU.recorded=TzzLoopMusic.create({context:AU.ctx,output:AU.bgm,url:new URL('../audio/carefree-kevin-macleod-8433b770.mp3',document.baseURI),isAllowed:()=>!state.muted&&!frozen&&!tdOpen&&!cardsOpen&&!zbOpen});
+  AU.recorded=TzzLoopMusic.create({context:AU.ctx,output:AU.bgm,url:new URL('../audio/carefree-kevin-macleod-8433b770.mp3',document.baseURI),isAllowed:()=>!state.muted&&!frozen&&!tdOpen&&!zbOpen});
 }
-function audioUnlock() { if (cardsOpen || tdOpen || zbOpen) return; // 只能在用户手势里调用（iOS）
+function audioUnlock() { if (tdOpen || zbOpen) return; // 只能在用户手势里调用（iOS）
   audioInit(); if (!AU.ctx) return;
   if (AU.ctx.state !== 'running' && !document.hidden && !state.muted) AU.ctx.resume().catch(() => {});
   if (!AU.started) { AU.started = true; startBgm(); } else AU.recorded?.retry();
 }
 function audioPause() { if (AU.ctx && AU.ctx.state === 'running') AU.ctx.suspend().catch(() => {}); stopBgm(); }
-function audioResume() { if (!AU.ctx || state.muted || document.hidden || frozen || tdOpen || cardsOpen || zbOpen) return; AU.ctx.resume().catch(() => {}); if (AU.started) startBgm(); }
+function audioResume() { if (!AU.ctx || state.muted || document.hidden || frozen || tdOpen || zbOpen) return; AU.ctx.resume().catch(() => {}); if (AU.started) startBgm(); }
 function tone(f, t, dur, type = 'sine', vol = 0.3, dest = AU.sfx, f2) {
   const c = AU.ctx, o = c.createOscillator(), g = c.createGain();
   o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
@@ -1186,7 +1184,6 @@ function act(a, arg, btn) {
   const i = state.cur;
   switch (a) {
     case 'td': openTD(); return;
-    case 'cards': openCards(); return;
     case 'zombie': if (!zbCeo()) return openAssignTo(ZB_SHOP); openZombie(); return;   // 12e 打僵尸入口（板砖 b640f25）；13a：烧烤摊没 CEO → 打开派 CEO 选单
     case 'zbAssign': return openAssignTo(ZB_SHOP);   // 13a「先派 CEO」
     case 'open': { const r = atomic(() => E.openShop(state, +arg), '开张没有生效，金币已退回'); if (!buyOk(r, btn)) return; afterBuy(btn, E.SHOPS[+arg].name + ' 开张啦！'); signAnim = { shop:+arg, from:'招租中', t0:clock }; handleUnlocks(r.unlocked); break; }
@@ -1375,7 +1372,7 @@ function renderShop() {
 }
 // 13h：每家店自己的小游戏入口（只在店铺页最底部）；烧烤摊 = 打僵尸，其余三家以后各有自己的游戏，加在这里
 function shopGameCard(i) {
-  const card = i === ZB_SHOP ? zbCard() : i === CARDS_SHOP ? cardsCard() : i === 3 ? tdCard() : '';
+  const card = i === ZB_SHOP ? zbCard() : i === 1 ? tdCard() : '';
   return card ? `<div class="sec-title shop-game-title">小游戏</div>${card}` : '';
 }
 function ceoPost(id) { const s = state.ceos[id]; return s.at >= 0 ? E.signOf(state, s.at).name : '休息中（空着）'; }
@@ -2424,7 +2421,6 @@ $('#mute').addEventListener('click', () => {
   else { audioUnlock(); if (AU.master) AU.master.gain.value = 1; audioResume(); }
   tdController.reply();
   zbReply();   // 13e：小游戏开着时把静音状态同步过去
-  cardsSend({ card:'mute', muted: !!state.muted });
   if (!persist() && !saveBlocked && !frozen) toast('声音已切换，但保存失败：刷新后会恢复原设置', 2600);   // 12d3：声音开关是设置不是进度，照常生效（不能让玩家关不掉声音），只提示没存上
 });
 $('#dailyChip').addEventListener('click', () => toast(E.canDouble(state, now()) ? '每日双倍：今天第一次领离线收益可以免费翻倍（先封顶再翻倍）' : `今天的双倍用过啦，本机时间 ${fmtClockLocal(E.nextResetTs(now()))} 重置`, 2600));
@@ -2518,7 +2514,7 @@ window.__tzz = { TEST_MODE, TEST_LV, SAVE_KEY, BAK_KEY, get saveBlocked() { retu
   hitBig, modalOpen, closeModal, get frozen() { return frozen; },
   musicStatus() { return AU.recorded?.status || null; }, audioState() { return AU.ctx ? AU.ctx.state : 'none'; }, showPreview, openAssign, JOB_ART, jobShown, jobURL, showJobArt,
   HOME_ART, FURN_ART, FURN_UP, homeAct, get homeWho() { return homeWho; }, get homeSub() { return homeSub; }, get homeMode() { return homeMode; }, set homeMode(v) { homeMode = v === 'decor' ? 'decor' : 'live'; }, get homeSel() { return homeSel; }, get homeDrag() { return homeDrag; }, homeActor, LIVE_LINES, homeUndo, resize, get canvasSize() { return { W, H }; }, pet: petHooks, pets: petsHooks, lookOf, drawPerson, drawHead, LOOKS, get bubble() { return bubble; } };
-/* ================= 科技公司塔防：与主钱包同一存档、同一原子交易 ================= */
+/* ================= 奶茶店塔防：与主钱包同一存档、同一原子交易 ================= */
 function tdCard() {
   const z = TD.norm(state.td);
   return `<div class="card td-card"><div class="ava">♜</div><div class="info"><div class="name">机房塔防<span class="tag">样品</span></div><div class="desc">8 种防御塔 · 4 位统帅 · ${TD.WAVES} 波<br>最佳 ${z.best}/${TD.WAVES} 波 · 升级共用经营金币</div></div><button class="buy" data-act="td">去守</button></div>`;
@@ -2530,9 +2526,9 @@ const tdController = window.TDHost.create({
   send:d => { if (tdOpen && tdPort) tdPort.postMessage(d); }
 });
 function openTD() {
-  if (frozen || tdOpen || zbOpen || cardsOpen || !state.shops[3].open) return;
+  if (frozen || tdOpen || zbOpen || !state.shops[1].open) return;
   tdOpen = true; const f = $('#tdFrame'), generation = ++tdGeneration;
-  const target = new URL('td/index.html?embed=1&v=13k', location.href);
+  const target = new URL('td/index.html?embed=1&v=tea-td-cards-out-20261012-r1', location.href);
   f.onload = () => {
     if (!tdOpen || generation !== tdGeneration) return;
     // Verify the actual loaded document, not merely an iframe src attribute.
@@ -2558,52 +2554,7 @@ Object.defineProperties(window.__tzz, {openTD:{value:openTD}, closeTD:{value:clo
 
 /* ================= 书店卡牌（cards/ui/?embed=1，全屏 iframe，preview 试玩）=================
    父页只放进入按钮、开关浮层、同步静音；不读也不解析卡牌存档，不碰钱包，不发奖励。端口只认 ready / close / stay。 */
-function cardsCard() {
-  return `<div class="card cards-card"><div class="ava">🃏</div><div class="info"><div class="name">卡牌对战<span class="tag">试玩</span></div><div class="desc">风格试玩 · 不影响经营<br>进度在卡牌页里查看</div></div><button class="buy" data-act="cards">进入</button></div>`;
-}
-function cardsSend(d) { if (cardsOpen && cardsPort) cardsPort.postMessage(d); }
-function openCards() {
-  if (frozen || cardsOpen || tdOpen || zbOpen || !state.shops[CARDS_SHOP].open) return;
-  cardsOpen = true; const f = $('#cardsFrame'), generation = ++cardsGeneration;
-  const target = new URL('cards/ui/index.html?embed=1&v=' + CARDS_V, location.href);
-  if (COLLECTION.qa) target.searchParams.set('collectionQA','1');
-  f.onload = () => {
-    if (!cardsOpen || generation !== cardsGeneration) return;
-    let loaded; try { loaded = new URL(f.contentWindow.location.href); } catch (e) { return; }
-    if (loaded.origin !== location.origin || loaded.pathname !== target.pathname || loaded.searchParams.get('collectionQA') !== target.searchParams.get('collectionQA')) return;
-    if (cardsPort) cardsPort.close();
-    const ch = new MessageChannel(), port = cardsPort = ch.port1;
-    port.onmessage = e => { if (cardsOpen && generation === cardsGeneration && cardsPort === port) cardsMsg(e.data); };
-    f.contentWindow.postMessage({ card:'port', matchStorageProtocol:1, matchStorageScope:COLLECTION.qa?'qa-collection-trial-v1':'preview' }, location.origin, [ch.port2]);
-  };
-  f.src = target.href; $('#cardsOverlay').classList.remove('hidden'); audioPause();
-}
-function cardsMsg(d) {
-  if (!d || typeof d !== 'object') return;
-  if (d.card === 'collection') {
-    const port=cardsPort, generation=cardsGeneration;
-    const reply=COLLECTION.handle ? COLLECTION.handle(d) : {ok:false,code:'HOST_NOT_READY'};
-    if (cardsOpen && port === cardsPort && generation === cardsGeneration) port.postMessage({card:'collection-result',protocol:1,requestId:d.requestId,...reply});
-    return;
-  }
-  if (d.card === 'close') return closeCards();
-  if (d.card === 'ready') cardsSend({ card:'hello', muted: !!state.muted, collectionProtocol:1 });
-  if (d.card === 'stay') { clearTimeout(cardsCloseTimer); cardsCloseTimer = null; }   // 子页保存失败后玩家选了留下
-}
-// 请卡牌页先存档再关；3 秒没回应就问是否强制关闭
-function requestCloseCards() {
-  if (!cardsOpen) return; if (!cardsPort) return closeCards();
-  cardsSend({ card:'requestClose' }); clearTimeout(cardsCloseTimer);
-  cardsCloseTimer = setTimeout(() => { cardsCloseTimer = null; if (cardsOpen && confirm('卡牌页未响应，强制关闭？')) closeCards(); }, 3000);
-}
-function closeCards() {
-  if (!cardsOpen) return;
-  cardsOpen = false; cardsGeneration++; clearTimeout(cardsCloseTimer); cardsCloseTimer = null;
-  if (cardsPort) { cardsPort.close(); cardsPort = null; }
-  const f = $('#cardsFrame'); f.onload = null; f.src = 'about:blank';
-  $('#cardsOverlay').classList.add('hidden'); dirty = true; audioResume();
-}
-Object.defineProperties(window.__tzz, { collectionReplaceState:{value:s=>{state=s;lastGood=COLLECTION.coordinator.raw;if(!COLLECTION.coordinator.failed&&COLLECTION.ownsLock())saveBlocked=false;dirty=true;}}, collectionReadOnly:{value:code=>{saveBlocked=true;toast('预览存档已保护：'+code,3200);}}, openCards:{ value:openCards }, closeCards:{ value:closeCards }, requestCloseCards:{ value:requestCloseCards }, cardsOpen:{ get:() => cardsOpen }, cardsCloseTimer:{ get:() => cardsCloseTimer !== null } });
+Object.defineProperties(window.__tzz, { collectionReplaceState:{value:s=>{state=s;lastGood=COLLECTION.coordinator.raw;if(!COLLECTION.coordinator.failed&&COLLECTION.ownsLock())saveBlocked=false;dirty=true;}}, collectionReadOnly:{value:code=>{saveBlocked=true;toast('预览存档已保护：'+code,3200);}} });
 
 /* ================= 打僵尸（zombie/?embed=1，全屏 iframe）=================
    只和经营共用金币：价格、等级上限、进度校验都在这边按 ZBCore 算，训练扣款和结算进度都走 txn → E.transact（扣款 + 改状态 + persist 一起成功，失败整体回滚）。
@@ -2627,7 +2578,7 @@ function zbReply(why, extra) {
   zbPort.postMessage(Object.assign({ zb:'state', coins: ok ? E.balance(state) : 0, z: zbState(), blocked: !ok, why: why || '', ceo: zbCeo(), muted: !!state.muted }, extra));   // 13e：muted 让小游戏跟经营页静音开关走   // 13a：ceo = 烧烤摊现任 CEO id / null
 }
 function openZombie() {
-  if (frozen || zbOpen || cardsOpen || !ZB) return;
+  if (frozen || zbOpen || !ZB) return;
   zbOpen = true; const f = $('#zbFrame');
   f.onload = () => {
     if (!zbOpen || zbPort || !/\/zombie\//.test(f.src)) return;
