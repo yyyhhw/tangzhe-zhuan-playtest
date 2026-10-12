@@ -1976,16 +1976,37 @@ function homeDrawActor(){
 // 决策在 home/home-autonomy.js；这里只负责落脚点、走路、摆姿势、说话。脚本没加载到（旧缓存页）就整段不跑。
 const HA = window.HomeAutonomy || null;
 let homeAutoPeriodAt = null;   // 只有正式版有家宅-22 时段：拿得到才乘时段系数，拿不到一律 ×1
-import('./home/home-ambience.mjs?v=home56-autonomy-r1').then(m => { homeAutoPeriodAt = m.homePeriodAt; }).catch(() => {});
+import('./home/home-ambience.mjs?v=home56-autonomy-r2').then(m => { homeAutoPeriodAt = m.homePeriodAt; }).catch(() => {});
 const homeAutoPeriod = () => { try { return homeAutoPeriodAt ? homeAutoPeriodAt(now()).id : null; } catch (e) { return null; } };
 const homeAutoReduced = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
-function homeAutoReset(id) { const ac = homeActor[id]; if (ac) ac.auto = null; }
+// r2：只取消「自主」那段路——自主走动中被打断（切模式/切后台/切 CEO/玩家点）时，清掉它的目标、待摆姿势和自主动作，
+// 就近落回一格空地；玩家自己的走动不在 moving 阶段，不受影响。玩家点击是先 hold 再下新指令，新指令照常生效。
+function homeAutoCancel(id, ac) {
+  if (ac.auto?.phase === 'moving') {
+    ac.tx = ac.ty = null; ac.pendingPose = null; if (!ac.pose) ac.act = null;
+    const q = homeFreePoint(id, ac.x, ac.y); if (q) { ac.x = q.x; ac.y = q.y; }
+    dirty = true;
+  }
+  ac.auto = null;
+}
+function homeAutoReset(id) { const ac = homeActor[id]; if (ac) homeAutoCancel(id, ac); }
 // 玩家点家具 / 地板 / 切模式：立刻停，60 秒内不自己动；回来后从「闲站」重新开始
-function homeAutoHold(id) { if (!HA) return; const ac = homeActorOf(id); ac.auto = null; ac.autoHold = clock + HA.AFTER_PLAYER_SEC; }
+function homeAutoHold(id) { if (!HA) return; const ac = homeActorOf(id); homeAutoCancel(id, ac); ac.autoHold = clock + HA.AFTER_PLAYER_SEC; }
 function homeAutoList(id) { return HA.candidates(E.homeOf(state, id).placed, { capability:HomeInteraction.capability, liveAct:E.furnLiveAct, itemSurf:E.itemSurf }); }
-function homeAutoMove(id, ac, x, y) {
+// 实体家具（墙面、地毯层不挡路），和 homeFreePoint 同一口径
+function homeAutoSolids(id) { return E.homeOf(state, id).placed.filter(p => E.itemSurf(p) !== 'wall' && E.FURN_BY_ID[p.fid]?.layer !== 'rug').map(p => ({ x:p.x, y:p.y, ...E.furnSize(p.fid, p.rot) })); }
+function homeAutoFreeCells(id) {
+  const T = E.homeTier(E.homeOf(state, id).lv), solids = homeAutoSolids(id), out = [];
+  for (let y = 0; y < T.rows; y++) for (let x = 0; x < T.cols; x++) if (!solids.some(r => x + .5 > r.x && x + .5 < r.x + r.w && y + .5 > r.y && y + .5 < r.y + r.h)) out.push({ x, y });
+  return out;
+}
+function homeAutoMove(id, ac, x, y, pace) {
   const free = homeFreePoint(id, x, y); if (!free) return false;
-  if (HA.needsFade(Math.hypot(free.x - ac.x, free.y - ac.y), homeAutoReduced())) { ac.x = free.x; ac.y = free.y; ac.fadeUntil = clock + .5; }
+  const dist = Math.hypot(free.x - ac.x, free.y - ac.y);
+  const blocked = HA.segmentBlocked({ x:ac.x + .5, y:ac.y + .5 }, { x:free.x + .5, y:free.y + .5 }, homeAutoSolids(id));
+  const fade = HA.needsFade(dist, homeAutoReduced(), { blocked, pace });
+  ac.autoLastMove = { from:{ x:ac.x, y:ac.y }, to:free, dist, blocked, fade, pace:!!pace, at:clock };
+  if (fade) { ac.x = free.x; ac.y = free.y; ac.fadeUntil = clock + .5; }
   ac.tx = free.x; ac.ty = free.y; dirty = true; return true;
 }
 function homeAutoStart(id, ac, list) {
@@ -1993,9 +2014,12 @@ function homeAutoStart(id, ac, list) {
   const c = HA.pick(list, { last:ac.autoLast || null, ceo:id, period:homeAutoPeriod(), rng:Math.random });
   if (ac.pose && !homeFreePoint(id, ac.x, ac.y)) return null;   // 起不了身（四周没空地）就继续待着，不弹提示
   if (c.pace) {
-    const x = Math.floor(Math.random() * T.cols), y = Math.floor(T.rows / 2 + Math.random() * Math.ceil(T.rows / 2));   // 房间中间偏下
     homeLeavePose(id); ac.act = null; ac.pendingPose = null;
-    return homeAutoMove(id, ac, Math.min(T.cols - 1, x), Math.min(T.rows - 1, y)) ? { phase:'moving', pace:true, since:clock } : null;
+    // r2：按 PACE.walk 2–5 秒定距离挑空地，永不原地；房间中间偏下优先，下半没有可去的格子才用整间
+    const cells = homeAutoFreeCells(id), low = cells.filter(q => q.y >= Math.floor(T.rows / 2));
+    const to = HA.paceTarget(low, ac, Math.random) || HA.paceTarget(cells, ac, Math.random);
+    if (!to) return null;
+    return homeAutoMove(id, ac, to.x, to.y, true) ? { phase:'moving', pace:true, since:clock, want:to.want } : null;
   }
   const p = H.placed.find(q => q.uid === c.uid); if (!p) return null;
   const sz = E.furnSize(p.fid, p.rot), cap = HomeInteraction.capability(p.fid);
@@ -2715,7 +2739,7 @@ window.__tzz = { upgradeGate, TEST_MODE, TEST_LV, SAVE_KEY, BAK_KEY, get saveBlo
   musicStatus() { return AU.recorded?.status || null; }, audioState() { return AU.ctx ? AU.ctx.state : 'none'; }, showPreview, openAssign, JOB_ART, jobShown, jobURL, showJobArt,
   HOME_ART, FURN_ART, FURN_UP, homeAct, homeAdvanceActor, homeDrawActor, homeOwner, get homeWho() { return homeWho; }, get homeSub() { return homeSub; }, get homeMode() { return homeMode; }, set homeMode(v) { homeMode = v === 'decor' ? 'decor' : 'live'; }, get homeSel() { return homeSel; }, get homeDrag() { return homeDrag; }, homeActor, LIVE_LINES, homeUndo, resize, get canvasSize() { return { W, H }; }, pet: petHooks, pets: petsHooks, lookOf, drawPerson, drawHead, LOOKS, get bubble() { return bubble; } };
 // 家宅-56 只读测试钩子：读 CEO 自主活动状态（不改任何东西）
-Object.defineProperties(window.__tzz, { homeAutoState:{ value:id => { const a = homeActor[id]; return a ? { x:a.x, y:a.y, tx:a.tx, pose:a.pose && { ...a.pose }, act:a.act, line:a.line, auto:a.auto && { ...a.auto }, hold:a.autoHold || 0, clock } : null; } } });
+Object.defineProperties(window.__tzz, { homeAutoState:{ value:id => { const a = homeActor[id]; return a ? { x:a.x, y:a.y, tx:a.tx, pose:a.pose && { ...a.pose }, act:a.act, line:a.line, auto:a.auto && { ...a.auto }, hold:a.autoHold || 0, lastMove:a.autoLastMove || null, ty:a.ty, pendingPose:a.pendingPose && { ...a.pendingPose }, clock } : null; } } });
 /* ================= 奶茶店塔防「消灭细菌，保卫奶茶」：与主钱包同一存档、同一原子交易 =================
  * 入口/门禁为已开张奶茶店（1）；state.tdCampaign / 存档键 / 经济 / 玩法全部不变，旧进度原样沿用。 */
 function tdCard() {

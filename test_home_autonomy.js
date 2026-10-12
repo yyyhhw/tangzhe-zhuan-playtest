@@ -46,6 +46,41 @@ ok('停留时长按动作区间', () => {
 ok('家具之间单程超过 3 秒、或减少动态效果时淡入', () => {
   assert.strictEqual(HA.needsFade(8, false), false); assert.strictEqual(HA.needsFade(9, false), true); assert.strictEqual(HA.needsFade(1, true), true);
 });
+ok('r2 被挡就淡入：床(2,0) 2×3 + 书架(2,3) 2×1 隔断，从 (0,1) 去 (5,1) 必须淡入', () => {
+  const R = [{ x:2, y:0, w:2, h:3 }, { x:2, y:3, w:2, h:1 }], c = q => ({ x:q.x + .5, y:q.y + .5 });
+  assert.strictEqual(HA.segmentBlocked(c({ x:0, y:1 }), c({ x:5, y:1 }), R), true);
+  // 距离 5 格 ≈1.8 秒，按旧口径不淡入；r2 因为被挡而淡入
+  assert.strictEqual(HA.needsFade(5, false), false); assert.strictEqual(HA.needsFade(5, false, { blocked:true }), true);
+  // 隔断两侧任意两格都判被挡（这面「墙」从上到下封死）
+  for (let y1 = 0; y1 < 4; y1++) for (let y2 = 0; y2 < 4; y2++) for (const x1 of [0, 1]) for (const x2 of [4, 5]) assert(HA.segmentBlocked(c({ x:x1, y:y1 }), c({ x:x2, y:y2 }), R), [x1, y1, x2, y2].join());
+  // 同侧、贴边走不算挡
+  assert.strictEqual(HA.segmentBlocked(c({ x:0, y:0 }), c({ x:1, y:3 }), R), false);
+  assert.strictEqual(HA.segmentBlocked(c({ x:4, y:0 }), c({ x:4, y:3 }), R), false);
+  assert.strictEqual(HA.segmentBlocked({ x:0, y:2 }, { x:2, y:2 }, [{ x:2, y:0, w:2, h:2 }]), false);   // 只碰到角
+  // 原地不动不算挡
+  assert.strictEqual(HA.segmentBlocked(c({ x:1, y:1 }), c({ x:1, y:1 }), R), false);
+});
+ok('r2 踱步：用 PACE.walk 2–5 秒定距离，永不原地；踱步上限按 5 秒算', () => {
+  const cells = []; for (let y = 0; y < 4; y++) for (let x = 0; x < 6; x++) cells.push({ x, y });
+  // 熊大复现：6×4，人在 (3,3)，rng=.5 —— 旧版会挑到脚下这格（0 秒移动）
+  const t = HA.paceTarget(cells, { x:3, y:3 }, () => .5);
+  assert(t && t.dist >= 1, JSON.stringify(t)); assert(t.want >= 2 * 2.8 && t.want <= 5 * 2.8);
+  for (let i = 0; i < 2000; i++) { const from = cells[i % cells.length], q = HA.paceTarget(cells, from, Math.random); assert(q.dist >= 1); }
+  // 小屋走不到想走的距离：一律取房间里能走到的最远那格（6×4 从角落是 (5,3)，≈2.1 秒；从 (3,3) 是 (0,0)/≈1.5 秒，已是极限）
+  for (let i = 0; i < 200; i++) for (const from of cells) {
+    const q = HA.paceTarget(cells, from, Math.random), maxD = Math.max(...cells.map(c => Math.hypot(c.x - from.x, c.y - from.y)));
+    if (q.want >= maxD) assert(q.dist >= maxD - .01); else assert(Math.abs(q.dist - q.want) <= .75 || q.dist >= 1);
+  }
+  assert.deepStrictEqual((({ x, y }) => ({ x, y }))(HA.paceTarget(cells, { x:0, y:0 }, () => .99)), { x:5, y:3 });
+  // 大房间（villa 10×6）想走多远基本能走多远，单程不超过 5 秒就不淡入
+  const big = []; for (let y = 0; y < 6; y++) for (let x = 0; x < 10; x++) big.push({ x, y });
+  const b = HA.paceTarget(big, { x:0, y:0 }, () => .5); assert(Math.abs(b.dist - b.want) <= .75, JSON.stringify(b));
+  assert.strictEqual(HA.needsFade(b.dist, false, { pace:true }), b.dist / 2.8 > 5);
+  assert.strictEqual(HA.needsFade(11, false, { pace:true }), false); assert.strictEqual(HA.needsFade(11, false), true);
+  // 只剩脚下一格 / 没有空地：返回 null，调用方原地等
+  assert.strictEqual(HA.paceTarget([{ x:3, y:3 }], { x:3, y:3 }, Math.random), null);
+  assert.strictEqual(HA.paceTarget([], { x:3, y:3 }, Math.random), null);
+});
 ok('台词：50% 概率、10 分钟内同一句不重复、没有可用句就静默', () => {
   const said = {}, pool = ['甲', '乙'];
   assert.strictEqual(HA.chooseLine(pool, said, { now:0, rng:() => .6 }), null);   // 没抽中 50%

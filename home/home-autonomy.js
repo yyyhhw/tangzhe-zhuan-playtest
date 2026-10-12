@@ -45,10 +45,42 @@
   return pool[pool.length-1];
  }
  const stayFor=(kind,rng)=>between(KINDS[kind].stay,rng);
- const idleFor=rng=>between(IDLE,rng);
  const paceWalk=rng=>between(PACE.walk,rng), paceStay=rng=>between(PACE.stay,rng);
- // 规则 4：家具之间单程 ≤3 秒，超过就淡出淡入；空地踱步按 2–5 秒另算
- const needsFade=(dist,reducedMotion)=>!!reducedMotion||dist/WALK_SPEED>MOVE_MAX_SEC;
+ const idleFor=rng=>between(IDLE,rng);
+  // 规则 4：太远或被挡就淡出淡入。家具之间单程上限 3 秒；空地踱步上限按 PACE.walk 的 5 秒另算。
+ // 没有寻路：直线穿过任何实体家具（非墙面、非地毯层）就算被挡 → 淡入，不穿模。
+ function needsFade(dist,reducedMotion,opts){
+  const o=opts||{},max=o.pace?PACE.walk[1]:MOVE_MAX_SEC;
+  return !!reducedMotion||!!o.blocked||dist/WALK_SPEED>max;
+ }
+ // 直线 a→b（格子中心坐标）是否穿过某个家具矩形内部 {x,y,w,h}；贴边不算（Liang–Barsky，矩形内缩 eps）
+ function segmentBlocked(a,b,rects,eps){
+  const e=eps==null?.02:eps,dx=b.x-a.x,dy=b.y-a.y;
+  for(const r of rects||[]){
+   const x0=r.x+e,x1=r.x+r.w-e,y0=r.y+e,y1=r.y+r.h-e;if(x1<=x0||y1<=y0)continue;
+   let t0=0,t1=1,hit=true;
+   for(const [p,q] of [[-dx,a.x-x0],[dx,x1-a.x],[-dy,a.y-y0],[dy,y1-a.y]]){
+    if(p===0){if(q<0){hit=false;break;}continue;}
+    const t=q/p;if(p<0){if(t>t1){hit=false;break;}if(t>t0)t0=t;}else{if(t<t0){hit=false;break;}if(t<t1)t1=t;}
+   }
+   if(hit&&t1>t0)return true;
+  }
+  return false;
+ }
+ // 空地踱步：先按 PACE.walk（2–5 秒）×步速定一个想走的距离，再在空地里挑最接近的（房间小走不到就取最远的那几格，
+ // 所以小屋里有时不足 2 秒——那是房间本身走不了那么远，不会原地）。
+ // 永远不选脚下这格（距离 < 1 的一律排除）；没有别的空地就返回 null（调用方原地等）。
+ function paceTarget(cells,from,rng){
+  const want=paceWalk(rng)*WALK_SPEED;
+  const far=(cells||[]).map(c=>({x:c.x,y:c.y,d:Math.hypot(c.x-from.x,c.y-from.y)})).filter(c=>c.d>=1);
+  if(!far.length)return null;
+  // 想走的比房间里能走的还远 → 只在最远的那几格里挑；否则在「离想走距离 ±0.75 格」里随机，没有就取最接近的
+  const maxD=Math.max(...far.map(c=>c.d));
+  let top=want>=maxD?far.filter(c=>c.d>=maxD-.01):far.filter(c=>Math.abs(c.d-want)<=.75);
+  if(!top.length)top=[far.reduce((p,q)=>Math.abs(q.d-want)<Math.abs(p.d-want)?q:p)];
+  const c=top[Math.floor(rng()*top.length)];
+  return {x:c.x,y:c.y,want,dist:c.d};
+ }
  // 规则 5：停下时 50%（空房 25%）冒一句；同一句 10 分钟内不重复；冷却后没有可用句就不说
  function chooseLine(pool,said,{now,rng,emptyRoom}){
   if(rng()>=(emptyRoom?.25:.5))return null;
@@ -56,5 +88,5 @@
   if(!ok.length)return null;
   const line=ok[Math.floor(rng()*ok.length)];said[line]=now;return line;
  }
- return Object.freeze({KINDS,PACE,IDLE,PREF,MOVE_MAX_SEC,WALK_SPEED,AFTER_PLAYER_SEC,LINE_SEC,LINE_REPEAT_SEC,RUG_FID,kindOf,candidates,pick,stayFor,idleFor,paceWalk,paceStay,needsFade,chooseLine});
+ return Object.freeze({KINDS,PACE,IDLE,PREF,MOVE_MAX_SEC,WALK_SPEED,AFTER_PLAYER_SEC,LINE_SEC,LINE_REPEAT_SEC,RUG_FID,kindOf,candidates,pick,stayFor,idleFor,paceWalk,paceStay,needsFade,segmentBlocked,paceTarget,chooseLine});
 });
