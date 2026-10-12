@@ -1,3 +1,4 @@
+import {readSpace,migrateSpace,spaceTransition} from '../../space/domain.mjs?v=wearables8-on-tea-cards-out-20261012-r1';
 /** PREVIEW-only save protocol. No global storage, no automatic import, no rollback writes. */
 import { canonical } from './domain/json.mjs';
 export const KEYS = Object.freeze({ main:'tangzhe-preview-collection-v1-save', backup:'tangzhe-preview-collection-v1-save-bak', tab:'tangzhe-preview-collection-v1-tab-lock', source:'tangzhe-preview-save', sourceBackup:'tangzhe-preview-save-bak' });
@@ -11,6 +12,7 @@ export function createSaveCoordinator({storage, economy:E, model, ownsLock, onFa
   if (!storage || typeof storage.getItem !== 'function' || typeof storage.setItem !== 'function' || typeof ownsLock !== 'function') throw Error('STORAGE_AND_LOCK_REQUIRED');
   let expectedRaw, started = false, failed = null, uncertain = null;
   const requiredParentShape=E.newState(0);
+  const spaceCapability=Symbol('owned-space-initialization');
   function completeShape(value, sample) {
     if (sample===null) return true;
     if (Array.isArray(sample)) return Array.isArray(value) && (!sample.length || (value.length===sample.length && sample.every((part,i)=>completeShape(value[i],part))));
@@ -41,6 +43,7 @@ export function createSaveCoordinator({storage, economy:E, model, ownsLock, onFa
     let value; try { value = JSON.parse(text); } catch { return bad('INVALID_JSON_READ_ONLY'); }
     if (!value || typeof value !== 'object' || Array.isArray(value)) return bad('INVALID_SAVE_READ_ONLY');
     if (!Number.isSafeInteger(value.v) || value.v !== E.CFG.SAVE_VERSION || !Number.isSafeInteger(value.rev) || value.rev < 0) return bad('UNSUPPORTED_SAVE_READ_ONLY');
+    const spaceCheck=readSpace(value);if(!spaceCheck.ok)return spaceCheck;
     // Never accept a partially present envelope as an old source to import.
     if (source && (Object.hasOwn(value,'collection') || Object.hasOwn(value,'collectionHost') || Object.hasOwn(value,'_collectionProtocol'))) return bad('SOURCE_COLLECTION_REQUIRES_REVIEW');
     if (!completeShape(value,requiredParentShape) || E.validState(copy(value)).length) return bad('INCOMPLETE_PARENT_SAVE_REQUIRES_REVIEW');
@@ -111,8 +114,11 @@ export function createSaveCoordinator({storage, economy:E, model, ownsLock, onFa
     if (r.raw !== expectedRaw) return fault('FOREIGN_WRITE_READ_ONLY');
     return parse(r.raw);
   }
-  function commit(state, {allowCollectionChange = false} = {}) {
+  function commit(state, {allowCollectionChange = false, spaceToken = null} = {}) {
     const previous=current(); if (!previous.ok) return previous;
+    const initializing=spaceToken===spaceCapability;
+    const transition=spaceTransition(previous.state,state,{initialize:initializing});if(!transition.ok)return transition;
+    if (initializing && allowCollectionChange)return bad('SPACE_INITIALIZATION_ONLY');
     if (state.rev !== previous.state.rev) return bad('REVISION_CONFLICT');
     if (!allowCollectionChange && (JSON.stringify(state.collection)!==JSON.stringify(previous.state.collection) || JSON.stringify(state.collectionHost)!==JSON.stringify(previous.state.collectionHost))) return bad('COLLECTION_CHANGE_REQUIRES_HOST');
     if (state._collectionProtocol !== WRITE_PROTOCOL) return bad('PROTOCOL_DOWNGRADE_BLOCKED');
@@ -122,14 +128,26 @@ export function createSaveCoordinator({storage, economy:E, model, ownsLock, onFa
     const p=parse(raw); if (!p.ok) return p;
     // Cooperative lifetime lock + exact raw check; no async gap, and no blind old-value rollback.
     const pre=readKey(KEYS.main); if (!pre.ok) return fault(pre.code); if (pre.raw !== previous.raw) return fault('FOREIGN_WRITE_READ_ONLY');
+    if(initializing&&!ownsLock())return fault('LOCK_NOT_OWNED');
     try { storage.setItem(KEYS.backup,previous.raw); } catch { return bad('BACKUP_WRITE_FAILED'); }
     const backup=readKey(KEYS.backup); if (!backup.ok || backup.raw!==previous.raw) return bad('BACKUP_WRITE_FAILED');
     const again=readKey(KEYS.main); if (!again.ok || again.raw!==previous.raw) return fault('FOREIGN_WRITE_READ_ONLY');
+    if(initializing&&!ownsLock())return fault('LOCK_NOT_OWNED');
+    if(initializing)uncertain={before:previous.raw,intended:raw};
     try { storage.setItem(KEYS.main,raw); } catch {}
     const actual=readKey(KEYS.main);
-    if (actual.ok && actual.raw===raw) { expectedRaw=raw; Object.assign(state,copy(candidate)); return {ok:true,rev:candidate.rev,state:copy(candidate)}; }
-    if (actual.ok && actual.raw===previous.raw) return bad('WRITE_FAILED');
+    if(initializing&&!ownsLock())return fault('LOCK_NOT_OWNED');
+    if (actual.ok && actual.raw===raw) { expectedRaw=raw; uncertain=null; Object.assign(state,copy(candidate)); return {ok:true,rev:candidate.rev,state:copy(candidate)}; }
+    if (actual.ok && actual.raw===previous.raw) {uncertain=null;return bad('WRITE_FAILED');}
     uncertain={before:previous.raw,intended:raw}; return fault('COMMIT_UNCERTAIN');
+  }
+  function initializeSpace(...args) {
+    if(args.length)return bad('SPACE_INITIALIZATION_ARGUMENTS_REFUSED');
+    const previous=current();if(!previous.ok)return previous;
+    const proposal=migrateSpace(previous.state);if(!proposal.ok)return proposal;
+    if(!proposal.initialized)return {ok:true,initialized:false,state:copy(previous.state),rev:previous.state.rev};
+    const result=commit(proposal.state,{spaceToken:spaceCapability});
+    return result.ok?{...result,initialized:true}:result;
   }
   function reconcile() {
     if (!ownsLock()) return bad('LOCK_NOT_OWNED');
@@ -139,5 +157,5 @@ export function createSaveCoordinator({storage, economy:E, model, ownsLock, onFa
     const p=parse(actual.raw); if (!p.ok) return p;
     expectedRaw=actual.raw; started=true; failed=null; uncertain=null; return p;
   }
-  return Object.freeze({validateCollection,parse,inspect,adopt,initialize,current,commit,reconcile,get raw(){return expectedRaw;},get failed(){return failed;}});
+  return Object.freeze({validateCollection,parse,inspect,adopt,initialize,current,commit,initializeSpace,reconcile,get raw(){return expectedRaw;},get failed(){return failed;}});
 }

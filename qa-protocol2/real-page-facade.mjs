@@ -63,7 +63,14 @@ export function createRealPageQAFacade({enabled = REAL_PAGE_QA_ENABLED, scope, f
     if (!result.ok) return protect(result, {recoverCurrent: !owner.readOnly && !owner.failed});
     return result;
   }
-  const coordinator = Object.freeze({keys, current, commit,
+  function initializeSpace(...args) {
+    if (!writable()) return gate();
+    if (args.length) return fail('SPACE_INITIALIZATION_ARGUMENTS_REFUSED');
+    const result = invoke('initializeSpace');
+    if (!result.ok) return protect(result, {recoverCurrent: !owner.readOnly && !owner.failed});
+    return play(result);
+  }
+  const coordinator = Object.freeze({keys, current, commit, initializeSpace,
     validateCollection: owner.validateCollection,
     get raw() { return owner.raw; },
     get failed() {

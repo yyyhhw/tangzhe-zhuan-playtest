@@ -1,0 +1,204 @@
+{
+  "baseline": "3a96a86a1c854bd681c0ff033de1e71ef724640e",
+  "nodeVersion": "v24.19.0",
+  "entries": [
+    {
+      "path": "tests/formal/protocol.mjs",
+      "command": "node tests/formal/protocol.mjs",
+      "baselineExit": 0,
+      "candidateExit": 0,
+      "status": "pass",
+      "normalizedOutputIdentical": true
+    },
+    {
+      "path": "tests/formal/economy-v2.test.mjs",
+      "command": "node tests/formal/economy-v2.test.mjs",
+      "baselineExit": 0,
+      "candidateExit": 0,
+      "status": "pass",
+      "normalizedOutputIdentical": false
+    },
+    {
+      "path": "tests/formal/td-receipts.test.mjs",
+      "command": "node tests/formal/td-receipts.test.mjs",
+      "baselineExit": 0,
+      "candidateExit": 0,
+      "status": "pass",
+      "normalizedOutputIdentical": false
+    },
+    {
+      "path": "tests/formal/td-fc2.test.mjs",
+      "command": "node tests/formal/td-fc2.test.mjs",
+      "baselineExit": 0,
+      "candidateExit": 0,
+      "status": "pass",
+      "normalizedOutputIdentical": false
+    },
+    {
+      "path": "tests/formal/fc2-archive.test.mjs",
+      "command": "node tests/formal/fc2-archive.test.mjs",
+      "baselineExit": 0,
+      "candidateExit": 0,
+      "status": "pass",
+      "normalizedOutputIdentical": false
+    },
+    {
+      "path": "tests/formal/copy52-display.test.mjs",
+      "command": "node tests/formal/copy52-display.test.mjs",
+      "baselineExit": 0,
+      "candidateExit": 0,
+      "status": "pass",
+      "normalizedOutputIdentical": true
+    },
+    {
+      "path": "tests/formal/carefree-bgm.test.mjs",
+      "command": "node tests/formal/carefree-bgm.test.mjs",
+      "baselineExit": 0,
+      "candidateExit": 0,
+      "status": "pass",
+      "normalizedOutputIdentical": true
+    },
+    {
+      "path": "test_economy.js",
+      "command": "node test_economy.js",
+      "baselineExit": 1,
+      "candidateExit": 1,
+      "status": "same-baseline-failure",
+      "normalizedOutputIdentical": true
+    },
+    {
+      "path": "test_coin_safety.js",
+      "command": "node test_coin_safety.js",
+      "baselineExit": 1,
+      "candidateExit": 1,
+      "status": "same-baseline-failure",
+      "normalizedOutputIdentical": true
+    },
+    {
+      "path": "td/test_tdhost.js",
+      "command": "node td/test_tdhost.js",
+      "baselineExit": 1,
+      "candidateExit": 1,
+      "status": "same-baseline-failure",
+      "normalizedOutputIdentical": true
+    },
+    {
+      "path": "td/test_td_bridge.js",
+      "command": "node td/test_td_bridge.js",
+      "baselineExit": 1,
+      "candidateExit": 1,
+      "status": "same-baseline-failure",
+      "normalizedOutputIdentical": true
+    },
+    {
+      "path": "td/test_td_protocol.js",
+      "command": "node td/test_td_protocol.js",
+      "baselineExit": 1,
+      "candidateExit": 1,
+      "status": "same-baseline-failure",
+      "normalizedOutputIdentical": true
+    },
+    {
+      "path": "preview/td/test_tdhost.js",
+      "command": "node preview/td/test_tdhost.js",
+      "baselineExit": 1,
+      "candidateExit": 1,
+      "status": "same-baseline-failure",
+      "normalizedOutputIdentical": true
+    },
+    {
+      "path": "preview/td/test_td_bridge.js",
+      "command": "node preview/td/test_td_bridge.js",
+      "baselineExit": 0,
+      "candidateExit": 0,
+      "status": "pass",
+      "normalizedOutputIdentical": true
+    },
+    {
+      "path": "cards/tests/save.test.mjs",
+      "command": "node cards/tests/save.test.mjs",
+      "baselineExit": 0,
+      "candidateExit": 0,
+      "status": "pass",
+      "normalizedOutputIdentical": false
+    },
+    {
+      "path": "cards/tests/saved-decks.test.mjs",
+      "command": "node cards/tests/saved-decks.test.mjs",
+      "baselineExit": 0,
+      "candidateExit": 0,
+      "status": "pass",
+      "normalizedOutputIdentical": false
+    },
+    {
+      "path": "preview/cards/tests/save.test.mjs",
+      "command": "node preview/cards/tests/save.test.mjs",
+      "baselineExit": 1,
+      "candidateExit": 1,
+      "status": "same-baseline-failure",
+      "normalizedOutputIdentical": false
+    },
+    {
+      "path": "preview/cards/tests/saved-decks.test.mjs",
+      "command": "node preview/cards/tests/saved-decks.test.mjs",
+      "baselineExit": 0,
+      "candidateExit": 0,
+      "status": "pass",
+      "normalizedOutputIdentical": false
+    },
+    {
+      "path": "tests/formal/tea-entry-cards-out.test.mjs",
+      "command": "node tests/formal/tea-entry-cards-out.test.mjs",
+      "baselineExit": 0,
+      "candidateExit": 0,
+      "status": "pass",
+      "normalizedOutputIdentical": false
+    },
+    {
+      "path": "test_root_keys.js",
+      "command": "node test_root_keys.js",
+      "baselineExit": 1,
+      "candidateExit": 1,
+      "status": "same-baseline-failure",
+      "normalizedOutputIdentical": true
+    },
+    {
+      "path": "test_integration_cross.mjs",
+      "command": "node test_integration_cross.mjs",
+      "baselineExit": 1,
+      "candidateExit": 1,
+      "status": "browser-preflight-blocked",
+      "normalizedOutputIdentical": true
+    },
+    {
+      "path": "pet/game/test_petgame.js",
+      "command": "node pet/game/test_petgame.js",
+      "baselineExit": 1,
+      "candidateExit": 1,
+      "status": "same-baseline-failure",
+      "normalizedOutputIdentical": true
+    },
+    {
+      "path": "preview/pet/game/test_petgame.js",
+      "command": "node preview/pet/game/test_petgame.js",
+      "baselineExit": 1,
+      "candidateExit": 1,
+      "status": "same-baseline-failure",
+      "normalizedOutputIdentical": true
+    }
+  ],
+  "newTests": {
+    "files": 5,
+    "cases": 79,
+    "passed": 79,
+    "failed": 0
+  },
+  "wearables8": {
+    "files": 7,
+    "baselineCases": 141,
+    "candidateCases": 141,
+    "passed": 141,
+    "failed": 0
+  },
+  "scopeNote": "Selected 35 file entries: 34 Node/VM executed (24 passed / 10 same-baseline failures); 1 browser runner blocked before launching by missing playwright. Not full repository coverage."
+}

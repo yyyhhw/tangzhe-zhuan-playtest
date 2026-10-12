@@ -51,21 +51,24 @@
     "path": "qa-protocol2/vendor/runtime/validator.mjs",
     "sourcePackage": "collectible-protocol2-runtime-v1",
     "sourcePath": "module/validator.mjs",
-    "bytes": 12029,
-    "sha256": "5451c77f06364b6f0084692157e740d5683c4383f5815c604e18d909983811af",
+    "bytes": 12187,
+    "sha256": "d75feca373df98a4aaa0ee89c872399d1ba14a2683d36c1635dcfb2ed53f6518",
     "sourceSha256": "b710aa9da4c979036e980ffdbdf2f8ed46259d13c5d7ac90bf07ea42a806511a",
     "sourceBytes": 8201,
-    "derivation": "Revision 2 exact boot migration markers, formal leaderboard mirror, optional source-bound pet roster transition guard; original reviewed archive unchanged."
+    "derivation": "Revision 2 exact boot migration markers, formal leaderboard mirror, optional source-bound pet roster transition guard; original reviewed archive unchanged.",
+    "reviewedInputSha256": "5451c77f06364b6f0084692157e740d5683c4383f5815c604e18d909983811af",
+    "reviewedInputBytes": 12029,
+    "integrationChange": "01a optional space validation / capability-bound missing-to-default initialization; no global mutable extension"
   },
   {
     "path": "qa-protocol2/vendor/cards/card-coordinator.mjs",
     "sourcePackage": "collectible-card-adapter-v1",
     "sourcePath": "module/card-coordinator.mjs",
-    "bytes": 8245,
-    "sha256": "0a42ba33adb8e4ccd9d763d827d8266a3d08a03dc017083e0d95d831cea5d06e",
+    "bytes": 9345,
+    "sha256": "ded07f7f14fde95651004f38b7c2f4b6d629b9544e9f809539a1fe853bd6325f",
     "reviewedInputSha256": "c39527224902c835f2cc611527a5fcec2a23293adebd3b78bbb8684d2b41a034",
     "reviewedInputBytes": 8203,
-    "integrationChange": "only final cache import URLs; business logic unchanged"
+    "integrationChange": "01a optional space validation / capability-bound missing-to-default initialization; no global mutable extension"
   },
   {
     "path": "qa-protocol2/vendor/cards/card-transition.mjs",

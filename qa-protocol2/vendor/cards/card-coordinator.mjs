@@ -1,3 +1,4 @@
+import {migrateSpace,spaceTransition} from '../../../space/domain.mjs?v=wearables8-on-tea-cards-out-20261012-r1';
 import {createCardTransitionGuard} from './card-transition.mjs?v=wearables8-on-tea-cards-out-20261012-r1';
 export const CARD_ADAPTER_ENABLED=false;
 /** Synthetic-adapter coordinator candidate; no global storage or automatic launch. */
@@ -7,6 +8,7 @@ export function createCardAwareSession({scope,storage,lease,validator,canonical,
   if(!['formal','preview'].includes(scope)||!storage||!lease||!validator||typeof canonical!=='function')fail('COORDINATOR_DEPENDENCIES_REQUIRED');
   if(!model||!E||typeof createCollectionHost!=='function')fail('TRUSTED_CARD_HOST_REQUIRED');
   const cardCapability=Symbol('private-card-host-commit');
+  const spaceCapability=Symbol('owned-space-initialization');
   const checkCardTransition=createCardTransitionGuard({model,economy:E,canonical});
   let hostBound=false;
   const keys=Object.freeze({main:`tangzhe-${scope}-collection-v1-save`,backup:`tangzhe-${scope}-collection-v1-save-bak`,snapshot:`tangzhe-${scope}-collectibles-v2-original`,original:scope==='formal'?'tangzhe-formal-collection-v1-original':null});
@@ -45,19 +47,23 @@ export function createCardAwareSession({scope,storage,lease,validator,canonical,
     return adopted(raw,e);
   });}
   function current(){return run(()=>{const v=getCurrent();return {...v,state:copy(v.state)};});}
-  function commit(state,{allowCollectionChange=false,capability=null}={}){return run(g=>{
+  function commit(state,{allowCollectionChange=false,capability=null,spaceToken=null}={}){return run(g=>{
     const previous=getCurrent();
     canonical(state); // reject accessors/toJSON/cycles before inspecting caller data
+    const initializing=spaceToken===spaceCapability;
+    const transition=spaceTransition(previous.state,state,{initialize:initializing});if(!transition.ok)return transition;
+    if(initializing&&allowCollectionChange)return {ok:false,code:'SPACE_INITIALIZATION_ONLY'};
     if(state?.rev!==previous.state.rev)return {ok:false,code:'REVISION_CONFLICT'};
     if(state._collectionProtocol!==previous.protocol)return {ok:false,code:'PROTOCOL_DOWNGRADE_OR_SWITCH_BLOCKED'};
     if(allowCollectionChange&&capability!==cardCapability)return {ok:false,code:'COLLECTION_HOST_CAPABILITY_REQUIRED'};
     if(allowCollectionChange)checkCardTransition(previous.state,state);
     for(const k of (allowCollectionChange?['collectiblesV1']:['collection','collectionHost','collectiblesV1']))if(canonical(state[k]??null)!==canonical(previous.state[k]??null))return {ok:false,code:'IMMUTABLE_COLLECTION_OR_IDENTITY'};
     for(const k of new Set([...Object.keys(previous.state),...Object.keys(state)])){
-      if(mutable.has(k)||['_collectionProtocol','collection','collectionHost','collectiblesV1'].includes(k))continue;
+      if((initializing&&k==='space')||mutable.has(k)||['_collectionProtocol','collection','collectionHost','collectiblesV1'].includes(k))continue;
       if(Object.hasOwn(state,k)!==Object.hasOwn(previous.state,k)||canonical(state[k])!==canonical(previous.state[k]))return {ok:false,code:'OPAQUE_EXTENSION_CHANGE_UNSUPPORTED'};
     }
-    if(!validator.opaqueUnchanged(previous.state,state))return {ok:false,code:'OPAQUE_EXTENSION_CHANGE_UNSUPPORTED'};
+    const opaqueAfter=copy(state);if(initializing)delete opaqueAfter.space;
+    if(!validator.opaqueUnchanged(previous.state,opaqueAfter))return {ok:false,code:'OPAQUE_EXTENSION_CHANGE_UNSUPPORTED'};
     const oldReceipts=previous.state.tdUpgradeReceipts;
     if(oldReceipts){const n=state.tdUpgradeReceipts;if(!n||n.schemaVersion!==oldReceipts.schemaVersion||n.scope!==oldReceipts.scope||n.ruleset!==oldReceipts.ruleset||!Array.isArray(n.receipts)||n.receipts.length<oldReceipts.receipts.length||oldReceipts.receipts.some((r,i)=>canonical(r)!==canonical(n.receipts[i])))return {ok:false,code:'TD_UPGRADE_RECEIPTS_IMMUTABLE'};}
     const next=copy(state);next.rev=previous.state.rev+1;
@@ -76,6 +82,14 @@ export function createCardAwareSession({scope,storage,lease,validator,canonical,
     if(actual===expected){uncertain=null;return {ok:false,code:'WRITE_FAILED'};}
     fail('COMMIT_UNCERTAIN');
   });}
+  function initializeSpace(...args){
+    if(args.length)return {ok:false,code:'SPACE_INITIALIZATION_ARGUMENTS_REFUSED'};
+    const previous=current();if(!previous.ok)return previous;
+    const proposal=migrateSpace(previous.state);if(!proposal.ok)return proposal;
+    if(!proposal.initialized)return {ok:true,initialized:false,state:copy(previous.state),rev:previous.state.rev};
+    const result=commit(proposal.state,{spaceToken:spaceCapability});
+    return result.ok?{...result,initialized:true}:result;
+  }
   function reconcile(){return run(()=>{
     if(!uncertain)return {ok:false,code:fault||'NO_PENDING_COMMIT'};
     const e=verifyEvidence(),raw=read(keys.main);
@@ -83,7 +97,7 @@ export function createCardAwareSession({scope,storage,lease,validator,canonical,
     return adopted(raw,e); // caller MUST replace its in-memory state with this result
   });}
   function invalidate(reason='SESSION_INVALIDATED'){generation++;invalidated=true;active=false;fault=reason;return {ok:false,code:reason,readOnly:true};}
-  const coordinator=Object.freeze({keys,adopt,adoptMigration,current,commit,reconcile,invalidate,validateCollection:validator.validateCollection,get raw(){return expected;},get failed(){return fault;},get readOnly(){return !active||!!fault;}});
+  const coordinator=Object.freeze({keys,adopt,adoptMigration,current,commit,initializeSpace,reconcile,invalidate,validateCollection:validator.validateCollection,get raw(){return expected;},get failed(){return fault;},get readOnly(){return !active||!!fault;}});
   const cardView=Object.freeze({current,reconcile,
     commit:(draft,options={})=>commit(draft,{allowCollectionChange:options.allowCollectionChange===true,capability:cardCapability}),
     // The pinned host reconciles only this documented sentinel on snapshot/resume.

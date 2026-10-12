@@ -1,3 +1,4 @@
+import {readSpace} from '../../../space/domain.mjs?v=wearables8-on-tea-cards-out-20261012-r1';
 /** Default-disabled pure validation candidate; supported domain is legacy36 gameplay,
  * protocol2 identity and empty hidden ledgers. No normalization or awards. */
 export const PROTOCOL2_RUNTIME_ENABLED=false;
@@ -115,6 +116,7 @@ export function createProtocol2Validator({scope,economy:E,model,planner,codec,ca
   function validate(raw,{snapshotRaw=null,originalRaw=null}={}){
     try{
       const s=parse(raw);
+      const space=readSpace(s);if(!space.ok)error(space.code);
       if(!validFormalMirror(s))error('INVALID_FORMAL_ZOMBIE_MIRROR');
       if(!validFootprintMarkers(s))error('INVALID_FOOTPRINT_MIGRATION_MARKER');
       if(s._collectionProtocol===1){
