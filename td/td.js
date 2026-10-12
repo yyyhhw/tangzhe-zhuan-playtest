@@ -478,10 +478,22 @@ addEventListener('keydown', e => { if(e.key === 'Escape' && !$('#towerDetails').
 
 // ---- 画面 ----
 const cv = $('#cv'), cx = cv.getContext('2d');
-let W = 0, H = 0, S = 40, OX = 0, OY = 0;
+let W = 0, H = 0, S = 40, OX = 0, OY = 0, LAND = false;
+// 塔防-53：手机横屏（宽>高且高<520）时地图占满左侧整高，HUD 和建造栏挪到右侧；竖屏走原来的算法不变。
+function landLayout() {
+  const css = getComputedStyle(document.documentElement), inset = n => parseFloat(css.getPropertyValue(n)) || 0;
+  const sat = inset('--sat'), sab = inset('--sab'), sal = inset('--sal');
+  const s = Math.floor((H - 16 - sat - sab) / ROWS), left = 8 + sal, side = W - left - s * COLS - 18;
+  if (!(W > H && H < 520) || s < 20 || side < 300) return false;
+  S = s; OX = left; OY = Math.round(8 + sat + Math.max(0, (H - 16 - sat - sab - S * ROWS) / 2));
+  document.documentElement.style.setProperty('--land-x', (OX + S * COLS + 10) + 'px');
+  return true;
+}
 function resize() {
   const dpr = Math.min(2, window.devicePixelRatio || 1); W = innerWidth; H = innerHeight;
   cv.width = W * dpr; cv.height = H * dpr; cx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  LAND = landLayout(); document.body.classList.toggle('td-land', LAND);
+  if (LAND) return;
   const top = (G?.adjusting ? ($('#endlessPrep').offsetHeight||120)+16 : 88) + parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--sat') || 0), bot = (barMaxH() || 110) + 6;
   S = Math.floor(Math.min((W - 12) / COLS, (H - top - bot) / ROWS)); OX = Math.round((W - S * COLS) / 2); OY = Math.round(top + Math.max(0, (H - top - bot - S * ROWS) / 2));
 }
@@ -502,9 +514,9 @@ function positionBuildActions() {
   const el = $('#buildActions'), active = sel?.k === 'build' && sel.id && sel.x !== null;
   el.classList.toggle('hidden', !active || paused || G?.over);
   if (!active) return;
-  const width = Math.min(214, innerWidth-16), x = px(sel.x+.5), y = py(sel.y);
-  el.style.width = width+'px'; el.style.left = Math.max(8,Math.min(innerWidth-width-8,x-width/2))+'px';
-  const below = y+S+8; const bottom = innerHeight-barMaxH();
+  const width = Math.min(214, innerWidth-16), x = px(sel.x+.5), y = py(sel.y), right = LAND ? OX+S*COLS : innerWidth-8;
+  el.style.width = width+'px'; el.style.left = Math.max(8,Math.min(right-width,x-width/2))+'px';
+  const below = y+S+8; const bottom = LAND ? innerHeight-8 : innerHeight-barMaxH();
   el.style.top = (below+48 < bottom ? below : Math.max(56,y-56))+'px';
 }
 
