@@ -446,6 +446,12 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 .mall-filters .mf{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:800;background:#fff;border:2px solid var(--ink);border-radius:8px;padding:4px 8px;min-height:34px}
 .mall-filters select{min-height:34px;border:2px solid var(--ink);border-radius:8px;font:inherit;font-weight:800;font-size:12px;padding:0 8px;background:#fff}
 .mall-count{font-size:11px;font-weight:800;color:#666;margin:0 0 8px;display:flex;justify-content:space-between}
+.mall-styles{display:flex;gap:6px;overflow-x:auto;padding:0 0 8px;-webkit-overflow-scrolling:touch}
+.mall-styles .mst{flex:0 0 auto;display:inline-flex;align-items:center;gap:5px;min-height:44px;padding:0 12px;border:2px solid var(--ink);border-radius:999px;background:#fff;font-weight:800;font-size:12px}
+.mall-styles .mst.on{background:var(--yellow);box-shadow:2px 2px 0 var(--ink)}
+.sdot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--sc,#999);border:1.5px solid var(--ink);flex:0 0 auto}
+.mall-card .fstyles{display:flex;flex-wrap:wrap;gap:4px 10px;margin:0 0 2px}
+.mall-card .fst{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;color:var(--ink-3,#555);line-height:1.2}
 .mall-spacer{color:#999}
 .mall-list{display:flex;flex-direction:column;gap:8px;min-height:220px}
 .mall-card.mall-ghost{opacity:.45;border-style:dashed}
