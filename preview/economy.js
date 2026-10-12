@@ -480,16 +480,16 @@
     { shop:2, name:'同人展采购团', line:'这套全要，再加周边！', emoji:'📚' },
     { shop:3, name:'甲方验收团', line:'签字！打款！今晚上线！', emoji:'📝' },
   ];
-  // 每店 1 个特殊客户占位：两格漫画 + 本店 SPECIAL_REWARD_SEC 秒产量
+  // 每店 1 个特殊客户：两格漫画 + 本店 SPECIAL_REWARD_SEC 秒产量
   const SPECIAL_GUESTS = [
-    { id:'sp0', shop:0, name:'夜游食神（占位）', emoji:'🐼',
-      panels:[['c77','🍢','（占位）神秘客人点了传说中的竹笋串。'], ['e0','✨','阿炭：（占位）这单，香气能飘三条街。']] },
-    { id:'sp1', shop:1, name:'珍珠鉴赏家（占位）', emoji:'🧋',
-      panels:[['pearl','🔍','（占位）客人掏出放大镜数珍珠。'], ['e1','🥤','小满：（占位）一颗都不能少，这单我包了。']] },
-    { id:'sp2', shop:2, name:'连载催更侠（占位）', emoji:'📖',
-      panels:[['otaku','✏️','（占位）催更侠把收银台画成下一话预告。'], ['e2','📚','阿页：（占位）案件没破，先把书结了。']] },
-    { id:'sp3', shop:3, name:'火星投资人（占位）', emoji:'🚀',
-      panels:[['rocket','💼','（占位）投资人说：先把服务器送到火星。'], ['e3','💻','小栈：（占位）代码能重构，合同不能拖。']] },
+    { id:'sp0', shop:0, name:'夜游食神', emoji:'🐼',
+      panels:[['c77','🍢','半夜来了位圆滚滚的客人，只点竹笋串。'], ['e0','✨','阿炭：吃完一抹嘴就不见了，钱倒是给足了。']] },
+    { id:'sp1', shop:1, name:'珍珠鉴赏家', emoji:'🧋',
+      panels:[['pearl','🔍','客人举着放大镜，一颗一颗数杯里的珍珠。'], ['e1','🥤','小满：数到最后一颗，她点点头：刚刚好。']] },
+    { id:'sp2', shop:2, name:'连载催更侠', emoji:'📖',
+      panels:[['otaku','✏️','一阵风过，收银台上多了张字条：下一话呢？'], ['e2','📚','阿页：人没看见，书钱压在字条底下，一分不少。']] },
+    { id:'sp3', shop:3, name:'火星投资人', emoji:'🚀',
+      panels:[['rocket','💼','投资人在白板上画了颗红星球：分店就开这儿。'], ['e3','💻','小栈：首付先结了，尾款等火星通网再说。']] },
   ];
   function specialReward(st, shop) { return shopRate(st, shop) * CFG.SPECIAL_REWARD_SEC; }
   function settleSpecial(st, shop) {
