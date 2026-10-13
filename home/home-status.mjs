@@ -42,7 +42,7 @@ export function createHomeStatusAdapter({document, window, now, gameDayAt}) {
       minuteOfDay:localMinuteAt(timestamp), gameDay:gameDayAt(timestamp),
       mode:'live', reducedMotion:true
     });
-    const text = `时段：${value.periodLabel} · 游戏内天气：${WEATHER_LABEL[value.weather]}。 `;
+    const text = `${value.periodLabel} · ${WEATHER_LABEL[value.weather]}`;   // 文案-89：标签不带句号，不写「时段」「游戏内」
     if (node.textContent !== text) node.textContent = text;
     node.hidden = false;
     room = node.closest('.room');

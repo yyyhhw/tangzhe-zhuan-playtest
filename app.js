@@ -1255,7 +1255,7 @@ function act(a, arg, btn) {
     case 'decor': { if (E.ITEM_BY_ID[arg]?.type !== 'decor' || !state.gacha.owned.includes(arg)) return; const r = atomic(() => { const h = state.decorHidden || (state.decorHidden = []); const k = h.indexOf(arg); if (k >= 0) h.splice(k, 1); else h.push(arg); return { ok:true }; }, '装饰显示没有切换'); dirty = true; bgKey = ''; if (r.ok) toast(decorOn(arg) ? '已摆出：四家店共用，开店后可见' : '已从四家店收起', 1900, 'header'); break; }
     case 'card': return showCard(arg);
     case 'musicCredits': return showMusicCredits();
-    case 'reset': toast('新版存档暂不支持重置；保留经营进度和永久交易回执。',3200); return;
+    case 'reset': toast('新版存档暂时不能重开，你的店和收藏都会好好留着。',3200); return;
     case 'goShop': switchShop(+arg); setTab('shop'); break;
     default: if (a.indexOf('home') === 0 || a.indexOf('mall') === 0 || a.indexOf('pet') === 0) return homeAct(a, arg, btn);
   }
@@ -1460,7 +1460,7 @@ function renderCeo() {
     const [id, shop] = k.split('@'), c = E.CEO_BY_ID[id], on = E.crossActive(state, k), known = state.ceos[id].unlocked;
     h += `<button class="cross-item ${on ? 'on' : ''}" data-act="comic" data-arg="${k}"><b>${x.title}${on ? ' ✅' : ''}</b><div class="who">${known ? c.name : '？？？'} → ${E.SHOPS[+shop].short}</div>${x.desc}</button>`;
   }
-  h += `</div><div class="note">专长对口加成 ×${CFG.MATCH_MULT}，跨行 ×${CFG.CROSS_MULT}；CEO 每级 +${CFG.CEO_LV_BONUS * 100}%。调任前会先给你看每家店和全街每秒收益的变化，确认了才生效。离线收益按离开时的安排结算。</div>`;
+  h += `</div><div class="note">专长对口加成 ×${CFG.MATCH_MULT}，跨行 ×${CFG.CROSS_MULT}；CEO 每级 +${CFG.CEO_LV_BONUS * 100}%。离线收益按离开时的安排结算。</div>`;
   return h;
 }
 function renderGacha() {
@@ -1510,7 +1510,7 @@ function renderCol() {
     <div class="item-grid">${clothes.map(id => cell('clothes', id)).join('')}</div>
     <div class="slot-title">帽子</div>
     <div class="item-grid">${hats.map(id => cell('hat', id)).join('')}</div>`;
-  if (clothes.length + hats.length <= 2) h += `<div class="note">从盲盒里抽到衣服、帽子后，在这里给 CEO 换上。两个「默认」分别是衣服和帽子，点选后能看出区别。</div>`;
+  if (clothes.length + hats.length <= 2) h += `<div class="note">抽到的衣服、帽子会出现在这里，点一下就给 CEO 换上。</div>`;
   const supers = E.SUPER_ITEMS.filter(it => own.has(it.id));
   if (supers.length) { h += `<div class="sec-title">超级装饰（常驻生效）</div>`;
     h += supers.map(it => `<div class="card super"><div class="ava sq">${itemIcon(it.id)}</div><div class="info"><div class="name">${it.name}<span class="tag match">${E.SHOPS[it.shop].short}</span></div><div class="desc">${it.desc}</div></div></div>`).join(''); }
@@ -1525,7 +1525,7 @@ function renderCol() {
     ? `<button type="button" class="story story-open" data-act="card" data-arg="${c.id}" aria-label="重看故事卡：${c.name}"><b>${k + 1}. ${c.name}</b>${storyArt(c.id)}<span class="story-text">${c.text}</span><span class="story-replay-hint">已收集 · 点击重看 ›</span></button>` : `<div class="story no" aria-label="第 ${k + 1} 张故事卡，未收集"><b>${k + 1}. ？？？</b><p>还没收集</p></div>`).join('');
   h += `<div class="note">${setDone ? `✅ 已集齐 ${cards.length} 张故事卡：解锁专属外观「金牌摊主」（金马甲 + 金厨师帽），在衣橱里给任意 CEO 换上。` : `集齐 ${cards.length} 张故事卡，解锁专属外观「金牌摊主」（金马甲 + 金厨师帽）。`}</div>`;
   h += `<div class="sec-title">设置</div><div class="card"><div class="info"><div class="name">关于／鸣谢</div><div class="desc">经营音乐 · Carefree — Kevin MacLeod</div></div><button type="button" class="buy ghost" data-act="musicCredits">查看鸣谢</button></div><div class="card"><div class="info"><div class="name">存档</div><div class="desc">版本 v${state.v} · 自动保存在本机浏览器 · 每日双倍下次重置：本机时间 ${fmtClockLocal(E.nextResetTs(now()))}</div></div>
-    <button class="buy ghost" disabled title="保留经营进度与永久交易回执">重新开始（暂不可用）</button><div class="note">新版存档暂不支持重置；原档、经营进度和永久交易回执均保留。</div></div><div class="note">试玩版 · 只花游戏金币，没有任何真钱购买。</div>`;
+    <button class="buy ghost" disabled title="新版存档暂时不能重开">重新开始（暂不可用）</button><div class="note">新版存档暂时不能重开，你的店和收藏都会好好留着。</div></div><div class="note">试玩版 · 只花游戏金币，没有任何真钱购买。</div>`;
   return h;
 }
 function renderTab() {
@@ -1572,10 +1572,10 @@ function updateCompactHead() {
       return `<div class="ch-card">${ava(c.id)}<b>${c.name}</b><small>${post}</small></div>`;
     }).join('');
     el.innerHTML = `<div class="ch-title">谁在管哪家店</div><div class="ch-row">${cards}</div>
-      <div class="ch-note">调任：点卡片上的「调任」→ 选目的店 → 看双方去向和全街 每秒金币收益对比 → 确认。目标店有人会变成「交换任职」。</div>`;
+      <div class="ch-note">调任：选目的店 → 看两家店和整条街每秒收益怎么变 → 确认。目标店有人就互换。</div>`;
   } else if (tab === 'gacha') {
     const owned = state.gacha.owned.length, total = E.ITEMS.length;
-    el.innerHTML = `<div class="ch-title">77 收藏盲盒</div><div class="ch-note">已收集 <b>${owned}/${total}</b>（普通 ${E.REGULAR_ITEMS.length} + 超级 ${E.SUPER_ITEMS.length} + 隐藏 ${E.ITEMS.filter(it=>it.hidden===true).length}）。店景在「经营」页；这里专心开盒。</div>`;
+    el.innerHTML = `<div class="ch-title">77 收藏盲盒</div><div class="ch-note">已收集 <b>${owned}/${total}</b>（普通 ${E.REGULAR_ITEMS.length} + 超级 ${E.SUPER_ITEMS.length} + 隐藏 ${E.ITEMS.filter(it=>it.hidden===true).length}）。抽到的装饰会摆进「经营」页的店里。</div>`;
   } else {
     el.innerHTML = `<div class="ch-title">收藏与穿搭</div><div class="ch-note">衣服 / 帽子分区给 CEO 换装；装饰摆店里；故事卡集齐解锁金牌摊主。</div>`;
   }
