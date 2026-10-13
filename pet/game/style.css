@@ -784,3 +784,8 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 
 .item-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
 .item-grid>.item{min-width:0;overflow-wrap:anywhere}
+
+/* 家宅-56：CEO 自主活动时，远距离换位或「减少动态效果」打开时淡入；换衣服停下时闪一下 */
+.home-actor.ha-fade{animation:haFade .5s ease}
+@keyframes haFade{0%{opacity:0}100%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.home-actor.ha-fade{animation-duration:.01s}}

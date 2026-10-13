@@ -1901,6 +1901,7 @@ function homeOwner(room,uid){
 }
 function homeDrawActor(){
   if(tab!=='home'||homeSub!=='room')return;const el=$('#homeActor'),floor=$('#roomFloor');if(!el||!floor)return;
+  el.classList.toggle('ha-fade',(homeActor[homeWho]?.fadeUntil||0)>clock);
   const ac=homeActorOf(homeWho),T=E.homeTier(E.homeOf(state,homeWho).lv),p=ac.pose&&E.homeOf(state,homeWho).placed.find(p=>p.uid===ac.pose.uid),profile=p&&HomeInteraction.profile(p.fid);
   const stand=()=>{el.classList.remove('posed');const q=profile?(homeFreePoint(homeWho,ac.x,ac.y)||ac):ac;ac.visualFallback=profile?{x:q.x,y:q.y}:null;el.style.cssText=`left:${(q.x+.5)/T.cols*100}%;top:${(q.y+.5)/T.rows*100}%`;};
   if(!profile){stand();return;}
@@ -1923,11 +1924,111 @@ function homeDrawActor(){
   }
   ac.visualFallback=null;el.classList.add('posed');
 }
+
+// ---- 家宅-56：CEO 没人点时在已摆家具之间自主活动（只用现有动作；状态只在内存，不存档、不影响收益） ----
+// 决策在 home/home-autonomy.js；这里只负责落脚点、走路、摆姿势、说话。脚本没加载到（旧缓存页）就整段不跑。
+const HA = window.HomeAutonomy || null;
+const homeAutoPeriod = () => null;   // 宠物页没有家宅-22 时段，时段系数一律 ×1
+const homeAutoReduced = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
+// r2：只取消「自主」那段路——自主走动中被打断（切模式/切后台/切 CEO/玩家点）时，清掉它的目标、待摆姿势和自主动作，
+// 就近落回一格空地；玩家自己的走动不在 moving 阶段，不受影响。玩家点击是先 hold 再下新指令，新指令照常生效。
+function homeAutoCancel(id, ac) {
+  if (ac.auto?.phase === 'moving') {
+    ac.tx = ac.ty = null; ac.pendingPose = null; ac.autoPace = null; if (!ac.pose) ac.act = null;
+    const q = homeFreePoint(id, ac.x, ac.y); if (q) { ac.x = q.x; ac.y = q.y; }
+    dirty = true;
+  }
+  ac.auto = null;
+}
+function homeAutoReset(id) { const ac = homeActor[id]; if (ac) homeAutoCancel(id, ac); }
+// 玩家点家具 / 地板 / 切模式：立刻停，60 秒内不自己动；回来后从「闲站」重新开始
+function homeAutoHold(id) { if (!HA) return; const ac = homeActorOf(id); homeAutoCancel(id, ac); ac.autoHold = clock + HA.AFTER_PLAYER_SEC; }
+function homeAutoList(id) { return HA.candidates(E.homeOf(state, id).placed, { capability:HomeInteraction.capability, liveAct:E.furnLiveAct, itemSurf:E.itemSurf }); }
+// 实体家具（墙面、地毯层不挡路），和 homeFreePoint 同一口径
+function homeAutoSolids(id) { return E.homeOf(state, id).placed.filter(p => E.itemSurf(p) !== 'wall' && E.FURN_BY_ID[p.fid]?.layer !== 'rug').map(p => ({ x:p.x, y:p.y, ...E.furnSize(p.fid, p.rot) })); }
+function homeAutoFreeCells(id) {
+  const T = E.homeTier(E.homeOf(state, id).lv), solids = homeAutoSolids(id), out = [];
+  for (let y = 0; y < T.rows; y++) for (let x = 0; x < T.cols; x++) if (!solids.some(r => x + .5 > r.x && x + .5 < r.x + r.w && y + .5 > r.y && y + .5 < r.y + r.h)) out.push({ x, y });
+  return out;
+}
+// pace：自主踱步传 { sec, speed }（本段时长、按距离反推的速度）；去家具不传，照旧 2.8 格/秒
+function homeAutoMove(id, ac, x, y, pace) {
+  const free = homeFreePoint(id, x, y); if (!free) return false;
+  const dist = Math.hypot(free.x - ac.x, free.y - ac.y);
+  if (pace && dist < 1) return false;   // r3：落点被挪成脚下这格 → 不走，闲站
+  const blocked = HA.segmentBlocked({ x:ac.x + .5, y:ac.y + .5 }, { x:free.x + .5, y:free.y + .5 }, homeAutoSolids(id));
+  const fade = HA.needsFade(dist, homeAutoReduced(), { blocked, pace:!!pace, sec:pace ? pace.sec : null });
+  ac.autoLastMove = { from:{ x:ac.x, y:ac.y }, to:free, dist, blocked, fade, pace:!!pace, sec:pace ? pace.sec : null, at:clock };
+  // r4：非淡入的自主踱步按「有效 elapsed / sec」插值，elapsed ≥ sec 才到达（不走 d<.05 提前收尾）
+  ac.autoPace = !fade && pace ? { fx:ac.x, fy:ac.y, sec:pace.sec, el:0, speed:dist / pace.sec } : null;
+  if (fade) { ac.x = free.x; ac.y = free.y; ac.fadeUntil = clock + .5; }
+  ac.tx = free.x; ac.ty = free.y; dirty = true; return true;
+}
+function homeAutoStart(id, ac, list) {
+  const H = E.homeOf(state, id), T = E.homeTier(H.lv);
+  const c = HA.pick(list, { last:ac.autoLast || null, ceo:id, period:homeAutoPeriod(), rng:Math.random });
+  if (ac.pose && !homeFreePoint(id, ac.x, ac.y)) return null;   // 起不了身（四周没空地）就继续待着，不弹提示
+  if (c.pace) {
+    homeLeavePose(id); ac.act = null; ac.pendingPose = null;
+    // r2：按 PACE.walk 2–5 秒定距离挑空地，永不原地；房间中间偏下优先，下半没有可去的格子才用整间
+    const cells = homeAutoFreeCells(id), low = cells.filter(q => q.y >= Math.floor(T.rows / 2));
+    const to = HA.paceTarget(low, ac, Math.random) || HA.paceTarget(cells, ac, Math.random);
+    if (!to) return null;
+    return homeAutoMove(id, ac, to.x, to.y, { sec:to.sec }) ? { phase:'moving', pace:true, since:clock, sec:to.sec } : null;
+  }
+  const p = H.placed.find(q => q.uid === c.uid); if (!p) return null;
+  const sz = E.furnSize(p.fid, p.rot), cap = HomeInteraction.capability(p.fid);
+  let point = { x:p.x + Math.floor(sz.w / 2), y:p.y + Math.floor(sz.h / 2) };
+  if (c.kind === 'rug') { point = HomeInteraction.rugPoint(E, H, p, ac); if (!point) { ac.autoLast = c.uid; return null; } }   // 地毯上没空位就不去
+  homeLeavePose(id); ac.pendingPose = null;
+  if (!homeAutoMove(id, ac, point.x, point.y)) return null;
+  ac.act = c.kind === 'lie' ? 'rest' : c.kind === 'read' || c.kind === 'dress' ? c.kind : 'sit';
+  if (cap) ac.pendingPose = { uid:p.uid, kind:cap };
+  return { phase:'moving', uid:c.uid, kind:c.kind, since:clock };
+}
+function homeAutoSay(id, ac, kind, emptyRoom) {
+  const pack = LIVE_LINES[id] || LIVE_LINES.c77, key = kind ? HA.KINDS[kind].lines : 'walk';
+  const pool = key === 'sit' ? ['坐一会儿，陪你们玩。'] : pack[key] || pack.walk;   // 56 先用现有台词；坐的专属句归家宅-57
+  const line = HA.chooseLine(pool, ac.autoSaid || (ac.autoSaid = {}), { now:clock, rng:Math.random, emptyRoom });
+  if (line) { ac.line = line; ac.until = clock + HA.LINE_SEC; dirty = true; }
+}
+function homeAutoTick(id, ac) {
+  if (!HA || homeDrag || frozen || document.hidden) return;
+  if (ac.autoHold && clock < ac.autoHold) return;
+  let a = ac.auto;
+  if (!a) a = ac.auto = { phase:'idle', until:clock + HA.idleFor(Math.random) };
+  if (a.phase === 'idle') {
+    if (clock < a.until || ac.tx != null) return;
+    const list = homeAutoList(id), next = homeAutoStart(id, ac, list);
+    ac.auto = next ? Object.assign(next, { emptyRoom:!list.length }) : { phase:'idle', until:clock + 3 };
+    return;
+  }
+  if (a.phase === 'moving') {
+    if (ac.tx != null && clock - a.since < 12) return;   // 还在路上（最多等 12 秒，防止卡住）
+    if (ac.tx != null) { ac.tx = ac.ty = null; ac.pendingPose = null; }
+    ac.autoPace = null; a.walked = clock - a.since;   // r3：记下本段实际走了多久（测试读这个）
+    if (a.kind === 'dress') ac.fadeUntil = clock + .4;   // 换衣服：停下时人物闪一下
+    homeAutoSay(id, ac, a.pace ? null : a.kind, a.emptyRoom);
+    a.phase = 'stay'; a.until = clock + (a.pace ? HA.paceStay(Math.random) : HA.stayFor(a.kind, Math.random));
+    return;
+  }
+  if (a.phase === 'stay' && clock >= a.until) {
+    if (ac.pose && !homeFreePoint(id, ac.x, ac.y)) { a.until = clock + 10; return; }
+    if (ac.pose) homeLeavePose(id);
+    if (!ac.pose && (ac.act === 'read' || ac.act === 'dress' || ac.act === 'sit' || ac.act === 'rest')) ac.act = null;
+    ac.autoLast = a.pace ? null : a.uid;
+    ac.auto = { phase:'idle', until:clock + HA.idleFor(Math.random) }; dirty = true;
+  }
+}
 function homeAdvanceActor(dt){
   if(tab!=='home'||homeSub!=='room'||homeMode!=='live')return;
+  if(document.hidden)return;   // 家宅-56 r3：后台时移动器硬停，回前台由 onShow 作废自主那段
   const ac=homeActorOf(homeWho);
-  if(ac.tx!=null){const d=Math.hypot(ac.tx-ac.x,ac.ty-ac.y),step=Math.min(2.8*dt,d);if(d<.05){ac.x=ac.tx;ac.y=ac.ty;ac.tx=ac.ty=null;if(ac.pendingPose){ac.pose=ac.pendingPose;ac.pendingPose=null;ac.revision++;dirty=true;homeActorOf(homeWho);}}else{ac.x+=(ac.tx-ac.x)/d*step;ac.y+=(ac.ty-ac.y)/d*step;}}
-  else if(ac.line&&ac.until<clock){ac.line='';if(!ac.pose)ac.act=null;const el=$('#homeActor');el?.querySelector('.ha-line')?.remove();}
+  const P=ac.autoPace;
+  if(ac.tx!=null&&P){P.el+=dt;const k=Math.min(1,P.el/P.sec);ac.x=P.fx+(ac.tx-P.fx)*k;ac.y=P.fy+(ac.ty-P.fy)*k;if(P.el>=P.sec-1e-9){ac.x=ac.tx;ac.y=ac.ty;ac.tx=ac.ty=null;ac.autoPace=null;}}   // 家宅-56 r4：只给自主踱步
+  else if(ac.tx!=null){const d=Math.hypot(ac.tx-ac.x,ac.ty-ac.y),step=Math.min(2.8*dt,d);if(d<.05){ac.x=ac.tx;ac.y=ac.ty;ac.tx=ac.ty=null;if(ac.pendingPose){ac.pose=ac.pendingPose;ac.pendingPose=null;ac.revision++;dirty=true;homeActorOf(homeWho);}}else{ac.x+=(ac.tx-ac.x)/d*step;ac.y+=(ac.ty-ac.y)/d*step;}}
+  else if(ac.line&&ac.until<clock){ac.line='';if(!ac.pose&&!ac.auto?.phase?.startsWith('stay'))ac.act=null;const el=$('#homeActor');el?.querySelector('.ha-line')?.remove();}
+  homeAutoTick(homeWho, ac);
   homeDrawActor();
 }
 
@@ -2308,9 +2409,9 @@ function homeAct(a, arg, b) {
     case 'petSelect': if(PG.knownSpecies(arg)&&petSelection!==arg){petSelection=arg;petSelectedUid=null;renderTab();dirty=false;document.querySelector('[data-act="petSelect"][data-arg="'+arg+'"]')?.focus({preventScroll:true});}return;
     case 'petSelectRecord': {const p=petRoster().pets[arg];if(p&&!p.quarantined){petSelection=p.species;petSelectedUid=p.uid;renderTab();dirty=false;[...document.querySelectorAll('[data-act="petSelectRecord"]')].find(b=>b.dataset.arg===arg)?.focus({preventScroll:true});}return;}
     case 'homeGo': petPanelOpen=false;return setTab(arg);
-    case 'homeMode': homeMode = arg === 'decor' ? 'decor' : 'live'; homeSel = null; if (homeDrag) homeEnd(); sfx('tap'); dirty = true; return;
+    case 'homeMode': homeMode = arg === 'decor' ? 'decor' : 'live'; homeSel = null; homeAutoHold(homeWho); if (homeDrag) homeEnd(); sfx('tap'); dirty = true; return;
     case 'homeSub': petPanelOpen=false;if (homeSub !== arg) { homeSub = arg; homeSel = null; pageFlip(arg === 'mall' ? 'next' : 'prev'); $('#panel').scrollTop = 0; sfx('swoosh'); } dirty = true; return;
-    case 'homeWho': if (homeWho !== arg) { homeWho = arg; homeSel = null; sfx('tap'); } if (!E.homeOpen(state, arg)) toast('这位 CEO 还没加入'); dirty = true; return;
+    case 'homeWho': if (homeWho !== arg) { homeWho = arg; homeSel = null; homeAutoReset(arg); sfx('tap'); } if (!E.homeOpen(state, arg)) toast('这位 CEO 还没加入'); dirty = true; return;
     case 'homeUp': return confirmHomeUp(arg);
     case 'petActivate': { const r=PG.activateDuplicate(state,E,arg,{save:petSave,blocked:saveBlocked||frozen,prepare:petPrepare}); return petAfterResult(r); }
     case 'homePetBuy': { const [room,species] = (arg || homeWho).split('|'); petSelection=species||'dog';return confirmPetBuy(room,petSelection); }
@@ -2347,6 +2448,7 @@ function homeCellAt(px, py, fid, rot, offX, offY, surf) {
 }
 function homeLiveTap(e) {
   const floor = $('#roomFloor'); if (!floor) return;
+  homeAutoHold(homeWho);   // 家宅-56：玩家的指令永远优先
   const fEl = e.target.closest('#roomFloor .furn');
   const id = homeWho, T = E.homeTier(E.homeOf(state, id).lv), ac = homeActorOf(id);
   const go = (x, y, act) => {
@@ -2499,7 +2601,7 @@ let lastTouchEnd = 0;
 document.addEventListener('touchend', e => { const t = Date.now(); if (t - lastTouchEnd < 300 && !e.target.closest('button')) e.preventDefault(); lastTouchEnd = t; }, { passive:false });
 
 function onHide() { if ((COLLECTION.qaProtocol2 && saveBlocked) || frozen || petManual || persist.pending) return; petHiddenAt = now(); tick(); if (order) order = null; /* 离线不结算进行中的团单，避免和离线收益纠缠 */ special = null; state.lastSeen = now(); persist(); audioPause(); }
-function onShow() {
+function onShow() { for (const k in homeActor) homeAutoReset(k);
   if (frozen || petManual || persist.pending) return;
   if (!lockMine()) { freeze(); return; }
   if (storedRev() > state.rev) { freeze(); return; }
@@ -2591,6 +2693,8 @@ window.__tzz = { collectionReplaceState:s=>{state=s;lastGood=COLLECTION.coordina
   hitBig, modalOpen, closeModal, get frozen() { return frozen; },
   audioState() { return AU.ctx ? AU.ctx.state : 'none'; }, showPreview, openAssign, JOB_ART, jobShown, jobURL, showJobArt,
   HOME_ART, FURN_ART, FURN_UP, homeAct, homeAdvanceActor, homeDrawActor, homeOwner, get homeWho() { return homeWho; }, get homeSub() { return homeSub; }, get homeMode() { return homeMode; }, set homeMode(v) { homeMode = v === 'decor' ? 'decor' : 'live'; }, get homeSel() { return homeSel; }, get homeDrag() { return homeDrag; }, homeActor, LIVE_LINES, homeUndo, resize, get canvasSize() { return { W, H }; }, pet: petHooks, pets: petsHooks, lookOf, drawPerson, drawHead, LOOKS, get bubble() { return bubble; } };
+// 家宅-56 只读测试钩子：读 CEO 自主活动状态（不改任何东西）
+Object.defineProperties(window.__tzz, { homeAutoState:{ value:id => { const a = homeActor[id]; return a ? { x:a.x, y:a.y, tx:a.tx, pose:a.pose && { ...a.pose }, act:a.act, line:a.line, auto:a.auto && { ...a.auto }, hold:a.autoHold || 0, lastMove:a.autoLastMove || null, speed:a.autoPace ? a.autoPace.speed : null, paceEl:a.autoPace ? a.autoPace.el : null, ty:a.ty, pendingPose:a.pendingPose && { ...a.pendingPose }, clock } : null; } } });
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&petPanelOpen&&!modalOpen()){e.preventDefault();homeAct('petClose');}});
 
 })();

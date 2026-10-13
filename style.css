@@ -812,3 +812,8 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 @keyframes roomRain{to{background-position:-6px 26px,0 0}}
 @keyframes roomSnow{to{background-position:3px 32px,8px 31px,0 0}}
 @media (prefers-reduced-motion:reduce){.room-wx{transition:none}.room[data-room-weather] .room-wx{animation:none}}
+
+/* 家宅-56：CEO 自主活动时，远距离换位或「减少动态效果」打开时淡入；换衣服停下时闪一下 */
+.home-actor.ha-fade{animation:haFade .5s ease}
+@keyframes haFade{0%{opacity:0}100%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.home-actor.ha-fade{animation-duration:.01s}}
