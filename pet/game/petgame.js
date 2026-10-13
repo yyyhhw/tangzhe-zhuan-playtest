@@ -8,16 +8,16 @@
   else root.PetGame = factory(root.PetEngine, root.PetRoom, root.PetCompanions, root.PetArt, root.HomeInteraction);
 })(typeof self !== 'undefined' ? self : this, function (PE, PR, PC, PA, HI) {
   'use strict';
-  const PET = { id: 'pet_dog', name: '暖棕白小狗', emoji: '🐶', price: 3000, desc: '会自己在家里逛、闻家具、回窝睡觉；能呼唤、摸摸、抛球。只陪玩，不加产速。' };
+  const PET = { id: 'pet_dog', name: '暖棕白小狗', emoji: '🐶', price: 3000, desc: '暖棕白毛色。会自己在家里逛、闻闻家具、回窝睡觉；可以叫它、摸摸它、陪它抛球。只陪玩，不加产量。' };
   // Only species with their own shipped runtime/art are available for purchase.
   const SPECIES = Object.freeze({
     dog: Object.freeze({ ...PET, species: 'dog', ready: true }),
-    cat: Object.freeze({ species: 'cat', name: '猫', emoji: '🐱', ready: false, price: 3000, desc: '猫的专属动作与素材待接入。' }),
-    red_panda: Object.freeze({ species: 'red_panda', name: '小熊猫', emoji: '🐾', ready: false, price: 3000, desc: '小熊猫的专属动作与素材待接入。' }),
-    robot: Object.freeze({ species: 'robot', name: '机器人', emoji: '🤖', ready: false, price: 3000, desc: '机器人的专属动作与素材待接入。' }),
-    panda_cub: Object.freeze({ species: 'panda_cub', name: '幼年熊猫', emoji: '🐼', ready: false, price: 3000, desc: '幼年熊猫的专属动作与素材待接入。' }),
-    alpaca: Object.freeze({ species: 'alpaca', name: '羊驼', emoji: '🦙', ready: false, price: 3000, desc: '羊驼的专属动作与素材待接入。' }),
-    rabbit: Object.freeze({ species: 'rabbit', name: '兔子', emoji: '🐰', ready: false, price: 3000, desc: '兔子的专属动作与素材待接入。' })
+    cat: Object.freeze({ species: 'cat', name: '猫', emoji: '🐱', ready: false, price: 3000, desc: '爱晒太阳，喜欢趴在暖和的地方。只陪玩，不加产量。' }),
+    red_panda: Object.freeze({ species: 'red_panda', name: '小熊猫', emoji: '🐾', ready: false, price: 3000, desc: '尾巴蓬松，爱爬高看风景。只陪玩，不加产量。' }),
+    robot: Object.freeze({ species: 'robot', name: '机器人', emoji: '🤖', ready: false, price: 3000, desc: '会跟着你转圈，偶尔亮灯打招呼。只陪玩，不加产量。' }),
+    panda_cub: Object.freeze({ species: 'panda_cub', name: '幼年熊猫', emoji: '🐼', ready: false, price: 3000, desc: '圆滚滚，吃饱就睡。只陪玩，不加产量。' }),
+    alpaca: Object.freeze({ species: 'alpaca', name: '羊驼', emoji: '🦙', ready: false, price: 3000, desc: '脖子长长，表情淡定。只陪玩，不加产量。' }),
+    rabbit: Object.freeze({ species: 'rabbit', name: '兔子', emoji: '🐰', ready: false, price: 3000, desc: '耳朵竖起来就是在听你说话。只陪玩，不加产量。' })
   });
   const knownSpecies = s => typeof s === 'string' && Object.prototype.hasOwnProperty.call(SPECIES,s);
   const assets = new Map();
@@ -120,7 +120,7 @@
   }
   function activateDuplicate(st,E,uid,opt) {
     const o=opt||{}, v=view(st,E), chosen=v.pets[uid];
-    if(!chosen||chosen.quarantined||!chosen.compatibility)return {ok:false,why:'不是兼容待命宠物'};
+    if(!chosen||chosen.quarantined||!chosen.compatibility)return {ok:false,why:'这只暂时换不上。'};
     const current=Object.values(v.pets).find(p=>p.species===chosen.species&&!p.compatibility);
     if(!current)return {ok:false,why:'当前宠物不存在'};
     const expected=placementKey(v);
@@ -170,8 +170,8 @@
   }
   function placement(st, E, uid, room, o, purchasing) {
     const v = view(st, E), p = purchasing ? null : v.pets[uid];
-    if(p&&p.quarantined)return {ok:false,why:'未知物种记录已保留，暂停运行'};
-    if (p && p.compatibility) return {ok:false,why:'请先在兼容待命区选择换用此只'};
+    if(p&&p.quarantined)return {ok:false,why:'这条记录暂时用不了，已经帮你留着。'};
+    if (p && p.compatibility) return {ok:false,why:'这只是旧记录，先点「换用此只」。'};
     if (!purchasing && !p) return { ok: false, why: '找不到这只宠物' };
     if (room !== null && !validRoom(st, E, room)) return { ok: false, why: '这位 CEO 还没加入' };
     // Same room is a true no-op, even in a full room or with replace=self.
@@ -203,7 +203,7 @@
     const o = opt || {}, checked = placement(st, E, uid, room, o, false);
     if (!checked.ok) return checked;
     if (room !== null && o.M !== undefined && !hasRoom(st, E, room, o.M, { ...o, uid })) return { ok: false, why: NO_ROOM, noRoom: true };
-    if (typeof E.transact !== 'function') return { ok: false, why: '存档交易不可用' };
+    if (typeof E.transact !== 'function') return { ok: false, why: '暂时没法保存，金币和宠物都没变。' };
     const r = E.transact(st, { price: 0, blocked: !!o.blocked, save: o.save,
       apply: (s) => {
         const ready = preparePlacement(s, E, uid, room, o, false, checked);

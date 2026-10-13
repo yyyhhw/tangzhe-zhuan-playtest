@@ -55,10 +55,6 @@
     "path": "pet/companions.js",
     "sha256": "e3a93e7ac77270d3053268b0bf933e6d0d1aae5d81ff10d39bf949257cb03e6c"
   },
-  "index.html pet/game/petgame.js?v=15c": {
-    "path": "pet/game/petgame.js",
-    "sha256": "db2a70bea532902aeffeea3c7cc85db4aa4ce3f04b74b46e76b13b40294e00e0"
-  },
   "index.html upgrade-snapshot.js?v=15c": {
     "path": "upgrade-snapshot.js",
     "sha256": "dbee2c687f47c2b55e3f127e710c2ab48e427d38beca7694c21d91f8d71733cc"
@@ -115,12 +111,24 @@
     "path": "pet/companions.js",
     "sha256": "e3a93e7ac77270d3053268b0bf933e6d0d1aae5d81ff10d39bf949257cb03e6c"
   },
-  "pet/game/index.html petgame.js?v=15c": {
-    "path": "pet/game/petgame.js",
-    "sha256": "db2a70bea532902aeffeea3c7cc85db4aa4ce3f04b74b46e76b13b40294e00e0"
-  },
   "pet/game/index.html ../../upgrade-snapshot.js?v=15c": {
     "path": "upgrade-snapshot.js",
     "sha256": "dbee2c687f47c2b55e3f127e710c2ab48e427d38beca7694c21d91f8d71733cc"
+  },
+  "index.html home/home-autonomy.js?v=copy98-20261013-r1": {
+    "path": "home/home-autonomy.js",
+    "sha256": "558e1318e54f4ac3fd6b8172b2b6ed0af92c4228b748a0cc5ccef23574a0658c"
+  },
+  "pet/game/index.html ../../home/home-autonomy.js?v=copy98-20261013-r1": {
+    "path": "home/home-autonomy.js",
+    "sha256": "558e1318e54f4ac3fd6b8172b2b6ed0af92c4228b748a0cc5ccef23574a0658c"
+  },
+  "index.html pet/game/petgame.js?v=copy98-20261013-r1": {
+    "path": "pet/game/petgame.js",
+    "sha256": "1afcd6ccf4507b41c5702c902c6e2523675c7fdbc1c33d87e4b596cd7e798a06"
+  },
+  "pet/game/index.html petgame.js?v=copy98-20261013-r1": {
+    "path": "pet/game/petgame.js",
+    "sha256": "1afcd6ccf4507b41c5702c902c6e2523675c7fdbc1c33d87e4b596cd7e798a06"
   }
 }
