@@ -117,7 +117,7 @@ export async function assembly({scope='formal',path,query='',projectRoot='/',ena
     return `const E=window.Economy,COLLECTION=window.${scope==='formal'?'Formal':'Preview'}CollectionRuntime,TEST_MODE=false;
       let frozen=false,saveBlocked=false,state=COLLECTION.coordinator.current().state,lastGood=COLLECTION.coordinator.raw,dirty=false;
       const now=()=>Date.now(),toast=(message)=>globalThis.__modelToasts.push(message),showCollectionProtection=code=>globalThis.__modelErrors.push(code),restoreGood=()=>{};
-      ${persist}\n${txn}\n${saveFailNote}\n${atomic}\nlet drawing=false;const rand=()=>globalThis.__gachaRandom?globalThis.__gachaRandom():0,sfx=()=>{},failBuy=()=>{},showReveal=()=>{globalThis.__revealCalls=(globalThis.__revealCalls||0)+1;};\n${doGacha}
+      ${persist}\n${txn}\n${saveFailNote}\n${atomic}\nlet drawing=false;const rand=()=>globalThis.__gachaRandom?globalThis.__gachaRandom():0,sfx=()=>{},failBuy=(b,why)=>(globalThis.__failBuy=globalThis.__failBuy||[]).push(why),renderTab=()=>{},showReveal=()=>{globalThis.__revealCalls=(globalThis.__revealCalls||0)+1;};\n${doGacha}
       ${fullBoot?bootPreparation(text):'const petBeforePersist=()=>{};'}
       window.__tzz={persist,txn,atomic,doGacha,get state(){return state;},set state(s){state=s;},get saveBlocked(){return saveBlocked;},get lastGood(){return lastGood;}};
       ${hooks}

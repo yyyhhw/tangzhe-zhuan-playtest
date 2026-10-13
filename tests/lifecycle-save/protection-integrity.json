@@ -3,7 +3,7 @@
   "files": [
     {
       "path": "economy.js",
-      "sha256": "9194a7cfb19f72a660f5cc1da0d45599f594d0e9228c6b4a12d47bad2864f743",
+      "sha256": "c5a04023e6713b458724b095e68323f0ac0dca15bb5fbe8d61c9e2aaf6a7df28",
       "originalSha256": "c2abc463c6612361a24feace0a697df86bf72f9a04a8148e112b6dd55e20a91a",
       "expectedChange": "Previously reviewed decor16 catalog/hidden-grant extension from 89267ef; not claimed byte-identical to 7ce."
     },
@@ -15,13 +15,13 @@
     },
     {
       "path": "pet/game/economy.js",
-      "sha256": "85172af03f342b4564fc09dcd6e61eaccfa1ea2c61d9fd35875f966669e7c1d2",
+      "sha256": "9d6b10ffebc00b8ba14113ef5080114a4319f834e938beb4f50a8568c2fc3a49",
       "originalSha256": "4475552c124117f06322335a7befd168b51a0c6236b38446565d0030c41c14be",
       "expectedChange": "Previously reviewed decor16 catalog/hidden-grant extension from 89267ef; not claimed byte-identical to 7ce."
     },
     {
       "path": "qa-protocol2/vendor/runtime/validator.mjs",
-      "sha256": "18afe97dfaa4f2243e1b0e391700920b6827cabd490ca0e6f3ce924cb9b84c44",
+      "sha256": "914f33f05ddf6b9c5658f386b83b4aa6228f29b003c49122eba0864137edb66b",
       "originalSha256": "a6619f521e2d3c63945ab64ceff3cb0f1d44a39becac07bb3d045992aa0b484a",
       "expectedChange": "Previously reviewed decor16 catalog/hidden-grant extension from 89267ef; not claimed byte-identical to 7ce."
     },

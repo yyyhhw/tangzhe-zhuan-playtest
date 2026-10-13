@@ -56,6 +56,7 @@
     GACHA_PRICE: 200000,        // 盲盒单价（可调；熊大候选 20 万）
     GACHA_GROWTH: 1,            // 每开一个涨价倍数（1 = 固定价；杨总 15:19 定：就 20 万一个）
     SUPER_P: 0.10,              // 每抽出超级装饰的概率（还有没抽到的超级装饰时）
+    GACHA_DAILY_LIMIT: 5,       // 杨总 16:12：每人每天最多开 5 次盲盒（按游戏日 dayKey，与每日双倍同一天界）
     SUPER_PITY: 15,             // 保底：连续 14 抽没出超级装饰，第 15 抽必出
     SUPER_RATE: 1.3,            // 超级装饰：本店产量常驻 ×1.3（离线也算）
     PANDA_CRIT_ADD: 0.05,       // 熊猫食神：烧烤摊三档暴击各再 +5 个百分点（35% → 50%）
@@ -558,11 +559,23 @@
   function cardsComplete(st) { const own = new Set(st.gacha.owned); return ITEMS.filter(i => i.type === 'card').every(i => own.has(i.id)); }
   const pct = x => (x * 100 >= 10 || x === 0 ? (x * 100).toFixed(0) : (x * 100).toFixed(1)) + '%';
   // 抽一次：校验 → 扣币 → 先定「普通/超级」再在没收集的里等概率抽 → 入库（都改在 st 上，调用方一次性保存，动画只播 st.gacha.last）
-  function gachaDraw(st, rnd, price) {
+  // 每日开盒次数：存档字段 gachaDaily = { day:'YYYY-MM-DD', n }；缺字段/坏值 = 今天开了 0 次。
+  // 存的日子比今天还「晚」（手机时间往回调）按今天已开满算，防止回拨时间刷次数。
+  function gachaDailyUsed(st, now) {
+    const g = st.gachaDaily, day = dayKey(now);
+    if (!g || typeof g.day !== 'string' || !Number.isInteger(g.n) || g.n < 0) return 0;
+    if (g.day > day) return CFG.GACHA_DAILY_LIMIT;
+    return g.day === day ? Math.min(g.n, CFG.GACHA_DAILY_LIMIT) : 0;
+  }
+  function gachaDailyLeft(st, now) { return Math.max(0, CFG.GACHA_DAILY_LIMIT - gachaDailyUsed(st, now)); }
+  // now 传入时（玩家点「开一个」的真实路径）执行每日上限；不传 = 旧调用（模拟/测试）不限次。
+  function gachaDraw(st, rnd, price, now) {
     price = price == null ? gachaPrice(st) : price;
     if (!gachaUnlocked(st)) return { ok:false, why:'摸鱼科技公司雇到员工后开放' };
     const rem = gachaRemaining(st);
     if (!rem.length) return { ok:false, why:'已集齐', complete:true };
+    const daily = now != null && isFinite(now);
+    if (daily && gachaDailyLeft(st, now) <= 0) return { ok:false, why:'今天的 ' + CFG.GACHA_DAILY_LIMIT + ' 次已开完，明天再来', dailyLimit:true };
     if (!priceOk(price)) return { ok:false, why:'价格异常' };
     if (!canAfford(st, price)) return { ok:false, why:walletOk(st) ? '金币不够' : '金币数据异常' };
     const o = gachaOdds(st), isSuper = rnd < o.superP;
@@ -576,6 +589,7 @@
     const odds = isSuper ? (o.guaranteed && o.superP === 1 && o.remReg ? '保底必出超级装饰 · 这件 1/' + pool.length : '超级 ' + pct(o.superP) + ' · 这件 1/' + pool.length)
                          : '普通 ' + pct(o.regP) + ' · 这件 1/' + pool.length;
     st.gacha.last = { id:pick.id, n:st.gacha.draws, odds, setDone, seen:false, super:isSuper };
+    if (daily) st.gachaDaily = { day:dayKey(now), n:gachaDailyUsed(st, now) + 1 };
     return { ok:true, item:pick, cost:price, super:isSuper, odds:o, setDone };
   }
 
@@ -1230,6 +1244,7 @@
     st.gacha = raw.gacha && Array.isArray(raw.gacha.owned)
       ? { owned:[...new Set(raw.gacha.owned.filter(id => ITEM_BY_ID[id]))], draws:num(raw.gacha.draws, 0), pity:Math.max(0, Math.floor(num(raw.gacha.pity, 0))), last:raw.gacha.last || null }
       : { owned:[], draws:0, pity:0, last:null };
+    st.gachaDaily = raw.gachaDaily && typeof raw.gachaDaily.day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(raw.gachaDaily.day) && Number.isInteger(raw.gachaDaily.n) && raw.gachaDaily.n >= 0 ? { day:raw.gachaDaily.day, n:raw.gachaDaily.n } : null;   // 旧档没有 = 今天 0 次
     if (st.gacha.last && !ITEM_BY_ID[st.gacha.last.id]) st.gacha.last = null;
     st.claimLog = Array.isArray(raw.claimLog) ? raw.claimLog.filter(claimRecOk).slice(-20) : [];   // 12d3：读档就隔离坏领取记录（null 等），合法记录原样
     st.crossSeen = raw.crossSeen && typeof raw.crossSeen === 'object' ? raw.crossSeen : {};
@@ -1498,7 +1513,7 @@
     checkUnlocks, assignCeo, assignCeoWithPayout, creditOnline, previewAssign, signOf, cloneState,
     canOpen, openShop, hireEmp, upgradeEmp, upgradeCeo, upgradeShop,
     dayKey, nextResetTs, clockRolledBack, computeOffline, settleOffline, canDouble, claimOffline,
-    gachaUnlocked, gachaRemaining, gachaOdds, gachaPrice, gachaDraw, cardsComplete, newState, migrate, nextGoal, testHomesState,
+    gachaUnlocked, gachaRemaining, gachaOdds, gachaPrice, gachaDraw, gachaDailyUsed, gachaDailyLeft, cardsComplete, newState, migrate, nextGoal, testHomesState,
     HOME_TIERS, HOME_MAX, WALL_ROWS, WALL_BLOCK, wallBlockedCells, MALL_CATS, FURNITURE, FURN_BY_ID, FURN_STYLES, furnStyles, newHome, homeTier, homeOf, furnInvOf, homeOpen, furnLiveAct, furnSize, itemSurf, canPlace, findFree, homeUpgradeCost,
     buyFurniture, upgradeHome, placeItem, moveItem, rotateItem, storeItem, undoHome, migrateWallPaintings, reconcileWall, WALL_BLOCK, migrateFootprint11w, migrateFootprint11z, migrateFootprints, FP_OLD_11Z, homeLuxury, invCount, furnStats, normHomes, normFurnInv, normHomeBundle };
 });

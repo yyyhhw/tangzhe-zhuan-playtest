@@ -25,7 +25,7 @@
   },
   {
     "path": "qa-protocol2/vendor/runtime/validator.mjs",
-    "sha256AfterReleaseNormalization": "a634d246d9d2d1ab67388abeb97c8190b887224444d36d0e0e4935bcca9fc350"
+    "sha256AfterReleaseNormalization": "0d9611d97b8306a2fa0fdf19ce494a465174c9ed7297ba18dcbc0b7af8c0124b"
   },
   {
     "path": "qa-protocol2/vendor/cards/card-coordinator.mjs",
@@ -33,7 +33,7 @@
   },
   {
     "path": "economy.js",
-    "sha256AfterReleaseNormalization": "9194a7cfb19f72a660f5cc1da0d45599f594d0e9228c6b4a12d47bad2864f743"
+    "sha256AfterReleaseNormalization": "c5a04023e6713b458724b095e68323f0ac0dca15bb5fbe8d61c9e2aaf6a7df28"
   },
   {
     "path": "preview/economy.js",
@@ -41,6 +41,6 @@
   },
   {
     "path": "pet/game/economy.js",
-    "sha256AfterReleaseNormalization": "85172af03f342b4564fc09dcd6e61eaccfa1ea2c61d9fd35875f966669e7c1d2"
+    "sha256AfterReleaseNormalization": "9d6b10ffebc00b8ba14113ef5080114a4319f834e938beb4f50a8568c2fc3a49"
   }
 ]

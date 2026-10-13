@@ -1,4 +1,4 @@
-import {validateHiddenLedger} from '../../../collectibles/decor6-grants.mjs?v=autoupgrade-20261013-r1';
+import {validateHiddenLedger} from '../../../collectibles/decor6-grants.mjs?v=gacha-daily5-20261013-r1';
 /** Pure protocol2 validation: admitted catalog, immutable migration identity and
  * bounded hidden receipts. No normalization, award side effects or storage. */
 export const PROTOCOL2_RUNTIME_ENABLED=false;
@@ -142,6 +142,8 @@ export function createProtocol2Validator({scope,economy:E,model,planner,codec,ca
       if(!integer(s.coins)||typeof s.coinFrac!=='number'||!Number.isFinite(s.coinFrac)||s.coinFrac<0||s.coinFrac>=1)error('INVALID_WALLET');
       if(validateCollection(s).length||E.validState(copy(s)).length||E.checkSave(copy(s)).length)error('INVALID_PARENT_OR_COLLECTION');
       collectibles(s);
+      // 杨总 16:12 每日 5 次开盒：可选字段，缺 = 今天 0 次；有就必须是 {day:'YYYY-MM-DD',n:非负整数}
+      if(Object.hasOwn(s,'gachaDaily')&&s.gachaDaily!==null&&(!exact(s.gachaDaily,['day','n'])||typeof s.gachaDaily.day!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(s.gachaDaily.day)||!integer(s.gachaDaily.n)))error('INVALID_GACHA_DAILY');
       const chain=snapshotChain(snapshotRaw,originalRaw);
       if(!exact(s.collectiblesV1,['schemaVersion','catalogVersion','saveLineageId','migration','grants','acknowledged']))error('IDENTITY_OR_UNSUPPORTED_GRANTS');
       const identity={...s.collectiblesV1,grants:{},acknowledged:{}};
@@ -152,7 +154,7 @@ export function createProtocol2Validator({scope,economy:E,model,planner,codec,ca
       return {ok:true,state:s,protocol:2,raw,identity:copy(s.collectiblesV1),sourceRevision:chain.source.rev,sourceRaw:chain.sourceRaw,initialRaw:chain.initialRaw};
     }catch(e){return {ok:false,code:e?.message||String(e)};}
   }
-  const mutableFields=Object.freeze([...new Set([...Object.keys(parentShape),...footprintMarkers,...(petDomain?['pets']:[]),...(scope==='formal'?['zombieEndTopV1']:[]),'td','td50','tdCampaign','tdUpgradeReceipts','zombie'])]);
+  const mutableFields=Object.freeze([...new Set([...Object.keys(parentShape),...footprintMarkers,...(petDomain?['pets']:[]),...(scope==='formal'?['zombieEndTopV1']:[]),'td','td50','tdCampaign','tdUpgradeReceipts','zombie','gachaDaily'])]);
   // Preserve opaque fields beneath fixed parent shapes too. Empty dictionaries,
   // empty arrays and null placeholders are dynamic domains governed by the pinned
   // validators; this is not an invented stricter schema for their contents.
@@ -160,7 +162,7 @@ export function createProtocol2Validator({scope,economy:E,model,planner,codec,ca
     if(petDomain&&!petDomain.transition(before,after).ok)return false;
     if(!mirrorTransition(before,after))return false;
     if(!validFootprintMarkers(before)||!validFootprintMarkers(after)||footprintMarkers.some(k=>Object.hasOwn(before,k)&&!Object.hasOwn(after,k)))return false;
-    const rootShape={...parentShape,...(petDomain?{pets:null}:{}),...(scope==='formal'?{zombieEndTopV1:null}:{}),fpMig11w:null,fpMig11z:null,td:null,td50:null,tdCampaign:null,tdUpgradeReceipts:null,zombie:null,_collectionProtocol:null,collection:null,collectionHost:null,collectiblesV1:null};
+    const rootShape={...parentShape,...(petDomain?{pets:null}:{}),...(scope==='formal'?{zombieEndTopV1:null}:{}),fpMig11w:null,fpMig11z:null,td:null,td50:null,tdCampaign:null,tdUpgradeReceipts:null,zombie:null,gachaDaily:null,_collectionProtocol:null,collection:null,collectionHost:null,collectiblesV1:null};
     function walk(a,b,s){
       if(s===null||typeof s!=='object')return true;
       if(Array.isArray(s))return !s.length||!Array.isArray(a)||!Array.isArray(b)||a.every((v,i)=>walk(v,b[i],s[i]??s[0]));

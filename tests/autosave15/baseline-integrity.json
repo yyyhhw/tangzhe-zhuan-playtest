@@ -23,7 +23,7 @@
       "path": "app.js",
       "start": "function doGacha(",
       "end": "const STORY_ART",
-      "sha256": "e3d16a4497fae4b4a8b30106a7eab1b4bbcf5aa4b385bdd0db3360ab91475081"
+      "sha256": "d1f2f4eb9a780fddeccb3711de4fd1a3cb4fa8af8013f7e8473bb1d6846a8c82"
     },
     {
       "path": "preview/app.js",
@@ -71,11 +71,11 @@
       "path": "pet/game/app.js",
       "start": "function doGacha(",
       "end": "const STORY_ART",
-      "sha256": "e3d16a4497fae4b4a8b30106a7eab1b4bbcf5aa4b385bdd0db3360ab91475081"
+      "sha256": "d1f2f4eb9a780fddeccb3711de4fd1a3cb4fa8af8013f7e8473bb1d6846a8c82"
     },
     {
       "path": "economy.js",
-      "sha256": "9194a7cfb19f72a660f5cc1da0d45599f594d0e9228c6b4a12d47bad2864f743",
+      "sha256": "c5a04023e6713b458724b095e68323f0ac0dca15bb5fbe8d61c9e2aaf6a7df28",
       "expectedChange": "Six-decoration hidden-pool/claim extension; behavioral coverage in tests/decor6. This full file is intentionally not identical to b16."
     },
     {
@@ -85,12 +85,12 @@
     },
     {
       "path": "pet/game/economy.js",
-      "sha256": "85172af03f342b4564fc09dcd6e61eaccfa1ea2c61d9fd35875f966669e7c1d2",
+      "sha256": "9d6b10ffebc00b8ba14113ef5080114a4319f834e938beb4f50a8568c2fc3a49",
       "expectedChange": "Six-decoration hidden-pool/claim extension; behavioral coverage in tests/decor6. This full file is intentionally not identical to b16."
     },
     {
       "path": "qa-protocol2/vendor/runtime/validator.mjs",
-      "sha256": "51f95b6f346de3ddf4b75307e8b9182bbf29c13ac4f4abfe30ae3674d526a86a",
+      "sha256": "c224a7414111e8e0058147ea088b11e65a0e42b2efe7d02a0e909025aa82a9b4",
       "expectedChange": "Six-decoration hidden-pool/claim extension; behavioral coverage in tests/decor6. This full file is intentionally not identical to b16."
     },
     {
