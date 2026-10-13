@@ -1648,7 +1648,7 @@ function showNewBlindboxNotice() {
     $('#mGo').addEventListener('click', () => { audioUnlock(); closeModal(); bb70OpenGacha(); }, { once:true });
   } else {
     openModal(`<div class="mtitle">新盲盒上线啦！</div>
-      <div class="mnote">摸鱼科技公司雇到员工，就能来开盒</div>
+      <div class="mnote">摸鱼科技公司雇到员工，就能来开盒。</div>
       <div class="mbtns"><button class="buy big" id="mOk" type="button" data-x="close">知道了</button></div>`);
     $('#mOk').addEventListener('click', () => { audioUnlock(); closeModal(); }, { once:true });
   }
@@ -1665,7 +1665,7 @@ function showOffline() {
     <div class="mtitle">大家帮你干了 <b id="offDur">${fmtDur(p.sec)}</b></div>
     ${capped ? `<div class="mnote">（离开了 ${fmtDur(p.gap)}，离线最多算 ${capH} 小时）</div>` : ''}
     <div class="mreward">${coinSm}+<span id="offGain">${fmt(p.amount)}</span></div>
-    ${bbBanner ? `<div class="bb70-offline-banner" id="bb70OfflineBanner"><div class="bb70-offline-txt">盲盒上新了：${BB70_NEW_COUNT} 件新衣帽，等老板来开！</div><button type="button" class="buy red" id="claimBb70">${can ? '直接领取，去开盲盒' : '收下，去开盲盒'}</button></div>` : ''}
+    ${bbBanner ? `<div class="bb70-offline-banner" id="bb70OfflineBanner"><div class="bb70-offline-txt">盲盒上新了：${BB70_NEW_COUNT} 件新衣帽，等老板来开！</div><button type="button" class="buy ${can ? 'ghost' : 'red'}" id="claimBb70">${can ? '直接领取，去开盲盒' : '收下，去开盲盒'}</button></div>` : ''}
     <div class="mnote" id="offNote">离线 = 在线每秒收益的 50%，最多 ${capH} 小时${capH > 8 ? '（麻辣服务器 +2 小时）' : ''}；团单收入只算在线（离开时进行中的团单会取消）。按你离开时的店铺、员工和 CEO 安排结算。</div>
     <div class="mbtns">${can ? `<button class="buy big red" id="claimDouble">今日双倍领取 +${fmt(p.amount * 2)}</button><button class="buy ghost" id="claim">直接领取（双倍留到下次）</button>`
       : `<button class="buy big" id="claim">收下！</button><div class="mnote" style="margin:0">今日双倍已用，${fmtClockLocal(E.nextResetTs(now()))}重置</div>`}</div>`);
@@ -2792,7 +2792,7 @@ function boot() {
   if (fpMig && !fpMig.skipped && (fpMig.shifted || fpMig.stored)) toast(fpMig.stored ? `家具占地收紧：${fpMig.shifted} 件按脚底重锚，${fpMig.stored} 件腾不出空位已退回仓库` : `家具占地收紧：${fpMig.shifted} 件已按脚底重锚`, 3200);
   if (wallMig && (wallMig.moved || wallMig.stored)) toast(wallMig.stored ? `墙面整理：${wallMig.moved} 幅挂画挪到空墙，${wallMig.stored} 幅墙面没空已退回仓库` : `墙面整理：${wallMig.moved} 幅挂画已挪到空墙`, 3200);
   if (p && p.rolledBack) toast('检测到手机时间被往回调，这段时间不发离线收益');
-  if (first) queueModal(showIntro);
+  if (first) { queueModal(showIntro); bb70Set(BB70_LAUNCH_KEY); }   // 盲盒-86：新玩家点完「开摊！」不再紧接着弹上新，首次进入直接记已看（P1 时 bb70Set 本身不写）
   if (state.pending) queueModal(showOffline);
   if (bb70ShouldShowLaunch()) queueModal(showNewBlindboxNotice);   // 盲盒-70：先结算、后上新，不叠弹
   if (state.gacha.last && !state.gacha.last.seen) queueModal(() => showReveal(true));
