@@ -4,12 +4,13 @@ import test from 'node:test';import assert from 'node:assert/strict';import vm f
 import {assembly,until,copy,source} from '../wearables8/production-harness.mjs';
 const opts={timeout:20000};
 const slice=(s,a,b)=>{const i=s.indexOf(a);assert(i>=0,a);const j=s.indexOf(b,i);assert(j>i,b);return s.slice(i,j);};
-const MODES=[['P1 kept (cancel upgrade)',{},'collectibleUpgradeCancel',1],['P1→P2 (confirm upgrade)',{},'collectibleUpgradeConfirm',2],['P2 existing',{protocol:2},null,2]];
+// 杨总 16:05：正式存档不再有升级确认/取消，P1（含以前取消过的）一律自动升级到 P2。
+const MODES=[['P1 old save (auto-upgrade)',{},null,2],['P1→P2 (auto-upgrade)',{},null,2],['P2 existing',{protocol:2},null,2]];
 const ROUTES=[['app.js','/'],['pet/game/app.js','/pet/game/']];
 async function boot(t,{path,protocol,btn,configure,storageFault}){
   const h=await assembly({scope:'formal',mode:'bootstrap',path,...(protocol===2?{protocol:2}:{}),configure,storageFault});t.after(()=>h.close());
   await until(()=>h.view()?.phase==='prompt'||h.app||h.errors.length,'production entry');assert.equal(h.bootError,null);
-  if(h.view()?.phase==='prompt'){assert(btn,'unexpected migration prompt');await h.click(btn);}
+  assert.notEqual(h.view()?.phase,'prompt','formal must not show an upgrade prompt');
   await until(()=>h.app||h.errors.length,'production app');assert(h.app,JSON.stringify(h.errors));return h;
 }
 // Mount the ACTUAL 盲盒-70 block + showOffline from the shipped app file; claim goes through the real extracted atomic→txn→persist→coordinator.
@@ -34,33 +35,16 @@ const mainWrites=h=>h.calls.filter(x=>x.operation==='setItem'&&x.key===h.t.keys.
 const saved=h=>JSON.parse(h.data.get(h.t.keys.main));
 const flags=(h,m)=>[h.data.get(m.BB70_LAUNCH_KEY)??null,h.data.get(m.BB70_VISIT_KEY)??null];
 async function reopen(t,h,route,mode){const keep=new Map(h.data);await h.close();
-  return boot(t,{path:route,protocol:1,btn:mode[3]===1?'collectibleUpgradeCancel':null,configure:f=>{f.data.clear();for(const [k,v] of keep)f.data.set(k,v);}});}
+  return boot(t,{path:route,protocol:1,btn:null,configure:f=>{f.data.clear();for(const [k,v] of keep)f.data.set(k,v);}});}
 
 for(const [file,route] of ROUTES){
-  const P1=MODES[0];
-  // r3（熊大审 #1/#3）：P1 保留（取消升级，仍是 36 件旧目录）——不提示 16 件新、不写任何标记；普通领取照常
-  test(`${file} P1 kept (cancel upgrade): no launch notice, no settlement banner, no markers written; normal claim still commits once`,opts,async t=>{
-    const h=await boot(t,{path:route,protocol:1,btn:P1[2]});assert.equal(h.app.state._collectionProtocol,1);assert.notEqual(h.runtime.qaWearables8,true);
-    const p=settle(h),before=copy(h.app.state),w=mainWrites(h);const m=mount(h,file);
-    assert.equal(m.bb70ShouldShowLaunch(),false);assert.equal(m.bb70ShouldShowOfflineBanner(),false);
-    m.showNewBlindboxNotice();assert.equal(m.ui.open,false,'no launch popup on P1');
-    m.showOffline();assert.doesNotMatch(m.ui.html,/盲盒上新|claimBb70|16 件/);assert.equal(m.ui.els.has('claimBb70'),false);
-    m.click('claim');assert.equal(mainWrites(h),w+1);assert.equal(saved(h).coins,before.coins+p.amount);assert.equal(saved(h).pending,null);
-    m.realSetTab('gacha');assert.equal(m.bb70Set(m.BB70_LAUNCH_KEY),false);assert.equal(m.bb70Set(m.BB70_VISIT_KEY),false);
-    assert.deepEqual(flags(h,m),[null,null],'P1 writes no markers');assert(![...h.data.keys()].some(k=>k.startsWith('tzz-bb70')),'no bb70 keys at all');
-  });
-  // r3（熊大审 #3）：连续场景 P1 取消 → 进旧盲盒页 → 退出 → 升级到 P2 → 第一次提醒必须出现
-  test(`${file} continuous: P1 cancel → old gacha tab → exit → upgrade to P2 → first launch notice + settlement reminder show`,opts,async t=>{
-    const h=await boot(t,{path:route,protocol:1,btn:'collectibleUpgradeCancel'});assert.equal(h.app.state._collectionProtocol,1);
-    const m=mount(h,file);m.realSetTab('gacha');m.realSetTab('shop');m.showNewBlindboxNotice();assert.equal(m.ui.open,false);assert.deepEqual(flags(h,m),[null,null]);
-    const keep=new Map(h.data);await h.close();
-    const r=await boot(t,{path:route,protocol:1,btn:'collectibleUpgradeConfirm',configure:f=>{f.data.clear();for(const [k,v] of keep)f.data.set(k,v);}});
-    assert.equal(r.app.state._collectionProtocol,2);assert.equal(r.runtime.qaWearables8,true);
-    const p=settle(r);const m2=mount(r,file);assert.equal(m2.bb70ShouldShowLaunch(),true);assert.equal(m2.bb70ShouldShowOfflineBanner(),true);
-    m2.showOffline();assert.match(m2.ui.html,/盲盒上新了：16 件新衣帽/,'first P2 settlement reminder shows');
-    m2.showNewBlindboxNotice();assert.equal(m2.ui.mq.length,1,'launch queued behind settlement');
-    m2.click('claimBb70');assert.deepEqual(m2.ui.log.filter(x=>x[0]!=='toast'),[['close'],['tab','gacha']]);assert.equal(saved(r).pending,null);assert.equal(saved(r).claimLog.filter(c=>c.id===p.id).length,1);
-    assert.deepEqual(flags(r,m2),['1','1']);
+  // r3 #1/#3 → 杨总 16:05：P1 已不可能保留；P1 存档（含以前取消过的）开游戏即自动 P2，16 件新提醒照常出现
+  test(`${file} P1 old save (incl. previously cancelled) auto-upgrades: launch notice + settlement banner show, markers only after real actions`,opts,async t=>{
+    const h=await boot(t,{path:route,protocol:1,btn:null});assert.equal(h.app.state._collectionProtocol,2);assert.equal(h.runtime.qaWearables8,true);
+    const p=settle(h);const m=mount(h,file);assert.deepEqual(flags(h,m),[null,null],'no marker pre-written by upgrade');
+    assert.equal(m.bb70ShouldShowLaunch(),true);assert.equal(m.bb70ShouldShowOfflineBanner(),true);
+    m.showOffline();assert.match(m.ui.html,/盲盒上新了：16 件新衣帽/);m.showNewBlindboxNotice();assert.equal(m.ui.mq.length,1);
+    m.click('claimBb70');assert.deepEqual(m.ui.log.filter(x=>x[0]!=='toast'),[['close'],['tab','gacha']]);assert.equal(saved(h).pending,null);assert.equal(saved(h).claimLog.filter(c=>c.id===p.id).length,1);assert.deepEqual(flags(h,m),['1','1']);
   });
 }
 for(const [file,route] of ROUTES)for(const mode of MODES.slice(1)){
