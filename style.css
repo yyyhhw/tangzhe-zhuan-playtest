@@ -792,3 +792,14 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 /* 首批盲盒 6+2 图鉴预览（只展示） */
 .collectible-preview .item-art img{width:100%;height:auto;object-fit:contain;aspect-ratio:1}
 .collectible-preview .preview-note{display:block;font-size:11px;opacity:.75}
+
+/* 家宅-65：房间底图跟着时段变色（只调 room-art 底图和窗玻璃色块，不碰家具、人物、按钮；按手机本地时间，由 home-status 写 data-room-tone） */
+.room[data-room-tone] .room-art{transition:filter 1.5s ease}
+.room[data-room-tone="morning"] .room-art{filter:sepia(.18) saturate(1.08) brightness(1.03)}
+.room[data-room-tone="dusk"] .room-art{filter:sepia(.32) saturate(1.2) hue-rotate(-10deg) brightness(.94)}
+.room[data-room-tone="night"] .room-art{filter:brightness(.68) saturate(.82) hue-rotate(6deg)}
+.room-sky{position:absolute;left:68.8%;top:4.4%;width:17%;height:15.6%;z-index:0;pointer-events:none;opacity:0;mix-blend-mode:multiply;transition:opacity 1.5s ease}
+.room[data-room-tone="morning"] .room-sky{opacity:.45;background:linear-gradient(#ffe2a0,#fff4d8)}
+.room[data-room-tone="dusk"] .room-sky{opacity:.8;background:linear-gradient(#e9875c,#f6c48f)}
+.room[data-room-tone="night"] .room-sky{opacity:.92;background:radial-gradient(circle at 28% 30%,#fff 0 1px,transparent 1.6px),radial-gradient(circle at 64% 22%,#fff 0 .8px,transparent 1.4px),radial-gradient(circle at 78% 58%,#fff 0 1px,transparent 1.6px),linear-gradient(#18204a,#34396f)}
+@media (prefers-reduced-motion:reduce){.room[data-room-tone] .room-art,.room-sky{transition:none}}

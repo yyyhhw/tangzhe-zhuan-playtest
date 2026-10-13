@@ -1,6 +1,8 @@
 import {localMinuteAt, resolveHomeAmbience, HOME_AMBIENCE_REFRESH_MS} from './home-ambience.mjs?v=home35-td46-home22-copy52-20261012-r1';
 
-// Readonly text only. No room tint, weather overlay, particles, audio or poses.
+// Readonly text + 家宅-65 room tone. The tone is only a data-room-tone attribute on the
+// existing .room (CSS tints room-art and the window glass block); no weather overlay,
+// particles, audio or poses, and never furniture / people / controls.
 // The host passes scalars for an already-existing room; no state object or
 // mutating homeOf helper is accepted. The clock is read once per refresh.
 const WEATHER_LABEL = Object.freeze({clear:'晴', rain:'雨', snow:'雪'});
@@ -10,7 +12,7 @@ export function isHomeStatusEligible(context) {
 }
 
 export function createHomeStatusAdapter({document, window, now, gameDayAt}) {
-  let node = null, context = null, timer = null, generation = 0, suspended = false;
+  let node = null, context = null, timer = null, generation = 0, suspended = false, room = null;
 
   function stopTimer() {
     if (timer !== null) window.clearTimeout(timer);
@@ -23,7 +25,8 @@ export function createHomeStatusAdapter({document, window, now, gameDayAt}) {
     window.removeEventListener('pagehide', pageHidden);
     window.removeEventListener('pageshow', pageShown);
     if (node) { node.hidden = true; node.textContent = ''; }
-    node = context = null;
+    if (room) delete room.dataset.roomTone;
+    node = context = room = null;
     suspended = false;
   }
   function refresh() {
@@ -41,6 +44,8 @@ export function createHomeStatusAdapter({document, window, now, gameDayAt}) {
     const text = `时段：${value.periodLabel} · 游戏内天气：${WEATHER_LABEL[value.weather]}。 `;
     if (node.textContent !== text) node.textContent = text;
     node.hidden = false;
+    room = node.closest('.room');
+    if (room && room.dataset.roomTone !== value.roomTone) room.dataset.roomTone = value.roomTone;   // 家宅-65
     const current = generation;
     timer = window.setTimeout(() => {
       if (current !== generation) return;
