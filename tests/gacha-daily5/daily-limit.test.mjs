@@ -33,7 +33,7 @@ for(const file of ['economy.js','pet/game/economy.js']){
 }
 for(const file of ['app.js','pet/game/app.js'])test(file+': UI shows 今日剩余 X/5, disabled 今天的 5 次已开完 button, no 再开一个 at 0',()=>{
   const s=fs.readFileSync(new URL('../../'+file,import.meta.url),'utf8');
-  assert.match(s,/今日剩余 \$\{dailyLeft\}\/\$\{E\.CFG\.GACHA_DAILY_LIMIT\}/);assert.match(s,/id="gachaDailyDone" disabled>今天的 \$\{E\.CFG\.GACHA_DAILY_LIMIT\} 次已开完，明天再来</);
+  assert.match(s,/今日剩余 \$\{dailyLeft\}\/\$\{E\.CFG\.GACHA_DAILY_LIMIT\}/);assert.match(s,/id="gachaDailyDone" disabled>今天的 \$\{E\.CFG\.GACHA_DAILY_LIMIT\} 次已开完，\$\{gachaResumeText\(now\(\)\)\}</);
   assert.match(s,/!done && !resumed && E\.gachaDailyLeft\(state, now\(\)\) > 0/);assert.match(s,/E\.gachaDraw\(state, rand\(\), undefined, now\(\)\)/);
 });
 for(const path of ['/','/pet/game/'])test(`formal ${path}: real doGacha + P2 coordinator — 5 commits, 6th blocked without debit/write, gachaDaily persisted and survives reload`,{timeout:30000},async t=>{

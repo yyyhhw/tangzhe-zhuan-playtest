@@ -145,6 +145,9 @@ function fmtDur(sec) {
   return s + '秒';
 }
 function fmtClockLocal(ts) { const d = new Date(ts); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+// 盲盒-92：每日开盒次数恢复时间，按本机时区写「明天 HH:MM 恢复」（恢复点落在本机今天时写「今天」）
+function gachaResumeText(t) { const r = E.nextResetTs(t), a = new Date(t), b = new Date(r); const same = a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); return (same ? '今天 ' : '明天 ') + fmtClockLocal(r) + ' 恢复'; }
+let gachaShownDay = '';   // 盲盒-92：盲盒页渲染时的游戏日；停在页上跨过切换点时自动重画
 
 /* ================= 声音（切后台/锁屏立即暂停） ================= */
 const AU = { ctx:null, master:null, bgm:null, sfx:null, timer:null, nextT:0, step:0, started:false };
@@ -1465,6 +1468,7 @@ function renderCeo() {
 }
 function renderGacha() {
   const owned = E.ITEMS.filter(x=>x.hidden!==true&&state.gacha.owned.includes(x.id)).length, total = E.REGULAR_ITEMS.length + E.SUPER_ITEMS.length, rem = total - owned, unlocked = E.gachaUnlocked(state), price = E.gachaPrice(state), o = E.gachaOdds(state), dailyLeft = E.gachaDailyLeft(state, now());
+  gachaShownDay = E.dayKey(now());
   const box = `<svg viewBox="0 0 84 84"><rect x="10" y="30" width="64" height="46" rx="4" fill="${unlocked ? '#ffd23f' : '#ccc'}" stroke="#141414" stroke-width="4"/><rect x="6" y="20" width="72" height="16" rx="3" fill="${unlocked ? '#e63946' : '#aaa'}" stroke="#141414" stroke-width="4"/><rect x="36" y="20" width="12" height="56" fill="#fff" stroke="#141414" stroke-width="3"/><path d="M42 20 C30 4 18 10 26 20 M42 20 C54 4 66 10 58 20" fill="none" stroke="#141414" stroke-width="4"/><text x="42" y="64" font-size="18" font-weight="900" text-anchor="middle" fill="#141414">${unlocked ? '?' : '🔒'}</text></svg>`;
   const P = x => (x * 100 >= 10 || x === 0 ? (x * 100).toFixed(0) : (x * 100).toFixed(1)) + '%';
   const ownS = E.SUPER_ITEMS.filter(it => state.gacha.owned.includes(it.id)).length, ownR = owned - ownS;
@@ -1474,7 +1478,7 @@ function renderGacha() {
   } else {
     h += `<div class="box-hero"><div class="box-ico" id="boxIco">${box}</div><div class="info"><div class="name">已收集 ${owned}/${total}</div>
       <div class="desc">${rem ? `下一抽：<b>超级装饰 ${P(o.superP)}</b>${o.remSuper ? `（每件 ${P(o.perSuper)}）` : ''} · 普通收藏 ${P(o.regP)}${o.remReg ? `（每件 ${P(o.perReg)}）` : ''}<br>${o.remSuper ? (o.guaranteed ? '<b style="color:var(--red)">这一抽必出超级装饰！</b>' : `保底：再 <b>${o.pityLeft}</b> 抽内必出超级装饰`) : '超级装饰已集齐'}` : `${total} 件全收集！`}</div>
-      <div style="margin-top:6px">${!rem ? '<button class="buy no" disabled>已集齐</button>' : dailyLeft > 0 ? btn('draw', '', '开一个', price, 'red') : `<button class="buy no" id="gachaDailyDone" disabled>今天的 ${E.CFG.GACHA_DAILY_LIMIT} 次已开完，明天再来</button>`}</div>
+      <div style="margin-top:6px">${!rem ? '<button class="buy no" disabled>已集齐</button>' : dailyLeft > 0 ? btn('draw', '', '开一个', price, 'red') : `<button class="buy no" id="gachaDailyDone" disabled>今天的 ${E.CFG.GACHA_DAILY_LIMIT} 次已开完，${gachaResumeText(now())}</button>`}</div>
       ${rem ? `<div class="desc" id="gachaDailyLeft" style="margin-top:4px">今日剩余 ${dailyLeft}/${E.CFG.GACHA_DAILY_LIMIT}</div>` : ''}</div></div>`;
   }
   h += `<div class="sec-title">超级装饰 ${ownS}/${E.SUPER_ITEMS.length}（每店一件，只能抽到）</div>`;
@@ -1601,6 +1605,7 @@ function refreshDynamic(force) {
   tabBody.querySelectorAll('[data-cost]').forEach(b => b.classList.toggle('no', !E.canAfford(state, +b.dataset.cost)));
   refreshCrit();   // 暴击说明不受 900ms 限制：连击中 / 刚断连都马上对上店景 HUD
   if (!force && t - lastDyn < 900) return; lastDyn = t;
+  if (tab === 'gacha' && gachaShownDay && E.dayKey(t) !== gachaShownDay) { renderTab(); return; }   // 盲盒-92：跨过切换点，刷新「今日剩余」和按钮
   // 下一步
   const gl = E.nextGoal(state); $('#goalTxt').textContent = gl.text + (gl.lv ? `（${gl.cur}/${gl.need}）` : gl.count ? `（${gl.cur}/${gl.need}）` : '');
   $('#goalBar').style.width = Math.min(100, gl.cur / gl.need * 100).toFixed(0) + '%';
