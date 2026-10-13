@@ -1,0 +1,336 @@
+[
+  {
+    "samples": [
+      {
+        "at": 10867,
+        "ms": 154.1999999997206,
+        "stack": "Error\n    at persist (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:68:98)\n    at frame (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:2587:50)"
+      },
+      {
+        "at": 15950.69999999972,
+        "ms": 159.60000000009313,
+        "stack": "Error\n    at persist (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:68:98)\n    at frame (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:2587:50)"
+      },
+      {
+        "at": 21051.899999999907,
+        "ms": 169.39999999990687,
+        "stack": "Error\n    at persist (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:68:98)\n    at frame (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:2587:50)"
+      },
+      {
+        "at": 26154.5,
+        "ms": 170.1999999997206,
+        "stack": "Error\n    at persist (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:68:98)\n    at frame (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:2587:50)"
+      },
+      {
+        "at": 31248.799999999814,
+        "ms": 157.79999999981374,
+        "stack": "Error\n    at persist (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:68:98)\n    at frame (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:2587:50)"
+      },
+      {
+        "at": 36340.5,
+        "ms": 166.09999999962747,
+        "stack": "Error\n    at persist (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:68:98)\n    at frame (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:2587:50)"
+      },
+      {
+        "at": 41448.69999999972,
+        "ms": 178.10000000009313,
+        "stack": "Error\n    at persist (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:68:98)\n    at frame (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:2587:50)"
+      },
+      {
+        "at": 46565,
+        "ms": 175.59999999962747,
+        "stack": "Error\n    at persist (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:68:98)\n    at frame (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:2587:50)"
+      },
+      {
+        "at": 51679.89999999991,
+        "ms": 159.89999999990687,
+        "stack": "Error\n    at persist (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:68:98)\n    at frame (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:2587:50)"
+      },
+      {
+        "at": 56770.39999999991,
+        "ms": 162.10000000009313,
+        "stack": "Error\n    at persist (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:68:98)\n    at frame (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:2587:50)"
+      },
+      {
+        "at": 61864.59999999963,
+        "ms": 169.20000000018626,
+        "stack": "Error\n    at persist (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:68:98)\n    at frame (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:2587:50)"
+      },
+      {
+        "at": 66975.19999999972,
+        "ms": 172.5,
+        "stack": "Error\n    at persist (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:68:98)\n    at frame (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:2587:50)"
+      },
+      {
+        "at": 72106.3999999999,
+        "ms": 213.10000000009313,
+        "stack": "Error\n    at persist (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:68:98)\n    at frame (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:2587:50)"
+      },
+      {
+        "at": 77258.69999999972,
+        "ms": 177.10000000009313,
+        "stack": "Error\n    at persist (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:68:98)\n    at frame (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:2587:50)"
+      },
+      {
+        "at": 82374.09999999963,
+        "ms": 197.5,
+        "stack": "Error\n    at persist (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:68:98)\n    at frame (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:2587:50)"
+      },
+      {
+        "at": 87527.69999999972,
+        "ms": 165.70000000018626,
+        "stack": "Error\n    at persist (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:68:98)\n    at frame (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:2587:50)"
+      },
+      {
+        "at": 92630.5,
+        "ms": 165.09999999962747,
+        "stack": "Error\n    at persist (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:68:98)\n    at frame (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:2587:50)"
+      },
+      {
+        "at": 97736.19999999972,
+        "ms": 161.10000000009313,
+        "stack": "Error\n    at persist (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:68:98)\n    at frame (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:2587:50)"
+      },
+      {
+        "at": 102839.59999999963,
+        "ms": 189.10000000009313,
+        "stack": "Error\n    at persist (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:68:98)\n    at frame (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:2587:50)"
+      },
+      {
+        "at": 107964.09999999963,
+        "ms": 142.60000000009313,
+        "stack": "Error\n    at persist (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:68:98)\n    at frame (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:2587:50)"
+      },
+      {
+        "at": 113036.69999999972,
+        "ms": 171.20000000018626,
+        "stack": "Error\n    at persist (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:68:98)\n    at frame (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:2587:50)"
+      },
+      {
+        "at": 118145.19999999972,
+        "ms": 168.3000000002794,
+        "stack": "Error\n    at persist (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:68:98)\n    at frame (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:2587:50)"
+      },
+      {
+        "at": 123246.3999999999,
+        "ms": 163,
+        "stack": "Error\n    at persist (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:68:98)\n    at frame (http://127.0.0.1:8866/app.js?v=blindbox18-candidate-20261013-r1:2587:50)"
+      }
+    ],
+    "longTasks": [
+      {
+        "at": 10863.19999999972,
+        "ms": 173
+      },
+      {
+        "at": 15946.399999999907,
+        "ms": 177
+      },
+      {
+        "at": 18831.5,
+        "ms": 52
+      },
+      {
+        "at": 21047.799999999814,
+        "ms": 190
+      },
+      {
+        "at": 26151.5,
+        "ms": 187
+      },
+      {
+        "at": 31245.599999999627,
+        "ms": 180
+      },
+      {
+        "at": 32042.599999999627,
+        "ms": 63
+      },
+      {
+        "at": 36338,
+        "ms": 186
+      },
+      {
+        "at": 41445.5,
+        "ms": 203
+      },
+      {
+        "at": 46562.39999999991,
+        "ms": 193
+      },
+      {
+        "at": 51675.59999999963,
+        "ms": 178
+      },
+      {
+        "at": 56765.09999999963,
+        "ms": 181
+      },
+      {
+        "at": 61861.19999999972,
+        "ms": 188
+      },
+      {
+        "at": 66971.79999999981,
+        "ms": 191
+      },
+      {
+        "at": 72095.8999999999,
+        "ms": 245
+      },
+      {
+        "at": 74571.59999999963,
+        "ms": 60
+      },
+      {
+        "at": 75147.8999999999,
+        "ms": 52
+      },
+      {
+        "at": 75668.8999999999,
+        "ms": 66
+      },
+      {
+        "at": 75870.09999999963,
+        "ms": 58
+      },
+      {
+        "at": 77247.69999999972,
+        "ms": 204
+      },
+      {
+        "at": 81568.69999999972,
+        "ms": 51
+      },
+      {
+        "at": 82369.59999999963,
+        "ms": 218
+      },
+      {
+        "at": 84177.79999999981,
+        "ms": 53
+      },
+      {
+        "at": 86158.09999999963,
+        "ms": 102
+      },
+      {
+        "at": 87524,
+        "ms": 192
+      },
+      {
+        "at": 92627,
+        "ms": 184
+      },
+      {
+        "at": 97732.5,
+        "ms": 179
+      },
+      {
+        "at": 102837.59999999963,
+        "ms": 209
+      },
+      {
+        "at": 107961.5,
+        "ms": 159
+      },
+      {
+        "at": 113032.79999999981,
+        "ms": 194
+      },
+      {
+        "at": 118142.09999999963,
+        "ms": 186
+      },
+      {
+        "at": 123242.79999999981,
+        "ms": 182
+      }
+    ],
+    "elapsed": 120062,
+    "blocked": false,
+    "bytes": 62493,
+    "owned": 36,
+    "label": "baseline",
+    "cpuThrottle": 4,
+    "errors": [],
+    "browser": "154.0.8037.57"
+  },
+  {
+    "samples": [
+      {
+        "at": 21872.19999999972,
+        "ms": 177.20000000018626,
+        "stack": "Error\n    at persist (http://127.0.0.1:8765/app.js?v=autosave15-candidate-20261013-r1:70:98)\n    at frame (http://127.0.0.1:8765/app.js?v=autosave15-candidate-20261013-r1:2590:48)"
+      },
+      {
+        "at": 37052.299999999814,
+        "ms": 148,
+        "stack": "Error\n    at persist (http://127.0.0.1:8765/app.js?v=autosave15-candidate-20261013-r1:70:98)\n    at frame (http://127.0.0.1:8765/app.js?v=autosave15-candidate-20261013-r1:2590:48)"
+      },
+      {
+        "at": 52205.799999999814,
+        "ms": 137.79999999981374,
+        "stack": "Error\n    at persist (http://127.0.0.1:8765/app.js?v=autosave15-candidate-20261013-r1:70:98)\n    at frame (http://127.0.0.1:8765/app.js?v=autosave15-candidate-20261013-r1:2590:48)"
+      },
+      {
+        "at": 67351.19999999972,
+        "ms": 159.60000000009313,
+        "stack": "Error\n    at persist (http://127.0.0.1:8765/app.js?v=autosave15-candidate-20261013-r1:70:98)\n    at frame (http://127.0.0.1:8765/app.js?v=autosave15-candidate-20261013-r1:2590:48)"
+      },
+      {
+        "at": 82522,
+        "ms": 175.39999999990687,
+        "stack": "Error\n    at persist (http://127.0.0.1:8765/app.js?v=autosave15-candidate-20261013-r1:70:98)\n    at frame (http://127.0.0.1:8765/app.js?v=autosave15-candidate-20261013-r1:2590:48)"
+      },
+      {
+        "at": 97700.8999999999,
+        "ms": 183.79999999981374,
+        "stack": "Error\n    at persist (http://127.0.0.1:8765/app.js?v=autosave15-candidate-20261013-r1:70:98)\n    at frame (http://127.0.0.1:8765/app.js?v=autosave15-candidate-20261013-r1:2590:48)"
+      },
+      {
+        "at": 112886.69999999972,
+        "ms": 152.5,
+        "stack": "Error\n    at persist (http://127.0.0.1:8765/app.js?v=autosave15-candidate-20261013-r1:70:98)\n    at frame (http://127.0.0.1:8765/app.js?v=autosave15-candidate-20261013-r1:2590:48)"
+      }
+    ],
+    "longTasks": [
+      {
+        "at": 21867.099999999627,
+        "ms": 196
+      },
+      {
+        "at": 37049.299999999814,
+        "ms": 164
+      },
+      {
+        "at": 52202.59999999963,
+        "ms": 153
+      },
+      {
+        "at": 67348.3999999999,
+        "ms": 176
+      },
+      {
+        "at": 82519.29999999981,
+        "ms": 195
+      },
+      {
+        "at": 97697.29999999981,
+        "ms": 201
+      },
+      {
+        "at": 112883.79999999981,
+        "ms": 169
+      }
+    ],
+    "elapsed": 120109.29999999981,
+    "blocked": false,
+    "bytes": 62496,
+    "owned": 36,
+    "label": "candidate",
+    "cpuThrottle": 4,
+    "errors": [],
+    "browser": "154.0.8037.57"
+  }
+]

@@ -41,13 +41,15 @@ function storedRev() { if (TEST_MODE) return -1; try { const r = JSON.parse(STOR
 // 12d3（熊大 22:08 第 4 条）：只读模式返回 false（不假装保存成功）；写前 E.validState（含序列化后 E.checkSave）；
 //   备份写失败 → 整次保存放弃，主档不动；跨页写档（宠物 / 打僵尸）用 E.commitSave，同一套规矩
 function persist() {
+  // Monotonic deadline: failed attempts back off; successful immediate saves restart the interval.
+  persist.nextAutoAt = performance.now() + 15000;
   if (frozen || saveBlocked || !COLLECTION.ownsLock()) return false;
   if (TEST_MODE) { state.rev++; return true; }
   const bad=E.validState(state); if (bad.length) { restoreGood(bad); return false; }
   const t=now(); state.lastSeen=Math.max(state.lastSeen,t); state.maxSeen=Math.max(state.maxSeen||0,state.lastSeen);
   petBeforePersist();
   const r=COLLECTION.coordinator.commit(state);
-  if (r.ok) { lastGood=COLLECTION.coordinator.raw; return true; }
+  if (r.ok) { lastGood=COLLECTION.coordinator.raw; persist.nextAutoAt = performance.now() + 15000; return true; }
   if (COLLECTION.coordinator.failed) { saveBlocked=true; toast('预览存档已保护：'+r.code,3200); }
   return false;
 }
@@ -2474,7 +2476,7 @@ window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTi
 if (window.ResizeObserver) new ResizeObserver(() => { const r = cv.getBoundingClientRect(); if (Math.abs(r.width - W) > 1 || Math.abs(r.height - H) > 1) resize(); }).observe($('#stage'));
 window.addEventListener('pageshow', () => resize());
 
-let lastFrame = performance.now(), dynAcc = 0, saveAcc = 0;
+let lastFrame = performance.now(), dynAcc = 0;
 function frame(ts) {
   requestAnimationFrame(frame);
   const dt = Math.min(0.1, (ts - lastFrame) / 1000); lastFrame = ts; clock = ts / 1000;
@@ -2498,7 +2500,8 @@ function frame(ts) {
   }
   if (dirty) renderTab();
   petFrame(dt);   // 宠物 p4：小狗一直在过日子；在它家的生活页才画
-  saveAcc += dt; if (saveAcc > 5) { saveAcc = 0; persist(); }
+  // Use elapsed monotonic time, independent of the animation dt clamp. No catch-up writes.
+  if (performance.now() >= persist.nextAutoAt) persist();
 }
 
 function boot() {
@@ -2561,7 +2564,7 @@ const tdController = window.TDHost.create({
 function openTD() {
   if (frozen || tdOpen || zbOpen || !state.shops[1].open) return;
   tdOpen = true; const f = $('#tdFrame'), generation = ++tdGeneration;
-  const target = new URL('td/index.html?embed=1&v=blindbox18-candidate-20261013-r1', location.href);
+  const target = new URL('td/index.html?embed=1&v=autosave15-candidate-20261013-r1', location.href);
   f.onload = () => {
     if (!tdOpen || generation !== tdGeneration) return;
     // Verify the actual loaded document, not merely an iframe src attribute.

@@ -1,0 +1,44 @@
+[
+  {
+    "scope": "formal",
+    "fault": "backup-write",
+    "attemptsAtFailure": 1,
+    "noRetriesAcross90Seconds": true,
+    "blocked": true
+  },
+  {
+    "scope": "formal",
+    "fault": "main-readback",
+    "attemptsAtFailure": 2,
+    "noRetriesAcross90Seconds": true,
+    "blocked": true
+  },
+  {
+    "scope": "formal",
+    "fault": "lease-loss",
+    "attemptsAtFailure": 2,
+    "noRetriesAcross90Seconds": true,
+    "blocked": true
+  },
+  {
+    "scope": "preview",
+    "fault": "backup-write",
+    "attemptsAtFailure": 1,
+    "noRetriesAcross90Seconds": true,
+    "blocked": true
+  },
+  {
+    "scope": "preview",
+    "fault": "main-readback",
+    "attemptsAtFailure": 2,
+    "noRetriesAcross90Seconds": true,
+    "blocked": true
+  },
+  {
+    "scope": "preview",
+    "fault": "lease-loss",
+    "attemptsAtFailure": 2,
+    "noRetriesAcross90Seconds": true,
+    "blocked": true
+  }
+]

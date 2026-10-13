@@ -1,0 +1,32 @@
+[
+  {
+    "scope": "formal",
+    "path": "/",
+    "lowFpsCadence": true,
+    "incomeFlushed": true,
+    "immediateEquipSuppressesDuplicate": true,
+    "gachaSeenPurchaseRewardDurable": true,
+    "hiddenFlushed": true,
+    "errors": []
+  },
+  {
+    "scope": "preview",
+    "path": "/preview/",
+    "lowFpsCadence": true,
+    "incomeFlushed": true,
+    "immediateEquipSuppressesDuplicate": true,
+    "gachaSeenPurchaseRewardDurable": true,
+    "hiddenFlushed": true,
+    "errors": []
+  },
+  {
+    "scope": "formal",
+    "path": "/pet/game/",
+    "lowFpsCadence": true,
+    "incomeFlushed": true,
+    "immediateEquipSuppressesDuplicate": true,
+    "gachaSeenPurchaseRewardDurable": true,
+    "hiddenFlushed": true,
+    "errors": []
+  }
+]

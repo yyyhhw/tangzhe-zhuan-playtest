@@ -1,0 +1,19 @@
+import test from 'node:test';import assert from 'node:assert/strict';import vm from 'node:vm';import fs from 'node:fs';
+const files=['app.js','preview/app.js','pet/game/app.js'];
+function harness(file){
+ const source=fs.readFileSync(new URL('../../'+file,import.meta.url),'utf8');
+ const extract=name=>source.match(new RegExp(`function ${name}\\([^\\n]*\\) \\{[\\s\\S]*?\\n\\}`))[0];
+ const c={ms:0,writes:[],ok:true,owns:true,elapsedCommit:0,performance:{now:()=>c.ms},now:()=>c.ms,window:{},TEST_MODE:false,frozen:false,saveBlocked:false,state:{lastSeen:0,maxSeen:0},E:{validState:()=>[]},COLLECTION:{qaProtocol2:true,ownsLock:()=>c.owns,coordinator:{raw:'saved',failed:null,commit:()=>{c.writes.push(c.ms);c.ms+=c.elapsedCommit;return {ok:c.ok,code:'TEST_FAILURE'};}}},lastGood:null,restoreGood(){},petBeforePersist(){},toast(){},showCollectionProtection(){},requestAnimationFrame(){},lastFrame:0,clock:0,dynAcc:0,petManual:false,dirty:false,focusT:0,shake:0,nextBubbleAt:Infinity,tab:'shop'};
+ for(const n of ['tick','updateBig','updateGuests','updateSupers','render','refreshDynamic','homeAdvanceActor','renderTab','petFrame'])c[n]=()=>{};
+ vm.createContext(c);vm.runInContext(extract('persist')+'\n'+extract('frame'),c);
+ return {c,step(ms){c.ms=ms;c.frame(ms);},save(ms=0){c.ms=ms;return c.persist();}};
+}
+for(const file of files){
+ test(file+': low FPS elapsed 15 seconds, no dt-clamp drift or catch-up burst',()=>{const h=harness(file);h.save();for(let t=1000;t<15000;t+=1000)h.step(t);assert.deepEqual(h.c.writes,[0]);h.step(15000);assert.deepEqual(h.c.writes,[0,15000]);h.step(90000);h.step(90001);assert.deepEqual(h.c.writes,[0,15000,90000]);});
+ test(file+': successful immediate save resets deadline from completion',()=>{const h=harness(file);h.save();h.c.elapsedCommit=250;h.save(14999);h.step(15250);h.step(30248);assert.equal(h.c.writes.length,2);h.step(30249);assert.equal(h.c.writes.length,3);});
+ test(file+': immediate save inside tick suppresses same-frame automatic duplicate',()=>{const h=harness(file);h.save();h.c.tick=()=>h.c.persist();h.step(15000);assert.deepEqual(h.c.writes,[0,15000]);});
+ test(file+': failed autosave does not retry every frame',()=>{const h=harness(file);h.save();h.c.ok=false;for(let t=15000;t<30000;t+=16)h.step(t);assert.deepEqual(h.c.writes,[0,15000]);h.step(30000);assert.deepEqual(h.c.writes,[0,15000,30000]);});
+ test(file+': explicit transaction retry is not throttled by automatic deadline',()=>{const h=harness(file);h.save();h.c.ok=false;assert.equal(h.save(100),false);h.c.ok=true;assert.equal(h.save(101),true);assert.deepEqual(h.c.writes,[0,100,101]);});
+ test(file+': protected uncertain result and lock loss perform no further writes',()=>{const h=harness(file);h.save();h.c.ok=false;h.c.COLLECTION.coordinator.failed='COMMIT_UNCERTAIN';h.step(15000);assert.equal(h.c.saveBlocked,true);h.step(60000);assert.equal(h.save(60001),false);assert.equal(h.c.writes.length,2);const k=harness(file);k.save();k.c.owns=false;k.step(15000);k.step(15001);assert.equal(k.c.persist.nextAutoAt,30000);assert.equal(k.c.writes.length,1);});
+ test(file+': ordinary income state is not changed by scheduling and no clock dates enter save schema',()=>{const h=harness(file);h.save();h.c.state.coins=99;h.step(14999);assert.equal(h.c.state.coins,99);assert.equal(h.c.writes.length,1);assert.equal('nextAutoAt' in h.c.state,false);});
+}

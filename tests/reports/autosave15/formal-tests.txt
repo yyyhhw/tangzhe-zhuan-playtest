@@ -1,0 +1,70 @@
+{
+  "scope": "Node/VM behavior + static cache/attribution contracts; no browser or OS playback",
+  "cases": [
+    {
+      "site": "root",
+      "pass": true,
+      "checks": [
+        "exact official bytes",
+        "relative asset + helper URLs",
+        "cache chain",
+        "gesture-only start",
+        "one player after repeated input",
+        "unchanged volume buses",
+        "mute + persisted mute",
+        "TD/cards/zombie exclusion",
+        "hidden/pagehide/frozen silence",
+        "late decode safety",
+        "HTTP failure silence + gesture retry",
+        "visible credits + links",
+        "dialog guard + close focus"
+      ]
+    },
+    {
+      "site": "preview/",
+      "pass": true,
+      "checks": [
+        "exact official bytes",
+        "relative asset + helper URLs",
+        "cache chain",
+        "gesture-only start",
+        "one player after repeated input",
+        "unchanged volume buses",
+        "mute + persisted mute",
+        "TD/cards/zombie exclusion",
+        "hidden/pagehide/frozen silence",
+        "late decode safety",
+        "HTTP failure silence + gesture retry",
+        "visible credits + links",
+        "dialog guard + close focus"
+      ]
+    }
+  ]
+}
+✔ tests/formal/carefree-bgm.test.mjs (106.14859ms)
+Asia/Tokyo 2026-10-05T06:00:00Z R=2026-10-05T21:00:00.000Z => 06:00; four mirrors/four displays unchanged state/dayKey
+Asia/Kuala_Lumpur 2026-10-05T06:00:00Z R=2026-10-05T21:00:00.000Z => 05:00; four mirrors/four displays unchanged state/dayKey
+Asia/Kolkata 2026-10-05T06:00:00Z R=2026-10-05T21:00:00.000Z => 02:30; four mirrors/four displays unchanged state/dayKey
+Asia/Kathmandu 2026-10-05T06:00:00Z R=2026-10-05T21:00:00.000Z => 02:45; four mirrors/four displays unchanged state/dayKey
+America/New_York 2026-03-08T06:30:00Z R=2026-03-08T21:00:00.000Z => 17:00; four mirrors/four displays unchanged state/dayKey
+America/New_York 2026-11-01T05:30:00Z R=2026-11-01T21:00:00.000Z => 16:00; four mirrors/four displays unchanged state/dayKey
+Australia/Lord_Howe 2026-10-03T14:00:00Z R=2026-10-03T21:00:00.000Z => 08:00; four mirrors/four displays unchanged state/dayKey
+Australia/Lord_Howe 2026-04-04T14:00:00Z R=2026-04-04T21:00:00.000Z => 07:30; four mirrors/four displays unchanged state/dayKey
+Copy52 static cache closure: pass; no browser acceptance claimed.
+✔ tests/formal/copy52-display.test.mjs (158.248186ms)
+✔  actual parent entry gate and origin-checked iframe handshake (VM) (8.652013ms)
+✔  battle removed, shared save/wallet callbacks retained, retired links inert (2.630297ms)
+✔ preview/ actual parent entry gate and origin-checked iframe handshake (VM) (3.705889ms)
+✔ preview/ battle removed, shared save/wallet callbacks retained, retired links inert (2.548063ms)
+✔ formal TD second gate, handshake/read-only protection and zero history mutation (10.643522ms)
+✔ preview TD keeps legacy protocol/progress while using tea gate (7.802888ms)
+✔ isolated real coordinator preserves card compatibility keys and TD history during business gacha save (21.148966ms)
+✔ four entry version/changed-resource closure and preserved pet channel (4.467127ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 173.529883

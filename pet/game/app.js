@@ -7,7 +7,7 @@ const COLLECTION = window.FormalCollectionRuntime;
 if (!COLLECTION?.ownsLock()) {
   // Stale HTML can fetch a new script before bootstrap. No storage access here.
   const url=new URL(location.href);
-  if(url.searchParams.get('v')!=='formal-blindbox18-candidate-20261013-r1') {url.searchParams.set('v','formal-blindbox18-candidate-20261013-r1');location.replace(url.href);}
+  if(url.searchParams.get('v')!=='formal-autosave15-candidate-20261013-r1') {url.searchParams.set('v','formal-autosave15-candidate-20261013-r1');location.replace(url.href);}
   else {const notice=document.createElement('p');notice.textContent='页面资源尚未更新完整，存档未写入。请关闭此页后重新打开。';document.body.prepend(notice);}
   return;
 }
@@ -52,6 +52,8 @@ function showCollectionProtection(code) {
 function showUpgradeProtection() { toast("存档已保护，请刷新后重试",3200); }
 function upgradeWritable() { return COLLECTION.ownsLock() && !saveBlocked; }
 function persist() {
+  // Monotonic deadline: failed attempts back off; successful immediate saves restart the interval.
+  persist.nextAutoAt = performance.now() + 15000;
   if (frozen || saveBlocked || !COLLECTION.ownsLock()) return false;
   if (TEST_MODE) { state.rev++; return true; }
   const bad=E.validState(state); if (bad.length) { restoreGood(bad); return false; }
@@ -59,7 +61,7 @@ function persist() {
   petBeforePersist();
   if (window.ZBCore) window.ZBCore.preserveFormalTop(state);
   const r=COLLECTION.coordinator.commit(state);
-  if (r.ok) { lastGood=COLLECTION.coordinator.raw; return true; }
+  if (r.ok) { lastGood=COLLECTION.coordinator.raw; persist.nextAutoAt = performance.now() + 15000; return true; }
   if (COLLECTION.coordinator.failed) { saveBlocked=true; showCollectionProtection(r.code); }
   return false;
 }
@@ -2513,7 +2515,7 @@ window.addEventListener('resize', () => { clearTimeout(resizeT); resizeT = setTi
 if (window.ResizeObserver) new ResizeObserver(() => { const r = cv.getBoundingClientRect(); if (Math.abs(r.width - W) > 1 || Math.abs(r.height - H) > 1) resize(); }).observe($('#stage'));
 window.addEventListener('pageshow', () => resize());
 
-let lastFrame = performance.now(), dynAcc = 0, saveAcc = 0;
+let lastFrame = performance.now(), dynAcc = 0;
 function frame(ts) {
   requestAnimationFrame(frame);
   const dt = Math.min(0.1, (ts - lastFrame) / 1000); lastFrame = ts; clock = ts / 1000;
@@ -2529,7 +2531,8 @@ function frame(ts) {
   homeAdvanceActor(dt);
   if (dirty) renderTab();
   petFrame(dt);   // 宠物 p4：小狗一直在过日子；在它家的生活页才画
-  saveAcc += dt; if (saveAcc > 5) { saveAcc = 0; persist(); }
+  // Use elapsed monotonic time, independent of the animation dt clamp. No catch-up writes.
+  if (performance.now() >= persist.nextAutoAt) persist();
 }
 
 function boot() {

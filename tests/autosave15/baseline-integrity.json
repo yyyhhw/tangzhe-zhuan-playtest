@@ -1,0 +1,125 @@
+{
+  "baseline": "b16b99e3537af6f46d7f6508d42253c47d0b1ac3",
+  "checks": [
+    {
+      "path": "app.js",
+      "start": "function tick() {",
+      "end": "/* ---------- \u70b9\u5e97\u94fa",
+      "sha256": "76cf2aca2ed0b16cc1e0153c367ae1d4a7407b8266d8b4418ac293386beb2aa6"
+    },
+    {
+      "path": "app.js",
+      "start": "function onHide() {",
+      "end": "let resizeT",
+      "sha256": "527b912a97bbdd0fa0591f9cbf56bb9253572d5a47bd5e87d0f283fd3be9e9dc"
+    },
+    {
+      "path": "app.js",
+      "start": "function txn(",
+      "end": "function goPage(",
+      "sha256": "d7bf34d789d75f0f4031f998bfea84889f111491b07b65be8309b9bc6718c723"
+    },
+    {
+      "path": "app.js",
+      "start": "function doGacha(",
+      "end": "const STORY_ART",
+      "sha256": "e3d16a4497fae4b4a8b30106a7eab1b4bbcf5aa4b385bdd0db3360ab91475081"
+    },
+    {
+      "path": "preview/app.js",
+      "start": "function tick() {",
+      "end": "/* ---------- \u70b9\u5e97\u94fa",
+      "sha256": "4ae584106f61f3da4ed68fb4c28fa77ad59dabe902f96a5b95162e81c91a84cd"
+    },
+    {
+      "path": "preview/app.js",
+      "start": "function onHide() {",
+      "end": "let resizeT",
+      "sha256": "ae9193ad8591d5b3a47b9836faab357486f37976e9d74700f86c1cb0bf20f31d"
+    },
+    {
+      "path": "preview/app.js",
+      "start": "function txn(",
+      "end": "function goPage(",
+      "sha256": "550e14b50a7f7456eaaa40704745474cceb74f6c13da967aae96a83a5dfee30b"
+    },
+    {
+      "path": "preview/app.js",
+      "start": "function doGacha(",
+      "end": "const STORY_ART",
+      "sha256": "e3d16a4497fae4b4a8b30106a7eab1b4bbcf5aa4b385bdd0db3360ab91475081"
+    },
+    {
+      "path": "pet/game/app.js",
+      "start": "function tick() {",
+      "end": "/* ---------- \u70b9\u5e97\u94fa",
+      "sha256": "76cf2aca2ed0b16cc1e0153c367ae1d4a7407b8266d8b4418ac293386beb2aa6"
+    },
+    {
+      "path": "pet/game/app.js",
+      "start": "function onHide() {",
+      "end": "let resizeT",
+      "sha256": "527b912a97bbdd0fa0591f9cbf56bb9253572d5a47bd5e87d0f283fd3be9e9dc"
+    },
+    {
+      "path": "pet/game/app.js",
+      "start": "function txn(",
+      "end": "function goPage(",
+      "sha256": "d7bf34d789d75f0f4031f998bfea84889f111491b07b65be8309b9bc6718c723"
+    },
+    {
+      "path": "pet/game/app.js",
+      "start": "function doGacha(",
+      "end": "const STORY_ART",
+      "sha256": "e3d16a4497fae4b4a8b30106a7eab1b4bbcf5aa4b385bdd0db3360ab91475081"
+    },
+    {
+      "path": "economy.js",
+      "sha256": "c2abc463c6612361a24feace0a697df86bf72f9a04a8148e112b6dd55e20a91a"
+    },
+    {
+      "path": "preview/economy.js",
+      "sha256": "ab0921e44ceae1f1694c345dd41cedc38c987b156b5db9ea4eb715388bf10f5f"
+    },
+    {
+      "path": "pet/game/economy.js",
+      "sha256": "4475552c124117f06322335a7befd168b51a0c6236b38446565d0030c41c14be"
+    },
+    {
+      "path": "qa-protocol2/vendor/runtime/validator.mjs",
+      "sha256": "a6619f521e2d3c63945ab64ceff3cb0f1d44a39becac07bb3d045992aa0b484a"
+    },
+    {
+      "path": "qa-protocol2/real-page-facade.mjs",
+      "sha256": "2de83c71863a298369df5aa05a66b0e4e7fbd18de2d608b425e76f47414662ad"
+    },
+    {
+      "path": "collectibles/storage.mjs",
+      "sha256": "3b934e7ee152a582abd415efeb3385c23cb980abe7542c7855d77f02edb6ffd3"
+    },
+    {
+      "path": "collectibles/legacy-entry.mjs",
+      "sha256": "88c6d4230c174b28bf700c3671b7d9c8232a5dc6a4878026b304eb3b1fa93af2"
+    },
+    {
+      "path": "home-interaction.js",
+      "sha256": "8303c92c62f6089aac2db1bc2799c834d1c8c159f1d9a93001d08dae0734cf16"
+    },
+    {
+      "path": "preview/pet/game/app.js",
+      "sha256": "64755cf5eebb45e521995e298002cb82fd2b3ed96367d39d87b75b145fb05a10"
+    },
+    {
+      "path": "qa-protocol2/vendor/cards/card-coordinator.mjs",
+      "sha256": "e6cd6db30d2a3e4fe8bb2168a71631b5d24fad796659bf8c8cacc388a0c84fbb"
+    },
+    {
+      "path": "qa-protocol2/vendor/codec/snapshot-codec.mjs",
+      "sha256": "8d8724f755a5dc2b00546c9d0e788ef3b791e7af6d0df0ba5be6376e56c7ae88"
+    },
+    {
+      "path": "qa-protocol2/vendor/planner/migration.mjs",
+      "sha256": "f9bc1d535065eb2970800aacdb661694e609cbb2b9d2d41374bad12cbdee107d"
+    }
+  ]
+}

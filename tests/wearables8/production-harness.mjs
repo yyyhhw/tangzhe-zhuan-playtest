@@ -34,7 +34,7 @@ export async function assembly({scope='formal',path,query='',projectRoot='/',ena
   const data=new Map([...t.data].map(([key,value])=>[prefix+key,value]));
   const calls=[],classicLoads=[],economies=[],moduleLoads=[],dynamicImports=[],installed=[],errors=[],loadedSources=new Map();
   const lock={requests:[],active:false,released:0,pending:false};
-  const context=vm.createContext({URL,URLSearchParams,TextEncoder,TextDecoder,AbortController,Blob,console,queueMicrotask,setTimeout,clearTimeout,Date:class extends Date{static now(){return 1700000001000;}}});
+  const context=vm.createContext({URL,URLSearchParams,TextEncoder,TextDecoder,AbortController,Blob,console,performance,queueMicrotask,setTimeout,clearTimeout,Date:class extends Date{static now(){return 1700000001000;}}});
   const winEvents=eventTarget(),docEvents=eventTarget();
   let reloads=0,classicContinuation=null,grantLock=null,bootError=null,settled=false;
   class Node {
