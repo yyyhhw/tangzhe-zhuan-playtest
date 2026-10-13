@@ -11,10 +11,11 @@ function helper(file) {
   return new Function('E', fc + '\n' + gr + '\nreturn gachaResumeText;')(E);
 }
 for (const file of ['app.js', 'pet/game/app.js']) {
-  test(file + ': done button uses resume text; daily-limit counter/save untouched', () => {
+  test(file + ': 今日剩余 line carries resume text (盲盒-96); daily-limit counter/save untouched', () => {
     const s = fs.readFileSync(new URL(file, ROOT), 'utf8');
-    assert.match(s, /id="gachaDailyDone" disabled>今天的 \$\{E\.CFG\.GACHA_DAILY_LIMIT\} 次已开完，\$\{gachaResumeText\(now\(\)\)\}</);
+    assert.match(s, /id="gachaDailyDone" disabled>\$\{E\.CFG\.GACHA_DAILY_LIMIT\} 次已开完</);
     assert.doesNotMatch(s, /gachaDailyDone" disabled>[^<]*明天再来/);
+    assert.match(s, /今日剩余 \$\{dailyLeft\}\/\$\{E\.CFG\.GACHA_DAILY_LIMIT\}\$\{dailyLeft > 0 \? '' : ' · ' \+ gachaResumeText\(now\(\)\)\}</);   // 盲盒-96：恢复时间挪到「今日剩余」行，390 不折行
     assert.match(s, /gachaShownDay = E\.dayKey\(now\(\)\);/);
     assert.match(s, /if \(tab === 'gacha' && gachaShownDay && E\.dayKey\(t\) !== gachaShownDay\) \{ renderTab\(\); return; \}/);
     assert.doesNotMatch(s.slice(s.indexOf('function gachaResumeText')).split('\n')[0], /gachaDaily\s*=/, 'helper never writes the counter');
@@ -32,3 +33,8 @@ for (const file of ['app.js', 'pet/game/app.js']) {
     finally { if (old === undefined) delete process.env.TZ; else process.env.TZ = old; }
   });
 }
+for (const file of ['app.js', 'pet/game/app.js']) test(file + ': 盲盒-96 no duplicate 「77 收藏盲盒」 title on the gacha page', () => {
+  const s = fs.readFileSync(new URL(file, ROOT), 'utf8'), body = s.slice(s.indexOf('function renderGacha() {'), s.indexOf('\n}\n', s.indexOf('function renderGacha() {')));
+  assert.doesNotMatch(body, /77 收藏盲盒/, 'renderGacha body no longer has its own title');
+  assert.match(s, /<div class="ch-title">77 收藏盲盒<\/div>/, 'header card keeps the one title');
+});
