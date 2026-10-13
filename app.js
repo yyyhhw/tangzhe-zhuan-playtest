@@ -6,7 +6,7 @@ const COLLECTION = window.FormalCollectionRuntime;
 if (!COLLECTION?.ownsLock()) {
   // Stale HTML can fetch a new script before bootstrap. No storage access here.
   const url=new URL(location.href);
-  if(url.searchParams.get('v')!=='formal-fx100-20261013-r1') {url.searchParams.set('v','formal-fx100-20261013-r1');location.replace(url.href);}
+  if(url.searchParams.get('v')!=='formal-hometint-all-20261014-r1') {url.searchParams.set('v','formal-hometint-all-20261014-r1');location.replace(url.href);}
   else {const notice=document.createElement('p');notice.textContent='页面资源尚未更新完整，存档未写入。请关闭此页后重新打开。';document.body.prepend(notice);}
   return;
 }
@@ -1950,7 +1950,7 @@ const HOME_ICON = ['home', 'apt', 'villa'].map(n => ic(n)); // 12c1：家宅升�
 let homeWho = 'c77', homeSub = 'room', homeMode = 'live', homeSel = null, homeDrag = null;
 // Home22: optional readonly status for the existing c77 Lv1 room only.
 let homeStatusContext = null, homeStatusAdapter = null;
-import('./home/home-status.mjs?v=home81-window-weather-r1').then(({createHomeStatusAdapter}) => {
+import('./home/home-status.mjs?v=hometint-all-20261014-r1').then(({createHomeStatusAdapter}) => {
   homeStatusAdapter = createHomeStatusAdapter({document, window, now, gameDayAt:E.dayKey});
   homeStatusAdapter.sync(document.getElementById('homeAmbienceStatus'), homeStatusContext);
 }).catch(error => console.warn('家宅时间与游戏内天气状态未加载', error));
@@ -2252,14 +2252,15 @@ function renderRoom() {
   const wallItems = H.placed.filter(isWall).slice().sort((a, b) => a.y - b.y || a.x - b.x).map(p => mkFurn(p, E.WALL_ROWS)).join('');
   const floorItems = H.placed.filter(p => !isWall(p)).slice().sort((a, b) => isRug(a) - isRug(b) || footY(a) - footY(b) || a.x - b.x).map(p => mkFurn(p, T.rows)).join('');
   const artKey = `${id}_${H.lv}`, hasArt = !!HOME_ART[artKey];
-  homeStatusContext = id === 'c77' && statusExistingRoom?.lv === 1 && E.homeOpen(state, id) && homeMode === 'live' && hasArt
+  // 家宅-65/97 全开：每位 CEO、每个等级的房间都有时段色调和房名牌时段·天气（原来只对 77 Lv1）
+  homeStatusContext = !!statusExistingRoom && E.homeOpen(state, id) && homeMode === 'live' && hasArt
     ? {roomId:id, level:statusExistingRoom.lv, unlocked:true, mode:homeMode, hasArt} : null;
   const dockHost = homeMode === 'live' && (petRoster().rooms[id] || []).length > 0;
   // CEO remains visibly inside the room; pets draw in front of the standing portrait.
   // 墙面禁区（和 E.canPlace / E.findFree 同一份 E.wallBlockedCells）：平时隐藏，拖挂画时斜纹标红
   const wallBlocks = E.wallBlockedCells(state, id).map(([x, y]) => `<i class="wall-block" style="left:${x / T.cols * 100}%;top:${y / E.WALL_ROWS * 100}%;width:${100 / T.cols}%;height:${100 / E.WALL_ROWS}%"></i>`).join('');
   h += `<div class="room tier-${T.id}${hasArt ? ' has-art' : ''}${dockHost ? ' pet-host-docked' : ''}" id="room" data-tier="${T.id}" style="--cols:${T.cols};--rows:${T.rows};--wall:${T.wall};--floor:${T.floor};--trim:${T.trim}">
-    ${hasArt ? `<img class="room-art" src="art/home_${artKey}.webp?v=${ART_V}" data-homefb="1" alt="" onerror="this.closest('.room')&&this.closest('.room').classList.remove('has-art')">` : ''}${homeStatusContext ? '<span class="room-sky" aria-hidden="true"></span><span class="room-wx" aria-hidden="true"></span>' : ''}
+    ${hasArt ? `<img class="room-art" src="art/home_${artKey}.webp?v=${ART_V}" data-homefb="1" alt="" onerror="this.closest('.room')&&this.closest('.room').classList.remove('has-art')">` : ''}${homeStatusContext && artKey === 'c77_1' ? '<span class="room-sky" aria-hidden="true"></span><span class="room-wx" aria-hidden="true"></span>' : ''}
     <div class="room-wall" id="roomWall"><span class="rw-deco">${T.id === 'hut' ? ic('window') : T.id === 'apt' ? ic('window') + ic('window') : ic('spark') + ic('candle') + ic('spark')}</span><span class="rw-name">${c.name} 的${T.name}${homeStatusContext ? '<span class="rw-status" id="homeAmbienceStatus" hidden></span>' : ''}</span><div class="wall-grid" id="wallGrid">${wallBlocks}${wallItems}<div class="room-hl hidden" id="wallHl"></div></div></div>
     <div class="room-floor" id="roomFloor">${floorItems}<div class="home-actor" id="homeActor" style="left:${(homeActorOf(id).x + 0.5) / T.cols * 100}%;top:${(homeActorOf(id).y + 0.5) / T.rows * 100}%"><canvas class="ha-pose" width="240" height="240" aria-label="CEO坐卧姿态"></canvas><span class="ha-ava">${ava(id)}</span>${(() => { const ac = homeActorOf(id); return ac.line && ac.until > clock ? `<b class="ha-line">${ac.line}</b>` : ''; })()}<i class="ha-act">${(() => { const ac = homeActorOf(id); return ac.act === 'rest' ? ic('zz') : ac.act === 'read' ? ic('book') : ac.act === 'dress' ? ic('shirt') : ac.actIcon ? ic(ac.actIcon) : ''; })()}</i></div><div class="room-hl hidden" id="roomHl"></div></div></div>`;
   h += petInteractionBar();
@@ -2915,7 +2916,7 @@ const tdController = window.TDHost.create({
 function openTD() {
   if (frozen || tdOpen || zbOpen || !state.shops[1].open) return;
   tdOpen = true; const f = $('#tdFrame'), generation = ++tdGeneration;
-  const target = new URL('td/index.html?embed=1&v=fx100-20261013-r1', location.href);
+  const target = new URL('td/index.html?embed=1&v=hometint-all-20261014-r1', location.href);
   f.onload = () => {
     if (!tdOpen || generation !== tdGeneration) return;
     // Verify the actual loaded document, not merely an iframe src attribute.

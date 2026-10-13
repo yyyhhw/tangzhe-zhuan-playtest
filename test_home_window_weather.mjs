@@ -32,10 +32,13 @@ ok('5 分钟刷新时换天，属性跟着换', () => {
   e.set(T.rain); e.tick(); assert.strictEqual(e.room.dataset.roomWeather, 'rain');
   e.set(T.snow); e.tick(); assert.strictEqual(e.room.dataset.roomWeather, 'snow');
 });
-ok('卸载 / 不符合条件（布置模式、别的房间）时清掉属性', () => {
+ok('卸载 / 不符合条件（布置模式、没底图）时清掉属性', () => {
   const e = env(T.rain); e.a.sync(e.node, ctx); assert.strictEqual(e.room.dataset.roomWeather, 'rain');
   e.a.unmount(); assert.strictEqual(e.room.dataset.roomWeather, undefined); assert.strictEqual(e.room.dataset.roomTone, undefined);
   const f = env(T.rain); f.a.sync(f.node, {...ctx, mode:'decor'}); assert.strictEqual(f.room.dataset.roomWeather, undefined);
-  const g = env(T.rain); g.a.sync(g.node, {...ctx, roomId:'pearl'}); assert.strictEqual(g.room.dataset.roomWeather, undefined);
+  const g = env(T.rain); g.a.sync(g.node, {...ctx, hasArt:false}); assert.strictEqual(g.room.dataset.roomWeather, undefined);
+});
+ok('家宅-65/97 全开：别的 CEO、Lv2/Lv3 也写时段色调和天气', () => {
+  for (const c of [{roomId:'pearl'}, {level:2}, {level:3}, {roomId:'rocket', level:3}]) { const e = env(T.rain); e.a.sync(e.node, {...ctx, ...c}); assert.strictEqual(e.room.dataset.roomWeather, 'rain'); assert(e.room.dataset.roomTone); assert(e.node.textContent.includes('雨')); }
 });
 console.log(n + '/' + n + ' PASS');

@@ -8,7 +8,7 @@ import {localMinuteAt, resolveHomeAmbience, HOME_AMBIENCE_REFRESH_MS} from './ho
 // mutating homeOf helper is accepted. The clock is read once per refresh.
 const WEATHER_LABEL = Object.freeze({clear:'晴', rain:'雨', snow:'雪'});
 export function isHomeStatusEligible(context) {
-  return !!context && context.roomId === 'c77' && context.level === 1 &&
+  return !!context && typeof context.roomId === 'string' && Number.isInteger(context.level) && context.level >= 1 &&
     context.unlocked === true && context.mode === 'live' && context.hasArt === true;
 }
 
