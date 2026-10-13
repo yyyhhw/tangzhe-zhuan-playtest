@@ -2160,6 +2160,18 @@ function renderHome() {
   if (homeSub !== 'mall' && !E.homeOpen(state, homeWho)) return h + homeLocked(); // 商城是公共的，不受当前 CEO 是否加入限制
   return h + (homeSub === 'mall' ? renderMall() : renderRoom());
 }
+// 家宅-90：生活模式提示只列这间屋里真有的互动；空屋只给一条去商城的提示（只改显示）
+function homeLiveHint(id) {
+  const placed = E.homeOf(state, id).placed;
+  if (!placed.length) return '屋里还空着，去商城挑第一件家具吧。';
+  const floor = placed.filter(p => E.itemSurf(p) !== 'wall'), cap = p => HomeInteraction.capability(p.fid), act = p => E.furnLiveAct(p.fid);
+  const parts = ['点空地走过去'];
+  if (floor.some(p => cap(p) === 'lie')) parts.push('点床躺下');
+  if (floor.some(p => cap(p) === 'sit')) parts.push('点座椅坐下');
+  if (floor.some(p => !cap(p) && act(p) === 'read')) parts.push('点书架看书');
+  if (floor.some(p => !cap(p) && act(p) === 'dress')) parts.push('点衣柜换装');
+  return '生活：' + parts.join(' · ');
+}
 function renderRoom() {
   const id = homeWho, c = E.CEO_BY_ID[id], H = E.homeOf(state, id), T = E.homeTier(H.lv), lux = E.homeLuxury(state, id);
   if (homeSel && !H.placed.some(p => p.uid === homeSel)) homeSel = null;
@@ -2191,7 +2203,7 @@ function renderRoom() {
   const st = undoStack(id);
   h += `<div class="mode-tabs" role="tablist"><button class="mt ${homeMode === 'live' ? 'on' : ''}" data-act="homeMode" data-arg="live">${ic('live')}生活</button><button class="mt ${homeMode === 'decor' ? 'on' : ''}" data-act="homeMode" data-arg="decor">${ic('decor')}布置</button></div>`;
   h += `<div class="room-tools">${homeMode === 'decor' ? (sel ? `<span class="rt-sel">已选：<b>${E.FURN_BY_ID[sel.fid].name}</b></span><button class="buy alt" data-act="homeRot" data-arg="${sel.uid}">↻ 旋转</button><button class="buy alt" data-act="homeStore" data-arg="${sel.uid}">${ic('box')}收回</button>`
-    : '<span class="rt-sel">布置：点家具选中 / 拖动换位；挂画拖到墙面</span>') : '<span class="rt-sel">生活：点空地走过去 · 点床躺下 · 点座椅坐下 · 点书架看书 · 点衣柜换装</span>'}
+    : '<span class="rt-sel">布置：点家具选中 / 拖动换位；挂画拖到墙面</span>') : `<span class="rt-sel">${homeLiveHint(id)}</span>`}
     ${homeMode === 'decor' ? `<button class="buy alt" data-act="homeUndo" data-arg="${id}" ${st.length ? '' : 'disabled'}>↶ 撤销${st.length ? ' ' + st.length : ''}</button>` : ''}</div>`;
   h += petRoomBar(id);
   const inv = Object.entries(E.furnInvOf(state)).filter(([, n]) => n > 0);
@@ -2203,8 +2215,7 @@ function renderRoom() {
         <div class="note">布置模式：拖家具、旋转、收回。挂画只挂墙。生活模式下去点空地 / 床 / 书架 / 衣柜互动。</div>`
       : `<div class="note">仓库空空。去商城买家具，再回来布置 ${c.name} 的房间。</div>`;
   } else {
-    h += `<div class="note live-note">生活模式：点地板空位让 ${c.name} 走过去；点<b>床</b>躺下、点<b>座椅</b>坐下、点<b>书架</b>看书、点<b>衣柜</b>换装。要摆家具请切到「布置」。</div>
-      <button class="buy alt mall-go" data-act="homeSub" data-arg="mall">${ic('mall')}去商城</button>`;
+    h += `<button class="buy alt mall-go" data-act="homeSub" data-arg="mall">${ic('mall')}去商城</button>`;
   }
   return h;
 }
