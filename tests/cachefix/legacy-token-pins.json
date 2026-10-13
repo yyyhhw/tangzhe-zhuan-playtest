@@ -55,10 +55,6 @@
     "path": "pet/companions.js",
     "sha256": "e3a93e7ac77270d3053268b0bf933e6d0d1aae5d81ff10d39bf949257cb03e6c"
   },
-  "index.html pet/game/petgame.js?v=15c": {
-    "path": "pet/game/petgame.js",
-    "sha256": "db2a70bea532902aeffeea3c7cc85db4aa4ce3f04b74b46e76b13b40294e00e0"
-  },
   "index.html upgrade-snapshot.js?v=15c": {
     "path": "upgrade-snapshot.js",
     "sha256": "dbee2c687f47c2b55e3f127e710c2ab48e427d38beca7694c21d91f8d71733cc"
@@ -114,10 +110,6 @@
   "pet/game/index.html ../companions.js?v=15c": {
     "path": "pet/companions.js",
     "sha256": "e3a93e7ac77270d3053268b0bf933e6d0d1aae5d81ff10d39bf949257cb03e6c"
-  },
-  "pet/game/index.html petgame.js?v=15c": {
-    "path": "pet/game/petgame.js",
-    "sha256": "db2a70bea532902aeffeea3c7cc85db4aa4ce3f04b74b46e76b13b40294e00e0"
   },
   "pet/game/index.html ../../upgrade-snapshot.js?v=15c": {
     "path": "upgrade-snapshot.js",
