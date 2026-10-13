@@ -1,0 +1,45 @@
+[
+  {
+    "engine": "chromium",
+    "path": "/",
+    "pass": true,
+    "roundtripPts": 8,
+    "nativeSteal": {
+      "save": false,
+      "intent": false,
+      "unchanged": true,
+      "open": false
+    },
+    "pageErrors": []
+  },
+  {
+    "engine": "chromium",
+    "path": "/preview/",
+    "pass": true,
+    "roundtripPts": 8,
+    "nativeSteal": {
+      "save": false,
+      "intent": false,
+      "unchanged": true,
+      "open": false
+    },
+    "pageErrors": []
+  },
+  {
+    "engine": "chromium",
+    "path": "/pet/game/",
+    "pass": true,
+    "roundtripPts": 8,
+    "nativeSteal": {
+      "save": false,
+      "intent": false,
+      "unchanged": true,
+      "open": false
+    },
+    "pageErrors": []
+  },
+  {
+    "engine": "webkit",
+    "blocked": "BrowserType.launch: Executable doesn't exist at /home/agent/.cache/ms-playwright/webkit-2336/pw_run.sh\n╔════════════════════════════════════════════════════════════╗\n║ Looks like Playwright was just installed or updated.       ║\n║ Please run the following command to download new browsers: ║\n║                                                            ║\n║     playwright install                                     ║\n║                                                            ║\n║ <3 Playwright Team                                         ║\n╚════════════════════════════════════════════════════════════╝"
+  }
+]

@@ -1,0 +1,62 @@
+[
+  {
+    "scope": "formal",
+    "path": "/",
+    "mode": "offline",
+    "pass": true,
+    "offlineAmount": 187519648.507425,
+    "claimId": "1du47t01wf9qfh",
+    "pts": 8,
+    "immutableEvidenceUnchanged": true
+  },
+  {
+    "scope": "formal",
+    "path": "/",
+    "mode": "pending",
+    "pass": true,
+    "offlineAmount": 187492801.162875,
+    "claimId": "synthetic-offline-formal-1791909715308",
+    "pts": 8,
+    "immutableEvidenceUnchanged": true
+  },
+  {
+    "scope": "preview",
+    "path": "/preview/",
+    "mode": "offline",
+    "pass": true,
+    "offlineAmount": 187479377.4906,
+    "claimId": "1aqzr4b1lyyux",
+    "pts": 8,
+    "immutableEvidenceUnchanged": true
+  },
+  {
+    "scope": "preview",
+    "path": "/preview/",
+    "mode": "pending",
+    "pass": true,
+    "offlineAmount": 187489991.55705,
+    "claimId": "synthetic-offline-preview-1791909730887",
+    "pts": 8,
+    "immutableEvidenceUnchanged": true
+  },
+  {
+    "scope": "formal",
+    "path": "/pet/game/",
+    "mode": "offline",
+    "pass": true,
+    "offlineAmount": 187490615.9139,
+    "claimId": "2amg6p63ilid",
+    "pts": 8,
+    "immutableEvidenceUnchanged": true
+  },
+  {
+    "scope": "formal",
+    "path": "/pet/game/",
+    "mode": "pending",
+    "pass": true,
+    "offlineAmount": 187502166.515625,
+    "claimId": "synthetic-offline-formal-1791909746412",
+    "pts": 8,
+    "immutableEvidenceUnchanged": true
+  }
+]

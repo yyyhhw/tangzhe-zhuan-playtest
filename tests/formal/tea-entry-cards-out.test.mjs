@@ -1,7 +1,9 @@
 // Node/VM and isolated in-memory storage only; not real browser evidence.
 import {test} from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';import {createRequire} from 'node:module';
 import {createSaveCoordinator,KEYS} from '../../collection/host-save.mjs';import {createApprovedTrialModel} from '../../collection/domain/model.mjs';import {TRIAL_CONFIG} from '../../collection/domain/trial-config.mjs';import {canonical} from '../../collection/domain/json.mjs';
-const root=new URL('../../',import.meta.url),read=p=>fs.readFileSync(new URL(p,root),'utf8'),require=createRequire(import.meta.url),token='hometint-all-20261014-r1';
+const pageToken='space01b04-r5-main-20261013-r1';
+const uiToken='space01b04-r5-main-20261013-r1';
+const root=new URL('../../',import.meta.url),read=p=>fs.readFileSync(new URL(p,root),'utf8'),require=createRequire(import.meta.url),token='space01b04-r5-main-20261013-r1';
 function fn(src,name){const start=src.indexOf('function '+name+'(');assert(start>=0);const next=src.indexOf('\nfunction ',start+1);return src.slice(start,next===-1?undefined:next);}
 for(const prefix of ['', 'preview/']){
  test(prefix+' actual parent entry gate and origin-checked iframe handshake (VM)',()=>{
@@ -14,8 +16,8 @@ for(const prefix of ['', 'preview/']){
   state.shops[1].open=true;state.shops[3].open=false;c.openTD();assert(c.tdOpen);assert(els.get('#tdFrame').src.includes(token));
   els.get('#tdFrame').contentWindow.location.href='https://evil.test/'+prefix+'td/index.html';els.get('#tdFrame').onload();assert(!events.some(Array.isArray),'wrong origin receives no port');
   els.get('#tdFrame').contentWindow.location.href='https://example.test/'+prefix+'td/index.html';els.get('#tdFrame').onload();assert(events.some(x=>Array.isArray(x)&&x[1]===c.location.origin));
-  const cardContext={ZB_SHOP:0,zbCard:()=>'<zombie>',tdCard:()=>'<td>'};vm.createContext(cardContext);vm.runInContext(src.slice(src.indexOf('function shopGameCard('),src.indexOf('\n}',src.indexOf('function shopGameCard('))+2),cardContext);
-  assert(cardContext.shopGameCard(1).includes('<td>'));assert.equal(cardContext.shopGameCard(2),'');assert.equal(cardContext.shopGameCard(3),'');
+  const cardContext={ZB_SHOP:0,zbCard:()=>'<zombie>',tdCard:()=>'<td>',state:{shops:[{},{},{},{open:true,lv:49}]},SHOP_ICON:['','','','<tech-svg>']};vm.createContext(cardContext);vm.runInContext(src.slice(src.indexOf('function shopGameCard('),src.indexOf('\n}',src.indexOf('function shopGameCard('))+2)+'\n'+fn(src,'xingtuCard'),cardContext);
+  assert(cardContext.shopGameCard(1).includes('<td>'));assert.equal(cardContext.shopGameCard(2),'');assert(cardContext.shopGameCard(3).includes('data-act="xingtu"'));assert(cardContext.shopGameCard(3).includes('disabled'));cardContext.state.shops[3].lv=50;assert(!cardContext.shopGameCard(3).includes('disabled'));
  });
  test(prefix+' battle removed, shared save/wallet callbacks retained, retired links inert',()=>{
   const app=read(prefix+'app.js'),html=read(prefix+'index.html'),boot=read(prefix+'collection/bootstrap.mjs');
@@ -48,9 +50,9 @@ test('isolated real coordinator preserves card compatibility keys and TD history
 });
 test('four entry version/changed-resource closure and preserved pet channel',()=>{
  for(const p of ['','preview/','pet/game/','preview/pet/game/']){
-  const kind=p.startsWith('preview/')?'preview':'formal',html=read(p+'index.html');assert.equal(JSON.parse(read(p+'version.json')).v,kind+'-'+(p==='preview/pet/game/'?'tea-td-cards-out-20261012-r1':token));assert(html.includes("var B='"+kind+'-'+(p==='preview/pet/game/'?'tea-td-cards-out-20261012-r1':token)+"'"));assert(!html.includes('cardsFrame'));
-  for(const m of html.matchAll(/(?:src|href)="([^"?]+)\?v=([^"']+)"/g)){assert(fs.existsSync(new URL(m[1],new URL(p,root))),p+m[1]);if(/collection\/bootstrap\.mjs/.test(m[1]))assert.equal(m[2],token);if(/td\/tdhost\.js/.test(m[1]))assert.equal(m[2],'tea-td-cards-out-20261012-r1');}
+  const kind=p.startsWith('preview/')?'preview':'formal',html=read(p+'index.html');assert.equal(JSON.parse(read(p+'version.json')).v,kind+'-'+(p==='preview/pet/game/'?'tea-td-cards-out-20261012-r1':pageToken));assert(html.includes("var B='"+kind+'-'+(p==='preview/pet/game/'?'tea-td-cards-out-20261012-r1':pageToken)+"'"));assert(!html.includes('cardsFrame'));
+  for(const m of html.matchAll(/(?:src|href)="([^"?]+)\?v=([^"']+)"/g)){assert(fs.existsSync(new URL(m[1],new URL(p,root))),p+m[1]);if(/collection\/bootstrap\.mjs/.test(m[1]))assert.equal(m[2],pageToken);if(/td\/tdhost\.js/.test(m[1]))assert.equal(m[2],'tea-td-cards-out-20261012-r1');}
  }
- assert(read('collection/bootstrap.mjs').includes('../app.js?v='+token));assert.equal((read('collection/bootstrap.mjs').match(new RegExp('pet/game/app\\.js\\?v='+token,'g'))||[]).length,2);assert(read('preview/collection/bootstrap.mjs').includes('../app.js?collectionHost=1c&v='+token));
+ assert(read('collection/bootstrap.mjs').includes('../app.js?v='+uiToken));assert.equal((read('collection/bootstrap.mjs').match(new RegExp('pet/game/app\\.js\\?v='+token,'g'))||[]).length,2);assert(read('preview/collection/bootstrap.mjs').includes('../app.js?collectionHost=1c&v='+uiToken));
  assert(read('pet/game/app.js').includes('COLLECTION.coordinator'));assert(!read('pet/game/app.js').includes('openCards'));assert(!read('preview/pet/game/app.js').includes('openCards'));
 });

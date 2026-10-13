@@ -100,6 +100,7 @@ function claimLock() { if (TEST_MODE) return; try { STORAGE.setItem(LOCK_KEY, JS
 function lockMine() { if (TEST_MODE) return true; try { const v = JSON.parse(STORAGE.getItem(LOCK_KEY) || 'null'); return !v || v.tab === TAB; } catch (e) { return true; } }
 function freeze() {
   if (frozen) return; frozen = true; if (zbOpen) closeZombie(); if (tdOpen) closeTD();
+  window.XingTu?.invalidate();
   $('#lockOverlay').classList.remove('hidden'); audioPause();
 }
 window.addEventListener('storage', e => {
@@ -138,15 +139,15 @@ function audioInit() {
   AU.bgm = AU.ctx.createGain(); AU.bgm.gain.value = 0.09; AU.bgm.connect(AU.master);
   AU.sfx = AU.ctx.createGain(); AU.sfx.gain.value = 0.5; AU.sfx.connect(AU.master);
   AU.master.gain.value = state.muted ? 0 : 1;
-  AU.recorded=TzzLoopMusic.create({context:AU.ctx,output:AU.bgm,url:new URL('../audio/carefree-kevin-macleod-8433b770.mp3',document.baseURI),isAllowed:()=>!state.muted&&!frozen&&!tdOpen&&!zbOpen});
+  AU.recorded=TzzLoopMusic.create({context:AU.ctx,output:AU.bgm,url:new URL('../audio/carefree-kevin-macleod-8433b770.mp3',document.baseURI),isAllowed:()=>!state.muted&&!frozen&&!tdOpen&&!zbOpen&&!window.XingTu?.isOpen()});
 }
-function audioUnlock() { if (tdOpen || zbOpen) return; // 只能在用户手势里调用（iOS）
+function audioUnlock() { if (tdOpen || zbOpen || window.XingTu?.isOpen()) return; // 只能在用户手势里调用（iOS）
   audioInit(); if (!AU.ctx) return;
   if (AU.ctx.state !== 'running' && !document.hidden && !state.muted) AU.ctx.resume().catch(() => {});
   if (!AU.started) { AU.started = true; startBgm(); } else AU.recorded?.retry();
 }
 function audioPause() { if (AU.ctx && AU.ctx.state === 'running') AU.ctx.suspend().catch(() => {}); stopBgm(); }
-function audioResume() { if (!AU.ctx || state.muted || document.hidden || frozen || tdOpen || zbOpen) return; AU.ctx.resume().catch(() => {}); if (AU.started) startBgm(); }
+function audioResume() { if (!AU.ctx || state.muted || document.hidden || frozen || tdOpen || zbOpen || window.XingTu?.isOpen()) return; AU.ctx.resume().catch(() => {}); if (AU.started) startBgm(); }
 function tone(f, t, dur, type = 'sine', vol = 0.3, dest = AU.sfx, f2) {
   const c = AU.ctx, o = c.createOscillator(), g = c.createGain();
   o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
@@ -174,7 +175,7 @@ function sfx(name) {
 const N = s => 440 * Math.pow(2, (s - 69) / 12);
 const CHORDS = [[48, 55, 64], [45, 52, 60], [41, 48, 57], [43, 50, 59]];
 const MEL = [72, 0, 74, 76, 0, 79, 76, 0, 74, 0, 72, 74, 0, 0, 69, 0, 72, 0, 74, 76, 0, 81, 79, 0, 76, 0, 74, 72, 0, 0, 0, 0];
-function startBgm() { AU.recorded?.start(); }
+function startBgm() { if(window.XingTu?.isOpen())return; AU.recorded?.start(); }
 function stopBgm() { AU.recorded?.stop(); }
 function scheduleBgm() {
   if (!AU.ctx || AU.ctx.state !== 'running') return;
@@ -1212,6 +1213,7 @@ function doUpgradeShop(i, btn) {
 function act(a, arg, btn) {
   const i = state.cur;
   switch (a) {
+    case 'xingtu': window.XingTu?.open(); return;
     case 'td': openTD(); return;
     case 'zombie': if (!zbCeo()) return openAssignTo(ZB_SHOP); openZombie(); return;   // 12e 打僵尸入口（板砖 b640f25）；13a：烧烤摊没 CEO → 打开派 CEO 选单
     case 'zbAssign': return openAssignTo(ZB_SHOP);   // 13a「先派 CEO」
@@ -1406,8 +1408,13 @@ function renderShop() {
 }
 // 13h：每家店自己的小游戏入口（只在店铺页最底部）；烧烤摊 = 打僵尸，其余三家以后各有自己的游戏，加在这里
 function shopGameCard(i) {
-  const card = i === ZB_SHOP ? zbCard() : i === 1 ? tdCard() : '';
+  const card = i === ZB_SHOP ? zbCard() : i === 1 ? tdCard() : i === 3 ? xingtuCard(i) : '';
   return card ? `<div class="sec-title shop-game-title">小游戏</div>${card}` : '';
+}
+function xingtuCard(i) {
+  if(i!==3)return '';
+  const ready=!!state.shops[3].open&&state.shops[3].lv>=50;
+  return `<div class="card"><div class="ava">${SHOP_ICON[3]}</div><div class="info"><div class="name">星途 · 发射台</div><div class="desc">月面基地往返 · 候选测试6秒／8探索点（非正式参数）</div><div class="desc">科技公司Lv50测试门槛</div></div><button class="buy" data-act="xingtu" ${ready?'':'disabled'}>打开星图</button></div>`;
 }
 function ceoPost(id) { const s = state.ceos[id]; return s.at >= 0 ? E.signOf(state, s.at).name : '休息中（空着）'; }
 function jobGallery(id) {
@@ -2568,9 +2575,9 @@ const tdController = window.TDHost.create({
   send:d => { if (tdOpen && tdPort) tdPort.postMessage(COLLECTION.qaProtocol2 && qaTDUncertain ? {...d,ok:false,uncertain:true,blocked:true,coins:0,why:'结果未知，先核对；本页塔防已冻结，不自动重发'} : d); }
 });
 function openTD() {
-  if (frozen || tdOpen || zbOpen || !state.shops[1].open) return;
+  if (frozen || tdOpen || zbOpen || window.XingTu?.isOpen() || !state.shops[1].open) return;
   tdOpen = true; const f = $('#tdFrame'), generation = ++tdGeneration;
-  const target = new URL('td/index.html?embed=1&v=hometint-all-20261014-r1', location.href);
+  const target = new URL('td/index.html?embed=1&v=space01b04-r5-main-20261013-r1', location.href);
   f.onload = () => {
     if (!tdOpen || generation !== tdGeneration) return;
     // Verify the actual loaded document, not merely an iframe src attribute.
@@ -2603,7 +2610,7 @@ Object.defineProperties(window.__tzz, {openTD:{value:openTD}, closeTD:{value:clo
 
 /* ================= 书店卡牌（cards/ui/?embed=1，全屏 iframe，preview 试玩）=================
    父页只放进入按钮、开关浮层、同步静音；不读也不解析卡牌存档，不碰钱包，不发奖励。端口只认 ready / close / stay。 */
-Object.defineProperties(window.__tzz, { collectionReplaceState:{value:s=>{state=s;lastGood=COLLECTION.coordinator.raw;if(!COLLECTION.coordinator.failed&&COLLECTION.ownsLock())saveBlocked=false;dirty=true;}}, collectionReadOnly:{value:code=>{saveBlocked=true;toast('预览存档已保护：'+code,3200);}} });
+Object.defineProperties(window.__tzz, { xingtuContext:{value:()=>({blocked:frozen||saveBlocked||!!persist.pending||!!state.pending||E.isBlocked(state)||!E.walletOk(state)||!!(typeof loadInfo!=='undefined'&&loadInfo&&(loadInfo.unsafe||loadInfo.blocked))||document.hidden||!COLLECTION.ownsLock()||!!(window.__tzz.tdOpen||window.__tzz.zbOpen),otherGame:!!(window.__tzz.tdOpen||window.__tzz.zbOpen),muted:!!state.muted})}, xingtuAudioPause:{value:()=>audioPause()}, xingtuAudioResume:{value:()=>audioResume()}, collectionReplaceState:{value:s=>{state=s;lastGood=COLLECTION.coordinator.raw;if(!COLLECTION.coordinator.failed&&COLLECTION.ownsLock())saveBlocked=false;dirty=true;}}, collectionReadOnly:{value:code=>{saveBlocked=true;toast('预览存档已保护：'+code,3200);}} });
 
 /* ================= 打僵尸（zombie/?embed=1，全屏 iframe）=================
    只和经营共用金币：价格、等级上限、进度校验都在这边按 ZBCore 算，训练扣款和结算进度都走 txn → E.transact（扣款 + 改状态 + persist 一起成功，失败整体回滚）。
@@ -2627,7 +2634,7 @@ function zbReply(why, extra) {
   zbPort.postMessage(Object.assign({ zb:'state', coins: ok ? E.balance(state) : 0, z: zbState(), blocked: !ok, why: why || '', ceo: zbCeo(), muted: !!state.muted }, extra));   // 13e：muted 让小游戏跟经营页静音开关走   // 13a：ceo = 烧烤摊现任 CEO id / null
 }
 function openZombie() {
-  if (frozen || zbOpen || !ZB) return;
+  if (frozen || zbOpen || tdOpen || window.XingTu?.isOpen() || !ZB) return;
   zbOpen = true; const f = $('#zbFrame');
   f.onload = () => {
     if (!zbOpen || zbPort || !/\/zombie\//.test(f.src)) return;

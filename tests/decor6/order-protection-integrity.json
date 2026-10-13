@@ -15,8 +15,10 @@
   {
     "path": "collectibles/entry.mjs",
     "start": "  const abort=new AbortController();",
-    "end": "  makePanel('\u6b63\u5728\u6253\u5f00\u5b58\u6863'",
-    "sha256": "ef05561629f3a7942b87205244a7d514c34ab7bf973f038a254376d617761f95"
+    "end": "  makePanel('正在打开存档'",
+    "sha256": "963bdd103ed0e39455c91f92b07893019962cae52954710300befd6d8d40b888",
+    "preSpaceIntegrationSha256": "ef05561629f3a7942b87205244a7d514c34ab7bf973f038a254376d617761f95",
+    "integrationChange": "r5 space validation/intents/UI or outer Web Locks cleanup integrated on main 66abd4c; main pagehide save and decor guards retained; tests/moon and tests/space01a cover behavior."
   },
   {
     "path": "app.js",

@@ -4,7 +4,7 @@
     {
       "path": "app.js",
       "start": "function tick() {",
-      "end": "/* ---------- \u70b9\u5e97\u94fa",
+      "end": "/* ---------- 点店铺",
       "sha256": "76cf2aca2ed0b16cc1e0153c367ae1d4a7407b8266d8b4418ac293386beb2aa6"
     },
     {
@@ -28,7 +28,7 @@
     {
       "path": "preview/app.js",
       "start": "function tick() {",
-      "end": "/* ---------- \u70b9\u5e97\u94fa",
+      "end": "/* ---------- 点店铺",
       "sha256": "4ae584106f61f3da4ed68fb4c28fa77ad59dabe902f96a5b95162e81c91a84cd"
     },
     {
@@ -52,7 +52,7 @@
     {
       "path": "pet/game/app.js",
       "start": "function tick() {",
-      "end": "/* ---------- \u70b9\u5e97\u94fa",
+      "end": "/* ---------- 点店铺",
       "sha256": "76cf2aca2ed0b16cc1e0153c367ae1d4a7407b8266d8b4418ac293386beb2aa6"
     },
     {
@@ -90,13 +90,17 @@
     },
     {
       "path": "qa-protocol2/vendor/runtime/validator.mjs",
-      "sha256": "c224a7414111e8e0058147ea088b11e65a0e42b2efe7d02a0e909025aa82a9b4",
-      "expectedChange": "Six-decoration hidden-pool/claim extension; behavioral coverage in tests/decor6. This full file is intentionally not identical to b16."
+      "sha256": "e4a2592de1631318de0df2f42ac4f471ba7f724d331db953379ad76198ba564e",
+      "expectedChange": "Six-decoration hidden-pool/claim extension; behavioral coverage in tests/decor6. This full file is intentionally not identical to b16.",
+      "preSpaceIntegrationSha256": "c224a7414111e8e0058147ea088b11e65a0e42b2efe7d02a0e909025aa82a9b4",
+      "integrationChange": "r5 space validation/intents/UI or outer Web Locks cleanup integrated on main 66abd4c; main pagehide save and decor guards retained; tests/moon and tests/space01a cover behavior."
     },
     {
       "path": "qa-protocol2/real-page-facade.mjs",
-      "sha256": "a007a7da5db92aa286f56f1326b58130dc2f85358b5857adc0bc2f727d7fc79d",
-      "expectedChange": "Six-decoration hidden-pool/claim extension; behavioral coverage in tests/decor6. This full file is intentionally not identical to b16."
+      "sha256": "49c5d3f253eb3ebc677a348bc2e1f411cda57d07f5f4bafd51182b81677db4e1",
+      "expectedChange": "Six-decoration hidden-pool/claim extension; behavioral coverage in tests/decor6. This full file is intentionally not identical to b16.",
+      "preSpaceIntegrationSha256": "a007a7da5db92aa286f56f1326b58130dc2f85358b5857adc0bc2f727d7fc79d",
+      "integrationChange": "r5 space validation/intents/UI or outer Web Locks cleanup integrated on main 66abd4c; main pagehide save and decor guards retained; tests/moon and tests/space01a cover behavior."
     },
     {
       "path": "collectibles/storage.mjs",
@@ -116,8 +120,10 @@
     },
     {
       "path": "qa-protocol2/vendor/cards/card-coordinator.mjs",
-      "sha256": "f5e319b92ef2569921fca581767f5ed41836b8ccac4450a3755991d441c05a19",
-      "expectedChange": "Six-decoration hidden-pool/claim extension; behavioral coverage in tests/decor6. This full file is intentionally not identical to b16."
+      "sha256": "953ee0a0a963f81941b007038dd3dd2a76599e6d418dd98d159938ce8c78d684",
+      "expectedChange": "Six-decoration hidden-pool/claim extension; behavioral coverage in tests/decor6. This full file is intentionally not identical to b16.",
+      "preSpaceIntegrationSha256": "f5e319b92ef2569921fca581767f5ed41836b8ccac4450a3755991d441c05a19",
+      "integrationChange": "r5 space validation/intents/UI or outer Web Locks cleanup integrated on main 66abd4c; main pagehide save and decor guards retained; tests/moon and tests/space01a cover behavior."
     },
     {
       "path": "qa-protocol2/vendor/codec/snapshot-codec.mjs",

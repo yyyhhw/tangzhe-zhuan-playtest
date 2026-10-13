@@ -1,7 +1,9 @@
 [
   {
     "path": "preview/app.js",
-    "sha256AfterReleaseNormalization": "bb70b90234ca599f3302ac9914be9d43dda2c3b6703f73d61e2b9ca6d7161332"
+    "sha256AfterReleaseNormalization": "d68452e3038cb7321666d698084c584ecf0a6b6440ca872e8cf88ca5737f039a",
+    "preSpaceIntegrationSha256": "bb70b90234ca599f3302ac9914be9d43dda2c3b6703f73d61e2b9ca6d7161332",
+    "integrationChange": "r5 space validation/intents/UI or outer Web Locks cleanup integrated on main 66abd4c; main pagehide save and decor guards retained; tests/moon and tests/space01a cover behavior."
   },
   {
     "path": "collectibles/decor6-catalog.mjs",
@@ -17,19 +19,27 @@
   },
   {
     "path": "collectibles/entry.mjs",
-    "sha256AfterReleaseNormalization": "837af64aec386bfe757da71ca802a31a3c2d5a5bd86cc5e917e9d30a65f2512e"
+    "sha256AfterReleaseNormalization": "3976f6da346a12fadcbcaad0ae5612a4de68a491dab96d0c3a4e3a6597e273c5",
+    "preSpaceIntegrationSha256": "837af64aec386bfe757da71ca802a31a3c2d5a5bd86cc5e917e9d30a65f2512e",
+    "integrationChange": "r5 space validation/intents/UI or outer Web Locks cleanup integrated on main 66abd4c; main pagehide save and decor guards retained; tests/moon and tests/space01a cover behavior."
   },
   {
     "path": "qa-protocol2/real-page-facade.mjs",
-    "sha256AfterReleaseNormalization": "a007a7da5db92aa286f56f1326b58130dc2f85358b5857adc0bc2f727d7fc79d"
+    "sha256AfterReleaseNormalization": "7fd610519f1613a445b0df96e4848d0af294080808cee721187db435f7e82353",
+    "preSpaceIntegrationSha256": "a007a7da5db92aa286f56f1326b58130dc2f85358b5857adc0bc2f727d7fc79d",
+    "integrationChange": "r5 space validation/intents/UI or outer Web Locks cleanup integrated on main 66abd4c; main pagehide save and decor guards retained; tests/moon and tests/space01a cover behavior."
   },
   {
     "path": "qa-protocol2/vendor/runtime/validator.mjs",
-    "sha256AfterReleaseNormalization": "0d9611d97b8306a2fa0fdf19ce494a465174c9ed7297ba18dcbc0b7af8c0124b"
+    "sha256AfterReleaseNormalization": "5def83f29643904deab5c580941ace8510b78a35b66c7dddbab6a3a1c9408905",
+    "preSpaceIntegrationSha256": "0d9611d97b8306a2fa0fdf19ce494a465174c9ed7297ba18dcbc0b7af8c0124b",
+    "integrationChange": "r5 space validation/intents/UI or outer Web Locks cleanup integrated on main 66abd4c; main pagehide save and decor guards retained; tests/moon and tests/space01a cover behavior."
   },
   {
     "path": "qa-protocol2/vendor/cards/card-coordinator.mjs",
-    "sha256AfterReleaseNormalization": "ffaae9e2af8291023901e4861acb46ccb6a639b2819fd33aa3b02fe5ea3be60a"
+    "sha256AfterReleaseNormalization": "1828ed608b6728a223bfed2505310767d2e21f62dc062a835bf441c95d164888",
+    "preSpaceIntegrationSha256": "ffaae9e2af8291023901e4861acb46ccb6a639b2819fd33aa3b02fe5ea3be60a",
+    "integrationChange": "r5 space validation/intents/UI or outer Web Locks cleanup integrated on main 66abd4c; main pagehide save and decor guards retained; tests/moon and tests/space01a cover behavior."
   },
   {
     "path": "economy.js",

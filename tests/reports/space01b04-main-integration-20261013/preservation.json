@@ -1,0 +1,586 @@
+{
+  "baseline": "66abd4c8388730a71fda4881a367f6856e719f76",
+  "unchangedCount": 145,
+  "files": [
+    {
+      "path": "cards/SAVE.md",
+      "sha256": "44eb4d65fc2e4ee59287fc38c7b650612da15e35f25f80cd3dece2d87dbb1cbd"
+    },
+    {
+      "path": "cards/cardcore.mjs",
+      "sha256": "6c40f3c867210348f92d381b1c2e16b9e9eddb5b4a107712f68609f1b6ac3154"
+    },
+    {
+      "path": "cards/catalog-data.mjs",
+      "sha256": "86dcece74a1d5bc04fdda92b0da87b68610c113b01049777c6a4ca6ad77848d1"
+    },
+    {
+      "path": "cards/catalog.mjs",
+      "sha256": "546dd77bc9392ce19f6036ec57548f4f6277924c3c06fc7a8842f1f093a683a7"
+    },
+    {
+      "path": "cards/default-decks.mjs",
+      "sha256": "5c8b0d7da5c67717c38ede68b1278fda05ab92f25e66d4d3c3f593928dc10434"
+    },
+    {
+      "path": "cards/index.html",
+      "sha256": "96fe1bf3b821e5970bec3056074d6f14bfd6c35558b2a492377da06f1efcecce"
+    },
+    {
+      "path": "cards/tests/browser_cards.py",
+      "sha256": "68552e9989be48acdd24a753eaa282681d7012c4159d9bc0582ae364635f5b1d"
+    },
+    {
+      "path": "cards/tests/save.test.mjs",
+      "sha256": "d050cad85f85c2c9fdbeb5853c2e87724018d6be379422e9c03cec4f1a55ae4a"
+    },
+    {
+      "path": "cards/tests/saved-decks.test.mjs",
+      "sha256": "4416b84fc4dea50687aa062f1328bbc7363350a20c7c0bd6dec661bad3f79a25"
+    },
+    {
+      "path": "cards/ui/action-input-guard.mjs",
+      "sha256": "9d91a193fead1b1faa34cbf8f6ea26908028e5767892c1688c2eba4974ac83e4"
+    },
+    {
+      "path": "cards/ui/art-preview.html",
+      "sha256": "5b38d5ec4c36dd37dd3eee31f0085aca07309ca2ed35aecb855becdc8281e6bb"
+    },
+    {
+      "path": "cards/ui/bgm.mjs",
+      "sha256": "6b10c0cdc20e59e9ddd7de4581c0b4e56759c2bc7ca58067e6742a80cb9bb565"
+    },
+    {
+      "path": "cards/ui/collection-cards.mjs",
+      "sha256": "7267c3c180cafab3d259f19d52b3e4028d22244da918672a98db48557c1497b7"
+    },
+    {
+      "path": "cards/ui/collection-state.mjs",
+      "sha256": "df977c22c811f3404194ae05542f5cb5cac632b261900aefec2f5cbc0e791a7b"
+    },
+    {
+      "path": "cards/ui/collection.mjs",
+      "sha256": "849f98cf864212379fe2fae6a1df754c613fc6c9498b96eafdcfe4959ec2a047"
+    },
+    {
+      "path": "cards/ui/combat-audio.mjs",
+      "sha256": "44ccd4631948b16b67bfa554498b8ab00f0e0e9c6623d4322095006597a676e5"
+    },
+    {
+      "path": "cards/ui/deck-editor.mjs",
+      "sha256": "24c77c33ac1ec7e39e3fc717ab09e2f4a49f113793dc5a53e406b4bc43291e60"
+    },
+    {
+      "path": "cards/ui/gesture-input.mjs",
+      "sha256": "47e20ed36e6c901d0753f01395d9f26612d8d2632f9e388ca207cd7ae99dd4e6"
+    },
+    {
+      "path": "cards/ui/index.html",
+      "sha256": "5b38d5ec4c36dd37dd3eee31f0085aca07309ca2ed35aecb855becdc8281e6bb"
+    },
+    {
+      "path": "cards/ui/match-storage-scope.mjs",
+      "sha256": "5704b2df02f6847d9ecfbd338d93d512b6f72d64d2e4b7fe0d3996278ce5d994"
+    },
+    {
+      "path": "cards/ui/presentation.mjs",
+      "sha256": "96201d6df80c298b5a9bf1064213832fbc0d4ae3358a4c3ab462833e13cd4397"
+    },
+    {
+      "path": "cards/ui/readable-effects.mjs",
+      "sha256": "22c17394b068f022a7e4b8821a403d8733c4510e5fcbd34a37be9b812f6a6a3c"
+    },
+    {
+      "path": "cards/ui/save.mjs",
+      "sha256": "dcfb99469ec25d9db6bc528d5187962495ab33be8bcc83244cae7650b85282a4"
+    },
+    {
+      "path": "cards/ui/saved-decks.mjs",
+      "sha256": "613a2a24c1410dab91f672594ca7e4608dc4e63c50b363dca72b30c7840bfdf4"
+    },
+    {
+      "path": "cards/ui/spell-feedback.mjs",
+      "sha256": "28f69e9aaa219cb63b661f0b2306a6f96dcbb8c697c974e9fa71fb648b772701"
+    },
+    {
+      "path": "cards/ui/target-preview.mjs",
+      "sha256": "f1a61e279b98dde6e781464d0841c88f274562f90a4e3dbd10bdc4494a934a7a"
+    },
+    {
+      "path": "economy.js",
+      "sha256": "c5a04023e6713b458724b095e68323f0ac0dca15bb5fbe8d61c9e2aaf6a7df28"
+    },
+    {
+      "path": "home-interaction.js",
+      "sha256": "8303c92c62f6089aac2db1bc2799c834d1c8c159f1d9a93001d08dae0734cf16"
+    },
+    {
+      "path": "home/home-ambience.mjs",
+      "sha256": "a39e5e76c39e26cdb927a0a4decdd97586fe95bc15692cbf1e0728033b2e9e00"
+    },
+    {
+      "path": "home/home-autonomy.js",
+      "sha256": "558e1318e54f4ac3fd6b8172b2b6ed0af92c4228b748a0cc5ccef23574a0658c"
+    },
+    {
+      "path": "home/home-status.mjs",
+      "sha256": "27c4933b2e050d4157b3bcee2b4fd08e8ad8867d1512c33f77de1723629bfd58"
+    },
+    {
+      "path": "pet/game/economy.js",
+      "sha256": "9d6b10ffebc00b8ba14113ef5080114a4319f834e938beb4f50a8568c2fc3a49"
+    },
+    {
+      "path": "pet/game/style.css",
+      "sha256": "ffb8bdb3287674d2cef2ab95fb54ff5d6e82eb4728164ed05ae7f4dee489730b"
+    },
+    {
+      "path": "preview/cards/SAVE.md",
+      "sha256": "561962bf2138fc5bc6b08bd9d79f4c203581fbf7e49b9433a02de1880e986959"
+    },
+    {
+      "path": "preview/cards/cardcore.mjs",
+      "sha256": "6c40f3c867210348f92d381b1c2e16b9e9eddb5b4a107712f68609f1b6ac3154"
+    },
+    {
+      "path": "preview/cards/catalog-data.mjs",
+      "sha256": "86dcece74a1d5bc04fdda92b0da87b68610c113b01049777c6a4ca6ad77848d1"
+    },
+    {
+      "path": "preview/cards/catalog.mjs",
+      "sha256": "546dd77bc9392ce19f6036ec57548f4f6277924c3c06fc7a8842f1f093a683a7"
+    },
+    {
+      "path": "preview/cards/default-decks.mjs",
+      "sha256": "5c8b0d7da5c67717c38ede68b1278fda05ab92f25e66d4d3c3f593928dc10434"
+    },
+    {
+      "path": "preview/cards/index.html",
+      "sha256": "4782fc13030a55c7246487b8e5060a28d8d182d131c53183360855833c4c82e5"
+    },
+    {
+      "path": "preview/cards/tests/browser_cards.py",
+      "sha256": "68552e9989be48acdd24a753eaa282681d7012c4159d9bc0582ae364635f5b1d"
+    },
+    {
+      "path": "preview/cards/tests/save.test.mjs",
+      "sha256": "e24cf99c0fe1d08b81205ed7bd975ecd70a44602f5e93828ab5b945b222e5588"
+    },
+    {
+      "path": "preview/cards/tests/saved-decks.test.mjs",
+      "sha256": "4416b84fc4dea50687aa062f1328bbc7363350a20c7c0bd6dec661bad3f79a25"
+    },
+    {
+      "path": "preview/cards/ui/action-input-guard.mjs",
+      "sha256": "9d91a193fead1b1faa34cbf8f6ea26908028e5767892c1688c2eba4974ac83e4"
+    },
+    {
+      "path": "preview/cards/ui/art-preview.html",
+      "sha256": "086e30e3d0ef932e555594669d5e36d4a0b5094d1b9577fe6b534ff01b13993e"
+    },
+    {
+      "path": "preview/cards/ui/collection-cards.mjs",
+      "sha256": "7267c3c180cafab3d259f19d52b3e4028d22244da918672a98db48557c1497b7"
+    },
+    {
+      "path": "preview/cards/ui/collection-state.mjs",
+      "sha256": "2d663ce814aeafdca31a08bb4ab2570c25d772cb2cf55d93a95407bd1ad379cb"
+    },
+    {
+      "path": "preview/cards/ui/collection.mjs",
+      "sha256": "1eeec3f002231097440b31002638f553fa93511e138e485bbf26a17e93596404"
+    },
+    {
+      "path": "preview/cards/ui/deck-editor.mjs",
+      "sha256": "24c77c33ac1ec7e39e3fc717ab09e2f4a49f113793dc5a53e406b4bc43291e60"
+    },
+    {
+      "path": "preview/cards/ui/gesture-input.mjs",
+      "sha256": "d07bcd1a161751cbede22b098fd344bb43b479c22d865e57c9351f2b5f9b7964"
+    },
+    {
+      "path": "preview/cards/ui/index.html",
+      "sha256": "086e30e3d0ef932e555594669d5e36d4a0b5094d1b9577fe6b534ff01b13993e"
+    },
+    {
+      "path": "preview/cards/ui/match-storage-scope.mjs",
+      "sha256": "e106de81728917232607883e68f800b6c1f0d6282d3cdfc149e4dc2a5b4354d3"
+    },
+    {
+      "path": "preview/cards/ui/presentation.mjs",
+      "sha256": "96201d6df80c298b5a9bf1064213832fbc0d4ae3358a4c3ab462833e13cd4397"
+    },
+    {
+      "path": "preview/cards/ui/save.mjs",
+      "sha256": "955233271763a1b717bb94de158d90f26cd65275af2f7f622848bd04c40d9b81"
+    },
+    {
+      "path": "preview/cards/ui/saved-decks.mjs",
+      "sha256": "613a2a24c1410dab91f672594ca7e4608dc4e63c50b363dca72b30c7840bfdf4"
+    },
+    {
+      "path": "preview/cards/ui/spell-feedback.mjs",
+      "sha256": "28f69e9aaa219cb63b661f0b2306a6f96dcbb8c697c974e9fa71fb648b772701"
+    },
+    {
+      "path": "preview/economy.js",
+      "sha256": "b005a82bd3ccd728bf5de62a48fa7007dbfb0e78b1d963163de2a47d31e20538"
+    },
+    {
+      "path": "preview/pet/README.md",
+      "sha256": "001e7de53cfb7cc701d467b72b5dc237cc573159292eb07007973680db1c6e0f"
+    },
+    {
+      "path": "preview/pet/accept2/ACCEPT.md",
+      "sha256": "12a68866170654bebe7310d5f503c42b114872569dd066a4b64a0a03a6840584"
+    },
+    {
+      "path": "preview/pet/accept2/DOGS2_BROWSER_SMOKE.md",
+      "sha256": "1d9755464867e5b6ef6e4c9c0f3783b476d01abb8aa9aa91f44307f3b2f448cc"
+    },
+    {
+      "path": "preview/pet/accept2/PET2_DRAFT.md",
+      "sha256": "cafdea0211271a24aa7db6d001c71ec35979c8296b2467936b2b8b4845e2aabc"
+    },
+    {
+      "path": "preview/pet/accept2/PET_PORTAL_ACCEPTANCE.md",
+      "sha256": "2ae25d3aa3111f75bb67b57c503c00e0224ecbb6d1c83e6f570c86700f3bba33"
+    },
+    {
+      "path": "preview/pet/accept2/R4.md",
+      "sha256": "5858a5218a2e302a751f908069ecda156280539dbbbf460cd50d0d1d0c5532c2"
+    },
+    {
+      "path": "preview/pet/accept2/species_test_fixtures.js",
+      "sha256": "db6e069a2af59214589f9605eee4138208e4444df2534cd4182233f901bd9316"
+    },
+    {
+      "path": "preview/pet/accept2/test_companion_runtime.js",
+      "sha256": "ee68499a2d63af6158d0bbdd49d2ec10ab4ee224ec6d72f30d84ff6cf164d680"
+    },
+    {
+      "path": "preview/pet/accept2/test_dogs2_e2e.py",
+      "sha256": "a03d2e002c7b4d1cf79a34c7e3624f6ecebfcad00c1c506a738ef6ea0785c1a9"
+    },
+    {
+      "path": "preview/pet/accept2/test_manifest_companions.js",
+      "sha256": "421d74e1683104b9ac2fa176db416f6975604756c69187bfa44db167c0ef13a5"
+    },
+    {
+      "path": "preview/pet/accept2/test_pet_portal_e2e.mjs",
+      "sha256": "6e1b7221bbfde075051e4e7eb215d0adedfc4db10a27bd8862c77f4b13362353"
+    },
+    {
+      "path": "preview/pet/accept2/test_pet_portal_regressions.js",
+      "sha256": "b9a9444209207b799e69168cba9ab62c0e92062ddd6904a5a092bec23133a23a"
+    },
+    {
+      "path": "preview/pet/accept2/test_pets2_core.js",
+      "sha256": "2c66f7ec25e446e4ba8383daa436565047edc7222a74ecdca2597bd021650cbd"
+    },
+    {
+      "path": "preview/pet/accept2/test_pets2_dog_e2e.py",
+      "sha256": "02533a29d24c5340e69a5b29974c169f3d2117f1e5e85f42c3986c4119515e99"
+    },
+    {
+      "path": "preview/pet/accept2/test_pets2_e2e.py",
+      "sha256": "ece72db898e1cb0c959315a30c7c462b8d1d54c5ba62a684669858008e5b036c"
+    },
+    {
+      "path": "preview/pet/accept2/test_pets2_r4.js",
+      "sha256": "446dd0d863d673a7c859e8980a5402aea3f955a1153ad8ff9c872317ee7a7972"
+    },
+    {
+      "path": "preview/pet/accept2/test_pets2_r4_e2e.py",
+      "sha256": "b455d66b4c137a4f7cfa067c26ba2c708b918a0e0a27fa3fdefce74cfb25f294"
+    },
+    {
+      "path": "preview/pet/accept2/test_pets2_roster_runtime.js",
+      "sha256": "7315356a5e7cb3aa0de97686c5d056239bfe78f9e073f3202241d76c0c00c1a7"
+    },
+    {
+      "path": "preview/pet/accept2/test_pets2_ui_vm.js",
+      "sha256": "8f7f82e019161275af6a640a068ec4bc34d7075a38340e7dc8c073fa540c15da"
+    },
+    {
+      "path": "preview/pet/accept2/test_room_capacity.js",
+      "sha256": "5ee2e5925acee270acf3242329912b1607302f40fe3f0e0a4d041c55178f1329"
+    },
+    {
+      "path": "preview/pet/accept2/test_room_capacity_e2e.mjs",
+      "sha256": "810cd1f520a2eef99e0ff599429b49e81b32df9703dba4bd19e68d6fe3bf5f95"
+    },
+    {
+      "path": "preview/pet/accept2/test_spatial_companions.js",
+      "sha256": "320f925d27f2a6cb037c745a372b650c80e1665d658fcdf392b08ae4069275f2"
+    },
+    {
+      "path": "preview/pet/accept2/test_spatial_companions_e2e.mjs",
+      "sha256": "b2e795a2bc05a6c72455b87487d282ee80779966cf17d144a5cbb970be0f8743"
+    },
+    {
+      "path": "preview/pet/accept2/test_species_unique.js",
+      "sha256": "ed2abf7405e1d3be6529217f9cf63ee9e7bfde826346a11f22bd526a2e7598e1"
+    },
+    {
+      "path": "preview/pet/art.js",
+      "sha256": "0ef3344c4059e932b5df69e3ee8248406cbb9f9cb82e3be606c2f8df930e7903"
+    },
+    {
+      "path": "preview/pet/art/MANIFEST.md",
+      "sha256": "a911a4c6e74fc9064c58e2ba30a8bea8ebb47308c9de1c6957ac7d657fa2feae"
+    },
+    {
+      "path": "preview/pet/art/alpaca/alpaca_prototype_16_v2.png",
+      "sha256": "9e32d2ea84c2d131f04a7bfe29546f4a8f29f2359e0ceee81b7a35575f000307"
+    },
+    {
+      "path": "preview/pet/art/alpaca/manifest.json",
+      "sha256": "39505ddccf73ec475a046434909fcf693dde69edfb3e5fdc7f2fee2c2dfc6157"
+    },
+    {
+      "path": "preview/pet/art/alpaca/source-manifest.json",
+      "sha256": "b102b8a7c8cf2bc9fa2238a4238f001c5cab70aa50ded97e02d5eecc3fc265ab"
+    },
+    {
+      "path": "preview/pet/art/cat/cat-prototype-groom-tail-fixed.png",
+      "sha256": "16bb1f26d18577260f5b27ba9af43ee1eadb2e9c3884f052d3e6b54cc3da1ae5"
+    },
+    {
+      "path": "preview/pet/art/cat/cat-run-e-6.png",
+      "sha256": "30de003f2f28fa0bf78992eb5bc749c49d26b776760f682b8b96d5670a9dc250"
+    },
+    {
+      "path": "preview/pet/art/cat/cat-walk-e-8.png",
+      "sha256": "f87b9401f3639519a1325c3f98340eaea9e8945df61276fc54e6d74406791375"
+    },
+    {
+      "path": "preview/pet/art/cat/cat-walk-n-4-fixed.png",
+      "sha256": "74367f4b42f8f2da3f25d3b29d48da63490b70b3015cbe540d292d2bb488bd9a"
+    },
+    {
+      "path": "preview/pet/art/cat/cat-walk-s-4.png",
+      "sha256": "e93b7d9b2cf3bd151b003df8d1456ff8208df342ffe3d28d7bb14063a1e2d554"
+    },
+    {
+      "path": "preview/pet/art/cat/cat-walk-s-opposite-2.png",
+      "sha256": "e8b14d9af1bddea42c5e50ea960f43ee9e79a8accef2b88492355d85c6914ba6"
+    },
+    {
+      "path": "preview/pet/art/cat/cat_prototype_atlas_2048x1024.png",
+      "sha256": "754a04b05d6dcb28f063d973815307e6982bfda333d95c3515ae7dccb20d9f12"
+    },
+    {
+      "path": "preview/pet/art/cat/locomotion-source-manifest.json",
+      "sha256": "9353efd58cc631b003bdd923d9397aec86f43c96d626a473c123a526a045d9e1"
+    },
+    {
+      "path": "preview/pet/art/cat/manifest.json",
+      "sha256": "58657390f8bc4792235e14381cd54bc192f0866170f151f264fc21195e0d89c9"
+    },
+    {
+      "path": "preview/pet/art/cat/source-manifest.json",
+      "sha256": "82162488d5fdd0965989607a644bc40896fde0d8c9be5e39d2130e4c7ca4d199"
+    },
+    {
+      "path": "preview/pet/art/manifest.json",
+      "sha256": "f2563f3d7034cd8ee6ad9683e4ea9f576308e65ee17e3003b8226cdef8c0d511"
+    },
+    {
+      "path": "preview/pet/art/panda_cub/giant_panda_cub_atlas_16pose_flat_prototype.png",
+      "sha256": "e9db2bdb2d473e548eea7185cc636fe0606ea4f9cf247433eb31b56ecd3d379d"
+    },
+    {
+      "path": "preview/pet/art/panda_cub/manifest.json",
+      "sha256": "6fe344d4a48ca1fda2c21410d83812a4f41796778a64009418eeac3b9936ba4c"
+    },
+    {
+      "path": "preview/pet/art/panda_cub/source-manifest.json",
+      "sha256": "9fdcd45932bb9c087e1dbc91638f389d072811b357ad2bd478edf694c3117177"
+    },
+    {
+      "path": "preview/pet/art/puppy_atlas_v3.json",
+      "sha256": "3d24eeebde90eebae9de63c7cd193f5f3cef026e53f3595da7e2f983962c3ead"
+    },
+    {
+      "path": "preview/pet/art/puppy_atlas_v3.webp",
+      "sha256": "d841dd4410f374a534aef85b575ac85a73cb86591ea63825a9746ce80cffc923"
+    },
+    {
+      "path": "preview/pet/art/rabbit/manifest.json",
+      "sha256": "3ce29343dac770b3268cdb350ee83599ac229f9b5c2d4ef3e08b0478a08d2f3d"
+    },
+    {
+      "path": "preview/pet/art/rabbit/rabbit_prototype_16_v2.png",
+      "sha256": "0bc5f9183e5a1d20c3f18da884db2a6d5df2d498b8c11262ce5058620267d361"
+    },
+    {
+      "path": "preview/pet/art/rabbit/source-manifest.json",
+      "sha256": "7953b393f0573262d7f63374a9feca59b79680d56e8a0798265853d174e46d20"
+    },
+    {
+      "path": "preview/pet/art/red_panda/manifest.json",
+      "sha256": "f9977e91012132bf430cc8e0dfe778a83a454da3326a8be12be4c591f6b27184"
+    },
+    {
+      "path": "preview/pet/art/red_panda/red_panda_atlas_16pose_flat_prototype.png",
+      "sha256": "354f0a7b43926eaff81232cd762a47896cec738aa67ebfc66aff8f9e94b4b29b"
+    },
+    {
+      "path": "preview/pet/art/red_panda/source-manifest.json",
+      "sha256": "2b328125ba4e2679c27aeae714d646db817d708dec51b238fd90787e15feb73f"
+    },
+    {
+      "path": "preview/pet/art/robot/manifest.json",
+      "sha256": "6b93b832150cd8162767ea8d261c491ae24b84a6ea1b267d4470dada5cb58bec"
+    },
+    {
+      "path": "preview/pet/art/robot/robot_prototype_16_v2.png",
+      "sha256": "5a67e3dd63615684c840adc62e954e14e8ab146535ad5fb9b4800a377ba35f2d"
+    },
+    {
+      "path": "preview/pet/art/robot/source-manifest.json",
+      "sha256": "0d7d3c7d9278cbec3b0485d0417a5efde00119964d82374235013180c78c33e7"
+    },
+    {
+      "path": "preview/pet/art/species.json",
+      "sha256": "65b8f72afc874f775b90615e68f7d4047418aef3ce2a1e04a3ea303393a4bb9f"
+    },
+    {
+      "path": "preview/pet/companions.js",
+      "sha256": "b47203268e874a4b1e5e8f8d9d46a4579f7912cf6a2163f0508631979b434e9c"
+    },
+    {
+      "path": "preview/pet/engine.js",
+      "sha256": "ee88300dd32be18c06a0ed66b5977c277e4110d1680f4cf3b1a593b5ed930ce4"
+    },
+    {
+      "path": "preview/pet/game/app.js",
+      "sha256": "64755cf5eebb45e521995e298002cb82fd2b3ed96367d39d87b75b145fb05a10"
+    },
+    {
+      "path": "preview/pet/game/economy.js",
+      "sha256": "a3427641cfa19b45b447f37de736f29c058caee33bc3a6be13ebe19ede60c47f"
+    },
+    {
+      "path": "preview/pet/game/index.html",
+      "sha256": "d6bd9f4940bdd00ff7545de3b2e1502495f0b4d60ae1d7a8c0b34572577eb213"
+    },
+    {
+      "path": "preview/pet/game/petgame.css",
+      "sha256": "085a9ee656932d6ef5674078d170b7c7337cc9c7d72753d8f289e9d13c9707ba"
+    },
+    {
+      "path": "preview/pet/game/petgame.js",
+      "sha256": "674a7b85868681980800ee6c07355398e017a6f8aa69737e0cc191fcd7bb54f1"
+    },
+    {
+      "path": "preview/pet/game/style.css",
+      "sha256": "b881caa35b142822b9f43f3803cbd36757cbfe9db69acd2ff713a9daa5dab9ba"
+    },
+    {
+      "path": "preview/pet/game/test_petgame.js",
+      "sha256": "77e03cd327c1e000f425fb8ce7255cf4ea69e8ad6a2a574f1032b59ab01e23e1"
+    },
+    {
+      "path": "preview/pet/game/test_petgame_e2e.py",
+      "sha256": "40add479516b1d5424e7b11d180cb7f7422867c8245922e361f69cac069fbcde"
+    },
+    {
+      "path": "preview/pet/game/version.json",
+      "sha256": "d2e6ea9b98a730c711061c0aad39639facbcf5776b2302c1566b83f6614171fb"
+    },
+    {
+      "path": "preview/pet/index.html",
+      "sha256": "4bd235551a4be002b3bf783eacd3e806d24b07f07ca6d268837a5f57debb3584"
+    },
+    {
+      "path": "preview/pet/main.js",
+      "sha256": "8721a0733027c79bc36934064d657046d925d97889b997f01a28ec788dec983e"
+    },
+    {
+      "path": "preview/pet/pet.css",
+      "sha256": "f2f9bd6ef02df943043361d686c89569fcf584546d5e1e70df4d5e9a4f22c893"
+    },
+    {
+      "path": "preview/pet/puppy.js",
+      "sha256": "c3ece70109abdd721257872a0c43ac39ce5f84f56dd8f92c92c7068ab0ab3c13"
+    },
+    {
+      "path": "preview/pet/qa/p1_iphone15.webp",
+      "sha256": "83050813016c6264b6b7428cc0f32a36e423c49764018ee1943c1c3e887582fe"
+    },
+    {
+      "path": "preview/pet/qa/p1_se.webp",
+      "sha256": "5d8e6eb13ae9d7dacd10b3aeef932442597cacf2679d637b8160a6dfb5697b14"
+    },
+    {
+      "path": "preview/pet/qa/p5/p6_mouth_before_after.png",
+      "sha256": "5a70ddbf7ec3cbe29a1efc8932d36527db89ae40658ca53a061e75ce07640b2a"
+    },
+    {
+      "path": "preview/pet/qa/p5/p6_page_iPhone15.png",
+      "sha256": "021e144ae170fc9ad9580a77effe81062662b96162b8cc16a5b54b28d1b61e6c"
+    },
+    {
+      "path": "preview/pet/qa/p5/p6_page_iPhoneSE.png",
+      "sha256": "fa1f43023b03bb7586d7080f9cd77396defdb03f54f590d4e3064b7e08bf23ee"
+    },
+    {
+      "path": "preview/pet/qa/p5/p6_pick_iPhone15.png",
+      "sha256": "0fcb6305de7b0a45941ea4f7129ca79dbd098af36878aabf37210496e83690af"
+    },
+    {
+      "path": "preview/pet/qa/p5/p6_pick_iPhoneSE.png",
+      "sha256": "158386b08520194b30e7848d4481b209dbab26361f921f3e96775c9132ea30c8"
+    },
+    {
+      "path": "preview/pet/room.js",
+      "sha256": "3f837ae9795edd47a792ce62c4ec6486ab0fe6d7fa75063d0a824e821b8b9a95"
+    },
+    {
+      "path": "preview/pet/test_engine.js",
+      "sha256": "9569f412defaa8c5845e7a7cd8df580bd23ea09a2c08691409a91df8f4a50a73"
+    },
+    {
+      "path": "preview/pet/test_pet_e2e.py",
+      "sha256": "0bd971117657e4e07b702889a9765d7d211e12c8a8bb916250bb741adaacec7e"
+    },
+    {
+      "path": "preview/pet/tools/build_atlas.py",
+      "sha256": "1356907a4f25ae82958b317d9ad6a1f6bc79dab61f14ef8759ed32532440e17e"
+    },
+    {
+      "path": "preview/pet/tools/game/glue.js",
+      "sha256": "8ccc49d8fb04940516b1dcf5143838b1db577fc38f4f69d01112dbeb56010249"
+    },
+    {
+      "path": "preview/pet/tools/game/mkgame.py",
+      "sha256": "39241c49ccbf81276032f53fe75fb5ffac80442b94389e9d05bdca8da65828a7"
+    },
+    {
+      "path": "preview/pet/tools/gen_manifest.js",
+      "sha256": "d50d7568447cf811517edaddf1f8cf4557d35ae81f501892150ed021caa7cd4e"
+    },
+    {
+      "path": "preview/pet/tools/gen_manifest_v3.py",
+      "sha256": "46d272c9ed3c6e9e8a13084bbd6eb376e9f4aab5048e0e8f3dcef945a03f0111"
+    },
+    {
+      "path": "preview/pet/tools/import_cat_locomotion.py",
+      "sha256": "433ce9b10686b6aa0d94bb03c939f19c76074aa94d8ea9dc0a04074373d5c704"
+    },
+    {
+      "path": "preview/pet/tools/import_prototypes.py",
+      "sha256": "51674c678283476da877931f043badec2f0cb6d4fa721a8e77fbb38c9a29b2cb"
+    },
+    {
+      "path": "preview/style.css",
+      "sha256": "b402a614ee62c0876eff1c9acd0552dd1907aaadb9ffaa5449606dcf431a506f"
+    },
+    {
+      "path": "style.css",
+      "sha256": "88271c17f4462c54ab8c554989977e3f107f5af086877bae68bd453f97164116"
+    }
+  ]
+}

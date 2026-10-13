@@ -1,0 +1,134 @@
+[
+  {
+    "command": "node tests/formal/protocol.mjs",
+    "main": 0,
+    "integrated": 0,
+    "sameExit": true
+  },
+  {
+    "command": "node tests/formal/economy-v2.test.mjs",
+    "main": 0,
+    "integrated": 0,
+    "sameExit": true
+  },
+  {
+    "command": "node tests/formal/td-receipts.test.mjs",
+    "main": 0,
+    "integrated": 0,
+    "sameExit": true
+  },
+  {
+    "command": "node tests/formal/td-fc2.test.mjs",
+    "main": 0,
+    "integrated": 0,
+    "sameExit": true
+  },
+  {
+    "command": "node tests/formal/fc2-archive.test.mjs",
+    "main": 0,
+    "integrated": 0,
+    "sameExit": true
+  },
+  {
+    "command": "node tests/formal/copy52-display.test.mjs",
+    "main": 0,
+    "integrated": 0,
+    "sameExit": true
+  },
+  {
+    "command": "node tests/formal/carefree-bgm.test.mjs",
+    "main": 0,
+    "integrated": 0,
+    "sameExit": true
+  },
+  {
+    "command": "node test_economy.js",
+    "main": 1,
+    "integrated": 1,
+    "sameExit": true
+  },
+  {
+    "command": "node test_coin_safety.js",
+    "main": 1,
+    "integrated": 1,
+    "sameExit": true
+  },
+  {
+    "command": "node td/test_tdhost.js",
+    "main": 1,
+    "integrated": 1,
+    "sameExit": true
+  },
+  {
+    "command": "node td/test_td_bridge.js",
+    "main": 1,
+    "integrated": 1,
+    "sameExit": true
+  },
+  {
+    "command": "node td/test_td_protocol.js",
+    "main": 1,
+    "integrated": 1,
+    "sameExit": true
+  },
+  {
+    "command": "node preview/td/test_tdhost.js",
+    "main": 1,
+    "integrated": 1,
+    "sameExit": true
+  },
+  {
+    "command": "node preview/td/test_td_bridge.js",
+    "main": 0,
+    "integrated": 0,
+    "sameExit": true
+  },
+  {
+    "command": "node cards/tests/save.test.mjs",
+    "main": 0,
+    "integrated": 0,
+    "sameExit": true
+  },
+  {
+    "command": "node cards/tests/saved-decks.test.mjs",
+    "main": 0,
+    "integrated": 0,
+    "sameExit": true
+  },
+  {
+    "command": "node preview/cards/tests/save.test.mjs",
+    "main": 1,
+    "integrated": 1,
+    "sameExit": true
+  },
+  {
+    "command": "node preview/cards/tests/saved-decks.test.mjs",
+    "main": 0,
+    "integrated": 0,
+    "sameExit": true
+  },
+  {
+    "command": "node tests/formal/tea-entry-cards-out.test.mjs",
+    "main": 0,
+    "integrated": 0,
+    "sameExit": true
+  },
+  {
+    "command": "node test_root_keys.js",
+    "main": 1,
+    "integrated": 1,
+    "sameExit": true
+  },
+  {
+    "command": "node pet/game/test_petgame.js",
+    "main": 1,
+    "integrated": 1,
+    "sameExit": true
+  },
+  {
+    "command": "node preview/pet/game/test_petgame.js",
+    "main": 1,
+    "integrated": 1,
+    "sameExit": true
+  }
+]
