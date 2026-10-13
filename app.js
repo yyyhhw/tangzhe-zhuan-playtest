@@ -1265,7 +1265,7 @@ function avaCacheClear() { for (const k of Object.keys(avaCache)) delete avaCach
 /* ================= 界面：标签页 ================= */
 // 12c 漫画 UI：统一线稿图标（index.html 里的 <symbol>，导航 / 翻页签 / 模式签共用同一套）
 const ic = n => `<svg class="ic" aria-hidden="true"><use href="#ic-${n}"/></svg>`;
-const SHOP_ICON = ['bbq', 'tea', 'book', 'tech'].map(n => ic(n)), LOCK_IC = ic('lock'), TAB_NAME = ['烧烤摊', '奶茶店', '漫画店', '科技'];
+const SHOP_ICON = ['bbq', 'tea', 'book', 'tech'].map(n => ic(n)), LOCK_IC = ic('lock'), TAB_NAME = ['烧烤', '奶茶', '漫画', '科技'];
 const DECOR_SPOT = { d_stool:'门口左侧的小椅', d_lights:'遮阳棚下的辣椒串灯', d_neon:'招牌右侧的霓虹牌', d_board:'门口左侧的黑板', d_balloon:'店面左边的气球', d_poster:'柜台右边的海报', d_cat:'柜台上的招财猫', d_plant:'门口右侧的绿植' };
 const DECOR_ICON = { d_stool:'🪑', d_lights:'🌶️', d_neon:'🏮', d_board:'🪧', d_balloon:'🎈', d_poster:'📰', d_cat:'🐱', d_plant:'🪴' };
 const TYPE_LABEL = { clothes:'衣服', hat:'帽子', decor:'装饰', card:'故事卡', super:'超级装饰' };
@@ -1470,7 +1470,7 @@ function renderGacha() {
   const ownS = E.SUPER_ITEMS.filter(it => state.gacha.owned.includes(it.id)).length, ownR = owned - ownS;
   let h = `<div class="sec-title">77 收藏盲盒</div>`;
   if (!unlocked) {
-    h += `<div class="box-hero"><div class="box-ico">${box}</div><div class="info"><div class="name">还没开放</div><div class="desc">摸鱼科技公司雇到员工后开放。<br>只花游戏金币，不卖真钱。</div></div></div>`;
+    h += `<div class="box-hero"><div class="box-ico">${box}</div><div class="info"><div class="name">还没开放</div><div class="desc">科技公司雇到员工后开放。<br>只花游戏金币，不卖真钱。</div></div></div>`;
   } else {
     h += `<div class="box-hero"><div class="box-ico" id="boxIco">${box}</div><div class="info"><div class="name">已收集 ${owned}/${total}</div>
       <div class="desc">${rem ? `下一抽：<b>超级装饰 ${P(o.superP)}</b>${o.remSuper ? `（每件 ${P(o.perSuper)}）` : ''} · 普通收藏 ${P(o.regP)}${o.remReg ? `（每件 ${P(o.perReg)}）` : ''}<br>${o.remSuper ? (o.guaranteed ? '<b style="color:var(--red)">这一抽必出超级装饰！</b>' : `保底：再 <b>${o.pityLeft}</b> 抽内必出超级装饰`) : '超级装饰已集齐'}` : `${total} 件全收集！`}</div>
@@ -1692,7 +1692,7 @@ function showNewBlindboxNotice() {
     $('#mGo').addEventListener('click', () => { audioUnlock(); closeModal(); bb70OpenGacha(); }, { once:true });
   } else {
     openModal(`<div class="mtitle">新盲盒上线啦！</div>
-      <div class="mnote">摸鱼科技公司雇到员工，就能来开盒。</div>
+      <div class="mnote">科技公司雇到员工，就能来开盒。</div>
       <div class="mbtns"><button class="buy big" id="mOk" type="button" data-x="close">知道了</button></div>`);
     $('#mOk').addEventListener('click', () => { audioUnlock(); closeModal(); }, { once:true });
   }
