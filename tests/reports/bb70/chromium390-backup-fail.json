@@ -1,0 +1,34 @@
+{
+ "/": {
+  "modalOpen": true,
+  "note": "这次领取没有确认到账，先不去盲盒页。请按存档提示核对，不要重复领取。",
+  "disabled": [
+   true,
+   true,
+   null
+  ],
+  "tab": "经营",
+  "flags": [],
+  "saveBlocked": true,
+  "protectedPanel": "存档已保护\n\n当前结果需要核对，已暂停写入；不会自动退款、回",
+  "pendingInMemory": true,
+  "mainUnchanged": true,
+  "errors": []
+ },
+ "/pet/game/": {
+  "modalOpen": true,
+  "note": "这次领取没有确认到账，先不去盲盒页。请按存档提示核对，不要重复领取。",
+  "disabled": [
+   true,
+   true,
+   null
+  ],
+  "tab": "经营",
+  "flags": [],
+  "saveBlocked": true,
+  "protectedPanel": "存档已保护\n\n当前结果需要核对，已暂停写入；不会自动退款、回",
+  "pendingInMemory": true,
+  "mainUnchanged": true,
+  "errors": []
+ }
+}

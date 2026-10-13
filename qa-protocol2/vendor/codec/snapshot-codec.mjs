@@ -2,8 +2,8 @@
  * Envelope integrity is not game-state validity, consent, authenticity or a grant.
  * Only the canonical envelope produced by the reviewed planner is accepted.
  */
-import {canonical,freeze} from './lib/json.mjs?v=lifecycle-save-candidate-20261013-r1';
-import {sha256} from './lib/sha256.mjs?v=lifecycle-save-candidate-20261013-r1';
+import {canonical,freeze} from './lib/json.mjs?v=bb70-launch-notice-20261013-r2';
+import {sha256} from './lib/sha256.mjs?v=bb70-launch-notice-20261013-r2';
 
 export const SNAPSHOT_CODEC_ENABLED=false;
 export const SNAPSHOT_FORMATS=Object.freeze({legacy:1,compact:2});

@@ -1,17 +1,17 @@
-import {prepareSecondEightCatalog} from './wearables18-catalog.mjs?v=lifecycle-save-candidate-20261013-r1';
+import {prepareSecondEightCatalog} from './wearables18-catalog.mjs?v=bb70-launch-notice-20261013-r2';
 /** Production composition candidate; activation remains gated by release.mjs.
  * Synthetic review only until the independent browser/activation gate passes. */
-import {createCollectibleStorage} from './storage.mjs?v=lifecycle-save-candidate-20261013-r1';
-import {ensureLegacyReady} from './legacy-entry.mjs?v=lifecycle-save-candidate-20261013-r1';
-import {COLLECTIBLES_PRODUCTION_ENABLED,COLLECTIBLES_RELEASE} from './release.mjs?v=lifecycle-save-candidate-20261013-r1';
-import {createRealPageQAFacade} from '../qa-protocol2/real-page-facade.mjs?v=lifecycle-save-candidate-20261013-r1';
-import {createMigrationPlanner} from '../qa-protocol2/vendor/planner/migration.mjs?v=lifecycle-save-candidate-20261013-r1';
-import * as codec from '../qa-protocol2/vendor/codec/snapshot-codec.mjs?v=lifecycle-save-candidate-20261013-r1';
-import {createPetDomain} from '../qa-protocol2/vendor/runtime/pet-domain.mjs?v=lifecycle-save-candidate-20261013-r1';
-import {createProtocol2Validator} from '../qa-protocol2/vendor/runtime/validator.mjs?v=lifecycle-save-candidate-20261013-r1';
-import {createCardAwareSession} from '../qa-protocol2/vendor/cards/card-coordinator.mjs?v=lifecycle-save-candidate-20261013-r1';
-import {createHostModel} from '../qa-protocol2/vendor/host/host-model.mjs?v=lifecycle-save-candidate-20261013-r1';
-import {prepareEightWearableCatalog} from '../qa-protocol2/eight-catalog.mjs?v=lifecycle-save-candidate-20261013-r1';
+import {createCollectibleStorage} from './storage.mjs?v=bb70-launch-notice-20261013-r2';
+import {ensureLegacyReady} from './legacy-entry.mjs?v=bb70-launch-notice-20261013-r2';
+import {COLLECTIBLES_PRODUCTION_ENABLED,COLLECTIBLES_RELEASE} from './release.mjs?v=bb70-launch-notice-20261013-r2';
+import {createRealPageQAFacade} from '../qa-protocol2/real-page-facade.mjs?v=bb70-launch-notice-20261013-r2';
+import {createMigrationPlanner} from '../qa-protocol2/vendor/planner/migration.mjs?v=bb70-launch-notice-20261013-r2';
+import * as codec from '../qa-protocol2/vendor/codec/snapshot-codec.mjs?v=bb70-launch-notice-20261013-r2';
+import {createPetDomain} from '../qa-protocol2/vendor/runtime/pet-domain.mjs?v=bb70-launch-notice-20261013-r2';
+import {createProtocol2Validator} from '../qa-protocol2/vendor/runtime/validator.mjs?v=bb70-launch-notice-20261013-r2';
+import {createCardAwareSession} from '../qa-protocol2/vendor/cards/card-coordinator.mjs?v=bb70-launch-notice-20261013-r2';
+import {createHostModel} from '../qa-protocol2/vendor/host/host-model.mjs?v=bb70-launch-notice-20261013-r2';
+import {prepareEightWearableCatalog} from '../qa-protocol2/eight-catalog.mjs?v=bb70-launch-notice-20261013-r2';
 
 const clone=x=>JSON.parse(JSON.stringify(x));
 async function loadClassic(url){await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=url.href;s.onload=resolve;s.onerror=()=>reject(Error('QA_LEGACY_ECONOMY_LOAD_FAILED'));document.head.append(s);});}
@@ -93,7 +93,7 @@ export async function launchProductionCollectibles(options){
           const qaWearables8=!!wearableCatalog&&current.state._collectionProtocol===2;
           secondEight.setActive(qaWearables8);
           wearableCatalog?.setActive(qaWearables8);
-          if(qaWearables8){const display=await import('../candidates/blindbox18/display.mjs?v=lifecycle-save-candidate-20261013-r1');if(!lease.owns())throw Error('QA_DISPLAY_LOADED_AFTER_REVOKE');globalThis.QAWearables8Display=display.default;}
+          if(qaWearables8){const display=await import('../candidates/blindbox18/display.mjs?v=bb70-launch-notice-20261013-r2');if(!lease.owns())throw Error('QA_DISPLAY_LOADED_AFTER_REVOKE');globalThis.QAWearables8Display=display.default;}
           const runtime={keys,storage,model,qaWearables8,qa:false,qaScope:scope,qaProtocol2:true,entryEnabled:cardEntryEnabled===true,ownsLock:lease.owns,coordinator:facade.coordinator,
             registerPageHide:handler=>{if(typeof handler!=='function'||pageHideSave)throw Error('PAGE_HIDE_HANDLER_INVALID');pageHideSave=handler;},
             logicalStorageKey:storage.logicalKey,handle:message=>facade.card(message),snapshot:()=>facade.snapshot(),reconcile:()=>facade.reconcile()};
