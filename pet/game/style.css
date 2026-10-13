@@ -470,7 +470,8 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 .home-actor{position:absolute;z-index:6;width:18%;height:0;transform:translate(-50%,-70%);pointer-events:none;transition:left .05s linear, top .05s linear}
 .home-actor .ha-ava{display:block;width:100%;aspect-ratio:1}
 .home-actor .ha-ava .ava{width:100%;height:100%;border-width:2px}
-.home-actor .ha-line{position:absolute;left:50%;bottom:108%;transform:translateX(-50%);background:#fff;border:2px solid var(--ink);border-radius:8px;padding:2px 6px;font-size:10px;font-weight:800;white-space:nowrap;max-width:140px;overflow:hidden;text-overflow:ellipsis}
+.home-actor .ha-line{position:absolute;left:50%;bottom:108%;transform:translateX(calc(-50% + var(--ha-dx,0px)));background:#fff;border:2px solid var(--ink);border-radius:8px;padding:2px 6px;font-size:10px;font-weight:800;line-height:1.3;text-align:center;white-space:normal;width:max-content;max-width:140px;overflow-wrap:anywhere}
+.home-actor .ha-line.ha-below{bottom:auto;top:108%}
 .home-actor .ha-act{position:absolute;right:-4px;top:-8px;font-style:normal;font-size:14px}
 .live-note{margin:0 4px 8px 0}
 .room.live-mode .furn{cursor:pointer}
@@ -789,3 +790,15 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 
 .item-grid{grid-template-columns:repeat(4,minmax(0,1fr))}
 .item-grid>.item{min-width:0;overflow-wrap:anywhere}
+
+/* 家宅-56：CEO 自主活动时，远距离换位或「减少动态效果」打开时淡入；换衣服停下时闪一下 */
+.home-actor.ha-fade{animation:haFade .5s ease}
+@keyframes haFade{0%{opacity:0}100%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.home-actor.ha-fade{animation-duration:.01s}}
+
+/* 家宅-57：开灯时灯旁淡入一圈暖色光晕，离开后 1.5 秒淡出（不改房间灯光、不加遮罩、不改灯的图） */
+.furn.ha-lit{animation:haLitIn .6s ease forwards}
+.furn.ha-lit-off{animation:haLitOut 1.5s ease forwards}
+@keyframes haLitIn{from{box-shadow:2px 2px 0 rgba(20,20,20,.55),0 0 0 0 rgba(255,196,96,0)}to{box-shadow:2px 2px 0 rgba(20,20,20,.55),0 0 18px 8px rgba(255,196,96,.7)}}
+@keyframes haLitOut{from{box-shadow:2px 2px 0 rgba(20,20,20,.55),0 0 18px 8px rgba(255,196,96,.7)}to{box-shadow:2px 2px 0 rgba(20,20,20,.55),0 0 0 0 rgba(255,196,96,0)}}
+@media (prefers-reduced-motion:reduce){.furn.ha-lit,.furn.ha-lit-off{animation-duration:.01s}}
