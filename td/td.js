@@ -520,7 +520,15 @@ function drawTowerEmblem(id,x,y,r) {
     cx.fillStyle='#9fd8ef';for(const [ix,iy,a] of [[-.3,-.35,.4],[.32,-.05,-.3],[-.05,.25,.15]]){cx.save();cx.translate(ix*r,iy*r);cx.rotate(a);cx.fillRect(-r*.2,-r*.2,r*.4,r*.4);cx.strokeRect(-r*.2,-r*.2,r*.4,r*.4);cx.restore();}
   }
   else if (id==='tpearl') { cx.beginPath(); cx.moveTo(-r,-r*.65);cx.lineTo(-r*.7,r);cx.lineTo(r*.7,r);cx.lineTo(r,-r*.65);cx.closePath();cx.fill();cx.stroke();cx.beginPath();cx.moveTo(0,-r*.5);cx.lineTo(r*.4,-r*1.4);cx.stroke(); for(let i=0;i<3;i++){cx.beginPath();cx.arc((i-1)*r*.4,r*.5,r*.15,0,7);cx.fillStyle='#6d4c41';cx.fill();} }
-  else if(id==='book' || id==='totaku') { cx.rotate(-.18);cx.fillRect(-r,-r,r*2,r*2);cx.strokeRect(-r,-r,r*2,r*2);cx.beginPath();cx.moveTo(0,-r);cx.lineTo(0,r);cx.moveTo(-r*.7,-r*.35);cx.lineTo(-r*.2,-r*.35);cx.moveTo(r*.2,r*.2);cx.lineTo(r*.7,r*.2);cx.stroke(); }
+  else if(id==='totaku') { // 塔防-59 阿宅漫画塔：四格分镜 + 右上角对话气泡（和书页发射塔分开）
+    cx.fillRect(-r*1.1,-r*.75,r*1.7,r*1.85);cx.strokeRect(-r*1.1,-r*.75,r*1.7,r*1.85);
+    cx.beginPath();cx.moveTo(-r*.25,-r*.75);cx.lineTo(-r*.25,r*1.1);cx.moveTo(-r*1.1,r*.18);cx.lineTo(r*.6,r*.18);cx.stroke();
+    cx.fillStyle=INK;cx.beginPath();cx.arc(-r*.68,-r*.32,r*.13,0,7);cx.fill();cx.fillRect(-r*.9,r*.55,r*.45,r*.1);cx.fillRect(r*.05,r*.45,r*.32,r*.32);
+    cx.fillStyle='#fff';cx.beginPath();cx.ellipse(r*.62,-r*.95,r*.62,r*.42,0,0,7);cx.fill();cx.stroke();
+    cx.beginPath();cx.moveTo(r*.3,-r*.62);cx.lineTo(r*.12,-r*.3);cx.lineTo(r*.52,-r*.58);cx.fill();cx.stroke();
+    cx.fillStyle=INK;for(let i=-1;i<=1;i++){cx.beginPath();cx.arc(r*(.62+i*.24),-r*.95,r*.07,0,7);cx.fill();}
+  }
+  else if(id==='book') { cx.rotate(-.18);cx.fillRect(-r,-r,r*2,r*2);cx.strokeRect(-r,-r,r*2,r*2);cx.beginPath();cx.moveTo(0,-r);cx.lineTo(0,r);cx.moveTo(-r*.7,-r*.35);cx.lineTo(-r*.2,-r*.35);cx.moveTo(r*.2,r*.2);cx.lineTo(r*.7,r*.2);cx.stroke(); }
   else if(id==='tech') { // 紫外灯：紫色灯管 + 往下照的光线
     cx.strokeStyle='#7c4dff';cx.lineWidth=1.6;for(let i=-2;i<=2;i++){cx.beginPath();cx.moveTo(i*r*.42,r*.05);cx.lineTo(i*r*.62,r*1.25);cx.stroke();}
     cx.strokeStyle=INK;cx.lineWidth=1.8;cx.fillStyle='#b388ff';cx.beginPath();cx.roundRect?cx.roundRect(-r*1.05,-r*.75,r*2.1,r*.6,r*.3):cx.rect(-r*1.05,-r*.75,r*2.1,r*.6);cx.fill();cx.stroke();
