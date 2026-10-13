@@ -1,0 +1,6 @@
+{
+  "baseline": "7ce857d2cccb06a9d4ab2b2531f4d5c1a4041cab",
+  "cacheBlockSha256": "500549b64aa5fbd68d932ed749b2a2dae8e70a2151ef5a59198b6690d77bad81",
+  "snapshotCacheBodyUnchanged": true,
+  "published15Functions": "tests/decor6/published15-integrity.json"
+}

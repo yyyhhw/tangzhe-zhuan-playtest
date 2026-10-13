@@ -22,9 +22,11 @@ with sync_playwright() as p:
   assert pg.evaluate('__tzz.state.gacha.owned.length')==58
   # Capture the real full scrollable catalog in consecutive viewport segments.
   if mode=='after':
-   count=pg.evaluate("document.querySelectorAll('#panel .item-grid:not(.collectible-preview) > .item').length");assert count==58,count
-   for n in range(3):
-    pg.evaluate('(n)=>{const panel=document.querySelector("#panel");panel.scrollTop=n*(panel.scrollHeight-panel.clientHeight)/2}',n);pg.wait_for_timeout(100);pg.screenshot(path=str(OUT/f'catalog-{scope}-{width}-part{n}.png'))
+   count=pg.evaluate("document.querySelectorAll('#panel .item-grid:not(.collectible-preview) > .item').length");assert count==52,count
+   assert pg.locator('#panel .card.super').count()==4 and pg.locator('[data-hidden-decor]').count()==2
+   segments=pg.evaluate('Math.ceil(document.querySelector("#panel").scrollHeight/(document.querySelector("#panel").clientHeight*.8))')
+   for n in range(segments):
+    pg.evaluate('(n)=>{const panel=document.querySelector("#panel");panel.scrollTop=n*panel.clientHeight*.8}',n);pg.wait_for_timeout(100);pg.screenshot(path=str(OUT/f'catalog-{scope}-{width}-part{n}.png'))
   pg.locator('[data-tab="shop"]').click();pg.evaluate('()=>{for(let n=0;n<13;n++)__tzz.tapShop(120,120)}');pg.wait_for_timeout(4000)
   for shop in range(4):
    pg.evaluate('(i)=>__tzz.switchShop(i)',shop);pg.wait_for_timeout(400);pg.wait_for_function('!__tzz.bubble||__tzz.bubble.until<performance.now()/1000');pg.locator('#stage').screenshot(path=str(OUT/f'{mode}-{scope}-{width}-shop{shop}.png'))

@@ -14,6 +14,13 @@ for(const scope of ['formal','preview']){
  test(scope+': old 52 ownership and opaque nested data survive activation without random giveaways',async t=>{
   const ids=['c_charcoal_vest','c_matcha_knit','c_ember_fan_mantle','c_grill_grid_tabard','h_guokui','h_antenna_clip','h_skewer_pinwheel','h_mushroom_parasol','c_skewer_loop_tunic','c_smoke_split_bolero','c_pepper_scale_wrap','c_corn_rib_jacket','h_charcoal_crescent','h_grill_press','h_tin_foil_puff','h_corn_sail'];
   const h=await app(t,{scope,configure:f=>{const s=JSON.parse(f.data.get(f.keys.main));s.gacha.owned.push(...ids);s.gacha.draws=52;s.gacha.future={raw:['keep',null]};s.future={nested:{keep:true}};f.data.set(f.keys.main,JSON.stringify(s));}});assert.equal(h.app.state.gacha.owned.length,52);assert.deepEqual(copy(h.app.state.gacha.future),{raw:['keep',null]});assert.deepEqual(copy(h.app.state.future),{nested:{keep:true}});assert.equal(h.initialE.gachaRemaining(h.app.state).length,4);assert.deepEqual(copy(h.app.state.collectiblesV1.grants),{});
+  const original=[...h.data].filter(([k])=>k.endsWith('original')),identity=copy(h.app.state.collectiblesV1.migration),owned=copy(h.app.state.gacha.owned);
+  assert(h.app.atomic(()=>{h.app.state.coins+=1000000;h.app.state.totalEarned+=1000000;return {ok:true};},'synthetic funds').ok);const funds=h.app.state.coins;
+  for(let i=0;i<4;i++)assert(h.app.atomic(()=>h.initialE.gachaDraw(h.app.state,0),'paid decoration draw').ok);
+  assert.equal(h.app.state.coins,funds-800000);assert.equal(h.app.state.gacha.owned.length,56);assert.deepEqual(copy(h.app.state.gacha.owned.slice(0,52)),owned);
+  for(const id of ['d_opening_photo','d_ward_charm'])assert(h.runtime.claimHidden(id).ok);
+  assert.equal(h.app.state.coins,funds-800000);assert.equal(h.app.state.gacha.owned.length,58);assert.deepEqual(copy(h.app.state.gacha.future),{raw:['keep',null]});assert.deepEqual(copy(h.app.state.collectiblesV1.migration),identity);assert.deepEqual([...h.data].filter(([k])=>k.endsWith('original')),original);
+  const saved=[...h.data],final=copy(h.app.state);await h.close();const re=await app(t,{scope,configure:f=>{f.data.clear();for(const [k,v]of saved)f.data.set(k,v);}});assert.deepEqual(copy(re.app.state.gacha),final.gacha);assert.deepEqual(copy(re.app.state.collectiblesV1),final.collectiblesV1);
  });
  test(scope+': failed claim main write does not publish ownership or replay on read-only reconcile',async t=>{
   // Fail only the claim write (after the pre-claim gameplay flush).

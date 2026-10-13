@@ -1244,7 +1244,7 @@ function act(a, arg, btn) {
     case 'wearWho': wardrobeWho = arg; dirty = true; break;
     case 'jobView': { const [who, k] = arg.split(':'); jobView[who] = { i:+k, at:state.ceos[who].at }; dirty = true; sfx('tap'); break; }
     case 'jobBig': { const [who, k] = arg.split(':'); return showJobArt(who, +k); }
-    case 'claimHidden': { if(!DECOR6)return; const r=COLLECTION.claimHidden(arg); dirty=true; if(r.ok)toast('已领取：'+E.ITEM_BY_ID[arg].name,1900,'header'); break; }
+    case 'claimHidden': { if(!DECOR6)return; const r=COLLECTION.claimHidden(arg); dirty=true; if(r.ok){persist.nextAutoAt=performance.now()+15000;toast('已领取：'+E.ITEM_BY_ID[arg].name,1900,'header');} break; }
     case 'decor': { if (E.ITEM_BY_ID[arg]?.type !== 'decor' || !state.gacha.owned.includes(arg)) return; const r = atomic(() => { const h = state.decorHidden || (state.decorHidden = []); const k = h.indexOf(arg); if (k >= 0) h.splice(k, 1); else h.push(arg); return { ok:true }; }, '装饰显示没有切换'); dirty = true; bgKey = ''; if (r.ok) toast(decorOn(arg) ? '已摆出：四家店共用，开店后可见' : '已从四家店收起', 1900, 'header'); break; }
     case 'card': return showCard(arg);
     case 'reset': toast('新版存档暂不支持重置；保留经营进度和永久交易回执。',3200); return;
