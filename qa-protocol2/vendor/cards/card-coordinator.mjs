@@ -1,4 +1,4 @@
-import {createCardTransitionGuard} from './card-transition.mjs?v=autosave15-candidate-20261013-r1';
+import {createCardTransitionGuard} from './card-transition.mjs?v=autosave15-candidate-20261013-r2';
 export const CARD_ADAPTER_ENABLED=false;
 /** Synthetic-adapter coordinator candidate; no global storage or automatic launch. */
 const fail=code=>{throw Error(code);};

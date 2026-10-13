@@ -1,0 +1,101 @@
+[
+  {
+    "scope": "formal",
+    "path": "/",
+    "fault": "none",
+    "petPurchaseAtMs": 14900,
+    "initialDeadline": 15000,
+    "deadlineAfterPurchase": 29900,
+    "blocked": false,
+    "attempts": 2,
+    "passed": true
+  },
+  {
+    "scope": "formal",
+    "path": "/",
+    "fault": "backup-write",
+    "petPurchaseAtMs": 14900,
+    "initialDeadline": 15000,
+    "deadlineAfterPurchase": 15000,
+    "blocked": true,
+    "attempts": 1,
+    "passed": true
+  },
+  {
+    "scope": "formal",
+    "path": "/",
+    "fault": "main-readback",
+    "petPurchaseAtMs": 14900,
+    "initialDeadline": 15000,
+    "deadlineAfterPurchase": 15000,
+    "blocked": true,
+    "attempts": 2,
+    "passed": true
+  },
+  {
+    "scope": "preview",
+    "path": "/preview/",
+    "fault": "none",
+    "petPurchaseAtMs": 14900,
+    "initialDeadline": 15000,
+    "deadlineAfterPurchase": 29900,
+    "blocked": false,
+    "attempts": 2,
+    "passed": true
+  },
+  {
+    "scope": "preview",
+    "path": "/preview/",
+    "fault": "backup-write",
+    "petPurchaseAtMs": 14900,
+    "initialDeadline": 15000,
+    "deadlineAfterPurchase": 15000,
+    "blocked": true,
+    "attempts": 1,
+    "passed": true
+  },
+  {
+    "scope": "preview",
+    "path": "/preview/",
+    "fault": "main-readback",
+    "petPurchaseAtMs": 14900,
+    "initialDeadline": 15000,
+    "deadlineAfterPurchase": 15000,
+    "blocked": true,
+    "attempts": 2,
+    "passed": true
+  },
+  {
+    "scope": "formal",
+    "path": "/pet/game/",
+    "fault": "none",
+    "petPurchaseAtMs": 14900,
+    "initialDeadline": 15000,
+    "deadlineAfterPurchase": 29900,
+    "blocked": false,
+    "attempts": 2,
+    "passed": true
+  },
+  {
+    "scope": "formal",
+    "path": "/pet/game/",
+    "fault": "backup-write",
+    "petPurchaseAtMs": 14900,
+    "initialDeadline": 15000,
+    "deadlineAfterPurchase": 15000,
+    "blocked": true,
+    "attempts": 1,
+    "passed": true
+  },
+  {
+    "scope": "formal",
+    "path": "/pet/game/",
+    "fault": "main-readback",
+    "petPurchaseAtMs": 14900,
+    "initialDeadline": 15000,
+    "deadlineAfterPurchase": 15000,
+    "blocked": true,
+    "attempts": 2,
+    "passed": true
+  }
+]

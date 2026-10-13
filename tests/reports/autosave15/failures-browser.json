@@ -1,6 +1,7 @@
 [
   {
     "scope": "formal",
+    "path": "/",
     "fault": "backup-write",
     "attemptsAtFailure": 1,
     "noRetriesAcross90Seconds": true,
@@ -8,6 +9,7 @@
   },
   {
     "scope": "formal",
+    "path": "/",
     "fault": "main-readback",
     "attemptsAtFailure": 2,
     "noRetriesAcross90Seconds": true,
@@ -15,6 +17,7 @@
   },
   {
     "scope": "formal",
+    "path": "/",
     "fault": "lease-loss",
     "attemptsAtFailure": 2,
     "noRetriesAcross90Seconds": true,
@@ -22,6 +25,7 @@
   },
   {
     "scope": "preview",
+    "path": "/preview/",
     "fault": "backup-write",
     "attemptsAtFailure": 1,
     "noRetriesAcross90Seconds": true,
@@ -29,6 +33,7 @@
   },
   {
     "scope": "preview",
+    "path": "/preview/",
     "fault": "main-readback",
     "attemptsAtFailure": 2,
     "noRetriesAcross90Seconds": true,
@@ -36,6 +41,31 @@
   },
   {
     "scope": "preview",
+    "path": "/preview/",
+    "fault": "lease-loss",
+    "attemptsAtFailure": 2,
+    "noRetriesAcross90Seconds": true,
+    "blocked": true
+  },
+  {
+    "scope": "formal",
+    "path": "/pet/game/",
+    "fault": "backup-write",
+    "attemptsAtFailure": 1,
+    "noRetriesAcross90Seconds": true,
+    "blocked": true
+  },
+  {
+    "scope": "formal",
+    "path": "/pet/game/",
+    "fault": "main-readback",
+    "attemptsAtFailure": 2,
+    "noRetriesAcross90Seconds": true,
+    "blocked": true
+  },
+  {
+    "scope": "formal",
+    "path": "/pet/game/",
     "fault": "lease-loss",
     "attemptsAtFailure": 2,
     "noRetriesAcross90Seconds": true,

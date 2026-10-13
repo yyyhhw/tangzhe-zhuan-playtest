@@ -2087,7 +2087,7 @@ function petSave(s) {
   if (saveBlocked || frozen) return false;
   if (TEST_MODE) { s.rev++; return true; }
   const r = E.commitSave(STORAGE, SAVE_KEY, BAK_KEY, s);
-  if (r.ok) lastGood = JSON.stringify(s);
+  if (r.ok) { lastGood = JSON.stringify(s); persist.nextAutoAt = performance.now() + 15000; }
   else if (r.stage === 'conflict') freeze();
   return r;
 }
@@ -2564,7 +2564,7 @@ const tdController = window.TDHost.create({
 function openTD() {
   if (frozen || tdOpen || zbOpen || !state.shops[1].open) return;
   tdOpen = true; const f = $('#tdFrame'), generation = ++tdGeneration;
-  const target = new URL('td/index.html?embed=1&v=autosave15-candidate-20261013-r1', location.href);
+  const target = new URL('td/index.html?embed=1&v=autosave15-candidate-20261013-r2', location.href);
   f.onload = () => {
     if (!tdOpen || generation !== tdGeneration) return;
     // Verify the actual loaded document, not merely an iframe src attribute.

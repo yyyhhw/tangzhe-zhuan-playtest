@@ -5,7 +5,7 @@ from playwright.sync_api import sync_playwright
 OUT=Path('/tmp/autosave15');CONTROL=Path(__file__).with_name('browser.py').read_text().split("CONTROL='''",1)[1].split("'''",1)[0];results=[]
 with sync_playwright() as p:
  b=p.chromium.launch(executable_path='/usr/bin/chromium',headless=True,args=['--no-sandbox'])
- for scope,path in [('formal','/'),('preview','/preview/')]:
+ for scope,path in [('formal','/'),('preview','/preview/'),('formal','/pet/game/')]:
   for fault in ['backup-write','main-readback','lease-loss']:
    c=b.new_context();seed=(OUT/f'blindbox18-{scope}-p1.json').read_text();c.add_init_script('if(!sessionStorage.getItem("seeded")){for(const [k,v]of '+seed+')localStorage.setItem(k,v);sessionStorage.setItem("seeded","1");}');c.add_init_script(CONTROL)
    pg=c.new_page();pg.goto('http://127.0.0.1:8765'+path);pg.locator('#collectibleUpgradeConfirm').click(force=True);pg.wait_for_function('!!window.__tzz',polling=50)
@@ -21,6 +21,6 @@ with sync_playwright() as p:
    if fault=='backup-write':assert blocked and pg.evaluate('localStorage.getItem(__tzz.SAVE_KEY)===__baselineRaw')
    if fault=='main-readback':assert blocked and first>0
    if fault=='lease-loss':assert not pg.evaluate('(window.FormalCollectionRuntime||window.PreviewCollectionRuntime).ownsLock()')
-   results.append({'scope':scope,'fault':fault,'attemptsAtFailure':first,'noRetriesAcross90Seconds':True,'blocked':blocked});c.close()
+   results.append({'scope':scope,'path':path,'fault':fault,'attemptsAtFailure':first,'noRetriesAcross90Seconds':True,'blocked':blocked});c.close()
  b.close()
 (OUT/'failures-browser.json').write_text(json.dumps(results,indent=2));print(json.dumps(results))
