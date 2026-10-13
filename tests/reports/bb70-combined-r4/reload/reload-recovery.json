@@ -1,0 +1,90 @@
+[
+  {
+    "width": 320,
+    "path": "/",
+    "fault": "backup",
+    "lowerAckCovered": true,
+    "topReloadNormalClick": true,
+    "afterReloadOriginalClaimCount": 0,
+    "finalOriginalClaimCount": 1,
+    "blocked": false,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "path": "/",
+    "fault": "unknown",
+    "lowerAckCovered": true,
+    "topReloadNormalClick": true,
+    "afterReloadOriginalClaimCount": 1,
+    "finalOriginalClaimCount": 1,
+    "blocked": false,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "path": "/pet/game/",
+    "fault": "backup",
+    "lowerAckCovered": true,
+    "topReloadNormalClick": true,
+    "afterReloadOriginalClaimCount": 0,
+    "finalOriginalClaimCount": 1,
+    "blocked": false,
+    "errors": []
+  },
+  {
+    "width": 320,
+    "path": "/pet/game/",
+    "fault": "unknown",
+    "lowerAckCovered": true,
+    "topReloadNormalClick": true,
+    "afterReloadOriginalClaimCount": 1,
+    "finalOriginalClaimCount": 1,
+    "blocked": false,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "path": "/",
+    "fault": "backup",
+    "lowerAckCovered": true,
+    "topReloadNormalClick": true,
+    "afterReloadOriginalClaimCount": 0,
+    "finalOriginalClaimCount": 1,
+    "blocked": false,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "path": "/",
+    "fault": "unknown",
+    "lowerAckCovered": true,
+    "topReloadNormalClick": true,
+    "afterReloadOriginalClaimCount": 1,
+    "finalOriginalClaimCount": 1,
+    "blocked": false,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "path": "/pet/game/",
+    "fault": "backup",
+    "lowerAckCovered": true,
+    "topReloadNormalClick": true,
+    "afterReloadOriginalClaimCount": 0,
+    "finalOriginalClaimCount": 1,
+    "blocked": false,
+    "errors": []
+  },
+  {
+    "width": 390,
+    "path": "/pet/game/",
+    "fault": "unknown",
+    "lowerAckCovered": true,
+    "topReloadNormalClick": true,
+    "afterReloadOriginalClaimCount": 1,
+    "finalOriginalClaimCount": 1,
+    "blocked": false,
+    "errors": []
+  }
+]

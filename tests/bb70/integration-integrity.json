@@ -1,0 +1,46 @@
+[
+  {
+    "path": "preview/app.js",
+    "sha256AfterReleaseNormalization": "bb70b90234ca599f3302ac9914be9d43dda2c3b6703f73d61e2b9ca6d7161332"
+  },
+  {
+    "path": "collectibles/decor6-catalog.mjs",
+    "sha256AfterReleaseNormalization": "0eca3977b81ad21786786af3af6baaf40805ee3ff9edd29332e5a4061509bc17"
+  },
+  {
+    "path": "collectibles/decor6-display.mjs",
+    "sha256AfterReleaseNormalization": "b266a4f331acfd92b25f5a4dd4e20da72edf160071fb6c88ab2764f570d5310c"
+  },
+  {
+    "path": "collectibles/decor6-grants.mjs",
+    "sha256AfterReleaseNormalization": "1918e98ab2e0bb60bd11ea0492ebc0f16ac2b3f2527d97510e4518a0b94b3778"
+  },
+  {
+    "path": "collectibles/entry.mjs",
+    "sha256AfterReleaseNormalization": "c22d346a533958808c2555f004b229456addd4fda1d5d3c593a4687f9c9a3d04"
+  },
+  {
+    "path": "qa-protocol2/real-page-facade.mjs",
+    "sha256AfterReleaseNormalization": "a007a7da5db92aa286f56f1326b58130dc2f85358b5857adc0bc2f727d7fc79d"
+  },
+  {
+    "path": "qa-protocol2/vendor/runtime/validator.mjs",
+    "sha256AfterReleaseNormalization": "a634d246d9d2d1ab67388abeb97c8190b887224444d36d0e0e4935bcca9fc350"
+  },
+  {
+    "path": "qa-protocol2/vendor/cards/card-coordinator.mjs",
+    "sha256AfterReleaseNormalization": "ffaae9e2af8291023901e4861acb46ccb6a639b2819fd33aa3b02fe5ea3be60a"
+  },
+  {
+    "path": "economy.js",
+    "sha256AfterReleaseNormalization": "9194a7cfb19f72a660f5cc1da0d45599f594d0e9228c6b4a12d47bad2864f743"
+  },
+  {
+    "path": "preview/economy.js",
+    "sha256AfterReleaseNormalization": "b005a82bd3ccd728bf5de62a48fa7007dbfb0e78b1d963163de2a47d31e20538"
+  },
+  {
+    "path": "pet/game/economy.js",
+    "sha256AfterReleaseNormalization": "85172af03f342b4564fc09dcd6e61eaccfa1ea2c61d9fd35875f966669e7c1d2"
+  }
+]

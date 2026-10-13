@@ -1,0 +1,25 @@
+盲盒70 r4 组合候选独立核验（2026-10-13）
+
+基线：main 9a2aeddfc2287d8458138bf9141fbc5200d5752e。
+复用作者分支 xiong2/bb70-launch-notice-on-9a2aedd，作者 r4 3a76c3b725014cc7aa314247a2176f8b1a57b301。
+本次产品差异仅4文件6行替换：根/pet的style.css使用当前r4资源版本；两处固定52目录注释改为新衣帽目录/两批衣帽合计。未改变作者r4运行逻辑。preview不增加70功能。
+
+自动模型/单元测试：382/382 PASS（作者380 + 组合完整性和CSS版本负对照2项），见node-382.log。不能将此计为真实浏览器结果。
+11个关键文件相对9a仅允许资源token归一化，SHA256完整性通过：16目录/渲染/领取与保序克隆、入口生命周期、P2桥接/校验/协调器、三入口经济及preview/app。清单见tests/bb70/integration-integrity.json。
+
+实际Chromium，隔离合成档，页面真实渲染，正常locator.click，无force、无DOM click、未修改真实存档：
+- integration-390 与 integration-320：各8/8 PASS。根/pet P1取消→旧盲盒→真正关页→P2首次提示；成功离线领取一次持久化、双倍资格未消费、隐藏两项正常UI免费单次领取；备份失败及持续读回异常的保护与实际核对按钮恢复。
+- reload：8/8 PASS。根/pet × 320/390 × 备份/持续读回异常，正常点击上层“刷新重读”，前者保留待领后领一次，后者保留已落盘账本一次。
+- once-readback：4/4 PASS。根/pet × 单次旧字符串/单次抛异常，显式consumed布尔只注入一次，后续恢复原生读取（没有返回undefined）。每案主档写1次、核对写0次、刷新前后原领取账本各1条。单次旧字符串路径核对仍受保护，正常点上层刷新恢复；单次异常路径核对即可恢复。
+- lifecycle：6/6 PASS，见integration-390/lifecycle.json。根/preview/pet各真实reload/close，自动存档后等待9秒再离开；pagehide首回调持锁且未封写时补尾款，close等实际close事件后重开。
+
+证据界限：领取测试固定每次导航的Date.now用于稳定币数断言，rAF正常；生命周期测试使用真实时间。Storage失败是明确注入的故障，不代表真实硬件坏盘。上层存档保护遮住下层确认是保护接管，正常上层核对/刷新入口已点击验证，未绕过保护。抽查320根保护截图按钮完整、390 pet首次提示显示16件。旧r3报告的20 PASS/4遮挡REVIEW/2脚本ERROR不能宣称26 PASS；本报告独立测试不继承其错误的undefined注入。
+未实测本r4 WebKit、Firefox和移动真机；未重跑16大型存档性能矩阵，保序克隆文件保持不变，既有性能限制仍在。候选未合main、未部署70。
+
+复现（仓库根目录，本地HTTP服务8875）：
+mapfile -t test_files < <(rg --files tests -g '*.test.mjs'); node --experimental-vm-modules --test "${test_files[@]}"
+python3 tests/bb70/integration-browser.py
+BB70_WIDTH=320 BB70_OUT=/tmp/bb70-r4-review-320 python3 tests/bb70/integration-browser.py
+python3 tests/bb70/reload-recovery-browser.py
+python3 tests/bb70/once-readback-browser.py
+LIFECYCLE_BASE=http://127.0.0.1:8875 EXPECT_SAVED=1 LIFECYCLE_OUT=/tmp/bb70-r4-review/lifecycle.json python3 tests/lifecycle-save/browser.py

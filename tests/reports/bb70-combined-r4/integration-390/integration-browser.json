@@ -1,0 +1,74 @@
+[
+  {
+    "path": "/",
+    "scenario": "P1 cancel/old gacha/real close/P2 first notice",
+    "pass": true,
+    "errors": []
+  },
+  {
+    "path": "/",
+    "hiddenClaimsFreeAndDurable": true,
+    "scenario": "success and reload",
+    "exactOneCommit": true,
+    "exactClaimAmount": 1062075011.985,
+    "pass": true
+  },
+  {
+    "path": "/",
+    "scenario": "backup",
+    "initialWrites": 0,
+    "realReconcileClick": true,
+    "reconcileWrites": 0,
+    "realAcknowledgeClick": true,
+    "noDuplicateClaimAfterReopen": true,
+    "pass": true,
+    "errors": []
+  },
+  {
+    "path": "/",
+    "scenario": "unknown",
+    "initialWrites": 1,
+    "realReconcileClick": true,
+    "reconcileWrites": 0,
+    "realAcknowledgeClick": true,
+    "noDuplicateClaimAfterReopen": true,
+    "pass": true,
+    "errors": []
+  },
+  {
+    "path": "/pet/game/",
+    "scenario": "P1 cancel/old gacha/real close/P2 first notice",
+    "pass": true,
+    "errors": []
+  },
+  {
+    "path": "/pet/game/",
+    "hiddenClaimsFreeAndDurable": true,
+    "scenario": "success and reload",
+    "exactOneCommit": true,
+    "exactClaimAmount": 1063218125.0925,
+    "pass": true
+  },
+  {
+    "path": "/pet/game/",
+    "scenario": "backup",
+    "initialWrites": 0,
+    "realReconcileClick": true,
+    "reconcileWrites": 0,
+    "realAcknowledgeClick": true,
+    "noDuplicateClaimAfterReopen": true,
+    "pass": true,
+    "errors": []
+  },
+  {
+    "path": "/pet/game/",
+    "scenario": "unknown",
+    "initialWrites": 1,
+    "realReconcileClick": true,
+    "reconcileWrites": 0,
+    "realAcknowledgeClick": true,
+    "noDuplicateClaimAfterReopen": true,
+    "pass": true,
+    "errors": []
+  }
+]

@@ -1,0 +1,106 @@
+[
+  {
+    "path": "/",
+    "fault": "stale-once",
+    "audit": {
+      "writes": 1,
+      "injections": 1,
+      "reads": [
+        {
+          "kind": "stale-once",
+          "type": "string",
+          "length": 8262
+        },
+        {
+          "kind": "native",
+          "type": "string",
+          "length": 8253
+        }
+      ]
+    },
+    "claimWritesBeforeReload": 1,
+    "ledgerBeforeReload": 1,
+    "ledgerAfterReload": 1,
+    "reconcileWrites": 0,
+    "topReloadNeeded": true,
+    "reloadedReadOnly": false,
+    "errors": []
+  },
+  {
+    "path": "/",
+    "fault": "throw-once",
+    "audit": {
+      "writes": 1,
+      "injections": 1,
+      "reads": [
+        {
+          "kind": "throw"
+        },
+        {
+          "kind": "native",
+          "type": "string",
+          "length": 8252
+        }
+      ]
+    },
+    "claimWritesBeforeReload": 1,
+    "ledgerBeforeReload": 1,
+    "ledgerAfterReload": 1,
+    "reconcileWrites": 0,
+    "topReloadNeeded": false,
+    "reloadedReadOnly": false,
+    "errors": []
+  },
+  {
+    "path": "/pet/game/",
+    "fault": "stale-once",
+    "audit": {
+      "writes": 1,
+      "injections": 1,
+      "reads": [
+        {
+          "kind": "stale-once",
+          "type": "string",
+          "length": 8244
+        },
+        {
+          "kind": "native",
+          "type": "string",
+          "length": 8233
+        }
+      ]
+    },
+    "claimWritesBeforeReload": 1,
+    "ledgerBeforeReload": 1,
+    "ledgerAfterReload": 1,
+    "reconcileWrites": 0,
+    "topReloadNeeded": true,
+    "reloadedReadOnly": false,
+    "errors": []
+  },
+  {
+    "path": "/pet/game/",
+    "fault": "throw-once",
+    "audit": {
+      "writes": 1,
+      "injections": 1,
+      "reads": [
+        {
+          "kind": "throw"
+        },
+        {
+          "kind": "native",
+          "type": "string",
+          "length": 8232
+        }
+      ]
+    },
+    "claimWritesBeforeReload": 1,
+    "ledgerBeforeReload": 1,
+    "ledgerAfterReload": 1,
+    "reconcileWrites": 0,
+    "topReloadNeeded": false,
+    "reloadedReadOnly": false,
+    "errors": []
+  }
+]

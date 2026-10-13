@@ -1,0 +1,560 @@
+[
+  {
+    "path": "/",
+    "action": "reload",
+    "memoryBefore": 2234275963,
+    "diskBefore": 2232074629,
+    "diskAfter": 2234282324,
+    "savedTail": true,
+    "reopened": {
+      "coins": 2234315351,
+      "pending": null,
+      "blocked": false
+    },
+    "reopenedCoinsPlusPending": 2234315351,
+    "trace": [
+      {
+        "kind": "main-write",
+        "blocked": false,
+        "owns": true,
+        "coins": 2228401010,
+        "at": 1791864851116
+      },
+      {
+        "kind": "main-write",
+        "blocked": false,
+        "owns": true,
+        "coins": 2232074629,
+        "at": 1791864866129
+      },
+      {
+        "kind": "pagehide-1-start",
+        "blocked": false,
+        "owns": true,
+        "coins": 2234280122,
+        "at": 1791864875148
+      },
+      {
+        "kind": "main-write",
+        "blocked": false,
+        "owns": true,
+        "coins": 2234282324,
+        "at": 1791864875153
+      },
+      {
+        "kind": "pagehide-1-end",
+        "blocked": true,
+        "owns": false,
+        "coins": 2234282324,
+        "at": 1791864875160
+      },
+      {
+        "kind": "pagehide-1-microtask",
+        "blocked": true,
+        "owns": false,
+        "coins": 2234282324,
+        "at": 1791864875163
+      },
+      {
+        "kind": "pagehide-2-start",
+        "blocked": true,
+        "owns": false,
+        "coins": 2234282324,
+        "at": 1791864875163
+      },
+      {
+        "kind": "pagehide-2-end",
+        "blocked": true,
+        "owns": false,
+        "coins": 2234282324,
+        "at": 1791864875163
+      },
+      {
+        "kind": "pagehide-2-microtask",
+        "blocked": true,
+        "owns": false,
+        "coins": 2234282324,
+        "at": 1791864875163
+      },
+      {
+        "kind": "pagehide-3-start",
+        "blocked": true,
+        "owns": false,
+        "coins": 2234282324,
+        "at": 1791864875164
+      },
+      {
+        "kind": "pagehide-3-end",
+        "blocked": true,
+        "owns": false,
+        "coins": 2234282324,
+        "at": 1791864875164
+      },
+      {
+        "kind": "pagehide-3-microtask",
+        "blocked": true,
+        "owns": false,
+        "coins": 2234282324,
+        "at": 1791864875164
+      }
+    ]
+  },
+  {
+    "path": "/",
+    "action": "close",
+    "memoryBefore": 1173163637,
+    "diskBefore": 1170957900,
+    "diskAfter": 1173165839,
+    "savedTail": true,
+    "reopened": {
+      "coins": 1173237031,
+      "pending": null,
+      "blocked": false
+    },
+    "reopenedCoinsPlusPending": 1173237031,
+    "trace": [
+      {
+        "kind": "main-write",
+        "blocked": false,
+        "owns": true,
+        "coins": 1167285748,
+        "at": 1791864876166
+      },
+      {
+        "kind": "main-write",
+        "blocked": false,
+        "owns": true,
+        "coins": 1170957900,
+        "at": 1791864891178
+      },
+      {
+        "kind": "pagehide-1-start",
+        "blocked": false,
+        "owns": true,
+        "coins": 1173163637,
+        "at": 1791864900199
+      },
+      {
+        "kind": "main-write",
+        "blocked": false,
+        "owns": true,
+        "coins": 1173165839,
+        "at": 1791864900203
+      },
+      {
+        "kind": "pagehide-1-end",
+        "blocked": true,
+        "owns": false,
+        "coins": 1173165839,
+        "at": 1791864900206
+      },
+      {
+        "kind": "pagehide-1-microtask",
+        "blocked": true,
+        "owns": false,
+        "coins": 1173165839,
+        "at": 1791864900208
+      },
+      {
+        "kind": "pagehide-2-start",
+        "blocked": true,
+        "owns": false,
+        "coins": 1173165839,
+        "at": 1791864900208
+      },
+      {
+        "kind": "pagehide-2-end",
+        "blocked": true,
+        "owns": false,
+        "coins": 1173165839,
+        "at": 1791864900209
+      },
+      {
+        "kind": "pagehide-2-microtask",
+        "blocked": true,
+        "owns": false,
+        "coins": 1173165839,
+        "at": 1791864900209
+      },
+      {
+        "kind": "pagehide-3-start",
+        "blocked": true,
+        "owns": false,
+        "coins": 1173165839,
+        "at": 1791864900209
+      },
+      {
+        "kind": "pagehide-3-end",
+        "blocked": true,
+        "owns": false,
+        "coins": 1173165839,
+        "at": 1791864900209
+      },
+      {
+        "kind": "pagehide-3-microtask",
+        "blocked": true,
+        "owns": false,
+        "coins": 1173165839,
+        "at": 1791864900209
+      }
+    ]
+  },
+  {
+    "path": "/preview/",
+    "action": "reload",
+    "memoryBefore": 1176260746,
+    "diskBefore": 1174055987,
+    "diskAfter": 1176268085,
+    "savedTail": true,
+    "reopened": {
+      "coins": 1176307351,
+      "pending": null,
+      "blocked": false
+    },
+    "reopenedCoinsPlusPending": 1176307351,
+    "trace": [
+      {
+        "kind": "main-write",
+        "blocked": false,
+        "owns": true,
+        "coins": 1170381634,
+        "at": 1791864901475
+      },
+      {
+        "kind": "main-write",
+        "blocked": false,
+        "owns": true,
+        "coins": 1174055987,
+        "at": 1791864916497
+      },
+      {
+        "kind": "pagehide-1-start",
+        "blocked": false,
+        "owns": true,
+        "coins": 1176265639,
+        "at": 1791864925534
+      },
+      {
+        "kind": "main-write",
+        "blocked": false,
+        "owns": true,
+        "coins": 1176268085,
+        "at": 1791864925542
+      },
+      {
+        "kind": "pagehide-1-end",
+        "blocked": true,
+        "owns": false,
+        "coins": 1176268085,
+        "at": 1791864925551
+      },
+      {
+        "kind": "pagehide-1-microtask",
+        "blocked": true,
+        "owns": false,
+        "coins": 1176268085,
+        "at": 1791864925552
+      },
+      {
+        "kind": "pagehide-2-start",
+        "blocked": true,
+        "owns": false,
+        "coins": 1176268085,
+        "at": 1791864925553
+      },
+      {
+        "kind": "pagehide-2-end",
+        "blocked": true,
+        "owns": false,
+        "coins": 1176268085,
+        "at": 1791864925553
+      },
+      {
+        "kind": "pagehide-2-microtask",
+        "blocked": true,
+        "owns": false,
+        "coins": 1176268085,
+        "at": 1791864925553
+      },
+      {
+        "kind": "pagehide-3-start",
+        "blocked": true,
+        "owns": false,
+        "coins": 1176268085,
+        "at": 1791864925553
+      },
+      {
+        "kind": "pagehide-3-end",
+        "blocked": true,
+        "owns": false,
+        "coins": 1176268085,
+        "at": 1791864925553
+      },
+      {
+        "kind": "pagehide-3-microtask",
+        "blocked": true,
+        "owns": false,
+        "coins": 1176268085,
+        "at": 1791864925553
+      }
+    ]
+  },
+  {
+    "path": "/preview/",
+    "action": "close",
+    "memoryBefore": 1179346967,
+    "diskBefore": 1177145634,
+    "diskAfter": 1179352105,
+    "savedTail": true,
+    "reopened": {
+      "coins": 1179423297,
+      "pending": null,
+      "blocked": false
+    },
+    "reopenedCoinsPlusPending": 1179423297,
+    "trace": [
+      {
+        "kind": "main-write",
+        "blocked": false,
+        "owns": true,
+        "coins": 1173472993,
+        "at": 1791864926764
+      },
+      {
+        "kind": "main-write",
+        "blocked": false,
+        "owns": true,
+        "coins": 1177145634,
+        "at": 1791864941775
+      },
+      {
+        "kind": "pagehide-1-start",
+        "blocked": false,
+        "owns": true,
+        "coins": 1179351126,
+        "at": 1791864950791
+      },
+      {
+        "kind": "main-write",
+        "blocked": false,
+        "owns": true,
+        "coins": 1179352105,
+        "at": 1791864950794
+      },
+      {
+        "kind": "pagehide-1-end",
+        "blocked": true,
+        "owns": false,
+        "coins": 1179352105,
+        "at": 1791864950798
+      },
+      {
+        "kind": "pagehide-1-microtask",
+        "blocked": true,
+        "owns": false,
+        "coins": 1179352105,
+        "at": 1791864950799
+      },
+      {
+        "kind": "pagehide-2-start",
+        "blocked": true,
+        "owns": false,
+        "coins": 1179352105,
+        "at": 1791864950799
+      },
+      {
+        "kind": "pagehide-2-end",
+        "blocked": true,
+        "owns": false,
+        "coins": 1179352105,
+        "at": 1791864950799
+      },
+      {
+        "kind": "pagehide-2-microtask",
+        "blocked": true,
+        "owns": false,
+        "coins": 1179352105,
+        "at": 1791864950799
+      },
+      {
+        "kind": "pagehide-3-start",
+        "blocked": true,
+        "owns": false,
+        "coins": 1179352105,
+        "at": 1791864950799
+      },
+      {
+        "kind": "pagehide-3-end",
+        "blocked": true,
+        "owns": false,
+        "coins": 1179352105,
+        "at": 1791864950799
+      },
+      {
+        "kind": "pagehide-3-microtask",
+        "blocked": true,
+        "owns": false,
+        "coins": 1179352105,
+        "at": 1791864950800
+      }
+    ]
+  },
+  {
+    "path": "/pet/game/",
+    "action": "reload",
+    "memoryBefore": 1182455452,
+    "diskBefore": 1180250204,
+    "diskAfter": 1182461324,
+    "savedTail": true,
+    "reopened": {
+      "coins": 1182489825,
+      "pending": null,
+      "blocked": false
+    },
+    "reopenedCoinsPlusPending": 1182489825,
+    "trace": [
+      {
+        "kind": "main-write",
+        "blocked": false,
+        "owns": true,
+        "coins": 1176577074,
+        "at": 1791864952126
+      },
+      {
+        "kind": "main-write",
+        "blocked": false,
+        "owns": true,
+        "coins": 1180250204,
+        "at": 1791864967142
+      },
+      {
+        "kind": "pagehide-1-start",
+        "blocked": false,
+        "owns": true,
+        "coins": 1182459611,
+        "at": 1791864976175
+      },
+      {
+        "kind": "main-write",
+        "blocked": false,
+        "owns": true,
+        "coins": 1182461324,
+        "at": 1791864976179
+      },
+      {
+        "kind": "pagehide-1-end",
+        "blocked": true,
+        "owns": false,
+        "coins": 1182461324,
+        "at": 1791864976181
+      },
+      {
+        "kind": "pagehide-1-microtask",
+        "blocked": true,
+        "owns": false,
+        "coins": 1182461324,
+        "at": 1791864976182
+      },
+      {
+        "kind": "pagehide-2-start",
+        "blocked": true,
+        "owns": false,
+        "coins": 1182461324,
+        "at": 1791864976182
+      },
+      {
+        "kind": "pagehide-2-end",
+        "blocked": true,
+        "owns": false,
+        "coins": 1182461324,
+        "at": 1791864976182
+      },
+      {
+        "kind": "pagehide-2-microtask",
+        "blocked": true,
+        "owns": false,
+        "coins": 1182461324,
+        "at": 1791864976182
+      }
+    ]
+  },
+  {
+    "path": "/pet/game/",
+    "action": "close",
+    "memoryBefore": 1185501185,
+    "diskBefore": 1183299607,
+    "diskAfter": 1185506323,
+    "savedTail": true,
+    "reopened": {
+      "coins": 1185575435,
+      "pending": null,
+      "blocked": false
+    },
+    "reopenedCoinsPlusPending": 1185575435,
+    "trace": [
+      {
+        "kind": "main-write",
+        "blocked": false,
+        "owns": true,
+        "coins": 1179625987,
+        "at": 1791864977054
+      },
+      {
+        "kind": "main-write",
+        "blocked": false,
+        "owns": true,
+        "coins": 1183299607,
+        "at": 1791864992073
+      },
+      {
+        "kind": "pagehide-1-start",
+        "blocked": false,
+        "owns": true,
+        "coins": 1185505589,
+        "at": 1791865001089
+      },
+      {
+        "kind": "main-write",
+        "blocked": false,
+        "owns": true,
+        "coins": 1185506323,
+        "at": 1791865001093
+      },
+      {
+        "kind": "pagehide-1-end",
+        "blocked": true,
+        "owns": false,
+        "coins": 1185506323,
+        "at": 1791865001095
+      },
+      {
+        "kind": "pagehide-1-microtask",
+        "blocked": true,
+        "owns": false,
+        "coins": 1185506323,
+        "at": 1791865001095
+      },
+      {
+        "kind": "pagehide-2-start",
+        "blocked": true,
+        "owns": false,
+        "coins": 1185506323,
+        "at": 1791865001095
+      },
+      {
+        "kind": "pagehide-2-end",
+        "blocked": true,
+        "owns": false,
+        "coins": 1185506323,
+        "at": 1791865001096
+      },
+      {
+        "kind": "pagehide-2-microtask",
+        "blocked": true,
+        "owns": false,
+        "coins": 1185506323,
+        "at": 1791865001096
+      }
+    ]
+  }
+]

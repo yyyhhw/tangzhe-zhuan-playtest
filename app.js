@@ -1654,8 +1654,8 @@ function showMusicCredits() {
 const BB70_NOTICE_VER = 'bb70-wearables16-20261013';
 const BB70_LAUNCH_KEY = 'tzz-bb70-launch-seen:' + BB70_NOTICE_VER;   // 开游戏弹窗：本版本只弹一次
 const BB70_VISIT_KEY = 'tzz-bb70-gacha-visited:' + BB70_NOTICE_VER;   // 去过盲盒页一次后，离线结算不再显示上新条
-const BB70_NEW_COUNT = 16;   // 本次新衣帽件数：首批 8 件 + 盲盒-18 第二批 8 件（目录 36 → 52）
-// 盲盒-70 r3（熊大审 #1）：只有真正启用了新目录（P2 协议 + 52 件衣帽目录已激活）才提示「16 件新」、才写任何标记；
+const BB70_NEW_COUNT = 16;   // 本次新衣帽件数：首批 8 件 + 盲盒-18 第二批 8 件（两批衣帽合计）
+// 盲盒-70 r3（熊大审 #1）：只有真正启用了新目录（P2 协议 + 新衣帽目录已激活）才提示「16 件新」、才写任何标记；
 //   P1（取消升级、仍是 36 件旧目录）一律不弹、不显示、不写。
 function bb70P2Active() { const rt = globalThis.FormalCollectionRuntime; return !!state && state._collectionProtocol === 2 && !!rt && rt.qaProtocol2 === true && rt.qaWearables8 === true; }
 function bb70Get(k) { try { return localStorage.getItem(k) === '1'; } catch (e) { return true; } }
