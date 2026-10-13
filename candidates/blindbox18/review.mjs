@@ -1,9 +1,9 @@
-import '../../home-interaction.js?v=bb70-launch-notice-20261013-r2';
-import display from './display.mjs?v=bb70-launch-notice-20261013-r2';
-import baseDisplay from '../../qa-protocol2/wearables8-display.mjs?v=bb70-launch-notice-20261013-r2';
-import {ITEMS} from './catalog.mjs?v=bb70-launch-notice-20261013-r2';
-import * as render from './render.mjs?v=bb70-launch-notice-20261013-r2';
-import {EIGHT_WEARABLES} from '../../qa-protocol2/eight-catalog.mjs?v=bb70-launch-notice-20261013-r2';
+import '../../home-interaction.js?v=bb70-launch-notice-20261013-r3';
+import display from './display.mjs?v=bb70-launch-notice-20261013-r3';
+import baseDisplay from '../../qa-protocol2/wearables8-display.mjs?v=bb70-launch-notice-20261013-r3';
+import {ITEMS} from './catalog.mjs?v=bb70-launch-notice-20261013-r3';
+import * as render from './render.mjs?v=bb70-launch-notice-20261013-r3';
+import {EIGHT_WEARABLES} from '../../qa-protocol2/eight-catalog.mjs?v=bb70-launch-notice-20261013-r3';
 const source=await (await fetch('../../app.js')).text();
 // Execute the actual shipped person implementation, with only explicit dependency injection.
 const looks=source.slice(source.indexOf('const LOOKS ='),source.indexOf('const CLOTHES ='));

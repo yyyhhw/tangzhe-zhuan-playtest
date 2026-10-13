@@ -14,7 +14,8 @@ async function boot(t,{path,protocol,btn,configure,storageFault}){
 }
 // Mount the ACTUAL 盲盒-70 block + showOffline from the shipped app file; claim goes through the real extracted atomic→txn→persist→coordinator.
 function mount(h,file){
-  const code=slice(source(file),'/* ---------- 盲盒-70','/* ---------- 调任');
+  const src=source(file),code=slice(src,'/* ---------- 盲盒-70','/* ---------- 调任');
+  const tabLine=slice(src,'function setTab(','function updateCompactHead').split('\n').find(l=>l.includes('bb70'));assert(tabLine,'setTab bb70 line');
   const ui={html:'',open:false,els:new Map(),log:[],mq:[],atomicCalls:0};
   const el=id=>{if(!ui.els.has(id))ui.els.set(id,{id,disabled:false,fns:[],addEventListener(ev,fn){this.fns.push(fn);},set innerHTML(x){ui.html+=x;ui.banner=x;},click(){for(const f of this.fns)f();}});return ui.els.get(id);};
   let dirty=false;
@@ -22,9 +23,10 @@ function mount(h,file){
     atomic:(...a)=>{ui.atomicCalls++;return h.app.atomic(...a);},now:()=>h.context.Date.now(),localStorage:h.context.localStorage,mq:ui.mq,
     modalOpen:()=>ui.open,openModal:x=>{ui.open=true;ui.html=x;ui.els.clear();},closeModal:()=>{ui.open=false;ui.html='';ui.log.push(['close']);},
     $:sel=>{const id=sel.slice(1);return ui.html.includes(`id="${id}"`)?el(id):null;},
-    setTab:x=>ui.log.push(['tab',x]),toast:m=>{ui.log.push(['toast',m]);h.context.__modelToasts.push(m);},
+    setTab:x=>{ui.log.push(['tab',x]);fns.realSetTab(x);},toast:m=>{ui.log.push(['toast',m]);h.context.__modelToasts.push(m);},
     audioUnlock(){},sfx(){},popWord(){},bumpCoins(){},burstCoins(){},fmt:String,fmtDur:String,fmtClockLocal:String,coinSm:'',W:1,H:1,get dirty(){return dirty;},set dirty(v){dirty=v;}};
-  const fns=vm.runInContext(`(function(env){with(env){return (function(){${code}\nreturn {showOffline,showNewBlindboxNotice,BB70_LAUNCH_KEY,BB70_VISIT_KEY,bb70ShouldShowLaunch};})();}})`,h.context)(env);
+  // realSetTab = the ACTUAL bb70 line from the shipped setTab() (r3: P1 old gacha tab must not write VISIT)
+  let fns;fns=vm.runInContext(`(function(env){with(env){return (function(){${code}\nfunction realSetTab(t){\n${tabLine}\n}\nreturn {showOffline,showNewBlindboxNotice,BB70_LAUNCH_KEY,BB70_VISIT_KEY,bb70ShouldShowLaunch,bb70ShouldShowOfflineBanner,bb70Set,realSetTab};})();}})`,h.context)(env);
   return {...fns,ui,click:id=>{const e=ui.els.get(id);assert(e&&ui.html.includes(`id="${id}"`),id+' rendered');e.click();}};
 }
 function settle(h){const s=h.app.state,p=h.context.Economy.settleOffline(s,Math.max(s.lastSeen,h.context.Date.now())+7200e3,()=>'bb70-protocol-offline');assert(p&&p.amount>0);assert.equal(h.app.persist(),true);return copy(p);}
@@ -34,7 +36,34 @@ const flags=(h,m)=>[h.data.get(m.BB70_LAUNCH_KEY)??null,h.data.get(m.BB70_VISIT_
 async function reopen(t,h,route,mode){const keep=new Map(h.data);await h.close();
   return boot(t,{path:route,protocol:1,btn:mode[3]===1?'collectibleUpgradeCancel':null,configure:f=>{f.data.clear();for(const [k,v] of keep)f.data.set(k,v);}});}
 
-for(const [file,route] of ROUTES)for(const mode of MODES){
+for(const [file,route] of ROUTES){
+  const P1=MODES[0];
+  // r3（熊大审 #1/#3）：P1 保留（取消升级，仍是 36 件旧目录）——不提示 16 件新、不写任何标记；普通领取照常
+  test(`${file} P1 kept (cancel upgrade): no launch notice, no settlement banner, no markers written; normal claim still commits once`,opts,async t=>{
+    const h=await boot(t,{path:route,protocol:1,btn:P1[2]});assert.equal(h.app.state._collectionProtocol,1);assert.notEqual(h.runtime.qaWearables8,true);
+    const p=settle(h),before=copy(h.app.state),w=mainWrites(h);const m=mount(h,file);
+    assert.equal(m.bb70ShouldShowLaunch(),false);assert.equal(m.bb70ShouldShowOfflineBanner(),false);
+    m.showNewBlindboxNotice();assert.equal(m.ui.open,false,'no launch popup on P1');
+    m.showOffline();assert.doesNotMatch(m.ui.html,/盲盒上新|claimBb70|16 件/);assert.equal(m.ui.els.has('claimBb70'),false);
+    m.click('claim');assert.equal(mainWrites(h),w+1);assert.equal(saved(h).coins,before.coins+p.amount);assert.equal(saved(h).pending,null);
+    m.realSetTab('gacha');assert.equal(m.bb70Set(m.BB70_LAUNCH_KEY),false);assert.equal(m.bb70Set(m.BB70_VISIT_KEY),false);
+    assert.deepEqual(flags(h,m),[null,null],'P1 writes no markers');assert(![...h.data.keys()].some(k=>k.startsWith('tzz-bb70')),'no bb70 keys at all');
+  });
+  // r3（熊大审 #3）：连续场景 P1 取消 → 进旧盲盒页 → 退出 → 升级到 P2 → 第一次提醒必须出现
+  test(`${file} continuous: P1 cancel → old gacha tab → exit → upgrade to P2 → first launch notice + settlement reminder show`,opts,async t=>{
+    const h=await boot(t,{path:route,protocol:1,btn:'collectibleUpgradeCancel'});assert.equal(h.app.state._collectionProtocol,1);
+    const m=mount(h,file);m.realSetTab('gacha');m.realSetTab('shop');m.showNewBlindboxNotice();assert.equal(m.ui.open,false);assert.deepEqual(flags(h,m),[null,null]);
+    const keep=new Map(h.data);await h.close();
+    const r=await boot(t,{path:route,protocol:1,btn:'collectibleUpgradeConfirm',configure:f=>{f.data.clear();for(const [k,v] of keep)f.data.set(k,v);}});
+    assert.equal(r.app.state._collectionProtocol,2);assert.equal(r.runtime.qaWearables8,true);
+    const p=settle(r);const m2=mount(r,file);assert.equal(m2.bb70ShouldShowLaunch(),true);assert.equal(m2.bb70ShouldShowOfflineBanner(),true);
+    m2.showOffline();assert.match(m2.ui.html,/盲盒上新了：16 件新衣帽/,'first P2 settlement reminder shows');
+    m2.showNewBlindboxNotice();assert.equal(m2.ui.mq.length,1,'launch queued behind settlement');
+    m2.click('claimBb70');assert.deepEqual(m2.ui.log.filter(x=>x[0]!=='toast'),[['close'],['tab','gacha']]);assert.equal(saved(r).pending,null);assert.equal(saved(r).claimLog.filter(c=>c.id===p.id).length,1);
+    assert.deepEqual(flags(r,m2),['1','1']);
+  });
+}
+for(const [file,route] of ROUTES)for(const mode of MODES.slice(1)){
   const [label,,btn,proto]=mode,cfg={path:route,protocol:mode[1].protocol||1,btn};
   test(`${file} ${label}: success commits exactly once, then closes, goes to gacha, marks seen; survives refresh`,opts,async t=>{
     const h=await boot(t,cfg);assert.equal(h.app.state._collectionProtocol,proto);const p=settle(h),before=copy(h.app.state),w=mainWrites(h);

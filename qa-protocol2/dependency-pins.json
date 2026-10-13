@@ -4,7 +4,7 @@
     "sourcePackage": "collectible-compat-candidate-v2",
     "sourcePath": "module/migration.mjs",
     "bytes": 12615,
-    "sha256": "ad76c3180c92c3682aaddfe37b8247823b026c75a6783f0f0713782024d7d1aa",
+    "sha256": "69e668bff6176992ced7de90b346e73dab35a033c350811d1e0bc802a10548af",
     "reviewedInputSha256": "5bc0536dacecbaca2f910def14ac7410a7b8c19495625604688156cb89848c49",
     "reviewedInputBytes": 12549,
     "integrationChange": "only final cache import URLs; business logic unchanged"
@@ -28,7 +28,7 @@
     "sourcePackage": "collectible-snapshot-codec-v1",
     "sourcePath": "module/snapshot-codec.mjs",
     "bytes": 4365,
-    "sha256": "85508f26ea187a48564ee35c2263ed9995f8b1a8b5c46dd7f6f4963d92e33aa9",
+    "sha256": "f497cdb5bcc5d787a06a43f430d330723219ac7ea787f6370e02d84ca80abd55",
     "reviewedInputSha256": "420e687372a697b79e65da6776088234b9a0e6fbd39154b2582bdbe42b4b156b",
     "reviewedInputBytes": 4299,
     "integrationChange": "only final cache import URLs; business logic unchanged"
@@ -62,7 +62,7 @@
     "sourcePackage": "collectible-card-adapter-v1",
     "sourcePath": "module/card-coordinator.mjs",
     "bytes": 8236,
-    "sha256": "5332d011def34de16c27983db724f76308b18c92cd7d6cc064baed4c777ffc19",
+    "sha256": "dd9daec3632f92188a20d753dc421bd98aefa45ec3b8032479e9c8014181cfa2",
     "reviewedInputSha256": "c39527224902c835f2cc611527a5fcec2a23293adebd3b78bbb8684d2b41a034",
     "reviewedInputBytes": 8203,
     "integrationChange": "only final cache import URLs; business logic unchanged"

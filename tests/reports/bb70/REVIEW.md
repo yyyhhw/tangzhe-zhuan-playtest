@@ -18,3 +18,11 @@
 - 预览（preview/app.js）没有实现 70，只换了缓存号；本候选不声称预览完成。
 - 根目录旧守卫 `test_root_keys.js` 在 main 上已有 8 项失败；本候选同为 8 项，但「谁写 localStorage」一行的列表多了 app.js、pet/game/app.js（70 的两个本机标记，按设计不进存档）。
 - 只测 Chromium；无 WebKit/Firefox、无真机。王大妈三条非阻断建议（首玩不弹/句号/双倍按钮防误点）未实现；失败提示新文案请王大妈过目。
+
+# r3（熊大 12:43 窄修）
+资源标识 `bb70-launch-notice-20261013-r3`，pins 重算。
+1. 新增 `bb70P2Active()`：`state._collectionProtocol===2` 且 runtime `qaProtocol2===true && qaWearables8===true`（52 件目录真激活）。上新弹窗（含未解锁版）、结算横条、所有 LAUNCH/VISIT 写入都以它为前提；P1（取消升级、36 件）不弹、不显示、不写。
+2. `setTab('gacha')` 只在 P2 生效时写 VISIT；P1 进旧盲盒页不再预先压掉升级后的提醒。
+3. claim-protocol：P1 保留改为断言「无弹窗/无横条/无标记，普通领取照常提交一次」；新增连续场景 P1 取消→进旧盲盒页→退出→升级 P2→首次提醒出现（用发布文件 setTab 里的真实 bb70 行）。
+4. `bb70Set` 本机写入守卫：只接受这两个键、值严格为 '1'，否则拒绝；块内唯一 localStorage.setItem 调用点。
+证据：`all-tests-r3.txt` 338/338（node --experimental-vm-modules --test 全部 tests/*.test.mjs）；`bb70-tests.txt` 45/45。r3 未重跑 Chromium。

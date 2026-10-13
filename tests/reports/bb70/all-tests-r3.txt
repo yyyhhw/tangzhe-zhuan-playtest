@@ -1,0 +1,1770 @@
+TAP version 13
+# Subtest: app.js: low FPS elapsed 15 seconds, no dt-clamp drift or catch-up burst
+ok 1 - app.js: low FPS elapsed 15 seconds, no dt-clamp drift or catch-up burst
+  ---
+  duration_ms: 10.705688
+  ...
+# Subtest: app.js: successful immediate save resets deadline from completion
+ok 2 - app.js: successful immediate save resets deadline from completion
+  ---
+  duration_ms: 2.487573
+  ...
+# Subtest: app.js: immediate save inside tick suppresses same-frame automatic duplicate
+ok 3 - app.js: immediate save inside tick suppresses same-frame automatic duplicate
+  ---
+  duration_ms: 1.998599
+  ...
+# Subtest: app.js: pet save near deadline restarts only on confirmed success
+ok 4 - app.js: pet save near deadline restarts only on confirmed success
+  ---
+  duration_ms: 2.57912
+  ...
+# Subtest: app.js: failed or uncertain pet save never advances successful-save deadline
+ok 5 - app.js: failed or uncertain pet save never advances successful-save deadline
+  ---
+  duration_ms: 10.471307
+  ...
+# Subtest: app.js: failed autosave does not retry every frame
+ok 6 - app.js: failed autosave does not retry every frame
+  ---
+  duration_ms: 6.705565
+  ...
+# Subtest: app.js: explicit transaction retry is not throttled by automatic deadline
+ok 7 - app.js: explicit transaction retry is not throttled by automatic deadline
+  ---
+  duration_ms: 2.400365
+  ...
+# Subtest: app.js: protected uncertain result and lock loss perform no further writes
+ok 8 - app.js: protected uncertain result and lock loss perform no further writes
+  ---
+  duration_ms: 12.319592
+  ...
+# Subtest: app.js: ordinary income state is not changed by scheduling and no clock dates enter save schema
+ok 9 - app.js: ordinary income state is not changed by scheduling and no clock dates enter save schema
+  ---
+  duration_ms: 1.940738
+  ...
+# Subtest: preview/app.js: low FPS elapsed 15 seconds, no dt-clamp drift or catch-up burst
+ok 10 - preview/app.js: low FPS elapsed 15 seconds, no dt-clamp drift or catch-up burst
+  ---
+  duration_ms: 2.298316
+  ...
+# Subtest: preview/app.js: successful immediate save resets deadline from completion
+ok 11 - preview/app.js: successful immediate save resets deadline from completion
+  ---
+  duration_ms: 1.756754
+  ...
+# Subtest: preview/app.js: immediate save inside tick suppresses same-frame automatic duplicate
+ok 12 - preview/app.js: immediate save inside tick suppresses same-frame automatic duplicate
+  ---
+  duration_ms: 1.872869
+  ...
+# Subtest: preview/app.js: pet save near deadline restarts only on confirmed success
+ok 13 - preview/app.js: pet save near deadline restarts only on confirmed success
+  ---
+  duration_ms: 1.748458
+  ...
+# Subtest: preview/app.js: failed or uncertain pet save never advances successful-save deadline
+ok 14 - preview/app.js: failed or uncertain pet save never advances successful-save deadline
+  ---
+  duration_ms: 4.010895
+  ...
+# Subtest: preview/app.js: failed autosave does not retry every frame
+ok 15 - preview/app.js: failed autosave does not retry every frame
+  ---
+  duration_ms: 6.511185
+  ...
+# Subtest: preview/app.js: explicit transaction retry is not throttled by automatic deadline
+ok 16 - preview/app.js: explicit transaction retry is not throttled by automatic deadline
+  ---
+  duration_ms: 1.56467
+  ...
+# Subtest: preview/app.js: protected uncertain result and lock loss perform no further writes
+ok 17 - preview/app.js: protected uncertain result and lock loss perform no further writes
+  ---
+  duration_ms: 3.494646
+  ...
+# Subtest: preview/app.js: ordinary income state is not changed by scheduling and no clock dates enter save schema
+ok 18 - preview/app.js: ordinary income state is not changed by scheduling and no clock dates enter save schema
+  ---
+  duration_ms: 2.274503
+  ...
+# Subtest: pet/game/app.js: low FPS elapsed 15 seconds, no dt-clamp drift or catch-up burst
+ok 19 - pet/game/app.js: low FPS elapsed 15 seconds, no dt-clamp drift or catch-up burst
+  ---
+  duration_ms: 2.15717
+  ...
+# Subtest: pet/game/app.js: successful immediate save resets deadline from completion
+ok 20 - pet/game/app.js: successful immediate save resets deadline from completion
+  ---
+  duration_ms: 2.147671
+  ...
+# Subtest: pet/game/app.js: immediate save inside tick suppresses same-frame automatic duplicate
+ok 21 - pet/game/app.js: immediate save inside tick suppresses same-frame automatic duplicate
+  ---
+  duration_ms: 1.823616
+  ...
+# Subtest: pet/game/app.js: pet save near deadline restarts only on confirmed success
+ok 22 - pet/game/app.js: pet save near deadline restarts only on confirmed success
+  ---
+  duration_ms: 2.881738
+  ...
+# Subtest: pet/game/app.js: failed or uncertain pet save never advances successful-save deadline
+ok 23 - pet/game/app.js: failed or uncertain pet save never advances successful-save deadline
+  ---
+  duration_ms: 2.941283
+  ...
+# Subtest: pet/game/app.js: failed autosave does not retry every frame
+ok 24 - pet/game/app.js: failed autosave does not retry every frame
+  ---
+  duration_ms: 6.876794
+  ...
+# Subtest: pet/game/app.js: explicit transaction retry is not throttled by automatic deadline
+ok 25 - pet/game/app.js: explicit transaction retry is not throttled by automatic deadline
+  ---
+  duration_ms: 1.816559
+  ...
+# Subtest: pet/game/app.js: protected uncertain result and lock loss perform no further writes
+ok 26 - pet/game/app.js: protected uncertain result and lock loss perform no further writes
+  ---
+  duration_ms: 3.721699
+  ...
+# Subtest: pet/game/app.js: ordinary income state is not changed by scheduling and no clock dates enter save schema
+ok 27 - pet/game/app.js: ordinary income state is not changed by scheduling and no clock dates enter save schema
+  ---
+  duration_ms: 2.015241
+  ...
+# Subtest: offline gap/50% economy, atomic transactions, reveal, lifecycle save bodies and protection code match approved baseline (registration checked separately)
+ok 28 - offline gap/50% economy, atomic transactions, reveal, lifecycle save bodies and protection code match approved baseline (registration checked separately)
+  ---
+  duration_ms: 44.958907
+  ...
+# (node:1054363) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: app.js P1 kept (cancel upgrade): no launch notice, no settlement banner, no markers written; normal claim still commits once
+ok 29 - app.js P1 kept (cancel upgrade): no launch notice, no settlement banner, no markers written; normal claim still commits once
+  ---
+  duration_ms: 420.272397
+  ...
+# Subtest: app.js continuous: P1 cancel → old gacha tab → exit → upgrade to P2 → first launch notice + settlement reminder show
+ok 30 - app.js continuous: P1 cancel → old gacha tab → exit → upgrade to P2 → first launch notice + settlement reminder show
+  ---
+  duration_ms: 597.86084
+  ...
+# Subtest: pet/game/app.js P1 kept (cancel upgrade): no launch notice, no settlement banner, no markers written; normal claim still commits once
+ok 31 - pet/game/app.js P1 kept (cancel upgrade): no launch notice, no settlement banner, no markers written; normal claim still commits once
+  ---
+  duration_ms: 390.619961
+  ...
+# Subtest: pet/game/app.js continuous: P1 cancel → old gacha tab → exit → upgrade to P2 → first launch notice + settlement reminder show
+ok 32 - pet/game/app.js continuous: P1 cancel → old gacha tab → exit → upgrade to P2 → first launch notice + settlement reminder show
+  ---
+  duration_ms: 792.118857
+  ...
+# Subtest: app.js P1→P2 (confirm upgrade): success commits exactly once, then closes, goes to gacha, marks seen; survives refresh
+ok 33 - app.js P1→P2 (confirm upgrade): success commits exactly once, then closes, goes to gacha, marks seen; survives refresh
+  ---
+  duration_ms: 556.281832
+  ...
+# Subtest: app.js P1→P2 (confirm upgrade): backup save failure keeps recovery path — no close/navigate/seen flags, buttons locked, no re-claim; refresh shows exact saved outcome
+ok 34 - app.js P1→P2 (confirm upgrade): backup save failure keeps recovery path — no close/navigate/seen flags, buttons locked, no re-claim; refresh shows exact saved outcome
+  ---
+  duration_ms: 560.392001
+  ...
+# Subtest: app.js P1→P2 (confirm upgrade): unknown save failure keeps recovery path — no close/navigate/seen flags, buttons locked, no re-claim; refresh shows exact saved outcome
+ok 35 - app.js P1→P2 (confirm upgrade): unknown save failure keeps recovery path — no close/navigate/seen flags, buttons locked, no re-claim; refresh shows exact saved outcome
+  ---
+  duration_ms: 486.447578
+  ...
+# Subtest: app.js P1→P2 (confirm upgrade): double-click / both buttons fire once — one real commit, normal amount, one gacha navigation
+ok 36 - app.js P1→P2 (confirm upgrade): double-click / both buttons fire once — one real commit, normal amount, one gacha navigation
+  ---
+  duration_ms: 248.358119
+  ...
+# Subtest: app.js P2 existing: success commits exactly once, then closes, goes to gacha, marks seen; survives refresh
+ok 37 - app.js P2 existing: success commits exactly once, then closes, goes to gacha, marks seen; survives refresh
+  ---
+  duration_ms: 297.57414
+  ...
+# Subtest: app.js P2 existing: backup save failure keeps recovery path — no close/navigate/seen flags, buttons locked, no re-claim; refresh shows exact saved outcome
+ok 38 - app.js P2 existing: backup save failure keeps recovery path — no close/navigate/seen flags, buttons locked, no re-claim; refresh shows exact saved outcome
+  ---
+  duration_ms: 289.370131
+  ...
+# Subtest: app.js P2 existing: unknown save failure keeps recovery path — no close/navigate/seen flags, buttons locked, no re-claim; refresh shows exact saved outcome
+ok 39 - app.js P2 existing: unknown save failure keeps recovery path — no close/navigate/seen flags, buttons locked, no re-claim; refresh shows exact saved outcome
+  ---
+  duration_ms: 247.220073
+  ...
+# Subtest: app.js P2 existing: double-click / both buttons fire once — one real commit, normal amount, one gacha navigation
+ok 40 - app.js P2 existing: double-click / both buttons fire once — one real commit, normal amount, one gacha navigation
+  ---
+  duration_ms: 139.619056
+  ...
+# Subtest: pet/game/app.js P1→P2 (confirm upgrade): success commits exactly once, then closes, goes to gacha, marks seen; survives refresh
+ok 41 - pet/game/app.js P1→P2 (confirm upgrade): success commits exactly once, then closes, goes to gacha, marks seen; survives refresh
+  ---
+  duration_ms: 329.431514
+  ...
+# Subtest: pet/game/app.js P1→P2 (confirm upgrade): backup save failure keeps recovery path — no close/navigate/seen flags, buttons locked, no re-claim; refresh shows exact saved outcome
+ok 42 - pet/game/app.js P1→P2 (confirm upgrade): backup save failure keeps recovery path — no close/navigate/seen flags, buttons locked, no re-claim; refresh shows exact saved outcome
+  ---
+  duration_ms: 331.25378
+  ...
+# Subtest: pet/game/app.js P1→P2 (confirm upgrade): unknown save failure keeps recovery path — no close/navigate/seen flags, buttons locked, no re-claim; refresh shows exact saved outcome
+ok 43 - pet/game/app.js P1→P2 (confirm upgrade): unknown save failure keeps recovery path — no close/navigate/seen flags, buttons locked, no re-claim; refresh shows exact saved outcome
+  ---
+  duration_ms: 342.6664
+  ...
+# Subtest: pet/game/app.js P1→P2 (confirm upgrade): double-click / both buttons fire once — one real commit, normal amount, one gacha navigation
+ok 44 - pet/game/app.js P1→P2 (confirm upgrade): double-click / both buttons fire once — one real commit, normal amount, one gacha navigation
+  ---
+  duration_ms: 214.434242
+  ...
+# Subtest: pet/game/app.js P2 existing: success commits exactly once, then closes, goes to gacha, marks seen; survives refresh
+ok 45 - pet/game/app.js P2 existing: success commits exactly once, then closes, goes to gacha, marks seen; survives refresh
+  ---
+  duration_ms: 234.225543
+  ...
+# Subtest: pet/game/app.js P2 existing: backup save failure keeps recovery path — no close/navigate/seen flags, buttons locked, no re-claim; refresh shows exact saved outcome
+ok 46 - pet/game/app.js P2 existing: backup save failure keeps recovery path — no close/navigate/seen flags, buttons locked, no re-claim; refresh shows exact saved outcome
+  ---
+  duration_ms: 249.389811
+  ...
+# Subtest: pet/game/app.js P2 existing: unknown save failure keeps recovery path — no close/navigate/seen flags, buttons locked, no re-claim; refresh shows exact saved outcome
+ok 47 - pet/game/app.js P2 existing: unknown save failure keeps recovery path — no close/navigate/seen flags, buttons locked, no re-claim; refresh shows exact saved outcome
+  ---
+  duration_ms: 234.622956
+  ...
+# Subtest: pet/game/app.js P2 existing: double-click / both buttons fire once — one real commit, normal amount, one gacha navigation
+ok 48 - pet/game/app.js P2 existing: double-click / both buttons fire once — one real commit, normal amount, one gacha navigation
+  ---
+  duration_ms: 132.177403
+  ...
+# Subtest: app.js: unlocked launch popup copy, buttons, × source, go to gacha; shown once per version
+ok 49 - app.js: unlocked launch popup copy, buttons, × source, go to gacha; shown once per version
+  ---
+  duration_ms: 6.140949
+  ...
+# Subtest: app.js: locked launch popup has only 知道了 and the hire hint
+ok 50 - app.js: locked launch popup has only 知道了 and the hire hint
+  ---
+  duration_ms: 2.298274
+  ...
+# Subtest: app.js: launch popup queues behind an open modal and is suppressed when seen / save blocked
+ok 51 - app.js: launch popup queues behind an open modal and is suppressed when seen / save blocked
+  ---
+  duration_ms: 7.227279
+  ...
+# Subtest: app.js: settlement banner + shortcut claims normal amount (double kept) then opens gacha
+ok 52 - app.js: settlement banner + shortcut claims normal amount (double kept) then opens gacha
+  ---
+  duration_ms: 4.050056
+  ...
+# Subtest: app.js: no settlement banner when locked or after visiting gacha once
+ok 53 - app.js: no settlement banner when locked or after visiting gacha once
+  ---
+  duration_ms: 7.366896
+  ...
+# Subtest: app.js: 去开盲盒 claim failure (model) keeps modal, no tab/flags, locks buttons; 知道了 closes only
+ok 54 - app.js: 去开盲盒 claim failure (model) keeps modal, no tab/flags, locks buttons; 知道了 closes only
+  ---
+  duration_ms: 2.389784
+  ...
+# Subtest: app.js: queue order — offline 去开盲盒 → already-seen launch notice is skipped → unseen open-box reveal still shows
+ok 55 - app.js: queue order — offline 去开盲盒 → already-seen launch notice is skipped → unseen open-box reveal still shows
+  ---
+  duration_ms: 7.943906
+  ...
+# Subtest: app.js: queue order — launch seen before boot: offline → reveal; normal claim with unseen launch: offline → launch → reveal
+ok 56 - app.js: queue order — launch seen before boot: offline → reveal; normal claim with unseen launch: offline → launch → reveal
+  ---
+  duration_ms: 5.623527
+  ...
+# Subtest: app.js: queue order — launch marked seen by another tab while queued still advances to reveal
+ok 57 - app.js: queue order — launch marked seen by another tab while queued still advances to reveal
+  ---
+  duration_ms: 2.707565
+  ...
+# Subtest: app.js: boot order is settlement then launch notice; gacha tab visit recorded; nothing written to save
+ok 58 - app.js: boot order is settlement then launch notice; gacha tab visit recorded; nothing written to save
+  ---
+  duration_ms: 1.768444
+  ...
+# Subtest: pet/game/app.js: unlocked launch popup copy, buttons, × source, go to gacha; shown once per version
+ok 59 - pet/game/app.js: unlocked launch popup copy, buttons, × source, go to gacha; shown once per version
+  ---
+  duration_ms: 1.662828
+  ...
+# Subtest: pet/game/app.js: locked launch popup has only 知道了 and the hire hint
+ok 60 - pet/game/app.js: locked launch popup has only 知道了 and the hire hint
+  ---
+  duration_ms: 1.985721
+  ...
+# Subtest: pet/game/app.js: launch popup queues behind an open modal and is suppressed when seen / save blocked
+ok 61 - pet/game/app.js: launch popup queues behind an open modal and is suppressed when seen / save blocked
+  ---
+  duration_ms: 10.035895
+  ...
+# Subtest: pet/game/app.js: settlement banner + shortcut claims normal amount (double kept) then opens gacha
+ok 62 - pet/game/app.js: settlement banner + shortcut claims normal amount (double kept) then opens gacha
+  ---
+  duration_ms: 7.060833
+  ...
+# Subtest: pet/game/app.js: no settlement banner when locked or after visiting gacha once
+ok 63 - pet/game/app.js: no settlement banner when locked or after visiting gacha once
+  ---
+  duration_ms: 4.050968
+  ...
+# Subtest: pet/game/app.js: 去开盲盒 claim failure (model) keeps modal, no tab/flags, locks buttons; 知道了 closes only
+ok 64 - pet/game/app.js: 去开盲盒 claim failure (model) keeps modal, no tab/flags, locks buttons; 知道了 closes only
+  ---
+  duration_ms: 1.345054
+  ...
+# Subtest: pet/game/app.js: queue order — offline 去开盲盒 → already-seen launch notice is skipped → unseen open-box reveal still shows
+ok 65 - pet/game/app.js: queue order — offline 去开盲盒 → already-seen launch notice is skipped → unseen open-box reveal still shows
+  ---
+  duration_ms: 1.88902
+  ...
+# Subtest: pet/game/app.js: queue order — launch seen before boot: offline → reveal; normal claim with unseen launch: offline → launch → reveal
+ok 66 - pet/game/app.js: queue order — launch seen before boot: offline → reveal; normal claim with unseen launch: offline → launch → reveal
+  ---
+  duration_ms: 4.032964
+  ...
+# Subtest: pet/game/app.js: queue order — launch marked seen by another tab while queued still advances to reveal
+ok 67 - pet/game/app.js: queue order — launch marked seen by another tab while queued still advances to reveal
+  ---
+  duration_ms: 2.432825
+  ...
+# Subtest: pet/game/app.js: boot order is settlement then launch notice; gacha tab visit recorded; nothing written to save
+ok 68 - pet/game/app.js: boot order is settlement then launch notice; gacha tab visit recorded; nothing written to save
+  ---
+  duration_ms: 1.179398
+  ...
+# Subtest: app.js: r3 P1 (36-item catalog, upgrade cancelled): no launch popup, no banner, no marker writes even via 去看看 path
+ok 69 - app.js: r3 P1 (36-item catalog, upgrade cancelled): no launch popup, no banner, no marker writes even via 去看看 path
+  ---
+  duration_ms: 4.830313
+  ...
+# Subtest: app.js: r3 native write guard — only the two UI keys, only value "1"
+ok 70 - app.js: r3 native write guard — only the two UI keys, only value "1"
+  ---
+  duration_ms: 2.620367
+  ...
+# Subtest: pet/game/app.js: r3 P1 (36-item catalog, upgrade cancelled): no launch popup, no banner, no marker writes even via 去看看 path
+ok 71 - pet/game/app.js: r3 P1 (36-item catalog, upgrade cancelled): no launch popup, no banner, no marker writes even via 去看看 path
+  ---
+  duration_ms: 5.390116
+  ...
+# Subtest: pet/game/app.js: r3 native write guard — only the two UI keys, only value "1"
+ok 72 - pet/game/app.js: r3 native write guard — only the two UI keys, only value "1"
+  ---
+  duration_ms: 1.99438
+  ...
+# Subtest: 16 = first eight + blindbox18 second eight, all clothes/hats, catalog 36 → 52
+ok 73 - 16 = first eight + blindbox18 second eight, all clothes/hats, catalog 36 → 52
+  ---
+  duration_ms: 47.482342
+  ...
+# Subtest: formal: one ordered admission produces 52 catalog / 52 random / 48 ordinary; exact rollback
+ok 74 - formal: one ordered admission produces 52 catalog / 52 random / 48 ordinary; exact rollback
+  ---
+  duration_ms: 16.131904
+  ...
+# (node:1054365) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: formal: all eight draw/equip/save through actual production coordinator and survive restart with opaque state
+ok 75 - formal: all eight draw/equip/save through actual production coordinator and survive restart with opaque state
+  ---
+  duration_ms: 756.852188
+  ...
+# Subtest: preview: one ordered admission produces 52 catalog / 52 random / 48 ordinary; exact rollback
+ok 76 - preview: one ordered admission produces 52 catalog / 52 random / 48 ordinary; exact rollback
+  ---
+  duration_ms: 7.493392
+  ...
+# Subtest: preview: all eight draw/equip/save through actual production coordinator and survive restart with opaque state
+ok 77 - preview: all eight draw/equip/save through actual production coordinator and survive restart with opaque state
+  ---
+  duration_ms: 356.953614
+  ...
+# Subtest: formal: standalone pool excludes missing decor assets and grants no item on P2 boot
+ok 78 - formal: standalone pool excludes missing decor assets and grants no item on P2 boot
+  ---
+  duration_ms: 172.523696
+  ...
+# Subtest: preview: standalone pool excludes missing decor assets and grants no item on P2 boot
+ok 79 - preview: standalone pool excludes missing decor assets and grants no item on P2 boot
+  ---
+  duration_ms: 154.390017
+  ...
+# Subtest: approved catalog stays eight ordinary metadata-only items, no flavor or shop ownership restriction
+ok 80 - approved catalog stays eight ordinary metadata-only items, no flavor or shop ownership restriction
+  ---
+  duration_ms: 2.207622
+  ...
+# Subtest: immutable synthetic state, slot ownership and registered-type checks
+ok 81 - immutable synthetic state, slot ownership and registered-type checks
+  ---
+  duration_ms: 1.685287
+  ...
+# Subtest: all CEO identity fields and sleeves/trousers/shoes preserved
+ok 82 - all CEO identity fields and sleeves/trousers/shoes preserved
+  ---
+  duration_ms: 0.466558
+  ...
+# Subtest: unknown IDs untouched, invalid arguments fail before canvas mutation
+ok 83 - unknown IDs untouched, invalid arguments fail before canvas mutation
+  ---
+  duration_ms: 1.726715
+  ...
+# Subtest: save/restore balanced even when drawing throws; pure drawing has no image/storage/serialization hot path
+ok 84 - save/restore balanced even when drawing throws; pure drawing has no image/storage/serialization hot path
+  ---
+  duration_ms: 1.584389
+  ...
+# Subtest: no production admission or migration edits are required by candidate import
+ok 85 - no production admission or migration edits are required by candidate import
+  ---
+  duration_ms: 0.186207
+  ...
+# Subtest: decoded PCM joins preserve adjacent waveform at 8000Hz/1ch
+ok 86 - decoded PCM joins preserve adjacent waveform at 8000Hz/1ch
+  ---
+  duration_ms: 5.157442
+  ...
+# Subtest: decoded PCM joins preserve adjacent waveform at 8000Hz/2ch
+ok 87 - decoded PCM joins preserve adjacent waveform at 8000Hz/2ch
+  ---
+  duration_ms: 7.730552
+  ...
+# Subtest: decoded PCM joins preserve adjacent waveform at 8000Hz/4ch
+ok 88 - decoded PCM joins preserve adjacent waveform at 8000Hz/4ch
+  ---
+  duration_ms: 9.964292
+  ...
+# Subtest: decoded PCM joins preserve adjacent waveform at 44100Hz/1ch
+ok 89 - decoded PCM joins preserve adjacent waveform at 44100Hz/1ch
+  ---
+  duration_ms: 4.855864
+  ...
+# Subtest: decoded PCM joins preserve adjacent waveform at 44100Hz/2ch
+ok 90 - decoded PCM joins preserve adjacent waveform at 44100Hz/2ch
+  ---
+  duration_ms: 20.287389
+  ...
+# Subtest: decoded PCM joins preserve adjacent waveform at 44100Hz/4ch
+ok 91 - decoded PCM joins preserve adjacent waveform at 44100Hz/4ch
+  ---
+  duration_ms: 15.048117
+  ...
+# Subtest: decoded PCM joins preserve adjacent waveform at 48000Hz/1ch
+ok 92 - decoded PCM joins preserve adjacent waveform at 48000Hz/1ch
+  ---
+  duration_ms: 1.057055
+  ...
+# Subtest: decoded PCM joins preserve adjacent waveform at 48000Hz/2ch
+ok 93 - decoded PCM joins preserve adjacent waveform at 48000Hz/2ch
+  ---
+  duration_ms: 1.964448
+  ...
+# Subtest: decoded PCM joins preserve adjacent waveform at 48000Hz/4ch
+ok 94 - decoded PCM joins preserve adjacent waveform at 48000Hz/4ch
+  ---
+  duration_ms: 7.966221
+  ...
+# Subtest: decoded PCM joins preserve adjacent waveform at 96000Hz/1ch
+ok 95 - decoded PCM joins preserve adjacent waveform at 96000Hz/1ch
+  ---
+  duration_ms: 1.939353
+  ...
+# Subtest: decoded PCM joins preserve adjacent waveform at 96000Hz/2ch
+ok 96 - decoded PCM joins preserve adjacent waveform at 96000Hz/2ch
+  ---
+  duration_ms: 3.420428
+  ...
+# Subtest: decoded PCM joins preserve adjacent waveform at 96000Hz/4ch
+ok 97 - decoded PCM joins preserve adjacent waveform at 96000Hz/4ch
+  ---
+  duration_ms: 12.4169
+  ...
+# Subtest: short 4-frame PCM stays finite and nonempty
+ok 98 - short 4-frame PCM stays finite and nonempty
+  ---
+  duration_ms: 0.330007
+  ...
+# Subtest: short 5-frame PCM stays finite and nonempty
+ok 99 - short 5-frame PCM stays finite and nonempty
+  ---
+  duration_ms: 0.185645
+  ...
+# Subtest: short 17-frame PCM stays finite and nonempty
+ok 100 - short 17-frame PCM stays finite and nonempty
+  ---
+  duration_ms: 0.09359
+  ...
+# Subtest: short 100-frame PCM stays finite and nonempty
+ok 101 - short 100-frame PCM stays finite and nonempty
+  ---
+  duration_ms: 0.122731
+  ...
+# Subtest: unsafe 0-frame PCM is rejected
+ok 102 - unsafe 0-frame PCM is rejected
+  ---
+  duration_ms: 0.50195
+  ...
+# Subtest: unsafe 1-frame PCM is rejected
+ok 103 - unsafe 1-frame PCM is rejected
+  ---
+  duration_ms: 0.230353
+  ...
+# Subtest: unsafe 2-frame PCM is rejected
+ok 104 - unsafe 2-frame PCM is rejected
+  ---
+  duration_ms: 0.102556
+  ...
+# Subtest: unsafe 3-frame PCM is rejected
+ok 105 - unsafe 3-frame PCM is rejected
+  ---
+  duration_ms: 0.127266
+  ...
+# Subtest: network failure only retries on gesture after backoff, clears error
+ok 106 - network failure only retries on gesture after backoff, clears error
+  ---
+  duration_ms: 17.390668
+  ...
+# Subtest: decode failure only retries on gesture after backoff, clears error
+ok 107 - decode failure only retries on gesture after backoff, clears error
+  ---
+  duration_ms: 19.744053
+  ...
+# Subtest: late decode after dispose creates no source
+ok 108 - late decode after dispose creates no source
+  ---
+  duration_ms: 8.852264
+  ...
+# Subtest: muted clicks do not resume existing loop
+ok 109 - muted clicks do not resume existing loop
+  ---
+  duration_ms: 6.243398
+  ...
+# Subtest: paused clicks do not resume existing loop
+ok 110 - paused clicks do not resume existing loop
+  ---
+  duration_ms: 4.58448
+  ...
+# Subtest: hidden clicks do not resume existing loop
+ok 111 - hidden clicks do not resume existing loop
+  ---
+  duration_ms: 5.064981
+  ...
+# Subtest: pending asynchronous resume then muted never enables loop gain
+ok 112 - pending asynchronous resume then muted never enables loop gain
+  ---
+  duration_ms: 10.647902
+  ...
+# Subtest: pending asynchronous resume then paused never enables loop gain
+ok 113 - pending asynchronous resume then paused never enables loop gain
+  ---
+  duration_ms: 5.965124
+  ...
+# Subtest: pending asynchronous resume then hidden never enables loop gain
+ok 114 - pending asynchronous resume then hidden never enables loop gain
+  ---
+  duration_ms: 8.330158
+  ...
+# Subtest: pending asynchronous resume then dispose never enables loop gain
+ok 115 - pending asynchronous resume then dispose never enables loop gain
+  ---
+  duration_ms: 3.216751
+  ...
+# Subtest: first pending resume then mute creates no source and concurrent updates coalesce
+ok 116 - first pending resume then mute creates no source and concurrent updates coalesce
+  ---
+  duration_ms: 3.025007
+  ...
+# {
+#   "scope": "Node/VM behavior + static cache/attribution contracts; no browser or OS playback",
+#   "cases": [
+#     {
+#       "site": "root",
+#       "pass": true,
+#       "checks": [
+#         "exact official bytes",
+#         "relative asset + helper URLs",
+#         "cache chain",
+#         "gesture-only start",
+#         "one player after repeated input",
+#         "unchanged volume buses",
+#         "mute + persisted mute",
+#         "TD/cards/zombie exclusion",
+#         "hidden/pagehide/frozen silence",
+#         "late decode safety",
+#         "HTTP failure silence + gesture retry",
+#         "visible credits + links",
+#         "dialog guard + close focus"
+#       ]
+#     },
+#     {
+#       "site": "preview/",
+#       "pass": true,
+#       "checks": [
+#         "exact official bytes",
+#         "relative asset + helper URLs",
+#         "cache chain",
+#         "gesture-only start",
+#         "one player after repeated input",
+#         "unchanged volume buses",
+#         "mute + persisted mute",
+#         "TD/cards/zombie exclusion",
+#         "hidden/pagehide/frozen silence",
+#         "late decode safety",
+#         "HTTP failure silence + gesture retry",
+#         "visible credits + links",
+#         "dialog guard + close focus"
+#       ]
+#     }
+#   ]
+# }
+# Subtest: /workspace/tz/tests/formal/carefree-bgm.test.mjs
+ok 9 - /workspace/tz/tests/formal/carefree-bgm.test.mjs
+  ---
+  duration_ms: 225.561169
+  ...
+# Asia/Tokyo 2026-10-05T06:00:00Z R=2026-10-05T21:00:00.000Z => 06:00; four mirrors/four displays unchanged state/dayKey
+# Asia/Kuala_Lumpur 2026-10-05T06:00:00Z R=2026-10-05T21:00:00.000Z => 05:00; four mirrors/four displays unchanged state/dayKey
+# Asia/Kolkata 2026-10-05T06:00:00Z R=2026-10-05T21:00:00.000Z => 02:30; four mirrors/four displays unchanged state/dayKey
+# Asia/Kathmandu 2026-10-05T06:00:00Z R=2026-10-05T21:00:00.000Z => 02:45; four mirrors/four displays unchanged state/dayKey
+# America/New_York 2026-03-08T06:30:00Z R=2026-03-08T21:00:00.000Z => 17:00; four mirrors/four displays unchanged state/dayKey
+# America/New_York 2026-11-01T05:30:00Z R=2026-11-01T21:00:00.000Z => 16:00; four mirrors/four displays unchanged state/dayKey
+# Australia/Lord_Howe 2026-10-03T14:00:00Z R=2026-10-03T21:00:00.000Z => 08:00; four mirrors/four displays unchanged state/dayKey
+# Australia/Lord_Howe 2026-04-04T14:00:00Z R=2026-04-04T21:00:00.000Z => 07:30; four mirrors/four displays unchanged state/dayKey
+# Copy52 static cache closure: pass; no browser acceptance claimed.
+# Subtest: /workspace/tz/tests/formal/copy52-display.test.mjs
+ok 10 - /workspace/tz/tests/formal/copy52-display.test.mjs
+  ---
+  duration_ms: 306.051273
+  ...
+# Subtest: common gold/normal threshold and uniform card selection
+ok 119 - common gold/normal threshold and uniform card selection
+  ---
+  duration_ms: 87.402976
+  ...
+# Subtest: common full normal upgraded + normal dust; full golden + gold dust
+ok 120 - common full normal upgraded + normal dust; full golden + gold dust
+  ---
+  duration_ms: 3.115948
+  ...
+# Subtest: common normal craft cost/cap/no golden
+ok 121 - common normal craft cost/cap/no golden
+  ---
+  duration_ms: 2.063472
+  ...
+# Subtest: rare gold/normal threshold and uniform card selection
+ok 122 - rare gold/normal threshold and uniform card selection
+  ---
+  duration_ms: 19.62133
+  ...
+# Subtest: rare full normal upgraded + normal dust; full golden + gold dust
+ok 123 - rare full normal upgraded + normal dust; full golden + gold dust
+  ---
+  duration_ms: 3.619894
+  ...
+# Subtest: rare normal craft cost/cap/no golden
+ok 124 - rare normal craft cost/cap/no golden
+  ---
+  duration_ms: 0.876441
+  ...
+# Subtest: epic gold/normal threshold and uniform card selection
+ok 125 - epic gold/normal threshold and uniform card selection
+  ---
+  duration_ms: 8.295542
+  ...
+# Subtest: epic full normal upgraded + normal dust; full golden + gold dust
+ok 126 - epic full normal upgraded + normal dust; full golden + gold dust
+  ---
+  duration_ms: 4.327583
+  ...
+# Subtest: epic normal craft cost/cap/no golden
+ok 127 - epic normal craft cost/cap/no golden
+  ---
+  duration_ms: 0.975447
+  ...
+# Subtest: legendary gold/normal threshold and uniform card selection
+ok 128 - legendary gold/normal threshold and uniform card selection
+  ---
+  duration_ms: 6.690217
+  ...
+# Subtest: legendary full normal upgraded + normal dust; full golden + gold dust
+ok 129 - legendary full normal upgraded + normal dust; full golden + gold dust
+  ---
+  duration_ms: 3.224041
+  ...
+# Subtest: legendary normal craft cost/cap/no golden
+ok 130 - legendary normal craft cost/cap/no golden
+  ---
+  duration_ms: 0.60332
+  ...
+# Subtest: 50000 exact cap no overflow, max golden compensation before RNG
+ok 131 - 50000 exact cap no overflow, max golden compensation before RNG
+  ---
+  duration_ms: 1.264591
+  ...
+# Subtest: cancel leaves holdings/dust/preferences unchanged and no tickets
+ok 132 - cancel leaves holdings/dust/preferences unchanged and no tickets
+  ---
+  duration_ms: 2.852607
+  ...
+# Subtest: gild removed; replay restores new rules
+ok 133 - gild removed; replay restores new rules
+  ---
+  duration_ms: 1.910623
+  ...
+# Subtest: legacy completed state preserved, pending explicitly protected
+ok 134 - legacy completed state preserved, pending explicitly protected
+  ---
+  duration_ms: 14.115444
+  ...
+# Subtest: SHA256 UTF8 and multi-block match node crypto
+ok 135 - SHA256 UTF8 and multi-block match node crypto
+  ---
+  duration_ms: 48.180806
+  ...
+# Subtest: archive corruption across fresh coordinator cannot adopt or commit
+ok 136 - archive corruption across fresh coordinator cannot adopt or commit
+  ---
+  duration_ms: 34.581531
+  ...
+# Subtest: foreign tangzhe-formal-collection-v1-save during original write retained
+ok 137 - foreign tangzhe-formal-collection-v1-save during original write retained
+  ---
+  duration_ms: 8.381641
+  ...
+# Subtest: foreign tangzhe-formal-collection-v1-save-bak during original write retained
+ok 138 - foreign tangzhe-formal-collection-v1-save-bak during original write retained
+  ---
+  duration_ms: 6.815184
+  ...
+# Subtest: foreign tangzhe-formal-collection-v1-tab-lock during original write retained
+ok 139 - foreign tangzhe-formal-collection-v1-tab-lock during original write retained
+  ---
+  duration_ms: 9.460624
+  ...
+# Subtest: foreign tangzhe-formal-collection-v1-original during original write retained
+ok 140 - foreign tangzhe-formal-collection-v1-original during original write retained
+  ---
+  duration_ms: 15.36887
+  ...
+# Subtest: valid digest with invalid v15 shape protected {"format":1,"release":"15"}
+ok 141 - valid digest with invalid v15 shape protected {"format":1,"release":"15"}
+  ---
+  duration_ms: 23.390688
+  ...
+# Subtest: valid digest with invalid v15 shape protected {"format":1,"release":"15","main":{},"backup":7}
+ok 142 - valid digest with invalid v15 shape protected {"format":1,"release":"15","main":{},"backup":7}
+  ---
+  duration_ms: 12.426515
+  ...
+# Subtest: valid digest with invalid v15 shape protected {"format":1,"release":"15","main":null}
+ok 143 - valid digest with invalid v15 shape protected {"format":1,"release":"15","main":null}
+  ---
+  duration_ms: 11.052131
+  ...
+# Subtest: legacy rules explicit upgrade retains holdings, gold, dust and parent; cancel/inspect writes zero
+ok 144 - legacy rules explicit upgrade retains holdings, gold, dust and parent; cancel/inspect writes zero
+  ---
+  duration_ms: 60.795413
+  ...
+# Subtest: changed legacy source must reconfirm, no overwrite
+ok 145 - changed legacy source must reconfirm, no overwrite
+  ---
+  duration_ms: 36.109042
+  ...
+# Subtest: legacy active transaction protected with original bytes unchanged
+ok 146 - legacy active transaction protected with original bytes unchanged
+  ---
+  duration_ms: 16.77367
+  ...
+# Subtest: attack legal set honors taunt and has no friendly targets
+ok 147 - attack legal set honors taunt and has no friendly targets
+  ---
+  duration_ms: 16.660352
+  ...
+# Subtest: real affected group allMinions / bkVanEx1400
+ok 148 - real affected group allMinions / bkVanEx1400
+  ---
+  duration_ms: 23.293723
+  ...
+# Subtest: real affected group enemyMinions / bkVanCs2025
+ok 149 - real affected group enemyMinions / bkVanCs2025
+  ---
+  duration_ms: 21.485968
+  ...
+# Subtest: real affected group enemyMinions / bkVanCs2032
+ok 150 - real affected group enemyMinions / bkVanCs2032
+  ---
+  duration_ms: 9.342028
+  ...
+# Subtest: real affected group enemyCharacters / bkVanCs2093
+ok 151 - real affected group enemyCharacters / bkVanCs2093
+  ---
+  duration_ms: 14.843061
+  ...
+# Subtest: real affected group allCharacters / bkVanCs2062
+ok 152 - real affected group allCharacters / bkVanCs2062
+  ---
+  duration_ms: 5.129193
+  ...
+# Subtest: minion-only shield spell excludes heroes and supports both sides
+ok 153 - minion-only shield spell excludes heroes and supports both sides
+  ---
+  duration_ms: 4.453864
+  ...
+# Subtest: unsupported stealth and area heal are not invented by UI
+ok 154 - unsupported stealth and area heal are not invented by UI
+  ---
+  duration_ms: 0.183473
+  ...
+# Subtest: protocol3 50-stage upgrade/results dedup through new coordinator
+ok 155 - protocol3 50-stage upgrade/results dedup through new coordinator
+  ---
+  duration_ms: 289.0816
+  ...
+# Subtest: missing receipt extension remains valid and does not invent historical receipts
+ok 156 - missing receipt extension remains valid and does not invent historical receipts
+  ---
+  duration_ms: 42.600364
+  ...
+# Subtest: one atomic debit+level+receipt; full host reload replay and original result
+ok 157 - one atomic debit+level+receipt; full host reload replay and original result
+  ---
+  duration_ms: 63.237158
+  ...
+# Subtest: same id different payload, ruleset or extra fields rejected without debit
+ok 158 - same id different payload, ruleset or extra fields rejected without debit
+  ---
+  duration_ms: 23.163876
+  ...
+# Subtest: write failure retry preserves one receipt and one debit
+ok 159 - write failure retry preserves one receipt and one debit
+  ---
+  duration_ms: 38.945648
+  ...
+# Subtest: read failure retry preserves one receipt and one debit
+ok 160 - read failure retry preserves one receipt and one debit
+  ---
+  duration_ms: 26.148572
+  ...
+# Subtest: ordinary save cannot drop, alter or reorder persisted receipts
+ok 161 - ordinary save cannot drop, alter or reorder persisted receipts
+  ---
+  duration_ms: 20.137069
+  ...
+# Subtest: invalid/future receipt ledger protects original main
+ok 162 - invalid/future receipt ledger protects original main
+  ---
+  duration_ms: 14.069038
+  ...
+# Subtest: invalid/future receipt ledger protects original main
+ok 163 - invalid/future receipt ledger protects original main
+  ---
+  duration_ms: 12.579207
+  ...
+# Subtest: invalid/future receipt ledger protects original main
+ok 164 - invalid/future receipt ledger protects original main
+  ---
+  duration_ms: 29.268834
+  ...
+# Subtest: invalid/future receipt ledger protects original main
+ok 165 - invalid/future receipt ledger protects original main
+  ---
+  duration_ms: 19.624614
+  ...
+# Subtest: invalid/future receipt ledger protects original main
+ok 166 - invalid/future receipt ledger protects original main
+  ---
+  duration_ms: 12.543041
+  ...
+# Subtest: present null is invalid; old missing field remains valid
+ok 167 - present null is invalid; old missing field remains valid
+  ---
+  duration_ms: 7.488095
+  ...
+# Subtest: invalid or future receipt extension never falls back to valid old backup
+ok 168 - invalid or future receipt extension never falls back to valid old backup
+  ---
+  duration_ms: 17.436547
+  ...
+# Subtest:  actual parent entry gate and origin-checked iframe handshake (VM)
+ok 169 -  actual parent entry gate and origin-checked iframe handshake (VM)
+  ---
+  duration_ms: 29.299916
+  ...
+# Subtest:  battle removed, shared save/wallet callbacks retained, retired links inert
+ok 170 -  battle removed, shared save/wallet callbacks retained, retired links inert
+  ---
+  duration_ms: 10.830757
+  ...
+# Subtest: preview/ actual parent entry gate and origin-checked iframe handshake (VM)
+ok 171 - preview/ actual parent entry gate and origin-checked iframe handshake (VM)
+  ---
+  duration_ms: 2.617978
+  ...
+# Subtest: preview/ battle removed, shared save/wallet callbacks retained, retired links inert
+ok 172 - preview/ battle removed, shared save/wallet callbacks retained, retired links inert
+  ---
+  duration_ms: 10.877228
+  ...
+# Subtest: formal TD second gate, handshake/read-only protection and zero history mutation
+ok 173 - formal TD second gate, handshake/read-only protection and zero history mutation
+  ---
+  duration_ms: 26.336924
+  ...
+# Subtest: preview TD keeps legacy protocol/progress while using tea gate
+ok 174 - preview TD keeps legacy protocol/progress while using tea gate
+  ---
+  duration_ms: 14.652301
+  ...
+# Subtest: isolated real coordinator preserves card compatibility keys and TD history during business gacha save
+ok 175 - isolated real coordinator preserves card compatibility keys and TD history during business gacha save
+  ---
+  duration_ms: 51.493712
+  ...
+# Subtest: four entry version/changed-resource closure and preserved pet channel
+ok 176 - four entry version/changed-resource closure and preserved pet channel
+  ---
+  duration_ms: 4.625468
+  ...
+# (node:1054538) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: formal: pagehide synchronously commits with valid lease then revokes
+ok 177 - formal: pagehide synchronously commits with valid lease then revokes
+  ---
+  duration_ms: 545.423957
+  ...
+# Subtest: formal: protected pagehide cannot write; throwing callback still releases lease
+ok 178 - formal: protected pagehide cannot write; throwing callback still releases lease
+  ---
+  duration_ms: 374.126474
+  ...
+# Subtest: formal: foreign evidence invalidation is not bypassed by pagehide
+ok 179 - formal: foreign evidence invalidation is not bypassed by pagehide
+  ---
+  duration_ms: 338.790345
+  ...
+# Subtest: preview: pagehide synchronously commits with valid lease then revokes
+ok 180 - preview: pagehide synchronously commits with valid lease then revokes
+  ---
+  duration_ms: 346.420911
+  ...
+# Subtest: preview: protected pagehide cannot write; throwing callback still releases lease
+ok 181 - preview: protected pagehide cannot write; throwing callback still releases lease
+  ---
+  duration_ms: 253.799311
+  ...
+# Subtest: preview: foreign evidence invalidation is not bypassed by pagehide
+ok 182 - preview: foreign evidence invalidation is not bypassed by pagehide
+  ---
+  duration_ms: 254.713169
+  ...
+# Subtest: full economy, current-save validation, original-evidence cache, CAS and uncertain-commit code preserved from published 7ce857d
+ok 183 - full economy, current-save validation, original-evidence cache, CAS and uncertain-commit code preserved from published 7ce857d
+  ---
+  duration_ms: 4.857253
+  ...
+# Subtest: formal: activation only extends ordinary catalog; deactivation restores exact existing objects
+ok 184 - formal: activation only extends ordinary catalog; deactivation restores exact existing objects
+  ---
+  duration_ms: 12.524319
+  ...
+# Subtest: formal: exact ordinary probability dilution with original super probability, price and pity
+ok 185 - formal: exact ordinary probability dilution with original super probability, price and pity
+  ---
+  duration_ms: 10.663214
+  ...
+# Subtest: formal: old complete save gets eight nonduplicate ordinary draws using unchanged algorithm
+ok 186 - formal: old complete save gets eight nonduplicate ordinary draws using unchanged algorithm
+  ---
+  duration_ms: 6.539778
+  ...
+# Subtest: formal: all eight owned/last/wear survive current normalization with active registry
+ok 187 - formal: all eight owned/last/wear survive current normalization with active registry
+  ---
+  duration_ms: 6.435205
+  ...
+# Subtest: formal: collisions, altered baseline and duplicate installer fail before activation
+ok 188 - formal: collisions, altered baseline and duplicate installer fail before activation
+  ---
+  duration_ms: 21.252683
+  ...
+# Subtest: preview: activation only extends ordinary catalog; deactivation restores exact existing objects
+ok 189 - preview: activation only extends ordinary catalog; deactivation restores exact existing objects
+  ---
+  duration_ms: 4.759875
+  ...
+# Subtest: preview: exact ordinary probability dilution with original super probability, price and pity
+ok 190 - preview: exact ordinary probability dilution with original super probability, price and pity
+  ---
+  duration_ms: 7.143886
+  ...
+# Subtest: preview: old complete save gets eight nonduplicate ordinary draws using unchanged algorithm
+ok 191 - preview: old complete save gets eight nonduplicate ordinary draws using unchanged algorithm
+  ---
+  duration_ms: 5.863639
+  ...
+# Subtest: preview: all eight owned/last/wear survive current normalization with active registry
+ok 192 - preview: all eight owned/last/wear survive current normalization with active registry
+  ---
+  duration_ms: 6.593451
+  ...
+# Subtest: preview: collisions, altered baseline and duplicate installer fail before activation
+ok 193 - preview: collisions, altered baseline and duplicate installer fail before activation
+  ---
+  duration_ms: 13.277658
+  ...
+# (node:1054564) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: formal legacy initialize forwards all three exact evidence values including authenticated v15 archive
+ok 194 - formal legacy initialize forwards all three exact evidence values including authenticated v15 archive
+  ---
+  duration_ms: 284.754833
+  ...
+# Subtest: formal source changes during explicit initialization consent reject before any write
+ok 195 - formal source changes during explicit initialization consent reject before any write
+  ---
+  duration_ms: 80.689967
+  ...
+# Subtest: formal sourceBackup changes during explicit initialization consent reject before any write
+ok 196 - formal sourceBackup changes during explicit initialization consent reject before any write
+  ---
+  duration_ms: 69.350773
+  ...
+# Subtest: formal v15 changes during explicit initialization consent reject before any write
+ok 197 - formal v15 changes during explicit initialization consent reject before any write
+  ---
+  duration_ms: 78.881356
+  ...
+# Subtest: formal: hide during legacy initialization consent cancels its promise and releases without writes
+ok 198 - formal: hide during legacy initialization consent cancels its promise and releases without writes
+  ---
+  duration_ms: 61.882388
+  ...
+# Subtest: formal: queued native-lock model reads no Storage and pagehide aborts the queue
+ok 199 - formal: queued native-lock model reads no Storage and pagehide aborts the queue
+  ---
+  duration_ms: 41.232849
+  ...
+# Subtest: formal: foreign same-scope storage event releases lifetime, unrelated key does not
+ok 200 - formal: foreign same-scope storage event releases lifetime, unrelated key does not
+  ---
+  duration_ms: 301.913559
+  ...
+# Subtest: formal: actual bootstrap carries original release flags into production entry at /
+ok 201 - formal: actual bootstrap carries original release flags into production entry at /
+  ---
+  duration_ms: 364.165992
+  ...
+# Subtest: formal: actual bootstrap carries original release flags into production entry at /tangzhe-zhuan-playtest/
+ok 202 - formal: actual bootstrap carries original release flags into production entry at /tangzhe-zhuan-playtest/
+  ---
+  duration_ms: 379.690309
+  ...
+# Subtest: formal: display resolving after pagehide publishes no app or runtime and writes nothing
+ok 203 - formal: display resolving after pagehide publishes no app or runtime and writes nothing
+  ---
+  duration_ms: 202.009185
+  ...
+# Subtest: preview: hide during legacy initialization consent cancels its promise and releases without writes
+ok 204 - preview: hide during legacy initialization consent cancels its promise and releases without writes
+  ---
+  duration_ms: 64.028076
+  ...
+# Subtest: preview: queued native-lock model reads no Storage and pagehide aborts the queue
+ok 205 - preview: queued native-lock model reads no Storage and pagehide aborts the queue
+  ---
+  duration_ms: 33.701168
+  ...
+# Subtest: preview: foreign same-scope storage event releases lifetime, unrelated key does not
+ok 206 - preview: foreign same-scope storage event releases lifetime, unrelated key does not
+  ---
+  duration_ms: 215.566013
+  ...
+# Subtest: preview: actual bootstrap carries original release flags into production entry at /
+ok 207 - preview: actual bootstrap carries original release flags into production entry at /
+  ---
+  duration_ms: 259.643363
+  ...
+# Subtest: preview: actual bootstrap carries original release flags into production entry at /tangzhe-zhuan-playtest/
+ok 208 - preview: actual bootstrap carries original release flags into production entry at /tangzhe-zhuan-playtest/
+  ---
+  duration_ms: 222.506205
+  ...
+# Subtest: preview: display resolving after pagehide publishes no app or runtime and writes nothing
+ok 209 - preview: display resolving after pagehide publishes no app or runtime and writes nothing
+  ---
+  duration_ms: 90.375264
+  ...
+# (node:1054570) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: formal: actual doGacha chain commits one 200000 draw; synchronous repeated clicks do not debit twice
+ok 210 - formal: actual doGacha chain commits one 200000 draw; synchronous repeated clicks do not debit twice
+  ---
+  duration_ms: 534.751097
+  ...
+# Subtest: formal: backup failure uses real persist; blocked retries cannot reroll/refund and explicit reconciliation restores exact saved outcome
+ok 211 - formal: backup failure uses real persist; blocked retries cannot reroll/refund and explicit reconciliation restores exact saved outcome
+  ---
+  duration_ms: 382.475841
+  ...
+# Subtest: formal: unknown failure uses real persist; blocked retries cannot reroll/refund and explicit reconciliation restores exact saved outcome
+ok 212 - formal: unknown failure uses real persist; blocked retries cannot reroll/refund and explicit reconciliation restores exact saved outcome
+  ---
+  duration_ms: 504.17281
+  ...
+# Subtest: formal: exact card compatibility keys and other scope bytes remain untouched across production P2 migration and one actual draw
+ok 213 - formal: exact card compatibility keys and other scope bytes remain untouched across production P2 migration and one actual draw
+  ---
+  duration_ms: 328.108708
+  ...
+# Subtest: preview: actual doGacha chain commits one 200000 draw; synchronous repeated clicks do not debit twice
+ok 214 - preview: actual doGacha chain commits one 200000 draw; synchronous repeated clicks do not debit twice
+  ---
+  duration_ms: 363.042975
+  ...
+# Subtest: preview: backup failure uses real persist; blocked retries cannot reroll/refund and explicit reconciliation restores exact saved outcome
+ok 215 - preview: backup failure uses real persist; blocked retries cannot reroll/refund and explicit reconciliation restores exact saved outcome
+  ---
+  duration_ms: 313.14712
+  ...
+# Subtest: preview: unknown failure uses real persist; blocked retries cannot reroll/refund and explicit reconciliation restores exact saved outcome
+ok 216 - preview: unknown failure uses real persist; blocked retries cannot reroll/refund and explicit reconciliation restores exact saved outcome
+  ---
+  duration_ms: 263.147737
+  ...
+# Subtest: preview: exact card compatibility keys and other scope bytes remain untouched across production P2 migration and one actual draw
+ok 217 - preview: exact card compatibility keys and other scope bytes remain untouched across production P2 migration and one actual draw
+  ---
+  duration_ms: 185.557415
+  ...
+# Subtest: candidate battle route and all former battle runtime imports stay retired; rootpet shares production formal writer
+ok 218 - candidate battle route and all former battle runtime imports stay retired; rootpet shares production formal writer
+  ---
+  duration_ms: 6.076137
+  ...
+# Subtest: formal: stale duplicate migration confirm cannot write twice; migrated actual draw survives a new production session
+ok 219 - formal: stale duplicate migration confirm cannot write twice; migrated actual draw survives a new production session
+  ---
+  duration_ms: 332.107781
+  ...
+# Subtest: preview: stale duplicate migration confirm cannot write twice; migrated actual draw survives a new production session
+ok 220 - preview: stale duplicate migration confirm cannot write twice; migrated actual draw survives a new production session
+  ---
+  duration_ms: 238.256091
+  ...
+# Subtest: approved first-eight flavor output is byte-for-byte unchanged
+ok 221 - approved first-eight flavor output is byte-for-byte unchanged
+  ---
+  duration_ms: 1.64091
+  ...
+# Subtest: absent, blank or invalid flavor omits the entire optional segment
+ok 222 - absent, blank or invalid flavor omits the entire optional segment
+  ---
+  duration_ms: 0.32699
+  ...
+# Subtest: flavor keeps escaping and ownership/type gates
+ok 223 - flavor keeps escaping and ownership/type gates
+  ---
+  duration_ms: 0.315097
+  ...
+# (node:1054603) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: formal: disabled negative control reads/writes no Storage and acquires no lock
+ok 224 - formal: disabled negative control reads/writes no Storage and acquires no lock
+  ---
+  duration_ms: 177.406783
+  ...
+# Subtest: formal: P1 Confirm uses actual boot and one coordinator without automatic grants
+ok 225 - formal: P1 Confirm uses actual boot and one coordinator without automatic grants
+  ---
+  duration_ms: 418.928643
+  ...
+# Subtest: formal: P1 Cancel uses actual boot and one coordinator without automatic grants
+ok 226 - formal: P1 Cancel uses actual boot and one coordinator without automatic grants
+  ---
+  duration_ms: 246.862913
+  ...
+# Subtest: formal: existing P2 bypasses legacy inspection and consent, uses full validator and real boot
+ok 227 - formal: existing P2 bypasses legacy inspection and consent, uses full validator and real boot
+  ---
+  duration_ms: 263.805634
+  ...
+# Subtest: formal: corrupt P2 snapshot never downgrades or overwrites evidence
+ok 228 - formal: corrupt P2 snapshot never downgrades or overwrites evidence
+  ---
+  duration_ms: 95.458102
+  ...
+# Subtest: formal: corrupt P2 original never downgrades or overwrites evidence
+ok 229 - formal: corrupt P2 original never downgrades or overwrites evidence
+  ---
+  duration_ms: 125.644703
+  ...
+# Subtest: formal: corrupt P2 identity never downgrades or overwrites evidence
+ok 230 - formal: corrupt P2 identity never downgrades or overwrites evidence
+  ---
+  duration_ms: 175.167843
+  ...
+# Subtest: formal: prepared P1 keeps evidence readonly until explicit reconcile/retry
+ok 231 - formal: prepared P1 keeps evidence readonly until explicit reconcile/retry
+  ---
+  duration_ms: 362.223026
+  ...
+# Subtest: formal: orphan snapshot with missing main is terminal, zero writes and lock release
+ok 232 - formal: orphan snapshot with missing main is terminal, zero writes and lock release
+  ---
+  duration_ms: 93.843972
+  ...
+# Subtest: formal: missing main source requires original-card consent Confirm before collectible prompt
+ok 233 - formal: missing main source requires original-card consent Confirm before collectible prompt
+  ---
+  duration_ms: 162.787739
+  ...
+# Subtest: formal: missing main source requires original-card consent Cancel before collectible prompt
+ok 234 - formal: missing main source requires original-card consent Cancel before collectible prompt
+  ---
+  duration_ms: 63.18435
+  ...
+# Subtest: formal: missing main empty requires original-card consent Confirm before collectible prompt
+ok 235 - formal: missing main empty requires original-card consent Confirm before collectible prompt
+  ---
+  duration_ms: 112.518413
+  ...
+# Subtest: formal: missing main empty requires original-card consent Cancel before collectible prompt
+ok 236 - formal: missing main empty requires original-card consent Cancel before collectible prompt
+  ---
+  duration_ms: 54.764854
+  ...
+# Subtest: formal: production refuses QA marker ?collectionQA=1 before Storage/lock
+ok 237 - formal: production refuses QA marker ?collectionQA=1 before Storage/lock
+  ---
+  duration_ms: 37.093123
+  ...
+# Subtest: formal: production refuses QA marker ?collectionQA=0 before Storage/lock
+ok 238 - formal: production refuses QA marker ?collectionQA=0 before Storage/lock
+  ---
+  duration_ms: 27.783913
+  ...
+# Subtest: formal: production refuses QA marker ?wearables8=1 before Storage/lock
+ok 239 - formal: production refuses QA marker ?wearables8=1 before Storage/lock
+  ---
+  duration_ms: 37.62186
+  ...
+# Subtest: formal: production refuses QA marker ?wearables8=0 before Storage/lock
+ok 240 - formal: production refuses QA marker ?wearables8=0 before Storage/lock
+  ---
+  duration_ms: 47.883081
+  ...
+# Subtest: formal: production refuses QA marker ?%77earables8=1 before Storage/lock
+ok 241 - formal: production refuses QA marker ?%77earables8=1 before Storage/lock
+  ---
+  duration_ms: 26.312987
+  ...
+# Subtest: formal: production refuses QA marker ?collectionQA=1&collectionQA=1 before Storage/lock
+ok 242 - formal: production refuses QA marker ?collectionQA=1&collectionQA=1 before Storage/lock
+  ---
+  duration_ms: 29.339051
+  ...
+# Subtest: formal: pagehide on consent prompt revokes ownership, releases lock and stale consent cannot write
+ok 243 - formal: pagehide on consent prompt revokes ownership, releases lock and stale consent cannot write
+  ---
+  duration_ms: 75.525094
+  ...
+# Subtest: formal: blindbox18/display.mjs import failure releases lifetime and cannot continue
+ok 244 - formal: blindbox18/display.mjs import failure releases lifetime and cannot continue
+  ---
+  duration_ms: 110.701836
+  ...
+# Subtest: formal: app.js?v= import failure releases lifetime and cannot continue
+ok 245 - formal: app.js?v= import failure releases lifetime and cannot continue
+  ---
+  duration_ms: 87.738674
+  ...
+# Subtest: preview: disabled negative control reads/writes no Storage and acquires no lock
+ok 246 - preview: disabled negative control reads/writes no Storage and acquires no lock
+  ---
+  duration_ms: 36.402082
+  ...
+# Subtest: preview: P1 Confirm uses actual boot and one coordinator without automatic grants
+ok 247 - preview: P1 Confirm uses actual boot and one coordinator without automatic grants
+  ---
+  duration_ms: 201.243008
+  ...
+# Subtest: preview: P1 Cancel uses actual boot and one coordinator without automatic grants
+ok 248 - preview: P1 Cancel uses actual boot and one coordinator without automatic grants
+  ---
+  duration_ms: 101.772295
+  ...
+# Subtest: preview: existing P2 bypasses legacy inspection and consent, uses full validator and real boot
+ok 249 - preview: existing P2 bypasses legacy inspection and consent, uses full validator and real boot
+  ---
+  duration_ms: 105.181147
+  ...
+# Subtest: preview: corrupt P2 snapshot never downgrades or overwrites evidence
+ok 250 - preview: corrupt P2 snapshot never downgrades or overwrites evidence
+  ---
+  duration_ms: 34.755739
+  ...
+# Subtest: preview: corrupt P2 identity never downgrades or overwrites evidence
+ok 251 - preview: corrupt P2 identity never downgrades or overwrites evidence
+  ---
+  duration_ms: 73.564784
+  ...
+# Subtest: preview: prepared P1 keeps evidence readonly until explicit reconcile/retry
+ok 252 - preview: prepared P1 keeps evidence readonly until explicit reconcile/retry
+  ---
+  duration_ms: 162.978543
+  ...
+# Subtest: preview: orphan snapshot with missing main is terminal, zero writes and lock release
+ok 253 - preview: orphan snapshot with missing main is terminal, zero writes and lock release
+  ---
+  duration_ms: 31.48939
+  ...
+# Subtest: preview: missing main source requires original-card consent Confirm before collectible prompt
+ok 254 - preview: missing main source requires original-card consent Confirm before collectible prompt
+  ---
+  duration_ms: 52.918854
+  ...
+# Subtest: preview: missing main source requires original-card consent Cancel before collectible prompt
+ok 255 - preview: missing main source requires original-card consent Cancel before collectible prompt
+  ---
+  duration_ms: 32.415299
+  ...
+# Subtest: preview: missing main empty requires original-card consent Confirm before collectible prompt
+ok 256 - preview: missing main empty requires original-card consent Confirm before collectible prompt
+  ---
+  duration_ms: 44.887641
+  ...
+# Subtest: preview: missing main empty requires original-card consent Cancel before collectible prompt
+ok 257 - preview: missing main empty requires original-card consent Cancel before collectible prompt
+  ---
+  duration_ms: 29.651608
+  ...
+# Subtest: preview: production refuses QA marker ?collectionQA=1 before Storage/lock
+ok 258 - preview: production refuses QA marker ?collectionQA=1 before Storage/lock
+  ---
+  duration_ms: 21.18369
+  ...
+# Subtest: preview: production refuses QA marker ?collectionQA=0 before Storage/lock
+ok 259 - preview: production refuses QA marker ?collectionQA=0 before Storage/lock
+  ---
+  duration_ms: 22.791364
+  ...
+# Subtest: preview: production refuses QA marker ?wearables8=1 before Storage/lock
+ok 260 - preview: production refuses QA marker ?wearables8=1 before Storage/lock
+  ---
+  duration_ms: 20.438775
+  ...
+# Subtest: preview: production refuses QA marker ?wearables8=0 before Storage/lock
+ok 261 - preview: production refuses QA marker ?wearables8=0 before Storage/lock
+  ---
+  duration_ms: 23.047458
+  ...
+# Subtest: preview: production refuses QA marker ?%77earables8=1 before Storage/lock
+ok 262 - preview: production refuses QA marker ?%77earables8=1 before Storage/lock
+  ---
+  duration_ms: 20.901027
+  ...
+# Subtest: preview: production refuses QA marker ?collectionQA=1&collectionQA=1 before Storage/lock
+ok 263 - preview: production refuses QA marker ?collectionQA=1&collectionQA=1 before Storage/lock
+  ---
+  duration_ms: 20.4163
+  ...
+# Subtest: preview: pagehide on consent prompt revokes ownership, releases lock and stale consent cannot write
+ok 264 - preview: pagehide on consent prompt revokes ownership, releases lock and stale consent cannot write
+  ---
+  duration_ms: 52.263058
+  ...
+# Subtest: preview: blindbox18/display.mjs import failure releases lifetime and cannot continue
+ok 265 - preview: blindbox18/display.mjs import failure releases lifetime and cannot continue
+  ---
+  duration_ms: 75.845159
+  ...
+# Subtest: preview: app.js?v= import failure releases lifetime and cannot continue
+ok 266 - preview: app.js?v= import failure releases lifetime and cannot continue
+  ---
+  duration_ms: 77.023604
+  ...
+# Subtest: formal project route / selects the correct real app
+ok 267 - formal project route / selects the correct real app
+  ---
+  duration_ms: 127.777185
+  ...
+# Subtest: formal project route /index.html selects the correct real app
+ok 268 - formal project route /index.html selects the correct real app
+  ---
+  duration_ms: 119.51649
+  ...
+# Subtest: formal project route /pet/game/ selects the correct real app
+ok 269 - formal project route /pet/game/ selects the correct real app
+  ---
+  duration_ms: 122.431345
+  ...
+# Subtest: formal project route /pet/game/index.html selects the correct real app
+ok 270 - formal project route /pet/game/index.html selects the correct real app
+  ---
+  duration_ms: 114.834936
+  ...
+# Subtest: formal project route /tangzhe-zhuan-playtest/ selects the correct real app
+ok 271 - formal project route /tangzhe-zhuan-playtest/ selects the correct real app
+  ---
+  duration_ms: 113.293617
+  ...
+# Subtest: formal project route /tangzhe-zhuan-playtest/index.html selects the correct real app
+ok 272 - formal project route /tangzhe-zhuan-playtest/index.html selects the correct real app
+  ---
+  duration_ms: 115.160146
+  ...
+# Subtest: formal project route /tangzhe-zhuan-playtest/pet/game/ selects the correct real app
+ok 273 - formal project route /tangzhe-zhuan-playtest/pet/game/ selects the correct real app
+  ---
+  duration_ms: 113.022204
+  ...
+# Subtest: formal project route /tangzhe-zhuan-playtest/pet/game/index.html selects the correct real app
+ok 274 - formal project route /tangzhe-zhuan-playtest/pet/game/index.html selects the correct real app
+  ---
+  duration_ms: 112.967963
+  ...
+# Subtest: app.js: actual production goPage never adds QA parameters
+ok 275 - app.js: actual production goPage never adds QA parameters
+  ---
+  duration_ms: 2.008104
+  ...
+# Subtest: preview/app.js: actual production goPage never adds QA parameters
+ok 276 - preview/app.js: actual production goPage never adds QA parameters
+  ---
+  duration_ms: 1.422184
+  ...
+# Subtest: pet/game/app.js: actual production goPage never adds QA parameters
+ok 277 - pet/game/app.js: actual production goPage never adds QA parameters
+  ---
+  duration_ms: 1.72969
+  ...
+# Subtest: preview wallet rollback rejects before Storage/lock
+ok 278 - preview wallet rollback rejects before Storage/lock
+  ---
+  duration_ms: 24.559103
+  ...
+# Subtest: formal wallet and entry rollback gates retain ordinary gameplay while disabling cards
+ok 279 - formal wallet and entry rollback gates retain ordinary gameplay while disabling cards
+  ---
+  duration_ms: 123.137225
+  ...
+# Subtest: actual candidate production flag/token, root/preview/rootpet version chain and separate unchanged previewpet
+ok 280 - actual candidate production flag/token, root/preview/rootpet version chain and separate unchanged previewpet
+  ---
+  duration_ms: 4.237643
+  ...
+# Subtest: all literal imports in new module closure resolve inside project and use the final token; derived pins match executed bytes
+ok 281 - all literal imports in new module closure resolve inside project and use the final token; derived pins match executed bytes
+  ---
+  duration_ms: 5.15029
+  ...
+# Subtest: all eight exact owned images are present and versioned; display does not grant ownership or add decoration gameplay
+ok 282 - all eight exact owned images are present and versioned; display does not grant ownership or add decoration gameplay
+  ---
+  duration_ms: 24.953302
+  ...
+# (node:1054609) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: formal: actual no-query bootstrap uses production entry under GitHub project subpath; new closure comes from exact candidate files
+ok 283 - formal: actual no-query bootstrap uses production entry under GitHub project subpath; new closure comes from exact candidate files
+  ---
+  duration_ms: 465.393614
+  ...
+# Subtest: preview: actual no-query bootstrap uses production entry under GitHub project subpath; new closure comes from exact candidate files
+ok 284 - preview: actual no-query bootstrap uses production entry under GitHub project subpath; new closure comes from exact candidate files
+  ---
+  duration_ms: 371.845437
+  ...
+# Subtest: changed shared home renderer: every actual HTML entry uses the exact production token
+ok 285 - changed shared home renderer: every actual HTML entry uses the exact production token
+  ---
+  duration_ms: 18.691152
+  ...
+# Subtest: negative control: old v=15c renderer URL is rejected for both root and formal pet
+ok 286 - negative control: old v=15c renderer URL is rejected for both root and formal pet
+  ---
+  duration_ms: 2.557489
+  ...
+# (node:1054625) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: formal: exact verified evidence reused, current save and returned copies remain independent
+ok 287 - formal: exact verified evidence reused, current save and returned copies remain independent
+  ---
+  duration_ms: 201.256479
+  ...
+# Subtest: formal: changed evidence is rechecked, failed chains never cached, only one raw pair retained
+ok 288 - formal: changed evidence is rechecked, failed chains never cached, only one raw pair retained
+  ---
+  duration_ms: 222.13882
+  ...
+# Subtest: formal: warm production cache retains snapshot protection
+ok 289 - formal: warm production cache retains snapshot protection
+  ---
+  duration_ms: 278.908513
+  ...
+# Subtest: formal: warm production cache retains main protection
+ok 290 - formal: warm production cache retains main protection
+  ---
+  duration_ms: 224.990638
+  ...
+# Subtest: formal: warm production cache retains lock protection
+ok 291 - formal: warm production cache retains lock protection
+  ---
+  duration_ms: 263.701755
+  ...
+# Subtest: preview: exact verified evidence reused, current save and returned copies remain independent
+ok 292 - preview: exact verified evidence reused, current save and returned copies remain independent
+  ---
+  duration_ms: 74.655254
+  ...
+# Subtest: preview: changed evidence is rechecked, failed chains never cached, only one raw pair retained
+ok 293 - preview: changed evidence is rechecked, failed chains never cached, only one raw pair retained
+  ---
+  duration_ms: 118.115101
+  ...
+# Subtest: preview: warm production cache retains snapshot protection
+ok 294 - preview: warm production cache retains snapshot protection
+  ---
+  duration_ms: 187.523099
+  ...
+# Subtest: preview: warm production cache retains main protection
+ok 295 - preview: warm production cache retains main protection
+  ---
+  duration_ms: 159.233998
+  ...
+# Subtest: preview: warm production cache retains lock protection
+ok 296 - preview: warm production cache retains lock protection
+  ---
+  duration_ms: 149.411119
+  ...
+# Subtest: formal cached chain cannot admit preview evidence
+ok 297 - formal cached chain cannot admit preview evidence
+  ---
+  duration_ms: 79.958651
+  ...
+# Subtest: formal: exact logical namespace is retained without prefixes or extra methods
+ok 298 - formal: exact logical namespace is retained without prefixes or extra methods
+  ---
+  duration_ms: 5.828045
+  ...
+# Subtest: formal: out-of-scope unrelated is rejected before native I/O
+ok 299 - formal: out-of-scope unrelated is rejected before native I/O
+  ---
+  duration_ms: 0.628156
+  ...
+# Subtest: formal: out-of-scope tangzhe-preview-collection-v1-save is rejected before native I/O
+ok 300 - formal: out-of-scope tangzhe-preview-collection-v1-save is rejected before native I/O
+  ---
+  duration_ms: 0.196713
+  ...
+# Subtest: formal: out-of-scope qa-formal-collection-v1:tangzhe-formal-collection-v1-save is rejected before native I/O
+ok 301 - formal: out-of-scope qa-formal-collection-v1:tangzhe-formal-collection-v1-save is rejected before native I/O
+  ---
+  duration_ms: 0.339884
+  ...
+# Subtest: formal: source reads exact bytes but never writes
+ok 302 - formal: source reads exact bytes but never writes
+  ---
+  duration_ms: 0.376689
+  ...
+# Subtest: formal: sourceBackup reads exact bytes but never writes
+ok 303 - formal: sourceBackup reads exact bytes but never writes
+  ---
+  duration_ms: 0.163684
+  ...
+# Subtest: formal: v15 reads exact bytes but never writes
+ok 304 - formal: v15 reads exact bytes but never writes
+  ---
+  duration_ms: 0.143372
+  ...
+# Subtest: formal: immutable tangzhe-formal-collectibles-v2-original admits first bytes once, accepts identical retry without write and rejects replacement
+ok 305 - formal: immutable tangzhe-formal-collectibles-v2-original admits first bytes once, accepts identical retry without write and rejects replacement
+  ---
+  duration_ms: 0.400324
+  ...
+# Subtest: formal: immutable tangzhe-formal-collection-v1-original admits first bytes once, accepts identical retry without write and rejects replacement
+ok 306 - formal: immutable tangzhe-formal-collection-v1-original admits first bytes once, accepts identical retry without write and rejects replacement
+  ---
+  duration_ms: 0.345717
+  ...
+# Subtest: formal: wrong key bindings are rejected at construction with zero native I/O
+ok 307 - formal: wrong key bindings are rejected at construction with zero native I/O
+  ---
+  duration_ms: 4.629738
+  ...
+# Subtest: formal: non-string keys/values are rejected without coercion or native writes
+ok 308 - formal: non-string keys/values are rejected without coercion or native writes
+  ---
+  duration_ms: 0.533269
+  ...
+# Subtest: formal: native read/write errors propagate without fallback, deletion or extra key
+ok 309 - formal: native read/write errors propagate without fallback, deletion or extra key
+  ---
+  duration_ms: 1.383667
+  ...
+# Subtest: formal: dump reads only the fixed scoped keys and its copy cannot mutate storage
+ok 310 - formal: dump reads only the fixed scoped keys and its copy cannot mutate storage
+  ---
+  duration_ms: 6.184849
+  ...
+# Subtest: preview: exact logical namespace is retained without prefixes or extra methods
+ok 311 - preview: exact logical namespace is retained without prefixes or extra methods
+  ---
+  duration_ms: 0.291555
+  ...
+# Subtest: preview: out-of-scope unrelated is rejected before native I/O
+ok 312 - preview: out-of-scope unrelated is rejected before native I/O
+  ---
+  duration_ms: 0.133878
+  ...
+# Subtest: preview: out-of-scope tangzhe-formal-collection-v1-save is rejected before native I/O
+ok 313 - preview: out-of-scope tangzhe-formal-collection-v1-save is rejected before native I/O
+  ---
+  duration_ms: 0.182758
+  ...
+# Subtest: preview: out-of-scope qa-formal-collection-v1:tangzhe-preview-collection-v1-save is rejected before native I/O
+ok 314 - preview: out-of-scope qa-formal-collection-v1:tangzhe-preview-collection-v1-save is rejected before native I/O
+  ---
+  duration_ms: 0.103289
+  ...
+# Subtest: preview: source reads exact bytes but never writes
+ok 315 - preview: source reads exact bytes but never writes
+  ---
+  duration_ms: 0.244656
+  ...
+# Subtest: preview: sourceBackup reads exact bytes but never writes
+ok 316 - preview: sourceBackup reads exact bytes but never writes
+  ---
+  duration_ms: 0.130186
+  ...
+# Subtest: preview: immutable tangzhe-preview-collectibles-v2-original admits first bytes once, accepts identical retry without write and rejects replacement
+ok 317 - preview: immutable tangzhe-preview-collectibles-v2-original admits first bytes once, accepts identical retry without write and rejects replacement
+  ---
+  duration_ms: 0.215614
+  ...
+# Subtest: preview: wrong key bindings are rejected at construction with zero native I/O
+ok 318 - preview: wrong key bindings are rejected at construction with zero native I/O
+  ---
+  duration_ms: 0.190153
+  ...
+# Subtest: preview: non-string keys/values are rejected without coercion or native writes
+ok 319 - preview: non-string keys/values are rejected without coercion or native writes
+  ---
+  duration_ms: 0.215476
+  ...
+# Subtest: preview: native read/write errors propagate without fallback, deletion or extra key
+ok 320 - preview: native read/write errors propagate without fallback, deletion or extra key
+  ---
+  duration_ms: 0.15085
+  ...
+# Subtest: preview: dump reads only the fixed scoped keys and its copy cannot mutate storage
+ok 321 - preview: dump reads only the fixed scoped keys and its copy cannot mutate storage
+  ---
+  duration_ms: 0.157457
+  ...
+# Subtest: formal: missing main binding rejects before I/O
+ok 322 - formal: missing main binding rejects before I/O
+  ---
+  duration_ms: 0.252003
+  ...
+# Subtest: formal: missing backup binding rejects before I/O
+ok 323 - formal: missing backup binding rejects before I/O
+  ---
+  duration_ms: 0.137951
+  ...
+# Subtest: formal: missing tab binding rejects before I/O
+ok 324 - formal: missing tab binding rejects before I/O
+  ---
+  duration_ms: 0.133147
+  ...
+# Subtest: formal: missing source binding rejects before I/O
+ok 325 - formal: missing source binding rejects before I/O
+  ---
+  duration_ms: 0.141704
+  ...
+# Subtest: formal: missing sourceBackup binding rejects before I/O
+ok 326 - formal: missing sourceBackup binding rejects before I/O
+  ---
+  duration_ms: 0.124869
+  ...
+# Subtest: formal: missing original binding rejects before I/O
+ok 327 - formal: missing original binding rejects before I/O
+  ---
+  duration_ms: 0.122824
+  ...
+# Subtest: formal: missing v15 binding rejects before I/O
+ok 328 - formal: missing v15 binding rejects before I/O
+  ---
+  duration_ms: 4.14739
+  ...
+# Subtest: formal: non-callable native Storage methods reject at construction
+ok 329 - formal: non-callable native Storage methods reject at construction
+  ---
+  duration_ms: 0.452589
+  ...
+# Subtest: preview: missing main binding rejects before I/O
+ok 330 - preview: missing main binding rejects before I/O
+  ---
+  duration_ms: 0.256208
+  ...
+# Subtest: preview: missing backup binding rejects before I/O
+ok 331 - preview: missing backup binding rejects before I/O
+  ---
+  duration_ms: 0.169923
+  ...
+# Subtest: preview: missing tab binding rejects before I/O
+ok 332 - preview: missing tab binding rejects before I/O
+  ---
+  duration_ms: 0.134845
+  ...
+# Subtest: preview: missing source binding rejects before I/O
+ok 333 - preview: missing source binding rejects before I/O
+  ---
+  duration_ms: 0.134293
+  ...
+# Subtest: preview: missing sourceBackup binding rejects before I/O
+ok 334 - preview: missing sourceBackup binding rejects before I/O
+  ---
+  duration_ms: 0.114361
+  ...
+# Subtest: preview: non-callable native Storage methods reject at construction
+ok 335 - preview: non-callable native Storage methods reject at construction
+  ---
+  duration_ms: 0.125986
+  ...
+# Subtest: prototype scope __proto__ cannot construct even an empty adapter
+ok 336 - prototype scope __proto__ cannot construct even an empty adapter
+  ---
+  duration_ms: 0.187046
+  ...
+# Subtest: prototype scope toString cannot construct even an empty adapter
+ok 337 - prototype scope toString cannot construct even an empty adapter
+  ---
+  duration_ms: 0.097596
+  ...
+# (node:1054647) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: formal authentic TD upgrade receipt and stage result survive P1→P2 production migration, gacha and reload; dropping receipt is denied
+ok 338 - formal authentic TD upgrade receipt and stage result survive P1→P2 production migration, gacha and reload; dropping receipt is denied
+  ---
+  duration_ms: 883.579202
+  ...
+1..338
+# tests 338
+# suites 0
+# pass 338
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7263.945848

@@ -2,21 +2,22 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';
 const read=p=>fs.readFileSync(new URL('../../'+p,import.meta.url),'utf8');
 const slice=(s,a,b)=>{const i=s.indexOf(a);assert(i>=0,a);const j=s.indexOf(b,i);assert(j>i,b);return s.slice(i,j);};
-function harness(file,{unlocked=true,can=true,ls={},saveBlocked=false,claim=null}={}){
+function harness(file,{unlocked=true,can=true,ls={},saveBlocked=false,claim=null,p2=true}={}){
   const src=read(file);
   const code=slice(src,'/* ---------- 盲盒-70','/* ---------- 调任');
   const store=new Map(Object.entries(ls)),h={},els=new Map(),log=[],mq=[];let open=false,html='';
   const el=id=>{if(!els.has(id))els.set(id,{id,disabled:false,addEventListener:(ev,fn)=>{h[id]=fn;},set innerHTML(x){html+=x;}});return els.get(id);};
   const ctx={TEST_MODE:false,saveBlocked,mq,log,
     localStorage:{getItem:k=>store.has(k)?store.get(k):null,setItem:(k,v)=>store.set(k,String(v))},
-    state:{pending:{sec:3600,gap:3600,amount:1000,cap:28800}},
+    FormalCollectionRuntime:{qaProtocol2:true,qaWearables8:p2},
+    state:{_collectionProtocol:p2?2:1,pending:{sec:3600,gap:3600,amount:1000,cap:28800}},
     E:{gachaUnlocked:()=>unlocked,canDouble:()=>can,claimOffline:(s,t,dbl)=>{log.push(['claim',dbl]);return claim?claim(dbl):{ok:true,amount:dbl?2000:1000,doubled:dbl};},nextResetTs:()=>0},
     modalOpen:()=>open,openModal:x=>{open=true;html=x;for(const k in h)delete h[k];els.clear();},closeModal:()=>{open=false;html='';log.push(['close']);},
     $:sel=>{const id=sel.slice(1);return html.includes(`id="${id}"`)?el(id):null;},
-    setTab:t=>{log.push(['tab',t]);if(t==='gacha')store.set(ctx.BB70_VISIT_KEY,'1');},
+    setTab:t=>{log.push(['tab',t]);},
     audioUnlock(){},sfx(){},popWord(){},bumpCoins(){},burstCoins(){},toast:m=>log.push(['toast',m]),fmt:String,fmtDur:String,fmtClockLocal:String,coinSm:'',W:1,H:1,now:()=>0,dirty:false,
     atomic:fn=>fn()};
-  vm.createContext(ctx);vm.runInContext(code+';this.BB70_LAUNCH_KEY=BB70_LAUNCH_KEY;this.BB70_VISIT_KEY=BB70_VISIT_KEY;this.notice=showNewBlindboxNotice;this.offline=showOffline;this.shouldLaunch=bb70ShouldShowLaunch;',ctx);
+  vm.createContext(ctx);vm.runInContext(code+';this.BB70_LAUNCH_KEY=BB70_LAUNCH_KEY;this.BB70_VISIT_KEY=BB70_VISIT_KEY;this.notice=showNewBlindboxNotice;this.offline=showOffline;this.shouldLaunch=bb70ShouldShowLaunch;this.set=bb70Set;',ctx);
   return {ctx,store,h,els,log,get html(){return html;},click:id=>h[id]()};
 }
 // 熊大审 #3：用 app 里真实的 queueModal / closeModal / modalOpen 和 boot() 里真实的三行排队顺序，验证整条弹窗队列不会卡住
@@ -30,7 +31,8 @@ function queueHarness(file,{launchSeen=false,claim=null}={}){
   const modal={classList:cls('modal')},sheet={classList:cls(null)},mpanel={set innerHTML(x){html=x;},get innerHTML(){return html;}};
   const ctx={TEST_MODE:false,saveBlocked:false,modal,sheet,mpanel,log,setTimeout:fn=>timers.push(fn),
     localStorage:{getItem:k=>store.has(k)?store.get(k):null,setItem:(k,v)=>store.set(k,String(v))},
-    state:{pending:{sec:3600,gap:3600,amount:1000,cap:28800},gacha:{last:{id:'c_x',seen:false}}},
+    FormalCollectionRuntime:{qaProtocol2:true,qaWearables8:true},
+    state:{_collectionProtocol:2,pending:{sec:3600,gap:3600,amount:1000,cap:28800},gacha:{last:{id:'c_x',seen:false}}},
     E:{gachaUnlocked:()=>true,canDouble:()=>true,claimOffline:(s,t,dbl)=>{log.push(['claim',dbl]);return claim?claim(dbl):{ok:true,amount:1000,doubled:dbl};},nextResetTs:()=>0},
     openModal:x=>{html=x;for(const k in h)delete h[k];modal.classList.remove('hidden');log.push(['open',/新盲盒上线啦/.test(x)?'launch':/大家帮你干了/.test(x)?'offline':'other']);},
     $:sel=>{const id=sel.slice(1);return html.includes(`id="${id}"`)?{disabled:false,addEventListener:(ev,fn)=>{h[id]=fn;},set innerHTML(x){html+=x;}}:null;},
@@ -97,8 +99,27 @@ for(const file of ['app.js','pet/game/app.js']){
   test(file+': boot order is settlement then launch notice; gacha tab visit recorded; nothing written to save',()=>{
     const s=read(file),b=slice(s,'function boot()','requestAnimationFrame(frame)');
     assert(b.indexOf('queueModal(showOffline)')<b.indexOf('queueModal(showNewBlindboxNotice)'));
-    assert.match(slice(s,'function setTab(','function updateCompactHead'),/if \(t === 'gacha'\) bb70Set\(BB70_VISIT_KEY\)/);
+    assert.match(slice(s,'function setTab(','function updateCompactHead'),/if \(t === 'gacha' && bb70P2Active\(\)\) bb70Set\(BB70_VISIT_KEY\)/);
     assert.doesNotMatch(slice(s,'/* ---------- 盲盒-70','/* ---------- 离线收益'),/state\.[a-z]+\s*=|persist\(|dirty\s*=/);
+  });
+}
+for(const file of ['app.js','pet/game/app.js']){
+  test(file+': r3 P1 (36-item catalog, upgrade cancelled): no launch popup, no banner, no marker writes even via 去看看 path',()=>{
+    for(const rt of [{qaProtocol2:true,qaWearables8:false},{qaProtocol2:false,qaWearables8:true}]){
+      const t=harness(file,{p2:false});t.ctx.FormalCollectionRuntime=rt;
+      assert.equal(t.ctx.shouldLaunch(),false);t.ctx.notice();assert.doesNotMatch(t.html,/新盲盒上线啦|16 件/);
+      t.ctx.offline();assert.doesNotMatch(t.html,/盲盒上新了|claimBb70/);
+      assert.equal(t.ctx.set(t.ctx.BB70_LAUNCH_KEY),false);assert.equal(t.ctx.set(t.ctx.BB70_VISIT_KEY),false);assert.equal(t.store.size,0);
+    }
+    const t=harness(file);t.ctx.state._collectionProtocol=1;assert.equal(t.ctx.shouldLaunch(),false,'runtime flag alone is not enough');
+  });
+  test(file+': r3 native write guard — only the two UI keys, only value "1"',()=>{
+    const t=harness(file);
+    assert.equal(t.ctx.set('tzz-save'),false);assert.equal(t.ctx.set(t.ctx.BB70_LAUNCH_KEY+'x'),false);
+    assert.equal(t.ctx.set(t.ctx.BB70_LAUNCH_KEY,'0'),false);assert.equal(t.ctx.set(t.ctx.BB70_VISIT_KEY,1),false);assert.equal(t.store.size,0);
+    assert.equal(t.ctx.set(t.ctx.BB70_LAUNCH_KEY),true);assert.equal(t.ctx.set(t.ctx.BB70_VISIT_KEY,'1'),true);
+    assert.deepEqual([...t.store.entries()].sort(),[[t.ctx.BB70_VISIT_KEY,'1'],[t.ctx.BB70_LAUNCH_KEY,'1']].sort());
+    const src=slice(read(file),'/* ---------- 盲盒-70','/* ---------- 调任');assert.equal((src.match(/localStorage\.setItem\(/g)||[]).length,1,'single native write site');
   });
 }
 test('16 = first eight + blindbox18 second eight, all clothes/hats, catalog 36 → 52',async()=>{

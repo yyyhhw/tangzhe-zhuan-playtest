@@ -1,4 +1,4 @@
-import {createCardTransitionGuard} from './card-transition.mjs?v=bb70-launch-notice-20261013-r2';
+import {createCardTransitionGuard} from './card-transition.mjs?v=bb70-launch-notice-20261013-r3';
 export const CARD_ADAPTER_ENABLED=false;
 /** Synthetic-adapter coordinator candidate; no global storage or automatic launch. */
 const fail=code=>{throw Error(code);};

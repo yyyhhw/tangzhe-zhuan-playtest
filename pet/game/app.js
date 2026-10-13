@@ -7,7 +7,7 @@ const COLLECTION = window.FormalCollectionRuntime;
 if (!COLLECTION?.ownsLock()) {
   // Stale HTML can fetch a new script before bootstrap. No storage access here.
   const url=new URL(location.href);
-  if(url.searchParams.get('v')!=='formal-bb70-launch-notice-20261013-r2') {url.searchParams.set('v','formal-bb70-launch-notice-20261013-r2');location.replace(url.href);}
+  if(url.searchParams.get('v')!=='formal-bb70-launch-notice-20261013-r3') {url.searchParams.set('v','formal-bb70-launch-notice-20261013-r3');location.replace(url.href);}
   else {const notice=document.createElement('p');notice.textContent='页面资源尚未更新完整，存档未写入。请关闭此页后重新打开。';document.body.prepend(notice);}
   return;
 }
@@ -1526,7 +1526,7 @@ function setTab(t) {
   updateCompactHead();
   renderTab();
   resize();
-  if (t === 'gacha') bb70Set(BB70_VISIT_KEY);   // 盲盒-70：去过一次盲盒页，结算上新条就收起
+  if (t === 'gacha' && bb70P2Active()) bb70Set(BB70_VISIT_KEY);   // 盲盒-70：P2 新目录生效时去过一次盲盒页，结算上新条才收起（P1 旧盲盒页不写，r3）
 }
 function updateCompactHead() {
   const el = $('#compactHead');
@@ -1607,10 +1607,18 @@ const BB70_NOTICE_VER = 'bb70-wearables16-20261013';
 const BB70_LAUNCH_KEY = 'tzz-bb70-launch-seen:' + BB70_NOTICE_VER;   // 开游戏弹窗：本版本只弹一次
 const BB70_VISIT_KEY = 'tzz-bb70-gacha-visited:' + BB70_NOTICE_VER;   // 去过盲盒页一次后，离线结算不再显示上新条
 const BB70_NEW_COUNT = 16;   // 本次新衣帽件数：首批 8 件 + 盲盒-18 第二批 8 件（目录 36 → 52）
+// 盲盒-70 r3（熊大审 #1）：只有真正启用了新目录（P2 协议 + 52 件衣帽目录已激活）才提示「16 件新」、才写任何标记；
+//   P1（取消升级、仍是 36 件旧目录）一律不弹、不显示、不写。
+function bb70P2Active() { const rt = globalThis.FormalCollectionRuntime; return !!state && state._collectionProtocol === 2 && !!rt && rt.qaProtocol2 === true && rt.qaWearables8 === true; }
 function bb70Get(k) { try { return localStorage.getItem(k) === '1'; } catch (e) { return true; } }
-function bb70Set(k) { try { localStorage.setItem(k, '1'); } catch (e) {} }
-function bb70ShouldShowLaunch() { return !TEST_MODE && !saveBlocked && !bb70Get(BB70_LAUNCH_KEY); }
-function bb70ShouldShowOfflineBanner() { return !!state && !TEST_MODE && E.gachaUnlocked(state) && !bb70Get(BB70_VISIT_KEY); }
+// 盲盒-70 r3（熊大审 #4）：本机写入守卫——只允许这两个 UI 标记键、值只能是 '1'，其它一律拒绝
+function bb70Set(k, v = '1') {
+  if ((k !== BB70_LAUNCH_KEY && k !== BB70_VISIT_KEY) || v !== '1') return false;
+  if (!bb70P2Active()) return false;
+  try { localStorage.setItem(k, '1'); return true; } catch (e) { return false; }
+}
+function bb70ShouldShowLaunch() { return !TEST_MODE && !saveBlocked && bb70P2Active() && !bb70Get(BB70_LAUNCH_KEY); }
+function bb70ShouldShowOfflineBanner() { return !!state && !TEST_MODE && bb70P2Active() && E.gachaUnlocked(state) && !bb70Get(BB70_VISIT_KEY); }
 function bb70OpenGacha() { bb70Set(BB70_VISIT_KEY); bb70Set(BB70_LAUNCH_KEY); setTab('gacha'); }
 // 盲盒-70（熊大审 #2）：「去开盲盒」领取没确认到账（保存失败 / 结果未知 / 已领过）→ 留在结算框：不跳盲盒、不写已看标记、按钮全部锁住不重领；
 //   存档保护面板照常接管核对，玩家点「知道了」才关框

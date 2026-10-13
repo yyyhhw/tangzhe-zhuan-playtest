@@ -6,8 +6,8 @@
  * sessionStorage is wholly denied after installation. Existing index version
  * clearing before this boundary must be separately audited; no exception here.
  */
-import {getRealPageQAConfig, validateRealPageQAGate} from './config.mjs?v=bb70-launch-notice-20261013-r2';
-export {getRealPageQAConfig, validateRealPageQAGate} from './config.mjs?v=bb70-launch-notice-20261013-r2';
+import {getRealPageQAConfig, validateRealPageQAGate} from './config.mjs?v=bb70-launch-notice-20261013-r3';
+export {getRealPageQAConfig, validateRealPageQAGate} from './config.mjs?v=bb70-launch-notice-20261013-r3';
 const installedGuards = new WeakMap();
 const frozen = value => Object.freeze(value);
 const fail = code => { throw new Error(code); };
