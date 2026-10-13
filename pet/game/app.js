@@ -1936,11 +1936,11 @@ function homeLocked() {
 
 const LIVE_LINES = {
   c77:    { walk:['走两步耍下！','地板巴适得很。','莫慌，慢慢逛。'], rest:['瞌睡来了……','躺平！串串味儿还在。','眯一会儿，招牌自己烤。'], read:['……看不懂，但装得很认真。','书里有没有烤串秘方？','阿宅教的，我翻两页。'], dress:['换件围裙耍帅！','金马甲呢？在仓库。','穿好了，出摊！'] },
-  pearl:  { walk:['脚步要轻，账本怕震。','茶香这边更浓。','客人看不见，我自己逛逛。'], rest:['珍珠姐也要午休。','躺平不等于躺不平账。','Q弹的梦，三分钟。'], read:['这本讲成本核算。','漫画？偶尔也扫一眼。','笔记写在杯套上。'], dress:['旗袍要平整。','换一身再营业。','珍珠发夹——不能掉。'] },
+  pearl:  { walk:['脚步要轻，账本怕震。','茶香这边更浓。','客人看不见，我自己逛逛。'], rest:['珍珠姐也要歇会儿。','躺一会儿，账明天再对。','Q弹的梦，三分钟。'], read:['这本讲成本核算。','漫画？偶尔也扫一眼。','笔记写在杯套上。'], dress:['旗袍要平整。','换一身再营业。','珍珠发夹——不能掉。'] },
   otaku:  { walk:['分镜走位，从这格到那格。','地板也是画框。','别踩到我的手办投影。'], rest:['存档点……睡着了。','梦里下一话更新。','被窝是我的次元。'], read:['这本我标了书签！','名场面在第 42 页。','读完去改招牌文案。'], dress:['连帽衫＋新徽章。','换上角色扮演装。','镜子前先摆个 pose。'] },
-  rocket: { walk:['舱内巡检开始。','步进电机：启动。','火星还远，先走到窗边。'], rest:['休眠模式 ON。','充电 20 分钟。','梦到小店起飞。'], read:['说明书：怎么把床送上轨道。','这页有推力公式。','读完继续画火箭。'], dress:['胸针要亮。','换发射正装。','地上的装备，穿上！'] },
+  rocket: { walk:['舱内巡检开始。','步进电机：启动。','火星还远，先在屋里走一圈。'], rest:['休眠模式 ON。','充电 20 分钟。','梦到小店起飞。'], read:['说明书：怎么把床送上轨道。','这页有推力公式。','读完继续画火箭。'], dress:['胸针要亮。','换发射正装。','装备检查完毕，穿上！'] },
 };
-function liveLine(id, act) { if(act==='sit'){const s=window.HomeAutonomy?.linesFor?.('sit',id);return s?s[Math.floor(Math.random()*s.length)]:'坐一会儿，陪你们玩。';}   /* 家宅-57：坐换成每位 CEO 两句专属台词 */const pack = LIVE_LINES[id] || LIVE_LINES.c77, arr = pack[act] || pack.walk; return arr[Math.floor(Math.random() * arr.length)]; }
+function liveLine(id, act) { if(act==='sit'){const s=window.HomeAutonomy?.linesFor?.('sit',id);return s?s[Math.floor(Math.random()*s.length)]:'坐一会儿，歇歇脚。';}   /* 家宅-57：坐换成每位 CEO 两句专属台词 */const pack = LIVE_LINES[id] || LIVE_LINES.c77, arr = pack[act] || pack.walk; return arr[Math.floor(Math.random() * arr.length)]; }
 function homeFreePoint(id,x,y) {
   const H=E.homeOf(state,id),T=E.homeTier(H.lv),pts=[];
   for(let py=0;py<T.rows;py++)for(let px=0;px<T.cols;px++){
@@ -2113,7 +2113,7 @@ function homeAutoStart(id, ac, list) {
 }
 function homeAutoSay(id, ac, kind, emptyRoom) {
   const pack = LIVE_LINES[id] || LIVE_LINES.c77, key = kind ? HA.KINDS[kind].lines : 'walk';
-  const pool = (kind && HA.linesFor && HA.linesFor(kind, id)) || (key === 'sit' ? ['坐一会儿，陪你们玩。'] : pack[key] || pack.walk);   // 家宅-57：坐 / 坐地毯 / 新动作用专属句，其余沿用 LIVE_LINES
+  const pool = (kind && HA.linesFor && HA.linesFor(kind, id)) || (key === 'sit' ? ['坐一会儿，歇歇脚。'] : pack[key] || pack.walk);   // 家宅-57：坐 / 坐地毯 / 新动作用专属句，其余沿用 LIVE_LINES
   const line = HA.chooseLine(pool, ac.autoSaid || (ac.autoSaid = {}), { now:clock, rng:Math.random, emptyRoom });
   if (line) { ac.line = line; ac.until = clock + HA.LINE_SEC; dirty = true; }
 }
@@ -2177,6 +2177,7 @@ function homeLiveHint(id) {
   if (floor.some(p => !cap(p) && act(p) === 'dress')) parts.push('点衣柜换装');
   return '生活：' + parts.join(' · ');
 }
+function petShortName(p) { return p.species === 'dog' ? '小狗' : p.name; }   // 文案-98：宠物页签和详情标题用同一个短名（购买弹窗仍写全名）
 function homeRoomName(id) { const c = E.CEO_BY_ID[id], lv = state.homes?.[id]?.lv || 1; return `${c.name} 的${E.homeTier(lv).name}`; }   // 家宅-97：卡片 / 墙牌 / 宠物面板用同一个房名（只读，不调 homeOf、不建房）
 function renderRoom() {
   const id = homeWho, c = E.CEO_BY_ID[id], H = E.homeOf(state, id), T = E.homeTier(H.lv), lux = E.homeLuxury(state, id);
@@ -2404,21 +2405,21 @@ function petTarget(uid) {
 function petPortal() {
   if(!PG)return '';
   const v=petRoster(), all=Object.values(v.pets), owned=all.filter(p=>!p.quarantined).length;
-  if(!petPanelOpen)return `<button class="pet-entry" id="petEntry" data-act="petOpen" aria-expanded="false" aria-controls="petPanel"><span>🐾 宠物</span><small>${owned ? '已拥有 '+owned+' 只' : '选择你的伙伴'} · 选择与管理</small><b aria-hidden="true">›</b></button>`;
+  if(!petPanelOpen)return `<button class="pet-entry" id="petEntry" data-act="petOpen" aria-expanded="false" aria-controls="petPanel"><span>🐾 宠物</span><small>${owned ? '已有 '+owned+' 只 · 管理' : '挑一只陪你过日子'}</small><b aria-hidden="true">›</b></button>`;
   const P=PG.SPECIES[petSelection]||PG.SPECIES.dog, records=all.filter(p=>p.species===P.species), selected=records.find(p=>p.uid===petSelectedUid)||records.find(p=>!p.compatibility)||records[0];
   if(selected)petSelectedUid=selected.uid;
   const here=v.rooms[homeWho]||[], noFloor=!!petManifest(P.species)&&!PG.hasRoom(state,E,homeWho,petManifest(P.species),{uid:selected?.uid,allowReplace:true,manifestOf:petManifest});
-  const tabs=Object.values(PG.SPECIES).map(p=>`<button class="pet-choice ${p.species===P.species?'on':''}" data-act="petSelect" data-arg="${p.species}" aria-pressed="${p.species===P.species}"><span>${p.emoji} ${p.species==='dog'?'小狗':p.name}</span><small>${PG.speciesOwned(state,E,p.species)?'已拥有':petAvailable(p.species)?'可购买':'待加入'}</small></button>`).join('');
+  const tabs=Object.values(PG.SPECIES).map(p=>`<button class="pet-choice ${p.species===P.species?'on':''}" data-act="petSelect" data-arg="${p.species}" aria-pressed="${p.species===P.species}"><span>${p.emoji} ${petShortName(p)}</span><small>${PG.speciesOwned(state,E,p.species)?'已拥有':petAvailable(p.species)?'可购买':'待加入'}</small></button>`).join('');
   let detail='';
   if(!selected){const ready=petAvailable(P.species);detail=`<p>${ready?'每种只买一只，每个房间最多住两种宠物。':'这位伙伴还没开放购买。'}</p><button class="buy red" data-act="homePetBuy" data-arg="${homeWho}|${P.species}" ${ready?'':'disabled'}>${ready?'购买 · '+fmt(P.price)+' 金币':'待加入'}</button>`;}
   else {
-    const where=selected.compatibility?'兼容待命 · 旧同种记录，成长保留':selected.room?homeRoomName(selected.room):'待命 · 成长保留';
+    const where=selected.compatibility?'老存档带来的同种伙伴 · 成长保留':selected.room?homeRoomName(selected.room):'待命 · 成长保留';
     const unsupported=['unsupported','opaque'].includes(PG.engSupport(selected));
     const action=selected.compatibility?'petActivate':'petPlace', disabled=!selected.compatibility&&(selected.room===homeWho||noFloor);
-    detail=`<p class="pet-location">${petEsc(where)}</p><p class="pet-feedback" data-pet-status="${petEsc(selected.uid)}" aria-live="polite"></p>${records.length>1?`<div class="pet-records" aria-label="同种旧记录">${records.map((p,i)=>`<button class="buy alt ${p.uid===selected.uid?'on':''}" data-act="petSelectRecord" data-arg="${petEsc(p.uid)}" aria-pressed="${p.uid===selected.uid}">第 ${i+1} 只${p.compatibility?' · 兼容待命':''}</button>`).join('')}</div>`:''}<div class="pet-arrange"><button class="buy alt" data-act="${action}" data-arg="${petEsc(selected.uid)}" ${disabled?'disabled':''}>${selected.compatibility?'换用此只':selected.room===homeWho?'已在当前房间':noFloor?'没有空地':here.length>=2?'选择替换入住':'放入当前房间'}</button>${selected.room&&!selected.compatibility?`<button class="buy ghost" data-act="petStandby" data-arg="${petEsc(selected.uid)}">回待命</button>`:''}</div>${unsupported?'<p>成长记录已保留，当前版本暂不能运行。</p>':''}`;
+    detail=`<p class="pet-location">${petEsc(where)}</p><p class="pet-feedback" data-pet-status="${petEsc(selected.uid)}" aria-live="polite"></p>${records.length>1?`<div class="pet-records" aria-label="同种旧记录">${records.map((p,i)=>`<button class="buy alt ${p.uid===selected.uid?'on':''}" data-act="petSelectRecord" data-arg="${petEsc(p.uid)}" aria-pressed="${p.uid===selected.uid}">第 ${i+1} 只${p.compatibility?' · 老存档':''}</button>`).join('')}</div>`:''}<div class="pet-arrange"><button class="buy alt" data-act="${action}" data-arg="${petEsc(selected.uid)}" ${disabled?'disabled':''}>${selected.compatibility?'换用此只':selected.room===homeWho?'已在当前房间':noFloor?'没有空地':here.length>=2?'选择替换入住':'放入当前房间'}</button>${selected.room&&!selected.compatibility?`<button class="buy ghost" data-act="petStandby" data-arg="${petEsc(selected.uid)}">回待命</button>`:''}</div>${unsupported?'<p>成长记录已保留，当前版本暂不能运行。</p>':''}`;
   }
   const unknown=all.filter(p=>p.quarantined);
-  return `<section class="pet-manager pet-panel" id="petPanel" aria-label="宠物管理"><header><div><h3 id="petPanelTitle" tabindex="-1">🐾 宠物</h3><small>当前：${petEsc(homeRoomName(homeWho))} · ${here.length}/2</small></div><button class="buy ghost" data-act="petClose" aria-label="关闭宠物并返回">返回 ×</button></header><div class="pet-choices" aria-label="选择物种">${tabs}</div><article class="pet-selected" data-species="${P.species}"><h4>${P.emoji} ${P.name}</h4>${detail}</article>${unknown.length?`<details class="pet-quarantine"><summary>${unknown.length} 条未知物种记录已隔离</summary>${unknown.map(p=>`<p>${petEsc(p.uid)} · 原记录保留，暂停运行</p>`).join('')}</details>`:''}</section>`;
+  return `<section class="pet-manager pet-panel" id="petPanel" aria-label="宠物管理"><header><div><h3 id="petPanelTitle" tabindex="-1">🐾 宠物</h3><small>住在 ${petEsc(homeRoomName(homeWho))}：${here.length}/2 只</small></div><button class="buy ghost" data-act="petClose" aria-label="关闭宠物并返回">返回 ×</button></header><div class="pet-choices" aria-label="选择物种">${tabs}</div><article class="pet-selected" data-species="${P.species}"><h4>${P.emoji} ${petShortName(P)}</h4>${detail}</article>${unknown.length?`<details class="pet-quarantine"><summary>${unknown.length} 条记录暂时认不出，已原样保留</summary>${unknown.map(p=>`<p>${petEsc(p.uid)} · 原样保留，暂不出现</p>`).join('')}</details>`:''}</section>`;
 }
 function petPanelFocus(open) {
   renderTab();dirty=false;
@@ -2438,7 +2439,7 @@ function petAfterResult(r) {
 }
 function petChooseReplacement(home, finish) {
   const v = petRoster(), ids = (v.rooms[home] || []).slice(), expected = petToken();
-  openModal(`<div id="petReplace"><div class="mtitle">${petEsc(E.CEO_BY_ID[home].name)}的家 · 选择替换</div><p>房间已满（2/2）。只替换你选中的这一只，成长保留，以后可免费接回。</p>${ids.map(uid => `<button class="buy alt pet-replace-option" data-replace-uid="${petEsc(uid)}">${petEsc(petName(v.pets[uid]))} → 待命</button>`).join('')}<button class="buy ghost pet-replace-option" data-act="petReplaceCancel" id="petReplaceCancel">取消</button></div>`, false);
+  openModal(`<div id="petReplace"><div class="mtitle">${petEsc(homeRoomName(home))} · 选择替换</div><p>房间已满（2/2）。只替换你选中的这一只，成长保留，以后可免费接回。</p>${ids.map(uid => `<button class="buy alt pet-replace-option" data-replace-uid="${petEsc(uid)}">${petEsc(petName(v.pets[uid]))} → 待命</button>`).join('')}<button class="buy ghost pet-replace-option" data-act="petReplaceCancel" id="petReplaceCancel">取消</button></div>`, false);
   $('#petReplaceCancel').addEventListener('click', closeModal, {once:true});
   for (const b of document.querySelectorAll('#petReplace [data-replace-uid]')) b.addEventListener('click', () => {
     if (petToken() !== expected) { closeModal(); toast('宠物位置已变化，请重新选择'); dirty = true; return; }
@@ -2474,7 +2475,7 @@ function confirmPetBuy(home, species = 'dog') {
   const v = petRoster(), full = (v.rooms[home] || []).length >= 2, noFloor = E.homeOpen(state,home) && !PG.hasRoom(state,E,home,manifest,{allowReplace:true,manifestOf:petManifest});
   const show = (room, replace) => {
     const expected = petToken(), P = PG.SPECIES[species], why = petBuyWhy(room,species,replace), can = !why;
-    openModal(`<div class="mtitle">购买 ${P.name}</div><p>价格：${fmt(P.price)} 金币<br>当前余额：${fmt(E.balance(state))}<br>${room ? '住进 '+petEsc(E.CEO_BY_ID[room].name)+'的家' : '先回待命，之后免费安排入住'}${replace ? '<br>'+petEsc(petName(petRoster().pets[replace]))+' 回待命，保留成长' : ''}</p><p class="pet-buy-why" id="pbWhy" ${why ? '' : 'hidden'}>${petEsc(why)}</p><div class="mbtns two"><button class="buy ghost" id="mNo">取消</button><button class="buy red" id="pbYes" ${can ? '' : 'disabled'}>确认购买</button></div>`,false);
+    openModal(`<div class="mtitle">购买 ${P.name}</div><p>价格：${fmt(P.price)} 金币<br>当前余额：${fmt(E.balance(state))}<br>${room ? '住进 '+petEsc(homeRoomName(room)) : '先回待命，之后免费安排入住'}${replace ? '<br>'+petEsc(petName(petRoster().pets[replace]))+' 回待命，保留成长' : ''}</p><p class="pet-buy-why" id="pbWhy" ${why ? '' : 'hidden'}>${petEsc(why)}</p><div class="mbtns two"><button class="buy ghost" id="mNo">取消</button><button class="buy red" id="pbYes" ${can ? '' : 'disabled'}>确认购买</button></div>`,false);
     $('#mNo').addEventListener('click',closeModal,{once:true});
     $('#pbYes').addEventListener('click',() => {
       closeModal(); if (petToken() !== expected) { toast('宠物位置已变化，请重新选择'); return; }

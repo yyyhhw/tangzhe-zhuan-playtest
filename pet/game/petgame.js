@@ -120,7 +120,7 @@
   }
   function activateDuplicate(st,E,uid,opt) {
     const o=opt||{}, v=view(st,E), chosen=v.pets[uid];
-    if(!chosen||chosen.quarantined||!chosen.compatibility)return {ok:false,why:'不是兼容待命宠物'};
+    if(!chosen||chosen.quarantined||!chosen.compatibility)return {ok:false,why:'这只暂时换不上'};
     const current=Object.values(v.pets).find(p=>p.species===chosen.species&&!p.compatibility);
     if(!current)return {ok:false,why:'当前宠物不存在'};
     const expected=placementKey(v);
@@ -170,8 +170,8 @@
   }
   function placement(st, E, uid, room, o, purchasing) {
     const v = view(st, E), p = purchasing ? null : v.pets[uid];
-    if(p&&p.quarantined)return {ok:false,why:'未知物种记录已保留，暂停运行'};
-    if (p && p.compatibility) return {ok:false,why:'请先在兼容待命区选择换用此只'};
+    if(p&&p.quarantined)return {ok:false,why:'这条记录暂时认不出，已原样保留'};
+    if (p && p.compatibility) return {ok:false,why:'请先点「换用此只」'};
     if (!purchasing && !p) return { ok: false, why: '找不到这只宠物' };
     if (room !== null && !validRoom(st, E, room)) return { ok: false, why: '这位 CEO 还没加入' };
     // Same room is a true no-op, even in a full room or with replace=self.
@@ -203,7 +203,7 @@
     const o = opt || {}, checked = placement(st, E, uid, room, o, false);
     if (!checked.ok) return checked;
     if (room !== null && o.M !== undefined && !hasRoom(st, E, room, o.M, { ...o, uid })) return { ok: false, why: NO_ROOM, noRoom: true };
-    if (typeof E.transact !== 'function') return { ok: false, why: '存档交易不可用' };
+    if (typeof E.transact !== 'function') return { ok: false, why: '暂时没法保存，金币和宠物都没变' };
     const r = E.transact(st, { price: 0, blocked: !!o.blocked, save: o.save,
       apply: (s) => {
         const ready = preparePlacement(s, E, uid, room, o, false, checked);
