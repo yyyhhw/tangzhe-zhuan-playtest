@@ -8,9 +8,9 @@ const root=path.resolve(new URL('../..',import.meta.url).pathname);
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const require=createRequire(import.meta.url);
 const apps=['app.js','preview/app.js','pet/game/app.js','preview/pet/game/app.js'];
-const pageToken='xingtu-20261014-r1';
-const uiToken='xingtu-20261014-r1';
-const token='xingtu-20261014-r1';
+const pageToken='copy27-20261014-r1';
+const uiToken='copy27-20261014-r1';
+const token='copy27-20261014-r1';
 const cases=[
  ['Asia/Tokyo','2026-10-05T06:00:00Z','06:00'],
  ['Asia/Kuala_Lumpur','2026-10-05T06:00:00Z','05:00'],

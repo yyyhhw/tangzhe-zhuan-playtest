@@ -7,7 +7,7 @@ const COLLECTION = window.FormalCollectionRuntime;
 if (!COLLECTION?.ownsLock()) {
   // Stale HTML can fetch a new script before bootstrap. No storage access here.
   const url=new URL(location.href);
-  if(url.searchParams.get('v')!=='formal-xingtu-20261014-r1') {url.searchParams.set('v','formal-xingtu-20261014-r1');location.replace(url.href);}
+  if(url.searchParams.get('v')!=='formal-copy27-20261014-r1') {url.searchParams.set('v','formal-copy27-20261014-r1');location.replace(url.href);}
   else {const notice=document.createElement('p');notice.textContent='页面资源尚未更新完整，存档未写入。请关闭此页后重新打开。';document.body.prepend(notice);}
   return;
 }
@@ -126,15 +126,25 @@ window.addEventListener('storage', e => {
 $('#lockResume').addEventListener('click', () => location.reload());
 
 /* ================= 数字/时间格式 ================= */
-function fmt(n) {
+// 文案-27：余额/收入按显示精度往下取整（fmt = fmtBal），价格/还差按显示精度往上取整（fmtPrice）；进位到下一档时换单位。
+const FMT_TIERS = [[100, 1, 1, ''], [1e5, 1, 0, ''], [1e6, 1e4, 2, '万'], [1e8, 1e4, 1, '万'], [1e12, 1e8, 2, '亿'], [Infinity, 1e12, 2, '万亿']];
+function fmtRound(n, up) {
   if (!isFinite(n)) return '∞';
-  const a = Math.abs(n);
-  if (a < 100) return (Math.round(n * 10) / 10).toLocaleString('en-US');
-  if (a < 1e5) return Math.floor(n).toLocaleString('en-US');
-  if (a < 1e8) return (n / 1e4).toFixed(a < 1e6 ? 2 : 1) + '万';
-  if (a < 1e12) return (n / 1e8).toFixed(2) + '亿';
-  return (n / 1e12).toFixed(2) + '万亿';
+  const neg = n < 0; let a = Math.abs(n);
+  for (let t = 0; t < FMT_TIERS.length; t++) {
+    const [lim, u, d] = FMT_TIERS[t];
+    if (a >= lim) continue;
+    const q = u / Math.pow(10, d), x = a / q;
+    const v = (up ? Math.ceil(x - 1e-9) : Math.floor(x + 1e-9)) * q;
+    if (v >= lim) { a = v; continue; }
+    const [, , , label] = FMT_TIERS[t], s = neg ? '-' : '';
+    return s + (label ? (v / u).toFixed(d) + label : (Math.round(v * 10) / 10).toLocaleString('en-US'));
+  }
+  return '∞';
 }
+function fmt(n) { return fmtRound(n, false); }
+function fmtBal(n) { return fmtRound(n, false); }
+function fmtPrice(n) { return fmtRound(n, true); }
 function fmtDur(sec) {
   sec = Math.max(0, Math.floor(sec));
   const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), s = sec % 60;
@@ -542,7 +552,7 @@ let signAnim = { shop:-1, from:null, to:null, t0:0 }, lastSign = {}, focusT = 0,
 const FX_RM = (() => { try { return matchMedia('(prefers-reduced-motion: reduce)'); } catch (e) { return null; } })();
 const fxReduced = () => !!(FX_RM && FX_RM.matches);
 let bubble = { who:null, txt:'', until:0 }, nextBubbleAt = 0, mileFx = null;
-function signNow(i) { return state.shops[i].open ? E.signOf(state, i) : { name:'招租中', slogan:'开张 ' + fmt(E.SHOPS[i].open) + ' 金' }; }
+function signNow(i) { return state.shops[i].open ? E.signOf(state, i) : { name:'招租中', slogan:'开张 ' + fmtPrice(E.SHOPS[i].open) + ' 金' }; }
 function drawSign(c, i, t) {
   const l = L(), cur = signNow(i), w = W * 0.7, h = l.signH, x = W / 2, y0 = l.signY;
   const drawBoard = (txt, sub, dy, rot, alpha) => {
@@ -1345,7 +1355,7 @@ document.addEventListener('error',e=>{
   img.hidden=true;img.closest('.item-art').querySelector('.item-art-status').hidden=false;
 },true);
 const ava = (id, cls = '') => PORTRAIT[id] ? `<div class="ava art ${cls}">${faceImg(id)}</div>` : `<div class="ava ${cls}"><img src="${avatarURL(id, JSON.stringify(E.CEO_BY_ID[id] ? wearOf(id) : ''))}" alt=""></div>`;
-const btn = (act, arg, label, cost, extra = '') => `<button class="buy ${extra}" data-act="${act}" data-arg="${arg}" ${cost != null ? `data-cost="${cost}"` : ''}>${label}${cost != null ? `<small>${fmt(cost)}</small>` : ''}</button>`;
+const btn = (act, arg, label, cost, extra = '') => `<button class="buy ${extra}" data-act="${act}" data-arg="${arg}" ${cost != null ? `data-cost="${cost}"` : ''}>${label}${cost != null ? `<small>${fmtPrice(cost)}</small>` : ''}</button>`;
 function rateDelta(fn) { const c = E.cloneState(state); fn(c); return E.baseRate(c) - E.baseRate(state); }
 function ceoTags(i) {
   const info = E.ceoInfo(state, i); if (!info.id) return '';
@@ -1477,7 +1487,7 @@ function renderGacha() {
     if (WEARABLES8?.has(it.id)) return WEARABLES8.catalogHTML(E, state, it.id);
     if (has && it.type === 'card') return `<button type="button" class="item story-open" data-act="card" data-arg="${it.id}" aria-label="重看故事卡：${it.name}"><span class="t">故事卡</span>${storyArt(it.id)}<span>${it.name}</span><span class="story-replay-hint">点击重看 ›</span></button>`;
     return `<div class="item ${has ? '' : 'no'}"><span class="t">${TYPE_LABEL[it.type]}</span>${itemIcon(it.id)}${has ? it.name : '？？？'}</div>`; }).join('')}</div>`;
-  h += `<div class="note">规则：不重复收藏盒，共 ${total} 件：普通收藏 ${E.REGULAR_ITEMS.length} 件（衣服 ${E.ITEMS.filter(it => it.type === 'clothes').length} / 帽子 ${E.ITEMS.filter(it => it.type === 'hat').length} / 装饰 ${E.ITEMS.filter(it => it.type === 'decor').length} / 故事卡 ${E.ITEMS.filter(it => it.type === 'card').length}）+ 超级装饰 ${E.SUPER_ITEMS.length} 件。每抽先定类别：<b>超级装饰 ${P(CFG.SUPER_P)}</b>、普通收藏 ${P(1 - CFG.SUPER_P)}，再从该类<b>还没收集的</b>里等概率抽；连续 ${CFG.SUPER_PITY - 1} 抽没出超级装饰，第 ${CFG.SUPER_PITY} 抽必出。某一类抽完了，就只出另一类。每抽必得新物品，最多 ${total} 抽集齐，集齐后不能再买、不扣金币。普通收藏只是好看，<b>不加产速</b>；超级装饰加本店产量和专属效果，但不抽也能正常开齐店铺。单价 ${fmt(CFG.GACHA_PRICE)}。</div>`;
+  h += `<div class="note">规则：不重复收藏盒，共 ${total} 件：普通收藏 ${E.REGULAR_ITEMS.length} 件（衣服 ${E.ITEMS.filter(it => it.type === 'clothes').length} / 帽子 ${E.ITEMS.filter(it => it.type === 'hat').length} / 装饰 ${E.ITEMS.filter(it => it.type === 'decor').length} / 故事卡 ${E.ITEMS.filter(it => it.type === 'card').length}）+ 超级装饰 ${E.SUPER_ITEMS.length} 件。每抽先定类别：<b>超级装饰 ${P(CFG.SUPER_P)}</b>、普通收藏 ${P(1 - CFG.SUPER_P)}，再从该类<b>还没收集的</b>里等概率抽；连续 ${CFG.SUPER_PITY - 1} 抽没出超级装饰，第 ${CFG.SUPER_PITY} 抽必出。某一类抽完了，就只出另一类。每抽必得新物品，最多 ${total} 抽集齐，集齐后不能再买、不扣金币。普通收藏只是好看，<b>不加产速</b>；超级装饰加本店产量和专属效果，但不抽也能正常开齐店铺。单价 ${fmtPrice(CFG.GACHA_PRICE)}。</div>`;
   if(DECOR6)h+=DECOR6.hiddenHTML(state);
   return h;
 }
@@ -1573,7 +1583,7 @@ function updateCompactHead() {
 function switchShop(i) { if (i < 0 || i > 3) return; if (state.cur !== i) combo.n = 0; state.cur = i; dirty = true; renderTabs(); }
 function renderTabs() {
   $('#shopTabs').innerHTML = E.SHOPS.map((S, i) => { const s = state.shops[i];
-    const sub = s.open ? (s.emp > 0 ? '+' + fmt(E.shopRate(state, i)) + '/秒' : '未雇员工') : (i === 0 || state.shops[i - 1].open ? fmt(S.open) : LOCK_IC + '待解锁');
+    const sub = s.open ? (s.emp > 0 ? '+' + fmt(E.shopRate(state, i)) + '/秒' : '未雇员工') : (i === 0 || state.shops[i - 1].open ? fmtPrice(S.open) : LOCK_IC + '待解锁');
     return `<button data-shop="${i}" class="${state.cur === i ? 'on' : ''} ${s.open ? '' : 'locked'}"><span class="tn">${SHOP_ICON[i]}${TAB_NAME[i]}</span><small>${sub}</small></button>`; }).join('');
 }
 let lastDyn = 0;
@@ -1838,7 +1848,7 @@ function showReveal(resumed) {
     <div class="mtitle">${TYPE_LABEL[it.type]}：${it.name}</div>
     <div class="mnote">${note}本次概率：${last.odds} · 已收集 ${state.gacha.owned.length}/${total}</div>
     ${last.setDone ? `<div class="pv-tags"><div>🎉 集齐 ${E.CARD_COUNT} 张故事卡！解锁专属外观「${E.SET_REWARD.name}」（金马甲 + 金厨师帽）</div></div>` : ''}
-    <div class="mbtns two"><button class="buy ghost" id="mOk">收下</button>${!done && !resumed && E.gachaDailyLeft(state, now()) > 0 ? `<button class="buy red" id="mAgain">再开一个 · ${fmt(E.gachaPrice(state))}</button>` : sup ? `<button class="buy" id="mGoShop">去看看</button>` : `<button class="buy" id="mCol">去收藏页</button>`}</div>`);
+    <div class="mbtns two"><button class="buy ghost" id="mOk">收下</button>${!done && !resumed && E.gachaDailyLeft(state, now()) > 0 ? `<button class="buy red" id="mAgain">再开一个 · ${fmtPrice(E.gachaPrice(state))}</button>` : sup ? `<button class="buy" id="mGoShop">去看看</button>` : `<button class="buy" id="mCol">去收藏页</button>`}</div>`);
   atomic(() => { if (state.gacha.last) state.gacha.last.seen = true; return { ok:true }; }, '「已看过」没有记上'); bgKey = ''; dirty = true;
   $('#mOk').addEventListener('click', closeModal, { once:true });
   const ag = $('#mAgain'); if (ag) ag.addEventListener('click', () => { closeModal(); doGacha(ag); }, { once:true });
@@ -2289,7 +2299,7 @@ function confirmHomeBuy(fid) {
   const f = E.FURN_BY_ID[fid], stt = E.furnStats(state, fid), bal = E.balance(state), can = E.canAfford(state, f.price);
   openModal(`<div class="mbubble">商城 · 公共仓库</div><div class="buy-prev"><div class="furn-ico big" style="--fc:${f.color}">${furnInner(fid, 0)}</div></div>
     <div class="mtitle">${f.name}（${f.w}×${f.h} 格 · 豪华 +${f.lux}）</div>
-    <table class="pv-table"><tr><td>价格</td><td>${fmt(f.price)}</td></tr><tr><td>当前余额</td><td>${fmt(bal)}</td></tr><tr><td>已有</td><td>${stt.owned}（摆出 ${stt.placed} / 仓库 ${stt.warehouse}）</td></tr><tr class="total"><td>买后余额</td><td class="${can ? '' : 'down'}">${can ? fmt(bal - f.price) : '还差 ' + fmt(f.price - bal)}</td></tr></table>
+    <table class="pv-table"><tr><td>价格</td><td>${fmtPrice(f.price)}</td></tr><tr><td>当前余额</td><td>${fmt(bal)}</td></tr><tr><td>已有</td><td>${stt.owned}（摆出 ${stt.placed} / 仓库 ${stt.warehouse}）</td></tr><tr class="total"><td>买后余额</td><td class="${can ? '' : 'down'}">${can ? fmt(bal - f.price) : '还差 ' + fmtPrice(f.price - bal)}</td></tr></table>
     <div class="mnote">买了进公共仓库，四家都能摆；一件同时只在一家。摆放 / 移动 / 收回 / 搬去别家都不花钱。</div>
     <div class="mbtns two"><button class="buy ghost" id="mNo">再想想</button><button class="buy red" id="hbYes" ${can ? '' : 'disabled'}>${can ? '确认购买' : '金币不够'}</button></div>`, false);
   $('#mNo').addEventListener('click', closeModal, { once:true });
@@ -2304,7 +2314,7 @@ function confirmHomeUp(id) {
   const T = E.homeTier(H.lv), N = E.HOME_TIERS[H.lv], bal = E.balance(state), can = E.canAfford(state, N.cost);
   openModal(`<div class="mbubble">房子升级</div><div class="mtitle">${c.name}：${T.name} → ${N.name}</div>
     <div class="mnote">${T.cols}×${T.rows} 格 → <b>${N.cols}×${N.rows} 格</b>，房间自带豪华度 ${T.bonus} → ${N.bonus}。摆好的家具原位保留；挂画如果挡到新房的窗户 / 墙饰，会自动挪到空墙，挂不下就退回仓库，不会丢。</div>
-    <table class="pv-table"><tr><td>价格</td><td>${fmt(N.cost)}</td></tr><tr><td>当前余额</td><td>${fmt(bal)}</td></tr><tr class="total"><td>升级后余额</td><td class="${can ? '' : 'down'}">${can ? fmt(bal - N.cost) : '还差 ' + fmt(N.cost - bal)}</td></tr></table>
+    <table class="pv-table"><tr><td>价格</td><td>${fmtPrice(N.cost)}</td></tr><tr><td>当前余额</td><td>${fmt(bal)}</td></tr><tr class="total"><td>升级后余额</td><td class="${can ? '' : 'down'}">${can ? fmt(bal - N.cost) : '还差 ' + fmtPrice(N.cost - bal)}</td></tr></table>
     <div class="mbtns two"><button class="buy ghost" id="mNo">再想想</button><button class="buy red" id="huYes" ${can ? '' : 'disabled'}>${can ? '确认升级' : '金币不够'}</button></div>`, false);
   $('#mNo').addEventListener('click', closeModal, { once:true });
   $('#huYes').addEventListener('click', () => {
@@ -2422,7 +2432,7 @@ function petPortal() {
   const here=v.rooms[homeWho]||[], noFloor=!!petManifest(P.species)&&!PG.hasRoom(state,E,homeWho,petManifest(P.species),{uid:selected?.uid,allowReplace:true,manifestOf:petManifest});
   const tabs=Object.values(PG.SPECIES).map(p=>`<button class="pet-choice ${p.species===P.species?'on':''}" data-act="petSelect" data-arg="${p.species}" aria-pressed="${p.species===P.species}"><span>${p.emoji} ${p.species==='dog'?'小狗':p.name}</span><small>${PG.speciesOwned(state,E,p.species)?'已拥有':petAvailable(p.species)?'可购买':'待加入'}</small></button>`).join('');
   let detail='';
-  if(!selected){const ready=petAvailable(P.species);detail=`<p>${ready?'每种只买一只，每个房间最多住两种宠物。':'这位伙伴还没开放购买。'}</p><button class="buy red" data-act="homePetBuy" data-arg="${homeWho}|${P.species}" ${ready?'':'disabled'}>${ready?'购买 · '+fmt(P.price)+' 金币':'待加入'}</button>`;}
+  if(!selected){const ready=petAvailable(P.species);detail=`<p>${ready?'每种只买一只，每个房间最多住两种宠物。':'这位伙伴还没开放购买。'}</p><button class="buy red" data-act="homePetBuy" data-arg="${homeWho}|${P.species}" ${ready?'':'disabled'}>${ready?'购买 · '+fmtPrice(P.price)+' 金币':'待加入'}</button>`;}
   else {
     const where=selected.compatibility?'旧记录 · 成长还在，点「换用此只」就能用':selected.room?homeRoomName(selected.room):'待命 · 成长保留';
     const unsupported=['unsupported','opaque'].includes(PG.engSupport(selected));
@@ -2486,7 +2496,7 @@ function confirmPetBuy(home, species = 'dog') {
   const v = petRoster(), full = (v.rooms[home] || []).length >= 2, noFloor = E.homeOpen(state,home) && !PG.hasRoom(state,E,home,manifest,{allowReplace:true,manifestOf:petManifest});
   const show = (room, replace) => {
     const expected = petToken(), P = PG.SPECIES[species], why = petBuyWhy(room,species,replace), can = !why;
-    openModal(`<div class="mtitle">购买 ${P.name}</div><p>价格：${fmt(P.price)} 金币<br>当前余额：${fmt(E.balance(state))}<br>${room ? '住进 '+petEsc(homeRoomName(room)) : '先回待命，之后免费安排入住'}${replace ? '<br>'+petEsc(petName(petRoster().pets[replace]))+' 回待命，保留成长' : ''}</p><p class="pet-buy-why" id="pbWhy" ${why ? '' : 'hidden'}>${petEsc(why)}</p><div class="mbtns two"><button class="buy ghost" id="mNo">取消</button><button class="buy red" id="pbYes" ${can ? '' : 'disabled'}>确认购买</button></div>`,false);
+    openModal(`<div class="mtitle">购买 ${P.name}</div><p>价格：${fmtPrice(P.price)} 金币<br>当前余额：${fmt(E.balance(state))}<br>${room ? '住进 '+petEsc(homeRoomName(room)) : '先回待命，之后免费安排入住'}${replace ? '<br>'+petEsc(petName(petRoster().pets[replace]))+' 回待命，保留成长' : ''}</p><p class="pet-buy-why" id="pbWhy" ${why ? '' : 'hidden'}>${petEsc(why)}</p><div class="mbtns two"><button class="buy ghost" id="mNo">取消</button><button class="buy red" id="pbYes" ${can ? '' : 'disabled'}>确认购买</button></div>`,false);
     $('#mNo').addEventListener('click',closeModal,{once:true});
     $('#pbYes').addEventListener('click',() => {
       closeModal(); if (petToken() !== expected) { toast('宠物位置已变化，请重新选择'); return; }

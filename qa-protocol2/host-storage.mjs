@@ -1,5 +1,5 @@
 /** Logical host keys mapped only to the fixed, current synthetic QA namespace. */
-import {getRealPageQAConfig} from './guard/config.mjs?v=xingtu-20261014-r1';
+import {getRealPageQAConfig} from './guard/config.mjs?v=copy27-20261014-r1';
 export function createRealPageQAStorage({scope,nativeStorage}) {
   const config=getRealPageQAConfig(scope,'host'),allowed=new Set(config.logicalKeys);
   const writable=new Set(config.logicalKeys.filter(k=>k.endsWith('-collection-v1-save')||k.endsWith('-collection-v1-save-bak')||k.endsWith('-collection-v1-tab-lock')||k.endsWith('-collectibles-v2-original')));

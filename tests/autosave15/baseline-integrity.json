@@ -23,7 +23,7 @@
       "path": "app.js",
       "start": "function doGacha(",
       "end": "const STORY_ART",
-      "sha256": "d1f2f4eb9a780fddeccb3711de4fd1a3cb4fa8af8013f7e8473bb1d6846a8c82"
+      "sha256": "af9343e4b9c8bf49d2daed27d135431de756d83c27fe4c18c84ae90522271bbd"
     },
     {
       "path": "preview/app.js",
@@ -71,7 +71,7 @@
       "path": "pet/game/app.js",
       "start": "function doGacha(",
       "end": "const STORY_ART",
-      "sha256": "d1f2f4eb9a780fddeccb3711de4fd1a3cb4fa8af8013f7e8473bb1d6846a8c82"
+      "sha256": "af9343e4b9c8bf49d2daed27d135431de756d83c27fe4c18c84ae90522271bbd"
     },
     {
       "path": "economy.js",
