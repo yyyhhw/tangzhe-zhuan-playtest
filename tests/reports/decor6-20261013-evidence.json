@@ -1,0 +1,870 @@
+{
+  "exploratoryPerformance": [
+    {
+      "times": [
+        18.100000000093132,
+        21.599999999976717,
+        17.100000000093132,
+        15.900000000023283,
+        12.099999999976717,
+        12.100000000093132,
+        13.699999999953434,
+        13.699999999953434
+      ],
+      "interactions": [
+        {
+          "tab": "gacha",
+          "ms": 388.19999999995343
+        },
+        {
+          "tab": "col",
+          "ms": 86.5
+        },
+        {
+          "tab": "home",
+          "ms": 76.19999999995343
+        },
+        {
+          "tab": "shop",
+          "ms": 79.20000000006985
+        }
+      ],
+      "bytes": 5301,
+      "blocked": false,
+      "automaticWrites": [
+        7082.5,
+        12095.70000000007
+      ],
+      "longTasks": [],
+      "frameGaps": [],
+      "blockedAfter": false,
+      "version": "baseline",
+      "kind": "new",
+      "errors": [],
+      "browser": "154.0.8037.57"
+    },
+    {
+      "times": [
+        17.699999999953434,
+        20.300000000046566,
+        14.800000000046566,
+        9.79999999993015,
+        5.400000000023283,
+        13.900000000023283,
+        17.400000000023283,
+        12.199999999953434
+      ],
+      "interactions": [
+        {
+          "tab": "gacha",
+          "ms": 472.9000000000233
+        },
+        {
+          "tab": "col",
+          "ms": 178.59999999997672
+        },
+        {
+          "tab": "home",
+          "ms": 110.20000000006985
+        },
+        {
+          "tab": "shop",
+          "ms": 89.79999999993015
+        }
+      ],
+      "bytes": 6051,
+      "blocked": false,
+      "automaticWrites": [
+        7614.29999999993,
+        12637.400000000023
+      ],
+      "longTasks": [
+        52
+      ],
+      "frameGaps": [
+        50.100000000000364,
+        50.100000000000364
+      ],
+      "blockedAfter": false,
+      "version": "baseline",
+      "kind": "old",
+      "errors": [],
+      "browser": "154.0.8037.57"
+    },
+    {
+      "times": [
+        185.5,
+        191,
+        159.09999999997672,
+        151.60000000009313,
+        161.39999999990687,
+        185.29999999993015,
+        154.70000000006985,
+        148.69999999995343
+      ],
+      "interactions": [
+        {
+          "tab": "gacha",
+          "ms": 543.1999999999534
+        },
+        {
+          "tab": "col",
+          "ms": 186.60000000009313
+        },
+        {
+          "tab": "home",
+          "ms": 129
+        },
+        {
+          "tab": "shop",
+          "ms": 106
+        }
+      ],
+      "bytes": 62494,
+      "blocked": false,
+      "automaticWrites": [
+        10804.599999999977,
+        15921.900000000023,
+        21054.099999999977
+      ],
+      "longTasks": [
+        186,
+        68,
+        184,
+        188
+      ],
+      "frameGaps": [
+        200,
+        66.70000000000073,
+        183.40000000000146,
+        50.10000000000218,
+        50.10000000000218,
+        66.70000000000073,
+        200
+      ],
+      "blockedAfter": false,
+      "version": "baseline",
+      "kind": "large",
+      "errors": [],
+      "browser": "154.0.8037.57"
+    },
+    {
+      "times": [
+        10.79999999993015,
+        23.5,
+        13,
+        15.300000000046566,
+        15.199999999953434,
+        11.199999999953434,
+        18,
+        16.5
+      ],
+      "interactions": [
+        {
+          "tab": "gacha",
+          "ms": 406.79999999993015
+        },
+        {
+          "tab": "col",
+          "ms": 99.5
+        },
+        {
+          "tab": "home",
+          "ms": 84.90000000002328
+        },
+        {
+          "tab": "shop",
+          "ms": 75.20000000006985
+        }
+      ],
+      "bytes": 5301,
+      "blocked": false,
+      "automaticWrites": [
+        7694.5,
+        12706.900000000023
+      ],
+      "longTasks": [],
+      "frameGaps": [],
+      "blockedAfter": false,
+      "version": "candidate",
+      "kind": "new",
+      "errors": [],
+      "browser": "154.0.8037.57"
+    },
+    {
+      "times": [
+        19.699999999953434,
+        14.70000000006985,
+        13.400000000023283,
+        19.5,
+        9.699999999953434,
+        17.199999999953434,
+        16,
+        16.099999999976717
+      ],
+      "interactions": [
+        {
+          "tab": "gacha",
+          "ms": 475.69999999995343
+        },
+        {
+          "tab": "col",
+          "ms": 154
+        },
+        {
+          "tab": "home",
+          "ms": 86.20000000006985
+        },
+        {
+          "tab": "shop",
+          "ms": 98.79999999993015
+        }
+      ],
+      "bytes": 6049,
+      "blocked": false,
+      "automaticWrites": [
+        8055.79999999993,
+        13072.79999999993
+      ],
+      "longTasks": [],
+      "frameGaps": [],
+      "blockedAfter": false,
+      "version": "candidate",
+      "kind": "old",
+      "errors": [],
+      "browser": "154.0.8037.57"
+    },
+    {
+      "times": [
+        162.5,
+        151.59999999997672,
+        181.80000000004657,
+        188.80000000004657,
+        226.90000000002328,
+        165.80000000004657,
+        104.09999999997672,
+        154.80000000004657
+      ],
+      "interactions": [
+        {
+          "tab": "gacha",
+          "ms": 597.4000000000233
+        },
+        {
+          "tab": "col",
+          "ms": 366
+        },
+        {
+          "tab": "home",
+          "ms": 155.59999999997672
+        },
+        {
+          "tab": "shop",
+          "ms": 110.80000000004657
+        }
+      ],
+      "bytes": 62495,
+      "blocked": false,
+      "automaticWrites": [
+        11141.100000000093,
+        16226.300000000047,
+        21309.20000000007
+      ],
+      "longTasks": [
+        64,
+        52,
+        51,
+        132,
+        52,
+        156
+      ],
+      "frameGaps": [
+        83.29999999999927,
+        66.70000000000073,
+        150,
+        50.100000000000364,
+        150
+      ],
+      "blockedAfter": false,
+      "version": "candidate",
+      "kind": "large",
+      "errors": [],
+      "browser": "154.0.8037.57"
+    }
+  ],
+  "isolatedLargePerformance": [
+    {
+      "times": [
+        140,
+        148.69999999995343,
+        140.5,
+        170.60000000009313,
+        147.29999999993015,
+        135.40000000002328,
+        134.30000000004657,
+        159.30000000004657
+      ],
+      "interactions": [
+        {
+          "tab": "gacha",
+          "ms": 581.4000000000233
+        },
+        {
+          "tab": "col",
+          "ms": 243.90000000002328
+        },
+        {
+          "tab": "home",
+          "ms": 118.79999999993015
+        },
+        {
+          "tab": "shop",
+          "ms": 93.20000000006985
+        }
+      ],
+      "bytes": 62495,
+      "blocked": false,
+      "automaticWrites": [
+        10818.800000000047,
+        15922.900000000023
+      ],
+      "longTasks": [
+        189,
+        62,
+        179,
+        59
+      ],
+      "frameGaps": [
+        183.29999999999927,
+        183.3000000000011,
+        66.59999999999854
+      ],
+      "blockedAfter": false,
+      "version": "candidate",
+      "kind": "large",
+      "errors": [],
+      "browser": "154.0.8037.57"
+    },
+    {
+      "times": [
+        146.40000000002328,
+        177.40000000002328,
+        189.70000000006985,
+        157.19999999995343,
+        147.09999999997672,
+        166.69999999995343,
+        154.90000000002328,
+        134.19999999995343
+      ],
+      "interactions": [
+        {
+          "tab": "gacha",
+          "ms": 422.70000000006985
+        },
+        {
+          "tab": "col",
+          "ms": 173.69999999995343
+        },
+        {
+          "tab": "home",
+          "ms": 99.30000000004657
+        },
+        {
+          "tab": "shop",
+          "ms": 100.29999999993015
+        }
+      ],
+      "bytes": 62496,
+      "blocked": false,
+      "automaticWrites": [
+        10280.400000000023,
+        15387.400000000023,
+        20501.900000000023
+      ],
+      "longTasks": [
+        165,
+        53,
+        181,
+        52,
+        204
+      ],
+      "frameGaps": [
+        166.60000000000036,
+        166.60000000000036,
+        50.099999999998545,
+        200
+      ],
+      "blockedAfter": false,
+      "version": "baseline",
+      "kind": "large",
+      "errors": [],
+      "browser": "154.0.8037.57"
+    }
+  ],
+  "isolatedInteractions": [
+    {
+      "times": [
+        146.19999999995343,
+        151.39999999990687,
+        142.30000000004657,
+        164.29999999993015,
+        155.19999999995343,
+        158.69999999995343,
+        150.90000000002328,
+        150.69999999995343
+      ],
+      "interactions": [
+        {
+          "round": 0,
+          "tab": "gacha",
+          "syncMs": 348,
+          "ms": 446.79999999993015
+        },
+        {
+          "round": 0,
+          "tab": "col",
+          "syncMs": 92.90000000002328,
+          "ms": 159.5
+        },
+        {
+          "round": 0,
+          "tab": "home",
+          "syncMs": 54.40000000002328,
+          "ms": 104.40000000002328
+        },
+        {
+          "round": 0,
+          "tab": "shop",
+          "syncMs": 43.09999999997672,
+          "ms": 109.5
+        },
+        {
+          "round": 1,
+          "tab": "gacha",
+          "syncMs": 55.5,
+          "ms": 108.69999999995343
+        },
+        {
+          "round": 1,
+          "tab": "col",
+          "syncMs": 59.300000000046566,
+          "ms": 111.30000000004657
+        },
+        {
+          "round": 1,
+          "tab": "home",
+          "syncMs": 34.40000000002328,
+          "ms": 65.90000000002328
+        },
+        {
+          "round": 1,
+          "tab": "shop",
+          "syncMs": 42.09999999997672,
+          "ms": 107.69999999995343
+        },
+        {
+          "round": 2,
+          "tab": "gacha",
+          "syncMs": 59.199999999953434,
+          "ms": 117
+        },
+        {
+          "round": 2,
+          "tab": "col",
+          "syncMs": 62.09999999997672,
+          "ms": 115
+        },
+        {
+          "round": 2,
+          "tab": "home",
+          "syncMs": 30.5,
+          "ms": 61
+        },
+        {
+          "round": 2,
+          "tab": "shop",
+          "syncMs": 38.800000000046566,
+          "ms": 102.09999999997672
+        },
+        {
+          "round": 3,
+          "tab": "gacha",
+          "syncMs": 60.20000000006985,
+          "ms": 256.70000000006985
+        },
+        {
+          "round": 3,
+          "tab": "col",
+          "syncMs": 61.29999999993015,
+          "ms": 120.29999999993015
+        },
+        {
+          "round": 3,
+          "tab": "home",
+          "syncMs": 30.400000000023283,
+          "ms": 105.30000000004657
+        },
+        {
+          "round": 3,
+          "tab": "shop",
+          "syncMs": 41.60000000009313,
+          "ms": 111.20000000006985
+        }
+      ],
+      "bytes": 62493,
+      "blocked": false,
+      "automaticWrites": [],
+      "longTasks": [],
+      "frameGaps": [],
+      "blockedAfter": false,
+      "version": "candidate",
+      "kind": "large",
+      "errors": [],
+      "browser": "154.0.8037.57"
+    },
+    {
+      "times": [
+        157.30000000004657,
+        150.79999999993015,
+        144.5,
+        157.5,
+        142.5,
+        149.69999999995343,
+        144.60000000009313,
+        151.70000000006985
+      ],
+      "interactions": [
+        {
+          "round": 0,
+          "tab": "gacha",
+          "syncMs": 312.80000000004657,
+          "ms": 430.20000000006985
+        },
+        {
+          "round": 0,
+          "tab": "col",
+          "syncMs": 107.09999999997672,
+          "ms": 171
+        },
+        {
+          "round": 0,
+          "tab": "home",
+          "syncMs": 53.29999999993015,
+          "ms": 106.59999999997672
+        },
+        {
+          "round": 0,
+          "tab": "shop",
+          "syncMs": 34.40000000002328,
+          "ms": 94.79999999993015
+        },
+        {
+          "round": 1,
+          "tab": "gacha",
+          "syncMs": 52,
+          "ms": 93
+        },
+        {
+          "round": 1,
+          "tab": "col",
+          "syncMs": 59.5,
+          "ms": 106.70000000006985
+        },
+        {
+          "round": 1,
+          "tab": "home",
+          "syncMs": 28.400000000023283,
+          "ms": 59.5
+        },
+        {
+          "round": 1,
+          "tab": "shop",
+          "syncMs": 40,
+          "ms": 102.29999999993015
+        },
+        {
+          "round": 2,
+          "tab": "gacha",
+          "syncMs": 55,
+          "ms": 99.60000000009313
+        },
+        {
+          "round": 2,
+          "tab": "col",
+          "syncMs": 52.39999999990687,
+          "ms": 251.89999999990687
+        },
+        {
+          "round": 2,
+          "tab": "home",
+          "syncMs": 29.100000000093132,
+          "ms": 64.10000000009313
+        },
+        {
+          "round": 2,
+          "tab": "shop",
+          "syncMs": 40.39999999990687,
+          "ms": 145.5
+        },
+        {
+          "round": 3,
+          "tab": "gacha",
+          "syncMs": 51.89999999990687,
+          "ms": 147.69999999995343
+        },
+        {
+          "round": 3,
+          "tab": "col",
+          "syncMs": 51.699999999953434,
+          "ms": 105.19999999995343
+        },
+        {
+          "round": 3,
+          "tab": "home",
+          "syncMs": 25.900000000023283,
+          "ms": 54.10000000009313
+        },
+        {
+          "round": 3,
+          "tab": "shop",
+          "syncMs": 34.39999999990687,
+          "ms": 95.29999999993015
+        }
+      ],
+      "bytes": 62494,
+      "blocked": false,
+      "automaticWrites": [],
+      "longTasks": [],
+      "frameGaps": [],
+      "blockedAfter": false,
+      "version": "baseline",
+      "kind": "large",
+      "errors": [],
+      "browser": "154.0.8037.57"
+    }
+  ],
+  "full50ClicksBeforeFinalPlacement": [
+    {
+      "width": 320,
+      "owned": 50,
+      "clicks": [
+        {
+          "id": "d_borrow_register",
+          "width": 60,
+          "height": 44,
+          "withinViewport": true
+        },
+        {
+          "id": "d_rocket_piggy",
+          "width": 60,
+          "height": 44,
+          "withinViewport": true
+        },
+        {
+          "id": "d_opening_photo",
+          "width": 60,
+          "height": 44,
+          "withinViewport": true
+        },
+        {
+          "id": "d_ward_charm",
+          "width": 60,
+          "height": 44,
+          "withinViewport": true
+        },
+        {
+          "id": "d_charcoal_chime",
+          "width": 60,
+          "height": 44,
+          "withinViewport": true
+        },
+        {
+          "id": "d_spice_turntable",
+          "width": 60,
+          "height": 44,
+          "withinViewport": true
+        }
+      ],
+      "saveMsAt4x": [
+        182.30000000004657,
+        177.59999999997672,
+        168.80000000004657,
+        165.19999999995343,
+        175.40000000002328,
+        172,
+        175.5,
+        157
+      ],
+      "errors": [],
+      "blocked": false,
+      "note": "two PNG assets missing; screenshots are NOT completed visual acceptance"
+    },
+    {
+      "width": 390,
+      "owned": 50,
+      "clicks": [
+        {
+          "id": "d_borrow_register",
+          "width": 60,
+          "height": 44,
+          "withinViewport": true
+        },
+        {
+          "id": "d_rocket_piggy",
+          "width": 60,
+          "height": 44,
+          "withinViewport": true
+        },
+        {
+          "id": "d_opening_photo",
+          "width": 60,
+          "height": 44,
+          "withinViewport": true
+        },
+        {
+          "id": "d_ward_charm",
+          "width": 60,
+          "height": 44,
+          "withinViewport": true
+        },
+        {
+          "id": "d_charcoal_chime",
+          "width": 60,
+          "height": 44,
+          "withinViewport": true
+        },
+        {
+          "id": "d_spice_turntable",
+          "width": 60,
+          "height": 44,
+          "withinViewport": true
+        }
+      ],
+      "saveMsAt4x": [
+        146.5,
+        172.90000000002328,
+        139.59999999997672,
+        161.5,
+        168.80000000004657,
+        158.39999999990687,
+        163.30000000004657,
+        151.30000000004657
+      ],
+      "errors": [],
+      "blocked": false,
+      "note": "two PNG assets missing; screenshots are NOT completed visual acceptance"
+    }
+  ],
+  "full50ClicksFinalPlacement": [
+    {
+      "width": 320,
+      "owned": 50,
+      "clicks": [
+        {
+          "id": "d_borrow_register",
+          "width": 60,
+          "height": 44,
+          "withinViewport": true
+        },
+        {
+          "id": "d_rocket_piggy",
+          "width": 60,
+          "height": 44,
+          "withinViewport": true
+        },
+        {
+          "id": "d_opening_photo",
+          "width": 60,
+          "height": 44,
+          "withinViewport": true
+        },
+        {
+          "id": "d_ward_charm",
+          "width": 60,
+          "height": 44,
+          "withinViewport": true
+        },
+        {
+          "id": "d_charcoal_chime",
+          "width": 60,
+          "height": 44,
+          "withinViewport": true
+        },
+        {
+          "id": "d_spice_turntable",
+          "width": 60,
+          "height": 44,
+          "withinViewport": true
+        }
+      ],
+      "saveMsAt4x": [
+        187.10000000009313,
+        197.5999999998603,
+        211.89999999990687,
+        170.5999999998603,
+        177.19999999995343,
+        192.19999999995343,
+        208.80000000004657,
+        189.0999999998603
+      ],
+      "errors": [],
+      "blocked": false,
+      "note": "Automated interaction evidence only; visually inspect all screenshots before acceptance"
+    },
+    {
+      "width": 390,
+      "owned": 50,
+      "clicks": [
+        {
+          "id": "d_borrow_register",
+          "width": 60,
+          "height": 44,
+          "withinViewport": true
+        },
+        {
+          "id": "d_rocket_piggy",
+          "width": 60,
+          "height": 44,
+          "withinViewport": true
+        },
+        {
+          "id": "d_opening_photo",
+          "width": 60,
+          "height": 44,
+          "withinViewport": true
+        },
+        {
+          "id": "d_ward_charm",
+          "width": 60,
+          "height": 44,
+          "withinViewport": true
+        },
+        {
+          "id": "d_charcoal_chime",
+          "width": 60,
+          "height": 44,
+          "withinViewport": true
+        },
+        {
+          "id": "d_spice_turntable",
+          "width": 60,
+          "height": 44,
+          "withinViewport": true
+        }
+      ],
+      "saveMsAt4x": [
+        194,
+        212,
+        211.10000000009313,
+        170.5999999998603,
+        192.69999999995343,
+        178.9000000001397,
+        178.10000000009313,
+        210.19999999995343
+      ],
+      "errors": [],
+      "blocked": false,
+      "note": "Automated interaction evidence only; visually inspect all screenshots before acceptance"
+    }
+  ]
+}

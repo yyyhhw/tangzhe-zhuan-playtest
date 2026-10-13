@@ -1,16 +1,17 @@
+import {prepareDecor6Catalog} from './decor6-catalog.mjs?v=decor6-candidate-20261013-r1';
 /** Production composition candidate; activation remains gated by release.mjs.
  * Synthetic review only until the independent browser/activation gate passes. */
-import {createCollectibleStorage} from './storage.mjs?v=save-evidence-cache-20261013-r1';
-import {ensureLegacyReady} from './legacy-entry.mjs?v=save-evidence-cache-20261013-r1';
-import {COLLECTIBLES_PRODUCTION_ENABLED,COLLECTIBLES_RELEASE} from './release.mjs?v=save-evidence-cache-20261013-r1';
-import {createRealPageQAFacade} from '../qa-protocol2/real-page-facade.mjs?v=save-evidence-cache-20261013-r1';
-import {createMigrationPlanner} from '../qa-protocol2/vendor/planner/migration.mjs?v=save-evidence-cache-20261013-r1';
-import * as codec from '../qa-protocol2/vendor/codec/snapshot-codec.mjs?v=save-evidence-cache-20261013-r1';
-import {createPetDomain} from '../qa-protocol2/vendor/runtime/pet-domain.mjs?v=save-evidence-cache-20261013-r1';
-import {createProtocol2Validator} from '../qa-protocol2/vendor/runtime/validator.mjs?v=save-evidence-cache-20261013-r1';
-import {createCardAwareSession} from '../qa-protocol2/vendor/cards/card-coordinator.mjs?v=save-evidence-cache-20261013-r1';
-import {createHostModel} from '../qa-protocol2/vendor/host/host-model.mjs?v=save-evidence-cache-20261013-r1';
-import {prepareEightWearableCatalog} from '../qa-protocol2/eight-catalog.mjs?v=save-evidence-cache-20261013-r1';
+import {createCollectibleStorage} from './storage.mjs?v=decor6-candidate-20261013-r1';
+import {ensureLegacyReady} from './legacy-entry.mjs?v=decor6-candidate-20261013-r1';
+import {COLLECTIBLES_PRODUCTION_ENABLED,COLLECTIBLES_RELEASE} from './release.mjs?v=decor6-candidate-20261013-r1';
+import {createRealPageQAFacade} from '../qa-protocol2/real-page-facade.mjs?v=decor6-candidate-20261013-r1';
+import {createMigrationPlanner} from '../qa-protocol2/vendor/planner/migration.mjs?v=decor6-candidate-20261013-r1';
+import * as codec from '../qa-protocol2/vendor/codec/snapshot-codec.mjs?v=decor6-candidate-20261013-r1';
+import {createPetDomain} from '../qa-protocol2/vendor/runtime/pet-domain.mjs?v=decor6-candidate-20261013-r1';
+import {createProtocol2Validator} from '../qa-protocol2/vendor/runtime/validator.mjs?v=decor6-candidate-20261013-r1';
+import {createCardAwareSession} from '../qa-protocol2/vendor/cards/card-coordinator.mjs?v=decor6-candidate-20261013-r1';
+import {createHostModel} from '../qa-protocol2/vendor/host/host-model.mjs?v=decor6-candidate-20261013-r1';
+import {prepareEightWearableCatalog} from '../qa-protocol2/eight-catalog.mjs?v=decor6-candidate-20261013-r1';
 
 const clone=x=>JSON.parse(JSON.stringify(x));
 async function loadClassic(url){await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=url.href;s.onload=resolve;s.onerror=()=>reject(Error('QA_LEGACY_ECONOMY_LOAD_FAILED'));document.head.append(s);});}
@@ -77,6 +78,7 @@ export async function launchProductionCollectibles(options){
       const planner=createMigrationPlanner({validateLegacy:(raw,opts)=>legacy.parse(raw,{source:opts.source})});
       const wearableCatalog=stageRequested?prepareEightWearableCatalog(E):null;
       wearableCatalog?.setActive(true); // Validator captures the admitted44 domain; legacy evidence retains its distinct36 Economy.
+      const decorCatalog=prepareDecor6Catalog(E);decorCatalog.setActive(true);
       const petDomain=globalThis.PetGame?createPetDomain({economy:E,petGame:globalThis.PetGame,canonical}):null;
       const validator=createProtocol2Validator({petDomain,scope,economy:E,model,planner,codec,canonical,validateLegacyCollection:legacy.validateCollection});
       const session=createCardAwareSession({scope,storage,lease,validator,canonical,model,economy:E,createCollectionHost});
@@ -85,9 +87,10 @@ export async function launchProductionCollectibles(options){
         try{
           const current=facade.coordinator.current();if(!current.ok)throw Error(current.code);
           const qaWearables8=!!wearableCatalog&&current.state._collectionProtocol===2;
+          decorCatalog.setActive(qaWearables8);
           wearableCatalog?.setActive(qaWearables8);
-          if(qaWearables8){const display=await import('../qa-protocol2/wearables8-display.mjs?v=save-evidence-cache-20261013-r1');if(!lease.owns())throw Error('QA_DISPLAY_LOADED_AFTER_REVOKE');globalThis.QAWearables8Display=display.default;}
-          const runtime={keys,storage,model,qaWearables8,qa:false,qaScope:scope,qaProtocol2:true,entryEnabled:cardEntryEnabled===true,ownsLock:lease.owns,coordinator:facade.coordinator,
+          if(qaWearables8){const display=await import('../qa-protocol2/wearables8-display.mjs?v=decor6-candidate-20261013-r1');if(!lease.owns())throw Error('QA_DISPLAY_LOADED_AFTER_REVOKE');globalThis.QAWearables8Display=display.default;const decor=await import('./decor6-display.mjs?v=decor6-candidate-20261013-r1');if(!lease.owns())throw Error('DECOR_DISPLAY_LOADED_AFTER_REVOKE');globalThis.Decor6Display=decor.default;}
+          const runtime={keys,storage,model,qaWearables8,decor6:qaWearables8,claimHidden:id=>facade.claimHidden(id),qa:false,qaScope:scope,qaProtocol2:true,entryEnabled:cardEntryEnabled===true,ownsLock:lease.owns,coordinator:facade.coordinator,
             logicalStorageKey:storage.logicalKey,handle:message=>facade.card(message),snapshot:()=>facade.snapshot(),reconcile:()=>facade.reconcile()};
           globalThis[scope==='formal'?'FormalCollectionRuntime':'PreviewCollectionRuntime']=runtime;
           const pet=scope==='formal'&&location.pathname.startsWith(new URL('pet/game/',sourceBase).pathname);
@@ -107,9 +110,9 @@ export async function launchProductionCollectibles(options){
           return;
         }
         const prompt=view.phase==='prompt',prepared=view.phase==='prepared';
-        const box=makePanel(prompt?'开启8件新衣帽？':prepared?'升级准备已保留，当前只读':'存档已保护',prompt?'升级存档后，盲盒新增8件衣帽。取消后照常玩原来的36件。':prepared?'原文已固定，现在不能继续经营或改档。请先核对，再明确重试。':'当前结果需要核对，已暂停写入；不会自动退款、回滚或重复执行。');
+        const box=makePanel(prompt?'开启新收藏？':prepared?'升级准备已保留，当前只读':'存档已保护',prompt?'升级存档后新增8件衣帽、4件普通店铺装饰与2件条件领取装饰。取消后照常玩原来的36件。':prepared?'原文已固定，现在不能继续经营或改档。请先核对，再明确重试。':'当前结果需要核对，已暂停写入；不会自动退款、回滚或重复执行。');
         const warning=document.createElement('p');warning.textContent=prompt?'升级前请关闭或刷新其他旧页面。新版无法阻止已打开的旧脚本写回；旧版不识别新物品。':'请保留原档和备份，不要清除浏览器数据或另开新档。';box.append(warning);
-        const details=document.createElement('details'),summary=document.createElement('summary'),body=document.createElement('p');summary.textContent='查看存档保护说明';body.textContent=prompt?'新增8件普通衣帽后共44件：40普通、4超级。空收藏且非保底时，普通单件概率由90%/32变为90%/40；每次20万金币、超级10%、15抽保底与不重复规则保留。将先保存完整原文与备份，逐项核对后才提交协议2主档；升级不赠物品、不扣金币。确认弹窗等待与取消不会写入升级，取消后正常经营可以保存旧协议。正式与预览存档彼此独立。写入或读回不确定时保持只读，需明确核对并替换内存，不会自动回滚、重抽或伪造历史达成时间。':`状态：${view.code||view.phase}。准备阶段原文不能改动；提交结果不明时只读核对，不重放经营。核对成功后才替换内存并继续。恢复文件含本机游戏进度，请妥善保存，仅在需要时提供给维护者。`;details.append(summary,body);box.append(details);
+        const details=document.createElement('details'),summary=document.createElement('summary'),body=document.createElement('p');summary.textContent='查看存档保护说明';body.textContent=prompt?'升级后共50件：44普通、4超级、2隐藏条件领取。空收藏且非保底时，普通单件概率由90%/32变为90%/44；每次20万金币、超级10%、15抽保底与不重复规则保留。将先保存完整原文与备份，逐项核对后才提交协议2主档；升级不赠物品、不扣金币。确认弹窗等待与取消不会写入升级，取消后正常经营可以保存旧协议。正式与预览存档彼此独立。写入或读回不确定时保持只读，需明确核对并替换内存，不会自动回滚、重抽或伪造历史达成时间。':`状态：${view.code||view.phase}。准备阶段原文不能改动；提交结果不明时只读核对，不重放经营。核对成功后才替换内存并继续。恢复文件含本机游戏进度，请妥善保存，仅在需要时提供给维护者。`;details.append(summary,body);box.append(details);
         if(prompt||prepared){button(box,'collectibleUpgradeConfirm',prompt?'保留备份并升级':'明确重试升级',async()=>{const result=facade.confirmMigration();if(result.ok)await startApp().catch(()=>{});});if(prompt)button(box,'collectibleUpgradeCancel','先不升级，继续原版',async()=>{const result=facade.cancelMigration();if(result.ok)await startApp().catch(()=>{});});}
         if(prepared||view.phase==='protected')button(box,'collectibleReconcile','只读核对结果',()=>{const result=facade.reconcile();if(result.ok&&facade.view().canPlay&&!appStarted)startApp().catch(()=>{});});
         button(box,'collectibleExport','保存本机恢复文件',exportEvidence);

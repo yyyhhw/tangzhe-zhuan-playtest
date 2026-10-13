@@ -4,8 +4,8 @@
  * An actual host must independently verify consent, original evidence, exclusive
  * ownership, unchanged raw, backups, commit readback and unknown outcomes.
  */
-import { canonical, freeze } from './lib/json.mjs?v=save-evidence-cache-20261013-r1';
-import { sha256, validateV15 } from './lib/sha256.mjs?v=save-evidence-cache-20261013-r1';
+import { canonical, freeze } from './lib/json.mjs?v=decor6-candidate-20261013-r1';
+import { sha256, validateV15 } from './lib/sha256.mjs?v=decor6-candidate-20261013-r1';
 
 export const CANDIDATE_ENABLED = false;
 export const TARGET_PROTOCOL = 2;
@@ -123,7 +123,7 @@ export function deriveGrantId(saveLineageId,rewardId,ruleVersion=1){
 }
 
 /** Only known raw evidence; no normalization, achievement timestamps, or awards. */
-function inspectHiddenEvidence(raw){
+export function inspectHiddenEvidence(raw){
   const s=rawJSON(raw), shops=s.shops;
   const shopValid=Array.isArray(shops)&&shops.length===4&&shops.every(x=>obj(x)&&typeof x.open==='boolean'&&safe(x.lv,x.open?1:0)&&safe(x.emp,0,40));
   const z=s.zombie, knownKeys=['lv','cleared','best','endBest','endTop'];

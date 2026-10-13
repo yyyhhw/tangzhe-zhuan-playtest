@@ -3,11 +3,11 @@
     "path": "qa-protocol2/vendor/planner/migration.mjs",
     "sourcePackage": "collectible-compat-candidate-v2",
     "sourcePath": "module/migration.mjs",
-    "bytes": 12617,
-    "sha256": "75e222f0ddc2fa42b73a27f20f898d44ef6fa3f2b27213cc140bc35f5f8a6569",
+    "bytes": 12618,
+    "sha256": "027d05d00b637053d65cd9c7ffb887b9a17b7c51c7b53b640d84fa7c5c976adf",
     "reviewedInputSha256": "5bc0536dacecbaca2f910def14ac7410a7b8c19495625604688156cb89848c49",
     "reviewedInputBytes": 12549,
-    "integrationChange": "only final cache import URLs; business logic unchanged"
+    "integrationChange": "Decor6: export existing evidence inspector; validate immutable identity plus bounded hidden ledger; capability-gated exact claim transition; retain evidence cache and all storage guards."
   },
   {
     "path": "qa-protocol2/vendor/planner/lib/json.mjs",
@@ -27,8 +27,8 @@
     "path": "qa-protocol2/vendor/codec/snapshot-codec.mjs",
     "sourcePackage": "collectible-snapshot-codec-v1",
     "sourcePath": "module/snapshot-codec.mjs",
-    "bytes": 4367,
-    "sha256": "679d153ac32f19a481bb662a03697ad77bef711d088f0d7ac1747d409fd4764e",
+    "bytes": 4361,
+    "sha256": "1b9a7eecef2d9e30c2be6fbf9949652fb9ee5ebe8fd0a319512f7993ec068916",
     "reviewedInputSha256": "420e687372a697b79e65da6776088234b9a0e6fbd39154b2582bdbe42b4b156b",
     "reviewedInputBytes": 4299,
     "integrationChange": "only final cache import URLs; business logic unchanged"
@@ -51,21 +51,22 @@
     "path": "qa-protocol2/vendor/runtime/validator.mjs",
     "sourcePackage": "collectible-protocol2-runtime-v1",
     "sourcePath": "module/validator.mjs",
-    "bytes": 12771,
-    "sha256": "a6619f521e2d3c63945ab64ceff3cb0f1d44a39becac07bb3d045992aa0b484a",
+    "bytes": 13013,
+    "sha256": "582ebefc2060cb08f8eb46ee04c47c7d2ad5b347c8b01672606a07c15715ba17",
     "sourceSha256": "b710aa9da4c979036e980ffdbdf2f8ed46259d13c5d7ac90bf07ea42a806511a",
     "sourceBytes": 8201,
-    "derivation": "Revision 2 exact boot migration markers, formal leaderboard mirror, optional source-bound pet roster transition guard; original reviewed archive unchanged. Revision 3: instance-local, single-entry cache of fully verified immutable snapshot/original raw pairs; current validation and write protections unchanged."
+    "derivation": "Revision 2 exact boot migration markers, formal leaderboard mirror, optional source-bound pet roster transition guard; original reviewed archive unchanged. Revision 3: instance-local, single-entry cache of fully verified immutable snapshot/original raw pairs; current validation and write protections unchanged.",
+    "integrationChange": "Decor6: export existing evidence inspector; validate immutable identity plus bounded hidden ledger; capability-gated exact claim transition; retain evidence cache and all storage guards."
   },
   {
     "path": "qa-protocol2/vendor/cards/card-coordinator.mjs",
     "sourcePackage": "collectible-card-adapter-v1",
     "sourcePath": "module/card-coordinator.mjs",
-    "bytes": 8237,
-    "sha256": "844a734b2248a3d930685f611f09e0f68856f6561026fdfcd9175e23eec9c3c8",
+    "bytes": 9137,
+    "sha256": "65a8a0bff53c129739478549d52dd9c3a1bc1f8afac3ca877569391f5bde4032",
     "reviewedInputSha256": "c39527224902c835f2cc611527a5fcec2a23293adebd3b78bbb8684d2b41a034",
     "reviewedInputBytes": 8203,
-    "integrationChange": "only final cache import URLs; business logic unchanged"
+    "integrationChange": "Decor6: export existing evidence inspector; validate immutable identity plus bounded hidden ledger; capability-gated exact claim transition; retain evidence cache and all storage guards."
   },
   {
     "path": "qa-protocol2/vendor/cards/card-transition.mjs",

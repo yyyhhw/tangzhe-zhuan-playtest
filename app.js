@@ -6,13 +6,14 @@ const COLLECTION = window.FormalCollectionRuntime;
 if (!COLLECTION?.ownsLock()) {
   // Stale HTML can fetch a new script before bootstrap. No storage access here.
   const url=new URL(location.href);
-  if(url.searchParams.get('v')!=='formal-save-evidence-cache-20261013-r1') {url.searchParams.set('v','formal-save-evidence-cache-20261013-r1');location.replace(url.href);}
+  if(url.searchParams.get('v')!=='formal-decor6-candidate-20261013-r1') {url.searchParams.set('v','formal-decor6-candidate-20261013-r1');location.replace(url.href);}
   else {const notice=document.createElement('p');notice.textContent='页面资源尚未更新完整，存档未写入。请关闭此页后重新打开。';document.body.prepend(notice);}
   return;
 }
 const STORAGE = COLLECTION.storage;
 // Display only. The QA host owns registration, truthful ownership and persistence.
 const WEARABLES8 = COLLECTION.qaProtocol2 && COLLECTION.qaWearables8 === true && window.QAWearables8Display?.version === 'qa-owned-wearables8-display-1' ? window.QAWearables8Display : null;
+const DECOR6 = COLLECTION.decor6 === true ? window.Decor6Display : null;
 const TD = window.TDCore; let tdOpen = false, tdPort = null, tdGeneration = 0;
 const ZB = window.ZBCore; var zbOpen = false, zbPort = null;
 const ZB_SHOP = 0; var zbLastCeo = null, zbRun = null; const zbUsedRuns = new Set();   // 13d：用过的 runId（本页内存），重复 / 过期的 start 不能把旧局重新激活   // 13a：打僵尸 = 烧烤摊（店 0）；zbLastCeo = 最近一次成功结算的上场 CEO（只在内存）
@@ -662,6 +663,7 @@ function render(t) {
     if (i === 0 && state.shops[0].emp > 0) for (let k = 0; k < 3; k++) { const p = (t * 0.5 + k / 3) % 1; g.save(); g.globalAlpha = 0.5 * (1 - p); g.fillStyle = '#fff'; g.strokeStyle = INK; g.lineWidth = 1.2 * U;
       g.beginPath(); g.arc(W * (0.2 + k * 0.1) + Math.sin(t * 2 + k) * 5 * U, l.counterY - 20 * U - p * 50 * U, (5 + p * 9) * U, 0, TAU); g.fill(); g.stroke(); g.restore(); }
     drawDecorFront(g, i, t);
+    if(DECOR6) DECOR6.draw(g,state,W,l,U);
     drawSuper(g, i, t);
     drawRushBanner(g, i, t);
     // CEO
@@ -1247,6 +1249,7 @@ function act(a, arg, btn) {
     case 'wearWho': wardrobeWho = arg; dirty = true; break;
     case 'jobView': { const [who, k] = arg.split(':'); jobView[who] = { i:+k, at:state.ceos[who].at }; dirty = true; sfx('tap'); break; }
     case 'jobBig': { const [who, k] = arg.split(':'); return showJobArt(who, +k); }
+    case 'claimHidden': { if(!DECOR6)return; const r=COLLECTION.claimHidden(arg); dirty=true; if(r.ok)toast('已领取：'+E.ITEM_BY_ID[arg].name,1900,'header'); else if(r.code==='HIDDEN_ALREADY_CLAIMED')toast('这件装饰已经领取',1900,'header'); break; }
     case 'decor': { if (E.ITEM_BY_ID[arg]?.type !== 'decor' || !state.gacha.owned.includes(arg)) return; const r = atomic(() => { const h = state.decorHidden || (state.decorHidden = []); const k = h.indexOf(arg); if (k >= 0) h.splice(k, 1); else h.push(arg); return { ok:true }; }, '装饰显示没有切换'); dirty = true; bgKey = ''; if (r.ok) toast(decorOn(arg) ? '已摆出：四家店共用，开店后可见' : '已从四家店收起', 1900, 'header'); break; }
     case 'card': return showCard(arg);
     case 'musicCredits': return showMusicCredits();
@@ -1314,6 +1317,7 @@ function drawCollectible(c, id) {
 const COLLECTIBLE_PREVIEW = Object.freeze([{"id": "c_charcoal_vest", "name": "炭灰小马甲", "type": "clothes", "shop": "烧烤摊", "hidden": false, "unlock": null, "src": "art/collectibles/c_charcoal_vest_catalog_v1.webp", "alt": "深灰色V领马甲，正面有四颗棕色纽扣、两个口袋和浅色缝线，口袋下部有深色斑点。"}, {"id": "c_matcha_knit", "name": "抹茶针织背心", "type": "clothes", "shop": "奶茶店", "hidden": false, "unlock": null, "src": "art/collectibles/c_matcha_knit_catalog_v1.webp", "alt": "抹茶绿色V领针织背心，正面织着竖向麻花纹，领口、袖口和下摆带米白色罗纹边。"}, {"id": "h_guokui", "name": "锅盔软帽", "type": "hat", "shop": "烧烤摊", "hidden": false, "unlock": null, "src": "art/collectibles/h_guokui_catalog_v1.webp", "alt": "圆鼓鼓的米金色软帽，带短帽檐和顶部圆扣，帽面有烘烤色斑与芝麻状点缀。"}, {"id": "h_antenna_clip", "name": "天线发卡", "type": "hat", "shop": "科技公司", "hidden": false, "unlock": null, "src": "art/collectibles/h_antenna_clip_catalog_v1.webp", "alt": "一枚金色发卡，蓝绿色椭圆饰面上有橙色电路线纹，上方的弯曲弹簧顶着一颗橙色圆球。"}, {"id": "d_borrow_register", "name": "借阅登记本", "type": "decor", "shop": "漫画书店", "hidden": false, "unlock": null, "src": "art/collectibles/d_borrow_register_catalog_v1.webp", "alt": "一本摊开的绿皮登记本，米色书页上画着空白表格，中央放着绿金色钢笔，下方垂着红色书签带。"}, {"id": "d_rocket_piggy", "name": "迷你火箭存钱罐", "type": "decor", "shop": "科技公司", "hidden": false, "unlock": null, "src": "art/collectibles/d_rocket_piggy_catalog_v1.webp", "alt": "米白色小火箭配橙红色尖顶和尾翼，机身有金边蓝绿色圆窗，上部有狭长投币口。"}, {"id": "d_opening_photo", "name": "开业合影", "type": "decor", "shop": "街区", "hidden": true, "unlock": "四家店全部开张", "src": "art/collectibles/d_opening_photo_catalog_v1.webp", "alt": "木相框中的四人合影，四人分别拿着烤夹、奶茶、书和小火箭，身后亮着烤串、饮料、书本与火箭图案招牌。"}, {"id": "d_ward_charm", "name": "退散护身符", "type": "decor", "shop": "科技公司", "hidden": true, "unlock": "打僵尸通关第10关", "src": "art/collectibles/d_ward_charm_catalog_v1.webp", "alt": "系着红绳的蓝绿色束口布袋，袋面饰有金色枝叶纹和电路纹盾牌，下方挂着金铃铛与红色流苏。"}].map(Object.freeze));
 const COLLECTIBLE_ART = Object.freeze(Object.fromEntries(COLLECTIBLE_PREVIEW.map(x => [x.id, x])));
 function collectiblePreviewHTML() {
+  if (DECOR6) return DECOR6.hiddenHTML(state);
   if (WEARABLES8) return WEARABLES8.remainingPreviewHTML(COLLECTIBLE_PREVIEW);
   const TL = { clothes:'衣服', hat:'帽子', decor:'装饰' };
   return `<div class="sec-title">新品图鉴预览（只展示，暂未放进盲盒）</div><div class="item-grid collectible-preview">${COLLECTIBLE_PREVIEW.map(x => `<div class="item preview-only" data-preview-item="${x.id}"><span class="t">${TL[x.type]}${x.hidden ? ' · 隐藏' : ''}</span><span class="item-art"><img data-item-art="${x.id}" src="${x.src}?v=collectibles-1" alt="${x.alt}" width="512" height="512" loading="lazy"><span class="item-art-status" hidden>图示暂不可用</span></span>${x.name}<small class="preview-note">${x.shop}${x.hidden ? ' · ' + x.unlock + '（条件未接入）' : ''}</small></div>`).join('')}</div><div class="note">外观收藏，不影响收益、概率和战斗。本批 8 件为图鉴预览，尚未加入盲盒、不能抽到。</div>`;
@@ -1335,6 +1339,7 @@ function itemThumb(id) {
   return (thumbCache[id]=o.toDataURL());
 }
 function itemIcon(id) {
+  if (DECOR6?.has(id)) return state.gacha.owned.includes(id) ? DECOR6.iconHTML(id) : '<span class="ii">❓</span>';
   if (WEARABLES8?.has(id)) return WEARABLES8.iconHTML(E, state, id);
   const it=E.ITEM_BY_ID[id];
   if(it&&it.type==='card')return '<span class="ii">📜</span>';
@@ -1457,7 +1462,7 @@ function renderCeo() {
   return h;
 }
 function renderGacha() {
-  const owned = state.gacha.owned.length, total = E.ITEMS.length, rem = total - owned, unlocked = E.gachaUnlocked(state), price = E.gachaPrice(state), o = E.gachaOdds(state);
+  const owned = E.ITEMS.filter(x=>x.hidden!==true&&state.gacha.owned.includes(x.id)).length, total = E.REGULAR_ITEMS.length + E.SUPER_ITEMS.length, rem = total - owned, unlocked = E.gachaUnlocked(state), price = E.gachaPrice(state), o = E.gachaOdds(state);
   const box = `<svg viewBox="0 0 84 84"><rect x="10" y="30" width="64" height="46" rx="4" fill="${unlocked ? '#ffd23f' : '#ccc'}" stroke="#141414" stroke-width="4"/><rect x="6" y="20" width="72" height="16" rx="3" fill="${unlocked ? '#e63946' : '#aaa'}" stroke="#141414" stroke-width="4"/><rect x="36" y="20" width="12" height="56" fill="#fff" stroke="#141414" stroke-width="3"/><path d="M42 20 C30 4 18 10 26 20 M42 20 C54 4 66 10 58 20" fill="none" stroke="#141414" stroke-width="4"/><text x="42" y="64" font-size="18" font-weight="900" text-anchor="middle" fill="#141414">${unlocked ? '?' : '🔒'}</text></svg>`;
   const P = x => (x * 100 >= 10 || x === 0 ? (x * 100).toFixed(0) : (x * 100).toFixed(1)) + '%';
   const ownS = E.SUPER_ITEMS.filter(it => state.gacha.owned.includes(it.id)).length, ownR = owned - ownS;
@@ -1478,7 +1483,7 @@ function renderGacha() {
     if (has && it.type === 'card') return `<button type="button" class="item story-open" data-act="card" data-arg="${it.id}" aria-label="重看故事卡：${it.name}"><span class="t">故事卡</span>${storyArt(it.id)}<span>${it.name}</span><span class="story-replay-hint">点击重看 ›</span></button>`;
     return `<div class="item ${has ? '' : 'no'}"><span class="t">${TYPE_LABEL[it.type]}</span>${itemIcon(it.id)}${has ? it.name : '？？？'}</div>`; }).join('')}</div>`;
   h += collectiblePreviewHTML();
-  h += `<div class="note">规则：不重复收藏盒，共 ${total} 件：普通收藏 ${E.REGULAR_ITEMS.length} 件（衣服 ${E.ITEMS.filter(it => it.type === 'clothes').length} / 帽子 ${E.ITEMS.filter(it => it.type === 'hat').length} / 装饰 ${E.ITEMS.filter(it => it.type === 'decor').length} / 故事卡 ${E.ITEMS.filter(it => it.type === 'card').length}）+ 超级装饰 ${E.SUPER_ITEMS.length} 件。每抽先定类别：<b>超级装饰 ${P(CFG.SUPER_P)}</b>、普通收藏 ${P(1 - CFG.SUPER_P)}，再从该类<b>还没收集的</b>里等概率抽；连续 ${CFG.SUPER_PITY - 1} 抽没出超级装饰，第 ${CFG.SUPER_PITY} 抽必出。某一类抽完了，就只出另一类。每抽必得新物品，最多 ${total} 抽集齐，集齐后不能再买、不扣金币。普通收藏只是好看，<b>不加产速</b>；超级装饰加本店产量和专属效果，但不抽也能正常开齐店铺。单价 ${fmt(CFG.GACHA_PRICE)}。</div>`;
+  h += `<div class="note">规则：不重复收藏盒，共 ${total} 件：普通收藏 ${E.REGULAR_ITEMS.length} 件（衣服 ${E.ITEMS.filter(it => it.type === 'clothes').length} / 帽子 ${E.ITEMS.filter(it => it.type === 'hat').length} / 装饰 ${E.REGULAR_ITEMS.filter(it => it.type === 'decor').length} / 故事卡 ${E.ITEMS.filter(it => it.type === 'card').length}）+ 超级装饰 ${E.SUPER_ITEMS.length} 件。每抽先定类别：<b>超级装饰 ${P(CFG.SUPER_P)}</b>、普通收藏 ${P(1 - CFG.SUPER_P)}，再从该类<b>还没收集的</b>里等概率抽；连续 ${CFG.SUPER_PITY - 1} 抽没出超级装饰，第 ${CFG.SUPER_PITY} 抽必出。某一类抽完了，就只出另一类。每抽必得新物品，最多 ${total} 抽集齐，集齐后不能再买、不扣金币。普通收藏只是好看，<b>不加产速</b>；超级装饰加本店产量和专属效果，但不抽也能正常开齐店铺。单价 ${fmt(CFG.GACHA_PRICE)}。</div>`;
   return h;
 }
 let wardrobeWho = 'c77';
@@ -1509,8 +1514,8 @@ function renderCol() {
   h += `<div class="sec-title">店铺装饰</div><div class="note">四家店共用，开店后可见；只改变店景，不增加产速。<button class="decor-view" data-act="goShop" data-arg="${state.cur}">查看店景 ›</button></div>`;
   const decors = E.ITEMS.filter(i => i.type === 'decor');
   h += decors.map(d => own.has(d.id)
-    ? `<div class="card decor-card" data-decor="${d.id}"><div class="ava sq">${itemIcon(d.id)}</div><div class="info"><div class="name">${d.name}</div><div class="desc"><b class="decor-state">${decorOn(d.id) ? '已摆出 · 四家店' : '已收起'}</b><br>${DECOR_SPOT[d.id]}</div></div><button class="toggle ${decorOn(d.id) ? 'on' : ''}" aria-label="${decorOn(d.id) ? '收起' : '摆出'}${d.name}" data-act="decor" data-arg="${d.id}">${decorOn(d.id) ? '收起' : '摆出'}</button></div>`
-    : `<div class="card dim"><div class="ava sq">❓</div><div class="info"><div class="name">？？？</div><div class="desc">盲盒里抽</div></div></div>`).join('');
+    ? `<div class="card decor-card" data-decor="${d.id}"><div class="ava sq">${itemIcon(d.id)}</div><div class="info"><div class="name">${d.name}</div><div class="desc"><b class="decor-state">${decorOn(d.id) ? '已摆出 · 四家店' : '已收起'}</b><br>${DECOR6?.has(d.id)?DECOR6.descriptions[d.id]:DECOR_SPOT[d.id]}</div></div><button class="toggle ${decorOn(d.id) ? 'on' : ''}" aria-label="${decorOn(d.id) ? '收起' : '摆出'}${d.name}" data-act="decor" data-arg="${d.id}">${decorOn(d.id) ? '收起' : '摆出'}</button></div>`
+    : `<div class="card dim"><div class="ava sq">❓</div><div class="info"><div class="name">？？？</div><div class="desc">${d.hidden?d.unlock+' · 到盲盒页领取':'盲盒里抽'}</div></div></div>`).join('');
   const cards = E.ITEMS.filter(i => i.type === 'card');
   h += `<div class="sec-title">故事卡图鉴 ${cards.filter(c => own.has(c.id)).length}/${cards.length}</div>`;
   h += cards.map((c, k) => own.has(c.id)
@@ -2663,7 +2668,7 @@ const tdController = window.TDHost.create({
 function openTD() {
   if (frozen || tdOpen || zbOpen || !state.shops[1].open) return;
   tdOpen = true; const f = $('#tdFrame'), generation = ++tdGeneration;
-  const target = new URL('td/index.html?embed=1&v=save-evidence-cache-20261013-r1', location.href);
+  const target = new URL('td/index.html?embed=1&v=decor6-candidate-20261013-r1', location.href);
   f.onload = () => {
     if (!tdOpen || generation !== tdGeneration) return;
     // Verify the actual loaded document, not merely an iframe src attribute.
