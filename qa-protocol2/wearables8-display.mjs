@@ -53,7 +53,9 @@ export function catalogHTML(economy, state, id) {
   return `<div class="item ${collected ? '' : 'no'}" data-wearable-item="${id}"><span class="t">${types[id] === 'clothes' ? '衣服' : '帽子'}</span>${iconHTML(economy, state, id)}${collected ? escapeHTML(item.name) + descriptionHTML(economy, state, id) : '？？？<small class="preview-note" style="display:block;font-size:11px;line-height:1.5">' + escapeHTML(item.hint) + '</small>'}</div>`;
 }
 export function revealFlavorHTML(economy, state, id) {
-  return owned(economy, state, id) ? escapeHTML(economy.ITEM_BY_ID[id].flavor) + '<br>' : '';
+  if (!owned(economy, state, id)) return '';
+  const flavor = economy.ITEM_BY_ID[id].flavor;
+  return typeof flavor === 'string' && flavor.trim() ? escapeHTML(flavor) + '<br>' : '';
 }
 /** Remove duplicate wearable previews only in QA; keep the unrelated decorative preview. */
 export function remainingPreviewHTML(previews) {

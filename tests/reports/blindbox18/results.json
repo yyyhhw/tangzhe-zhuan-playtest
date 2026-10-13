@@ -1,0 +1,61 @@
+{
+  "checks": 313,
+  "bounds": {
+    "c_skewer_loop_tunic": [
+      -26,
+      -74,
+      25,
+      -30
+    ],
+    "c_smoke_split_bolero": [
+      -25,
+      -75,
+      24,
+      -33
+    ],
+    "c_pepper_scale_wrap": [
+      -22,
+      -76,
+      24,
+      -30
+    ],
+    "c_corn_rib_jacket": [
+      -23,
+      -74,
+      22,
+      -34
+    ],
+    "h_charcoal_crescent": [
+      -22,
+      -138,
+      21,
+      -113
+    ],
+    "h_grill_press": [
+      -21,
+      -147,
+      19,
+      -113
+    ],
+    "h_tin_foil_puff": [
+      -20,
+      -145,
+      19,
+      -112
+    ],
+    "h_corn_sail": [
+      -22,
+      -148,
+      17,
+      -114
+    ]
+  },
+  "firstEightPixelComparisons": 64,
+  "facePixelComparisons": 32,
+  "poseCases": 192,
+  "draw1000Milliseconds": 54.899999999965075,
+  "catalogAssetsLoaded": 8,
+  "browser": "154.0.8037.57",
+  "pageErrors": [],
+  "scope": "Actual shipped person and home pose functions on isolated synthetic canvas boards, not full production page or save admission."
+}
