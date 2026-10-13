@@ -537,6 +537,9 @@ return (avaCache[k] = o.toDataURL());
 /* ---------- 每帧：招牌 / 人物 / 特效 / 大客户 ---------- */
 const fx = [], coinsP = [];
 let signAnim = { shop:-1, from:null, to:null, t0:0 }, lastSign = {}, focusT = 0, shake = 0;
+// 体验-100：系统开了「减少动态」时，经营页不震屏、不画集中线、不震动手机（对齐家宅 homeAutoReduced）
+const FX_RM = (() => { try { return matchMedia('(prefers-reduced-motion: reduce)'); } catch (e) { return null; } })();
+const fxReduced = () => !!(FX_RM && FX_RM.matches);
 let bubble = { who:null, txt:'', until:0 }, nextBubbleAt = 0, mileFx = null;
 function signNow(i) { return state.shops[i].open ? E.signOf(state, i) : { name:'招租中', slogan:'开张 ' + fmt(E.SHOPS[i].open) + ' 金' }; }
 function drawSign(c, i, t) {
@@ -642,11 +645,12 @@ function render(t) {
   const key = [i, W, H, DPR, state.shops[i].open, decorOn('d_neon')].join('|');
   if (key !== bgKey) { bgCache = buildBg(i); bgKey = key; }
   g.setTransform(1, 0, 0, 1, 0, 0);
-  let sx = 0, sy = 0; if (shake > 0) { sx = (Math.random() - 0.5) * shake * 6 * DPR; sy = (Math.random() - 0.5) * shake * 6 * DPR; }
+  const fxRm = fxReduced();
+  let sx = 0, sy = 0; if (shake > 0 && !fxRm) { sx = (Math.random() - 0.5) * shake * 6 * DPR; sy = (Math.random() - 0.5) * shake * 6 * DPR; }
   g.drawImage(bgCache, sx, sy);
   g.setTransform(DPR, 0, 0, DPR, sx, sy);
   // 集中线（点击 / 大客户时）
-  if (focusT > 0) { g.save(); g.globalAlpha = Math.min(1, focusT * 3) * 0.5; g.strokeStyle = INK; g.lineWidth = 1.2 * U;
+  if (focusT > 0 && !fxRm) { g.save(); g.globalAlpha = Math.min(1, focusT * 3) * 0.5; g.strokeStyle = INK; g.lineWidth = 1.2 * U;
     for (let k = 0; k < 40; k++) { const a = k / 40 * TAU + (k % 3) * 0.05; const r0 = Math.min(W, H) * 0.42, r1 = Math.max(W, H);
       g.beginPath(); g.moveTo(W / 2 + Math.cos(a) * r0, H / 2 + Math.sin(a) * r0); g.lineTo(W / 2 + Math.cos(a) * r1, H / 2 + Math.sin(a) * r1); g.stroke(); } g.restore(); }
   drawAwning(g, i, t);
@@ -893,7 +897,7 @@ function tapShop(x, y) {
     critFx = { shop:i, tier:r.tier, x, y, t0:clock, seed:Math.random() * 1000 };
     focusT = r.tier >= 2 ? 0.18 + r.tier * 0.06 : 0; shake = [0, 0.18, 0.32, 0.5][r.tier];
     popWord(CFG.CRIT_TIERS[r.tier - 1].word); sfx('crit' + r.tier);
-    try { if (navigator.vibrate) navigator.vibrate([0, 12, 22, 40][r.tier]); } catch (e) {}
+    try { if (navigator.vibrate && !fxReduced()) navigator.vibrate([0, 12, 22, 40][r.tier]); } catch (e) {}
   } else { sfx('tap'); if (Math.random() < 0.25) popWord(TAP_WORDS[Math.floor(Math.random() * TAP_WORDS.length)]); }
   // 每满 50 连击：三档各 +5 个百分点
   if (combo.n % CFG.COMBO_STEP === 0) { const pc = Math.round(E.critChance(state, i, now(), combo.n) * 100);
