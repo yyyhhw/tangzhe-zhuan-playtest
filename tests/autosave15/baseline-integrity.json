@@ -75,23 +75,28 @@
     },
     {
       "path": "economy.js",
-      "sha256": "c2abc463c6612361a24feace0a697df86bf72f9a04a8148e112b6dd55e20a91a"
+      "sha256": "9194a7cfb19f72a660f5cc1da0d45599f594d0e9228c6b4a12d47bad2864f743",
+      "expectedChange": "Six-decoration hidden-pool/claim extension; behavioral coverage in tests/decor6. This full file is intentionally not identical to b16."
     },
     {
       "path": "preview/economy.js",
-      "sha256": "ab0921e44ceae1f1694c345dd41cedc38c987b156b5db9ea4eb715388bf10f5f"
+      "sha256": "b005a82bd3ccd728bf5de62a48fa7007dbfb0e78b1d963163de2a47d31e20538",
+      "expectedChange": "Six-decoration hidden-pool/claim extension; behavioral coverage in tests/decor6. This full file is intentionally not identical to b16."
     },
     {
       "path": "pet/game/economy.js",
-      "sha256": "4475552c124117f06322335a7befd168b51a0c6236b38446565d0030c41c14be"
+      "sha256": "85172af03f342b4564fc09dcd6e61eaccfa1ea2c61d9fd35875f966669e7c1d2",
+      "expectedChange": "Six-decoration hidden-pool/claim extension; behavioral coverage in tests/decor6. This full file is intentionally not identical to b16."
     },
     {
       "path": "qa-protocol2/vendor/runtime/validator.mjs",
-      "sha256": "a6619f521e2d3c63945ab64ceff3cb0f1d44a39becac07bb3d045992aa0b484a"
+      "sha256": "51f95b6f346de3ddf4b75307e8b9182bbf29c13ac4f4abfe30ae3674d526a86a",
+      "expectedChange": "Six-decoration hidden-pool/claim extension; behavioral coverage in tests/decor6. This full file is intentionally not identical to b16."
     },
     {
       "path": "qa-protocol2/real-page-facade.mjs",
-      "sha256": "2de83c71863a298369df5aa05a66b0e4e7fbd18de2d608b425e76f47414662ad"
+      "sha256": "a007a7da5db92aa286f56f1326b58130dc2f85358b5857adc0bc2f727d7fc79d",
+      "expectedChange": "Six-decoration hidden-pool/claim extension; behavioral coverage in tests/decor6. This full file is intentionally not identical to b16."
     },
     {
       "path": "collectibles/storage.mjs",
@@ -111,7 +116,8 @@
     },
     {
       "path": "qa-protocol2/vendor/cards/card-coordinator.mjs",
-      "sha256": "e6cd6db30d2a3e4fe8bb2168a71631b5d24fad796659bf8c8cacc388a0c84fbb"
+      "sha256": "f5e319b92ef2569921fca581767f5ed41836b8ccac4450a3755991d441c05a19",
+      "expectedChange": "Six-decoration hidden-pool/claim extension; behavioral coverage in tests/decor6. This full file is intentionally not identical to b16."
     },
     {
       "path": "qa-protocol2/vendor/codec/snapshot-codec.mjs",
@@ -119,7 +125,8 @@
     },
     {
       "path": "qa-protocol2/vendor/planner/migration.mjs",
-      "sha256": "f9bc1d535065eb2970800aacdb661694e609cbb2b9d2d41374bad12cbdee107d"
+      "sha256": "567577d0c021e861255b2ae58ec554ac3df5799a51424108851f673f13403eb3",
+      "expectedChange": "Six-decoration hidden-pool/claim extension; behavioral coverage in tests/decor6. This full file is intentionally not identical to b16."
     }
   ]
 }

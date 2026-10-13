@@ -1,0 +1,38 @@
+[
+  {
+    "path": "art/collectibles/d_borrow_register_catalog_v1.webp",
+    "bytes": 129580,
+    "sha256": "b8ca141bbf985488835d0bdc80d5315ba1ba1ff20bf2f5964d6adfd2d23da6bc",
+    "sourceCommit": "b16b99e"
+  },
+  {
+    "path": "art/collectibles/d_charcoal_chime.png",
+    "bytes": 25052,
+    "sha256": "dda932ad24f13e65bb194758387490347dc98fb133c96026c7fe220fed990f84",
+    "sourceCommit": "e4474e7"
+  },
+  {
+    "path": "art/collectibles/d_opening_photo_catalog_v1.webp",
+    "bytes": 194798,
+    "sha256": "ed072353a903518d879969124993f54bd43c634577b7e8db8bb291ead3ec6d32",
+    "sourceCommit": "b16b99e"
+  },
+  {
+    "path": "art/collectibles/d_rocket_piggy_catalog_v1.webp",
+    "bytes": 113594,
+    "sha256": "33a72f91034b634633657c1e8e9cedc0dfa42492c130d6682684f619a35f8045",
+    "sourceCommit": "b16b99e"
+  },
+  {
+    "path": "art/collectibles/d_spice_turntable.png",
+    "bytes": 39252,
+    "sha256": "b40a0e532d9e39a9f922ef0a23740698a7b1a80d61678d6c4d0afa007fa3c94c",
+    "sourceCommit": "e4474e7"
+  },
+  {
+    "path": "art/collectibles/d_ward_charm_catalog_v1.webp",
+    "bytes": 73046,
+    "sha256": "76832ac6fd9ba58a2e77b412a5b46d87f4db5dbf139615991907dc29cabcf903",
+    "sourceCommit": "b16b99e"
+  }
+]

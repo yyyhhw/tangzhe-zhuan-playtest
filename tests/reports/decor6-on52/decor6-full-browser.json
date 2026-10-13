@@ -1,0 +1,538 @@
+[
+  {
+    "width": 320,
+    "owned": 58,
+    "scope": "formal",
+    "clicks": [
+      {
+        "id": "d_borrow_register",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      },
+      {
+        "id": "d_rocket_piggy",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      },
+      {
+        "id": "d_opening_photo",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      },
+      {
+        "id": "d_ward_charm",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      },
+      {
+        "id": "d_charcoal_chime",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      },
+      {
+        "id": "d_spice_turntable",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      }
+    ],
+    "images": [
+      {
+        "id": "d_borrow_register",
+        "w": 512,
+        "h": 512
+      },
+      {
+        "id": "d_rocket_piggy",
+        "w": 512,
+        "h": 512
+      },
+      {
+        "id": "d_opening_photo",
+        "w": 512,
+        "h": 512
+      },
+      {
+        "id": "d_ward_charm",
+        "w": 512,
+        "h": 512
+      },
+      {
+        "id": "d_charcoal_chime",
+        "w": 512,
+        "h": 512
+      },
+      {
+        "id": "d_spice_turntable",
+        "w": 512,
+        "h": 512
+      }
+    ],
+    "painted": [
+      {
+        "shop": 0,
+        "drawn": [
+          "d_opening_photo",
+          "d_ward_charm",
+          "d_borrow_register",
+          "d_rocket_piggy",
+          "d_charcoal_chime",
+          "d_spice_turntable"
+        ]
+      },
+      {
+        "shop": 1,
+        "drawn": [
+          "d_opening_photo",
+          "d_ward_charm",
+          "d_borrow_register",
+          "d_rocket_piggy",
+          "d_charcoal_chime",
+          "d_spice_turntable"
+        ]
+      },
+      {
+        "shop": 2,
+        "drawn": [
+          "d_opening_photo",
+          "d_ward_charm",
+          "d_borrow_register",
+          "d_rocket_piggy",
+          "d_charcoal_chime",
+          "d_spice_turntable"
+        ]
+      },
+      {
+        "shop": 3,
+        "drawn": [
+          "d_opening_photo",
+          "d_ward_charm",
+          "d_borrow_register",
+          "d_rocket_piggy",
+          "d_charcoal_chime",
+          "d_spice_turntable"
+        ]
+      }
+    ],
+    "saveMsAt4x": [
+      184.5,
+      197.90000000037253,
+      183,
+      175.19999999925494,
+      179.90000000037253,
+      158.19999999925494,
+      146.90000000037253,
+      155.79999999981374
+    ],
+    "errors": [],
+    "blocked": false,
+    "note": "Automated interaction evidence only; visually inspect all screenshots before acceptance"
+  },
+  {
+    "width": 390,
+    "owned": 58,
+    "scope": "formal",
+    "clicks": [
+      {
+        "id": "d_borrow_register",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      },
+      {
+        "id": "d_rocket_piggy",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      },
+      {
+        "id": "d_opening_photo",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      },
+      {
+        "id": "d_ward_charm",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      },
+      {
+        "id": "d_charcoal_chime",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      },
+      {
+        "id": "d_spice_turntable",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      }
+    ],
+    "images": [
+      {
+        "id": "d_borrow_register",
+        "w": 512,
+        "h": 512
+      },
+      {
+        "id": "d_rocket_piggy",
+        "w": 512,
+        "h": 512
+      },
+      {
+        "id": "d_opening_photo",
+        "w": 512,
+        "h": 512
+      },
+      {
+        "id": "d_ward_charm",
+        "w": 512,
+        "h": 512
+      },
+      {
+        "id": "d_charcoal_chime",
+        "w": 512,
+        "h": 512
+      },
+      {
+        "id": "d_spice_turntable",
+        "w": 512,
+        "h": 512
+      }
+    ],
+    "painted": [
+      {
+        "shop": 0,
+        "drawn": [
+          "d_opening_photo",
+          "d_ward_charm",
+          "d_borrow_register",
+          "d_rocket_piggy",
+          "d_charcoal_chime",
+          "d_spice_turntable"
+        ]
+      },
+      {
+        "shop": 1,
+        "drawn": [
+          "d_opening_photo",
+          "d_ward_charm",
+          "d_borrow_register",
+          "d_rocket_piggy",
+          "d_charcoal_chime",
+          "d_spice_turntable"
+        ]
+      },
+      {
+        "shop": 2,
+        "drawn": [
+          "d_opening_photo",
+          "d_ward_charm",
+          "d_borrow_register",
+          "d_rocket_piggy",
+          "d_charcoal_chime",
+          "d_spice_turntable"
+        ]
+      },
+      {
+        "shop": 3,
+        "drawn": [
+          "d_opening_photo",
+          "d_ward_charm",
+          "d_borrow_register",
+          "d_rocket_piggy",
+          "d_charcoal_chime",
+          "d_spice_turntable"
+        ]
+      }
+    ],
+    "saveMsAt4x": [
+      166.70000000018626,
+      188,
+      152.29999999981374,
+      139.6000000005588,
+      141.5,
+      141.09999999962747,
+      166.70000000018626,
+      174.19999999925494
+    ],
+    "errors": [],
+    "blocked": false,
+    "note": "Automated interaction evidence only; visually inspect all screenshots before acceptance"
+  },
+  {
+    "width": 320,
+    "owned": 58,
+    "scope": "preview",
+    "clicks": [
+      {
+        "id": "d_borrow_register",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      },
+      {
+        "id": "d_rocket_piggy",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      },
+      {
+        "id": "d_opening_photo",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      },
+      {
+        "id": "d_ward_charm",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      },
+      {
+        "id": "d_charcoal_chime",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      },
+      {
+        "id": "d_spice_turntable",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      }
+    ],
+    "images": [
+      {
+        "id": "d_borrow_register",
+        "w": 512,
+        "h": 512
+      },
+      {
+        "id": "d_rocket_piggy",
+        "w": 512,
+        "h": 512
+      },
+      {
+        "id": "d_opening_photo",
+        "w": 512,
+        "h": 512
+      },
+      {
+        "id": "d_ward_charm",
+        "w": 512,
+        "h": 512
+      },
+      {
+        "id": "d_charcoal_chime",
+        "w": 512,
+        "h": 512
+      },
+      {
+        "id": "d_spice_turntable",
+        "w": 512,
+        "h": 512
+      }
+    ],
+    "painted": [
+      {
+        "shop": 0,
+        "drawn": [
+          "d_opening_photo",
+          "d_ward_charm",
+          "d_borrow_register",
+          "d_rocket_piggy",
+          "d_charcoal_chime",
+          "d_spice_turntable"
+        ]
+      },
+      {
+        "shop": 1,
+        "drawn": [
+          "d_opening_photo",
+          "d_ward_charm",
+          "d_borrow_register",
+          "d_rocket_piggy",
+          "d_charcoal_chime",
+          "d_spice_turntable"
+        ]
+      },
+      {
+        "shop": 2,
+        "drawn": [
+          "d_opening_photo",
+          "d_ward_charm",
+          "d_borrow_register",
+          "d_rocket_piggy",
+          "d_charcoal_chime",
+          "d_spice_turntable"
+        ]
+      },
+      {
+        "shop": 3,
+        "drawn": [
+          "d_opening_photo",
+          "d_ward_charm",
+          "d_borrow_register",
+          "d_rocket_piggy",
+          "d_charcoal_chime",
+          "d_spice_turntable"
+        ]
+      }
+    ],
+    "saveMsAt4x": [
+      176.29999999981374,
+      146.79999999981374,
+      142.79999999981374,
+      140.90000000037253,
+      161.59999999962747,
+      143.40000000037253,
+      169.29999999981374,
+      192.1000000005588
+    ],
+    "errors": [],
+    "blocked": false,
+    "note": "Automated interaction evidence only; visually inspect all screenshots before acceptance"
+  },
+  {
+    "width": 390,
+    "owned": 58,
+    "scope": "preview",
+    "clicks": [
+      {
+        "id": "d_borrow_register",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      },
+      {
+        "id": "d_rocket_piggy",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      },
+      {
+        "id": "d_opening_photo",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      },
+      {
+        "id": "d_ward_charm",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      },
+      {
+        "id": "d_charcoal_chime",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      },
+      {
+        "id": "d_spice_turntable",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      }
+    ],
+    "images": [
+      {
+        "id": "d_borrow_register",
+        "w": 512,
+        "h": 512
+      },
+      {
+        "id": "d_rocket_piggy",
+        "w": 512,
+        "h": 512
+      },
+      {
+        "id": "d_opening_photo",
+        "w": 512,
+        "h": 512
+      },
+      {
+        "id": "d_ward_charm",
+        "w": 512,
+        "h": 512
+      },
+      {
+        "id": "d_charcoal_chime",
+        "w": 512,
+        "h": 512
+      },
+      {
+        "id": "d_spice_turntable",
+        "w": 512,
+        "h": 512
+      }
+    ],
+    "painted": [
+      {
+        "shop": 0,
+        "drawn": [
+          "d_opening_photo",
+          "d_ward_charm",
+          "d_borrow_register",
+          "d_rocket_piggy",
+          "d_charcoal_chime",
+          "d_spice_turntable"
+        ]
+      },
+      {
+        "shop": 1,
+        "drawn": [
+          "d_opening_photo",
+          "d_ward_charm",
+          "d_borrow_register",
+          "d_rocket_piggy",
+          "d_charcoal_chime",
+          "d_spice_turntable"
+        ]
+      },
+      {
+        "shop": 2,
+        "drawn": [
+          "d_opening_photo",
+          "d_ward_charm",
+          "d_borrow_register",
+          "d_rocket_piggy",
+          "d_charcoal_chime",
+          "d_spice_turntable"
+        ]
+      },
+      {
+        "shop": 3,
+        "drawn": [
+          "d_opening_photo",
+          "d_ward_charm",
+          "d_borrow_register",
+          "d_rocket_piggy",
+          "d_charcoal_chime",
+          "d_spice_turntable"
+        ]
+      }
+    ],
+    "saveMsAt4x": [
+      168.20000000018626,
+      151.70000000018626,
+      155.20000000018626,
+      170,
+      163.20000000018626,
+      165.29999999981374,
+      164.40000000037253,
+      163.79999999981374
+    ],
+    "errors": [],
+    "blocked": false,
+    "note": "Automated interaction evidence only; visually inspect all screenshots before acceptance"
+  }
+]

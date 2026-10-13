@@ -1,0 +1,39 @@
+[
+  {
+    "path": "collection/domain/json.mjs",
+    "sha256": "f88ea7903e5c58c21466921fefefe861c17c2cb077660bcdf7ba74d0602da095"
+  },
+  {
+    "path": "preview/collection/domain/json.mjs",
+    "sha256": "f88ea7903e5c58c21466921fefefe861c17c2cb077660bcdf7ba74d0602da095"
+  },
+  {
+    "path": "collectibles/decor6-grants.mjs",
+    "after": "export function validHiddenTransition",
+    "sha256": "eff34b36cf52ce6211b165bde4608b1e2ac5f8accfb8a0f5d48d89681a4eb51b"
+  },
+  {
+    "path": "collectibles/entry.mjs",
+    "start": "  const abort=new AbortController();",
+    "end": "  makePanel('\u6b63\u5728\u6253\u5f00\u5b58\u6863'",
+    "sha256": "ef05561629f3a7942b87205244a7d514c34ab7bf973f038a254376d617761f95"
+  },
+  {
+    "path": "app.js",
+    "start": "function onHide() {",
+    "end": "\nfunction onShow()",
+    "sha256": "82b5d4edbb32f944434a5ff804b2ac0c4d796d70426b3d9f91c1441f37dd8b60"
+  },
+  {
+    "path": "preview/app.js",
+    "start": "function onHide() {",
+    "end": "\nfunction onShow()",
+    "sha256": "dd227f9a17ea3b2d18a935893aa44ea7f2f1cc5f1965028b5151162cb721e881"
+  },
+  {
+    "path": "pet/game/app.js",
+    "start": "function onHide() {",
+    "end": "\nfunction onShow()",
+    "sha256": "82b5d4edbb32f944434a5ff804b2ac0c4d796d70426b3d9f91c1441f37dd8b60"
+  }
+]

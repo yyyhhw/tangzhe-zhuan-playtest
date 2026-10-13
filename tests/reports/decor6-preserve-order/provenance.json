@@ -1,0 +1,9 @@
+{
+  "baseline": "d16904e8a89f3a18bc40934ff723e4dc81def418",
+  "previousDecorCandidate": "89267ef704ef396b4912b47002aa2bd0ec1d32ba",
+  "release": "decor6-preserve-order-20261013-r1",
+  "art": {
+    "art/collectibles/d_charcoal_chime.png": "dda932ad24f13e65bb194758387490347dc98fb133c96026c7fe220fed990f84",
+    "art/collectibles/d_spice_turntable.png": "b40a0e532d9e39a9f922ef0a23740698a7b1a80d61678d6c4d0afa007fa3c94c"
+  }
+}

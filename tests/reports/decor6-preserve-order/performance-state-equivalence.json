@@ -1,0 +1,18 @@
+{
+  "sameCanonicalStateAsOld58": true,
+  "beforeKeys": [
+    "id",
+    "evidence",
+    "known",
+    "extra"
+  ],
+  "afterKeys": [
+    "id",
+    "evidence",
+    "known",
+    "extra"
+  ],
+  "opaqueHistoryTextIdentical": true,
+  "opaqueGachaTextIdentical": true,
+  "originalEvidenceIdentical": true
+}
