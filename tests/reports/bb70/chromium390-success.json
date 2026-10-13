@@ -1,0 +1,34 @@
+{
+ "/": {
+  "seq": [
+   "老板！你不在的时候…… 大家帮你干了 1小时49分 赚 +8.00亿 盲盒上新了：16 件新衣帽，等老板来开！ 直接领取，去开盲盒 离线 = 在线每秒收益的 50%，最多 8 小时",
+   "click #claimBb70",
+   null
+  ],
+  "v": null,
+  "tab": "盲盒",
+  "flags": [
+   "tzz-bb70-launch-seen:bb70-wearables16-20261013",
+   "tzz-bb70-gacha-visited:bb70-wearables16-20261013"
+  ],
+  "pending": null,
+  "saveBlocked": false,
+  "errors": []
+ },
+ "/pet/game/": {
+  "seq": [
+   "老板！你不在的时候…… 大家帮你干了 1小时49分 赚 +8.00亿 盲盒上新了：16 件新衣帽，等老板来开！ 直接领取，去开盲盒 离线 = 在线每秒收益的 50%，最多 8 小时",
+   "click #claimBb70",
+   null
+  ],
+  "v": null,
+  "tab": "盲盒",
+  "flags": [
+   "tzz-bb70-launch-seen:bb70-wearables16-20261013",
+   "tzz-bb70-gacha-visited:bb70-wearables16-20261013"
+  ],
+  "pending": null,
+  "saveBlocked": false,
+  "errors": []
+ }
+}

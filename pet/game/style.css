@@ -191,6 +191,11 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 .mbubble{display:inline-block;background:var(--ink);color:#fff;font-weight:900;padding:6px 12px;border-radius:14px;font-size:15px;position:relative;margin-bottom:10px}
 .mtitle{font-weight:900;font-size:18px;margin-bottom:6px}
 .mreward{font-size:32px;font-weight:900;margin:8px 0;text-shadow:2px 2px 0 var(--yellow);word-break:break-all}
+/* 盲盒-70：离线结算醒目横条 */
+.bb70-offline-banner{margin:10px 0 12px;padding:12px;border:3px solid var(--ink);border-radius:14px;background:linear-gradient(180deg,#ffe566 0%,#ffd23f 100%);box-shadow:3px 3px 0 var(--ink);display:flex;flex-direction:column;gap:8px}
+.bb70-offline-txt{font-weight:900;font-size:14px;line-height:1.4;color:var(--ink);text-align:center}
+.bb70-offline-banner .buy{width:100%}
+
 .mnote{font-size:12px;color:#555;line-height:1.55;margin-bottom:12px}
 .mbtns{display:flex;flex-direction:column;gap:10px}
 .mbtns.two{flex-direction:row}

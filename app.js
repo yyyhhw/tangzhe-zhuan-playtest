@@ -6,7 +6,7 @@ const COLLECTION = window.FormalCollectionRuntime;
 if (!COLLECTION?.ownsLock()) {
   // Stale HTML can fetch a new script before bootstrap. No storage access here.
   const url=new URL(location.href);
-  if(url.searchParams.get('v')!=='formal-decor6-preserve-order-20261013-r1') {url.searchParams.set('v','formal-decor6-preserve-order-20261013-r1');location.replace(url.href);}
+  if(url.searchParams.get('v')!=='formal-bb70-launch-notice-20261013-r4') {url.searchParams.set('v','formal-bb70-launch-notice-20261013-r4');location.replace(url.href);}
   else {const notice=document.createElement('p');notice.textContent='页面资源尚未更新完整，存档未写入。请关闭此页后重新打开。';document.body.prepend(notice);}
   return;
 }
@@ -1557,6 +1557,7 @@ function setTab(t) {
   updateCompactHead();
   renderTab();
   resize();
+  if (t === 'gacha' && bb70P2Active()) bb70Set(BB70_VISIT_KEY);   // 盲盒-70：P2 新目录生效时去过一次盲盒页，结算上新条才收起（P1 旧盲盒页不写，r3）
 }
 function updateCompactHead() {
   const el = $('#compactHead');
@@ -1649,27 +1650,89 @@ function showMusicCredits() {
   $('#mOk').focus({preventScroll:true});
 }
 
+/* ---------- 盲盒-70：新盲盒上线提醒（只记本机 localStorage，按版本号；不进存档） ---------- */
+const BB70_NOTICE_VER = 'bb70-wearables16-20261013';
+const BB70_LAUNCH_KEY = 'tzz-bb70-launch-seen:' + BB70_NOTICE_VER;   // 开游戏弹窗：本版本只弹一次
+const BB70_VISIT_KEY = 'tzz-bb70-gacha-visited:' + BB70_NOTICE_VER;   // 去过盲盒页一次后，离线结算不再显示上新条
+const BB70_NEW_COUNT = 16;   // 本次新衣帽件数：首批 8 件 + 盲盒-18 第二批 8 件（目录 36 → 52）
+// 盲盒-70 r3（熊大审 #1）：只有真正启用了新目录（P2 协议 + 52 件衣帽目录已激活）才提示「16 件新」、才写任何标记；
+//   P1（取消升级、仍是 36 件旧目录）一律不弹、不显示、不写。
+function bb70P2Active() { const rt = globalThis.FormalCollectionRuntime; return !!state && state._collectionProtocol === 2 && !!rt && rt.qaProtocol2 === true && rt.qaWearables8 === true; }
+function bb70Get(k) { try { return localStorage.getItem(k) === '1'; } catch (e) { return true; } }
+// 盲盒-70 r3（熊大审 #4）：本机写入守卫——只允许这两个 UI 标记键、值只能是 '1'，其它一律拒绝
+function bb70Set(k, v = '1') {
+  if ((k !== BB70_LAUNCH_KEY && k !== BB70_VISIT_KEY) || v !== '1') return false;
+  if (!bb70P2Active()) return false;
+  try { localStorage.setItem(k, '1'); return true; } catch (e) { return false; }
+}
+function bb70ShouldShowLaunch() { return !TEST_MODE && !saveBlocked && bb70P2Active() && !bb70Get(BB70_LAUNCH_KEY); }
+function bb70ShouldShowOfflineBanner() { return !!state && !TEST_MODE && bb70P2Active() && E.gachaUnlocked(state) && !bb70Get(BB70_VISIT_KEY); }
+function bb70OpenGacha() { bb70Set(BB70_VISIT_KEY); bb70Set(BB70_LAUNCH_KEY); setTab('gacha'); }
+// 盲盒-70（熊大审 #2）：「去开盲盒」领取没确认到账（保存失败 / 结果未知 / 已领过）→ 留在结算框：不跳盲盒、不写已看标记、按钮全部锁住不重领；
+//   存档保护面板照常接管核对，玩家点「知道了」才关框
+function bb70ClaimFailed(r) {
+  if (r.why !== 'saveFailed') toast(r.why);
+  for (const id of ['claimDouble', 'claim', 'claimBb70']) { const b = $('#' + id); if (b) b.disabled = true; }
+  const box = $('#bb70OfflineBanner'); if (!box) return;
+  box.innerHTML = `<div class="bb70-offline-txt" id="bb70ClaimNote">这次领取没有确认到账，先不去盲盒页。请按存档提示核对，不要重复领取。</div><button type="button" class="buy ghost" id="bb70ClaimOk">知道了</button>`;
+  $('#bb70ClaimOk').addEventListener('click', () => { audioUnlock(); closeModal(); }, { once:true });
+}
+// 盲盒-70（熊大审 #3）：从弹窗队列里轮到「已看过 / 不该弹」时也要把队列往下推，否则排在后面的开盒揭晓等会卡住
+function bb70SkipQueued() { if (!modalOpen() && mq.length) mq.shift()(); }
+function showNewBlindboxNotice() {
+  if (!bb70ShouldShowLaunch()) { bb70SkipQueued(); return; }
+  if (modalOpen()) { if (!mq.includes(showNewBlindboxNotice)) mq.push(showNewBlindboxNotice); return; }
+  bb70Set(BB70_LAUNCH_KEY);
+  if (E.gachaUnlocked(state)) {
+    openModal(`<div class="mtitle">新盲盒上线啦！</div>
+      <div class="mnote">77 收藏盲盒到了 ${BB70_NEW_COUNT} 件新衣服和帽子，开出来就能给 CEO 换上。</div>
+      <div class="mbtns two"><button class="buy ghost" id="mNo" type="button">等会儿</button><button class="buy red" id="mGo" type="button">去看看</button></div>`);
+    $('#mNo').addEventListener('click', () => { audioUnlock(); closeModal(); }, { once:true });
+    $('#mGo').addEventListener('click', () => { audioUnlock(); closeModal(); bb70OpenGacha(); }, { once:true });
+  } else {
+    openModal(`<div class="mtitle">新盲盒上线啦！</div>
+      <div class="mnote">摸鱼科技公司雇到员工，就能来开盒</div>
+      <div class="mbtns"><button class="buy big" id="mOk" type="button" data-x="close">知道了</button></div>`);
+    $('#mOk').addEventListener('click', () => { audioUnlock(); closeModal(); }, { once:true });
+  }
+}
+
 /* ---------- 离线收益 ---------- */
 function showOffline() {
   const p = state.pending; if (!p) return;
   if (modalOpen()) { if (!mq.includes(showOffline)) mq.unshift(showOffline); return; }
   const can = E.canDouble(state, now()), capH = p.cap / 3600;
   const capped = p.gap > p.sec + 1;
+  const bbBanner = bb70ShouldShowOfflineBanner();
   openModal(`<div class="mbubble">老板！你不在的时候……</div>
     <div class="mtitle">大家帮你干了 <b id="offDur">${fmtDur(p.sec)}</b></div>
     ${capped ? `<div class="mnote">（离开了 ${fmtDur(p.gap)}，离线最多算 ${capH} 小时）</div>` : ''}
     <div class="mreward">${coinSm}+<span id="offGain">${fmt(p.amount)}</span></div>
+    ${bbBanner ? `<div class="bb70-offline-banner" id="bb70OfflineBanner"><div class="bb70-offline-txt">盲盒上新了：${BB70_NEW_COUNT} 件新衣帽，等老板来开！</div><button type="button" class="buy red" id="claimBb70">${can ? '直接领取，去开盲盒' : '收下，去开盲盒'}</button></div>` : ''}
     <div class="mnote" id="offNote">离线 = 在线每秒收益的 50%，最多 ${capH} 小时${capH > 8 ? '（麻辣服务器 +2 小时）' : ''}；团单收入只算在线（离开时进行中的团单会取消）。按你离开时的店铺、员工和 CEO 安排结算。</div>
     <div class="mbtns">${can ? `<button class="buy big red" id="claimDouble">今日双倍领取 +${fmt(p.amount * 2)}</button><button class="buy ghost" id="claim">直接领取（双倍留到下次）</button>`
       : `<button class="buy big" id="claim">收下！</button><div class="mnote" style="margin:0">今日双倍已用，${fmtClockLocal(E.nextResetTs(now()))}重置</div>`}</div>`);
+  let claimTried = false;   // 同一个结算框只发起一次领取：双击 / 两个按钮连点都不会重领
+  const claim = dbl => {
+    if (claimTried) return null; claimTried = true;
+    return atomic(() => E.claimOffline(state, now(), dbl), '离线收益没有到账，下次再领');
+  };
+  const cheer = r => { sfx('reveal'); popWord(r.doubled ? '翻倍！' : '到账！'); bumpCoins(); burstCoins(W / 2, H * 0.5, 18); toast((r.doubled ? '双倍到账 +' : '到账 +') + fmt(r.amount) + (r.capped ? '（金币已到上限，多出的没进账）' : '')); dirty = true; };
   const go = dbl => {
-    const r = atomic(() => E.claimOffline(state, now(), dbl), '离线收益没有到账，下次再领');
+    const r = claim(dbl); if (!r) return;
     closeModal();
-    if (r.ok) { sfx('reveal'); popWord(r.doubled ? '翻倍！' : '到账！'); bumpCoins(); burstCoins(W / 2, H * 0.5, 18); toast((r.doubled ? '双倍到账 +' : '到账 +') + fmt(r.amount) + (r.capped ? '（金币已到上限，多出的没进账）' : '')); dirty = true; }
+    if (r.ok) cheer(r);
     else if (r.why !== 'saveFailed') toast(r.why);
+  };
+  // 盲盒-70：按普通额领取（双倍留到下次）；只有真实保存确认成功才关框、去盲盒页、记已看
+  const goBb70 = () => {
+    const r = claim(false); if (!r) return;
+    if (!r.ok) { bb70ClaimFailed(r); return; }
+    closeModal(); cheer(r); bb70OpenGacha();
   };
   const cd = $('#claimDouble'); if (cd) cd.addEventListener('click', () => { audioUnlock(); go(true); }, { once:true });
   $('#claim').addEventListener('click', () => { audioUnlock(); go(false); }, { once:true });
+  const cb = $('#claimBb70'); if (cb) cb.addEventListener('click', () => { audioUnlock(); goBb70(); }, { once:true });
 }
 
 /* ---------- 调任 ---------- */
@@ -2635,6 +2698,7 @@ function boot() {
   if (p && p.rolledBack) toast('检测到手机时间被往回调，这段时间不发离线收益');
   if (first) queueModal(showIntro);
   if (state.pending) queueModal(showOffline);
+  if (bb70ShouldShowLaunch()) queueModal(showNewBlindboxNotice);   // 盲盒-70：先结算、后上新，不叠弹
   if (state.gacha.last && !state.gacha.last.seen) queueModal(() => showReveal(true));
   lastFrame = performance.now();
   requestAnimationFrame(frame);
@@ -2644,7 +2708,7 @@ if (PG) { const migration=PG.migrateRoster(state,E,{save:petSave,blocked:saveBlo
 petInit();
 
 // 测试/调试钩子（不影响玩家）
-window.__tzz = { upgradeGate, TEST_MODE, TEST_LV, SAVE_KEY, BAK_KEY, get saveBlocked() { return saveBlocked; }, get loadInfo() { return loadInfo; }, restoreGood, earn, doUpgradeShop, goPage, txn, atomic, showOffline, homeAutoPlace, showReveal, shopUpgradeCount, get buyAmt() { return buyAmt; }, E, FURN_SIDE, furnInner, get combo() { return combo; }, get critFx() { return critFx; }, critLine, refreshCrit, showComic, showCrossBig, queueModal, CROSS_ART, crossURL, showCeoJoin, get state() { return state; }, set state(v) { state = v; }, persist, onReturn, tapShop, act, setTab, switchShop, renderTab,
+window.__tzz = { upgradeGate, TEST_MODE, TEST_LV, SAVE_KEY, BAK_KEY, get saveBlocked() { return saveBlocked; }, get loadInfo() { return loadInfo; }, restoreGood, earn, doUpgradeShop, goPage, txn, atomic, showOffline, showNewBlindboxNotice, BB70_LAUNCH_KEY, BB70_VISIT_KEY, homeAutoPlace, showReveal, shopUpgradeCount, get buyAmt() { return buyAmt; }, E, FURN_SIDE, furnInner, get combo() { return combo; }, get critFx() { return critFx; }, critLine, refreshCrit, showComic, showCrossBig, queueModal, CROSS_ART, crossURL, showCeoJoin, get state() { return state; }, set state(v) { state = v; }, persist, onReturn, tapShop, act, setTab, switchShop, renderTab,
   forceBig() { nextBigAt = 0; if (order) order = null; }, clearVisitors() { order = null; special = null; nextBigAt = clock + 9999; nextSpecialAt = clock + 9999; }, forceSpecial() { nextSpecialAt = 0; special = null; },
   forceSupers() { for (const k in superNext) superNext[k] = 0; updateSupers(); renderTab(); },
   get big() { return order; }, get order() { return order; }, get special() { return special; }, get guests() { return guests; },
@@ -2672,7 +2736,7 @@ const tdController = window.TDHost.create({
 function openTD() {
   if (frozen || tdOpen || zbOpen || !state.shops[1].open) return;
   tdOpen = true; const f = $('#tdFrame'), generation = ++tdGeneration;
-  const target = new URL('td/index.html?embed=1&v=decor6-preserve-order-20261013-r1', location.href);
+  const target = new URL('td/index.html?embed=1&v=bb70-launch-notice-20261013-r4', location.href);
   f.onload = () => {
     if (!tdOpen || generation !== tdGeneration) return;
     // Verify the actual loaded document, not merely an iframe src attribute.

@@ -1,0 +1,237 @@
+TAP version 13
+# (node:1063528) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: app.js P1 kept (cancel upgrade): no launch notice, no settlement banner, no markers written; normal claim still commits once
+ok 1 - app.js P1 kept (cancel upgrade): no launch notice, no settlement banner, no markers written; normal claim still commits once
+  ---
+  duration_ms: 226.043402
+  ...
+# Subtest: app.js continuous: P1 cancel → old gacha tab → exit → upgrade to P2 → first launch notice + settlement reminder show
+ok 2 - app.js continuous: P1 cancel → old gacha tab → exit → upgrade to P2 → first launch notice + settlement reminder show
+  ---
+  duration_ms: 360.609186
+  ...
+# Subtest: pet/game/app.js P1 kept (cancel upgrade): no launch notice, no settlement banner, no markers written; normal claim still commits once
+ok 3 - pet/game/app.js P1 kept (cancel upgrade): no launch notice, no settlement banner, no markers written; normal claim still commits once
+  ---
+  duration_ms: 153.337914
+  ...
+# Subtest: pet/game/app.js continuous: P1 cancel → old gacha tab → exit → upgrade to P2 → first launch notice + settlement reminder show
+ok 4 - pet/game/app.js continuous: P1 cancel → old gacha tab → exit → upgrade to P2 → first launch notice + settlement reminder show
+  ---
+  duration_ms: 366.904786
+  ...
+# Subtest: app.js P1→P2 (confirm upgrade): success commits exactly once, then closes, goes to gacha, marks seen; survives refresh
+ok 5 - app.js P1→P2 (confirm upgrade): success commits exactly once, then closes, goes to gacha, marks seen; survives refresh
+  ---
+  duration_ms: 361.641589
+  ...
+# Subtest: app.js P1→P2 (confirm upgrade): backup save failure keeps recovery path — no close/navigate/seen flags, buttons locked, no re-claim; refresh shows exact saved outcome
+ok 6 - app.js P1→P2 (confirm upgrade): backup save failure keeps recovery path — no close/navigate/seen flags, buttons locked, no re-claim; refresh shows exact saved outcome
+  ---
+  duration_ms: 362.077769
+  ...
+# Subtest: app.js P1→P2 (confirm upgrade): unknown save failure keeps recovery path — no close/navigate/seen flags, buttons locked, no re-claim; refresh shows exact saved outcome
+ok 7 - app.js P1→P2 (confirm upgrade): unknown save failure keeps recovery path — no close/navigate/seen flags, buttons locked, no re-claim; refresh shows exact saved outcome
+  ---
+  duration_ms: 336.248933
+  ...
+# Subtest: app.js P1→P2 (confirm upgrade): double-click / both buttons fire once — one real commit, normal amount, one gacha navigation
+ok 8 - app.js P1→P2 (confirm upgrade): double-click / both buttons fire once — one real commit, normal amount, one gacha navigation
+  ---
+  duration_ms: 236.690956
+  ...
+# Subtest: app.js P2 existing: success commits exactly once, then closes, goes to gacha, marks seen; survives refresh
+ok 9 - app.js P2 existing: success commits exactly once, then closes, goes to gacha, marks seen; survives refresh
+  ---
+  duration_ms: 273.51652
+  ...
+# Subtest: app.js P2 existing: backup save failure keeps recovery path — no close/navigate/seen flags, buttons locked, no re-claim; refresh shows exact saved outcome
+ok 10 - app.js P2 existing: backup save failure keeps recovery path — no close/navigate/seen flags, buttons locked, no re-claim; refresh shows exact saved outcome
+  ---
+  duration_ms: 267.128111
+  ...
+# Subtest: app.js P2 existing: unknown save failure keeps recovery path — no close/navigate/seen flags, buttons locked, no re-claim; refresh shows exact saved outcome
+ok 11 - app.js P2 existing: unknown save failure keeps recovery path — no close/navigate/seen flags, buttons locked, no re-claim; refresh shows exact saved outcome
+  ---
+  duration_ms: 243.867047
+  ...
+# Subtest: app.js P2 existing: double-click / both buttons fire once — one real commit, normal amount, one gacha navigation
+ok 12 - app.js P2 existing: double-click / both buttons fire once — one real commit, normal amount, one gacha navigation
+  ---
+  duration_ms: 145.951829
+  ...
+# Subtest: pet/game/app.js P1→P2 (confirm upgrade): success commits exactly once, then closes, goes to gacha, marks seen; survives refresh
+ok 13 - pet/game/app.js P1→P2 (confirm upgrade): success commits exactly once, then closes, goes to gacha, marks seen; survives refresh
+  ---
+  duration_ms: 360.166528
+  ...
+# Subtest: pet/game/app.js P1→P2 (confirm upgrade): backup save failure keeps recovery path — no close/navigate/seen flags, buttons locked, no re-claim; refresh shows exact saved outcome
+ok 14 - pet/game/app.js P1→P2 (confirm upgrade): backup save failure keeps recovery path — no close/navigate/seen flags, buttons locked, no re-claim; refresh shows exact saved outcome
+  ---
+  duration_ms: 343.912366
+  ...
+# Subtest: pet/game/app.js P1→P2 (confirm upgrade): unknown save failure keeps recovery path — no close/navigate/seen flags, buttons locked, no re-claim; refresh shows exact saved outcome
+ok 15 - pet/game/app.js P1→P2 (confirm upgrade): unknown save failure keeps recovery path — no close/navigate/seen flags, buttons locked, no re-claim; refresh shows exact saved outcome
+  ---
+  duration_ms: 339.71725
+  ...
+# Subtest: pet/game/app.js P1→P2 (confirm upgrade): double-click / both buttons fire once — one real commit, normal amount, one gacha navigation
+ok 16 - pet/game/app.js P1→P2 (confirm upgrade): double-click / both buttons fire once — one real commit, normal amount, one gacha navigation
+  ---
+  duration_ms: 276.113723
+  ...
+# Subtest: pet/game/app.js P2 existing: success commits exactly once, then closes, goes to gacha, marks seen; survives refresh
+ok 17 - pet/game/app.js P2 existing: success commits exactly once, then closes, goes to gacha, marks seen; survives refresh
+  ---
+  duration_ms: 304.073441
+  ...
+# Subtest: pet/game/app.js P2 existing: backup save failure keeps recovery path — no close/navigate/seen flags, buttons locked, no re-claim; refresh shows exact saved outcome
+ok 18 - pet/game/app.js P2 existing: backup save failure keeps recovery path — no close/navigate/seen flags, buttons locked, no re-claim; refresh shows exact saved outcome
+  ---
+  duration_ms: 311.757899
+  ...
+# Subtest: pet/game/app.js P2 existing: unknown save failure keeps recovery path — no close/navigate/seen flags, buttons locked, no re-claim; refresh shows exact saved outcome
+ok 19 - pet/game/app.js P2 existing: unknown save failure keeps recovery path — no close/navigate/seen flags, buttons locked, no re-claim; refresh shows exact saved outcome
+  ---
+  duration_ms: 238.679907
+  ...
+# Subtest: pet/game/app.js P2 existing: double-click / both buttons fire once — one real commit, normal amount, one gacha navigation
+ok 20 - pet/game/app.js P2 existing: double-click / both buttons fire once — one real commit, normal amount, one gacha navigation
+  ---
+  duration_ms: 145.184169
+  ...
+# Subtest: app.js: unlocked launch popup copy, buttons, × source, go to gacha; shown once per version
+ok 21 - app.js: unlocked launch popup copy, buttons, × source, go to gacha; shown once per version
+  ---
+  duration_ms: 8.451882
+  ...
+# Subtest: app.js: locked launch popup has only 知道了 and the hire hint
+ok 22 - app.js: locked launch popup has only 知道了 and the hire hint
+  ---
+  duration_ms: 1.925963
+  ...
+# Subtest: app.js: launch popup queues behind an open modal and is suppressed when seen / save blocked
+ok 23 - app.js: launch popup queues behind an open modal and is suppressed when seen / save blocked
+  ---
+  duration_ms: 6.497039
+  ...
+# Subtest: app.js: settlement banner + shortcut claims normal amount (double kept) then opens gacha
+ok 24 - app.js: settlement banner + shortcut claims normal amount (double kept) then opens gacha
+  ---
+  duration_ms: 3.676258
+  ...
+# Subtest: app.js: no settlement banner when locked or after visiting gacha once
+ok 25 - app.js: no settlement banner when locked or after visiting gacha once
+  ---
+  duration_ms: 6.706391
+  ...
+# Subtest: app.js: 去开盲盒 claim failure (model) keeps modal, no tab/flags, locks buttons; 知道了 closes only
+ok 26 - app.js: 去开盲盒 claim failure (model) keeps modal, no tab/flags, locks buttons; 知道了 closes only
+  ---
+  duration_ms: 1.817501
+  ...
+# Subtest: app.js: queue order — offline 去开盲盒 → already-seen launch notice is skipped → unseen open-box reveal still shows
+ok 27 - app.js: queue order — offline 去开盲盒 → already-seen launch notice is skipped → unseen open-box reveal still shows
+  ---
+  duration_ms: 5.06222
+  ...
+# Subtest: app.js: queue order — launch seen before boot: offline → reveal; normal claim with unseen launch: offline → launch → reveal
+ok 28 - app.js: queue order — launch seen before boot: offline → reveal; normal claim with unseen launch: offline → launch → reveal
+  ---
+  duration_ms: 6.593076
+  ...
+# Subtest: app.js: queue order — launch marked seen by another tab while queued still advances to reveal
+ok 29 - app.js: queue order — launch marked seen by another tab while queued still advances to reveal
+  ---
+  duration_ms: 2.589669
+  ...
+# Subtest: app.js: boot order is settlement then launch notice; gacha tab visit recorded; nothing written to save
+ok 30 - app.js: boot order is settlement then launch notice; gacha tab visit recorded; nothing written to save
+  ---
+  duration_ms: 1.508163
+  ...
+# Subtest: pet/game/app.js: unlocked launch popup copy, buttons, × source, go to gacha; shown once per version
+ok 31 - pet/game/app.js: unlocked launch popup copy, buttons, × source, go to gacha; shown once per version
+  ---
+  duration_ms: 2.016989
+  ...
+# Subtest: pet/game/app.js: locked launch popup has only 知道了 and the hire hint
+ok 32 - pet/game/app.js: locked launch popup has only 知道了 and the hire hint
+  ---
+  duration_ms: 2.645217
+  ...
+# Subtest: pet/game/app.js: launch popup queues behind an open modal and is suppressed when seen / save blocked
+ok 33 - pet/game/app.js: launch popup queues behind an open modal and is suppressed when seen / save blocked
+  ---
+  duration_ms: 9.140866
+  ...
+# Subtest: pet/game/app.js: settlement banner + shortcut claims normal amount (double kept) then opens gacha
+ok 34 - pet/game/app.js: settlement banner + shortcut claims normal amount (double kept) then opens gacha
+  ---
+  duration_ms: 4.937014
+  ...
+# Subtest: pet/game/app.js: no settlement banner when locked or after visiting gacha once
+ok 35 - pet/game/app.js: no settlement banner when locked or after visiting gacha once
+  ---
+  duration_ms: 5.16719
+  ...
+# Subtest: pet/game/app.js: 去开盲盒 claim failure (model) keeps modal, no tab/flags, locks buttons; 知道了 closes only
+ok 36 - pet/game/app.js: 去开盲盒 claim failure (model) keeps modal, no tab/flags, locks buttons; 知道了 closes only
+  ---
+  duration_ms: 2.159511
+  ...
+# Subtest: pet/game/app.js: queue order — offline 去开盲盒 → already-seen launch notice is skipped → unseen open-box reveal still shows
+ok 37 - pet/game/app.js: queue order — offline 去开盲盒 → already-seen launch notice is skipped → unseen open-box reveal still shows
+  ---
+  duration_ms: 2.188993
+  ...
+# Subtest: pet/game/app.js: queue order — launch seen before boot: offline → reveal; normal claim with unseen launch: offline → launch → reveal
+ok 38 - pet/game/app.js: queue order — launch seen before boot: offline → reveal; normal claim with unseen launch: offline → launch → reveal
+  ---
+  duration_ms: 5.71802
+  ...
+# Subtest: pet/game/app.js: queue order — launch marked seen by another tab while queued still advances to reveal
+ok 39 - pet/game/app.js: queue order — launch marked seen by another tab while queued still advances to reveal
+  ---
+  duration_ms: 2.243804
+  ...
+# Subtest: pet/game/app.js: boot order is settlement then launch notice; gacha tab visit recorded; nothing written to save
+ok 40 - pet/game/app.js: boot order is settlement then launch notice; gacha tab visit recorded; nothing written to save
+  ---
+  duration_ms: 1.376001
+  ...
+# Subtest: app.js: r3 P1 (36-item catalog, upgrade cancelled): no launch popup, no banner, no marker writes even via 去看看 path
+ok 41 - app.js: r3 P1 (36-item catalog, upgrade cancelled): no launch popup, no banner, no marker writes even via 去看看 path
+  ---
+  duration_ms: 5.889582
+  ...
+# Subtest: app.js: r3 native write guard — only the two UI keys, only value "1"
+ok 42 - app.js: r3 native write guard — only the two UI keys, only value "1"
+  ---
+  duration_ms: 2.789904
+  ...
+# Subtest: pet/game/app.js: r3 P1 (36-item catalog, upgrade cancelled): no launch popup, no banner, no marker writes even via 去看看 path
+ok 43 - pet/game/app.js: r3 P1 (36-item catalog, upgrade cancelled): no launch popup, no banner, no marker writes even via 去看看 path
+  ---
+  duration_ms: 6.675573
+  ...
+# Subtest: pet/game/app.js: r3 native write guard — only the two UI keys, only value "1"
+ok 44 - pet/game/app.js: r3 native write guard — only the two UI keys, only value "1"
+  ---
+  duration_ms: 2.86062
+  ...
+# Subtest: 16 = first eight + blindbox18 second eight, all clothes/hats, catalog 36 → 52
+ok 45 - 16 = first eight + blindbox18 second eight, all clothes/hats, catalog 36 → 52
+  ---
+  duration_ms: 14.863205
+  ...
+1..45
+# tests 45
+# suites 0
+# pass 45
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5837.187275

@@ -1,0 +1,517 @@
+TAP version 13
+# Subtest: decoded PCM joins preserve adjacent waveform at 8000Hz/1ch
+ok 1 - decoded PCM joins preserve adjacent waveform at 8000Hz/1ch
+  ---
+  duration_ms: 6.517121
+  ...
+# Subtest: decoded PCM joins preserve adjacent waveform at 8000Hz/2ch
+ok 2 - decoded PCM joins preserve adjacent waveform at 8000Hz/2ch
+  ---
+  duration_ms: 6.636593
+  ...
+# Subtest: decoded PCM joins preserve adjacent waveform at 8000Hz/4ch
+ok 3 - decoded PCM joins preserve adjacent waveform at 8000Hz/4ch
+  ---
+  duration_ms: 8.809661
+  ...
+# Subtest: decoded PCM joins preserve adjacent waveform at 44100Hz/1ch
+ok 4 - decoded PCM joins preserve adjacent waveform at 44100Hz/1ch
+  ---
+  duration_ms: 11.692563
+  ...
+# Subtest: decoded PCM joins preserve adjacent waveform at 44100Hz/2ch
+ok 5 - decoded PCM joins preserve adjacent waveform at 44100Hz/2ch
+  ---
+  duration_ms: 19.40929
+  ...
+# Subtest: decoded PCM joins preserve adjacent waveform at 44100Hz/4ch
+ok 6 - decoded PCM joins preserve adjacent waveform at 44100Hz/4ch
+  ---
+  duration_ms: 6.58339
+  ...
+# Subtest: decoded PCM joins preserve adjacent waveform at 48000Hz/1ch
+ok 7 - decoded PCM joins preserve adjacent waveform at 48000Hz/1ch
+  ---
+  duration_ms: 1.131652
+  ...
+# Subtest: decoded PCM joins preserve adjacent waveform at 48000Hz/2ch
+ok 8 - decoded PCM joins preserve adjacent waveform at 48000Hz/2ch
+  ---
+  duration_ms: 8.683719
+  ...
+# Subtest: decoded PCM joins preserve adjacent waveform at 48000Hz/4ch
+ok 9 - decoded PCM joins preserve adjacent waveform at 48000Hz/4ch
+  ---
+  duration_ms: 4.213936
+  ...
+# Subtest: decoded PCM joins preserve adjacent waveform at 96000Hz/1ch
+ok 10 - decoded PCM joins preserve adjacent waveform at 96000Hz/1ch
+  ---
+  duration_ms: 7.058991
+  ...
+# Subtest: decoded PCM joins preserve adjacent waveform at 96000Hz/2ch
+ok 11 - decoded PCM joins preserve adjacent waveform at 96000Hz/2ch
+  ---
+  duration_ms: 6.942044
+  ...
+# Subtest: decoded PCM joins preserve adjacent waveform at 96000Hz/4ch
+ok 12 - decoded PCM joins preserve adjacent waveform at 96000Hz/4ch
+  ---
+  duration_ms: 9.206088
+  ...
+# Subtest: short 4-frame PCM stays finite and nonempty
+ok 13 - short 4-frame PCM stays finite and nonempty
+  ---
+  duration_ms: 0.655678
+  ...
+# Subtest: short 5-frame PCM stays finite and nonempty
+ok 14 - short 5-frame PCM stays finite and nonempty
+  ---
+  duration_ms: 0.187754
+  ...
+# Subtest: short 17-frame PCM stays finite and nonempty
+ok 15 - short 17-frame PCM stays finite and nonempty
+  ---
+  duration_ms: 0.088295
+  ...
+# Subtest: short 100-frame PCM stays finite and nonempty
+ok 16 - short 100-frame PCM stays finite and nonempty
+  ---
+  duration_ms: 0.174215
+  ...
+# Subtest: unsafe 0-frame PCM is rejected
+ok 17 - unsafe 0-frame PCM is rejected
+  ---
+  duration_ms: 2.892466
+  ...
+# Subtest: unsafe 1-frame PCM is rejected
+ok 18 - unsafe 1-frame PCM is rejected
+  ---
+  duration_ms: 0.331495
+  ...
+# Subtest: unsafe 2-frame PCM is rejected
+ok 19 - unsafe 2-frame PCM is rejected
+  ---
+  duration_ms: 0.175568
+  ...
+# Subtest: unsafe 3-frame PCM is rejected
+ok 20 - unsafe 3-frame PCM is rejected
+  ---
+  duration_ms: 0.20721
+  ...
+# Subtest: network failure only retries on gesture after backoff, clears error
+ok 21 - network failure only retries on gesture after backoff, clears error
+  ---
+  duration_ms: 18.161269
+  ...
+# Subtest: decode failure only retries on gesture after backoff, clears error
+ok 22 - decode failure only retries on gesture after backoff, clears error
+  ---
+  duration_ms: 20.023549
+  ...
+# Subtest: late decode after dispose creates no source
+ok 23 - late decode after dispose creates no source
+  ---
+  duration_ms: 8.090829
+  ...
+# Subtest: muted clicks do not resume existing loop
+ok 24 - muted clicks do not resume existing loop
+  ---
+  duration_ms: 6.660503
+  ...
+# Subtest: paused clicks do not resume existing loop
+ok 25 - paused clicks do not resume existing loop
+  ---
+  duration_ms: 7.840448
+  ...
+# Subtest: hidden clicks do not resume existing loop
+ok 26 - hidden clicks do not resume existing loop
+  ---
+  duration_ms: 8.275083
+  ...
+# Subtest: pending asynchronous resume then muted never enables loop gain
+ok 27 - pending asynchronous resume then muted never enables loop gain
+  ---
+  duration_ms: 11.245342
+  ...
+# Subtest: pending asynchronous resume then paused never enables loop gain
+ok 28 - pending asynchronous resume then paused never enables loop gain
+  ---
+  duration_ms: 7.864495
+  ...
+# Subtest: pending asynchronous resume then hidden never enables loop gain
+ok 29 - pending asynchronous resume then hidden never enables loop gain
+  ---
+  duration_ms: 6.187079
+  ...
+# Subtest: pending asynchronous resume then dispose never enables loop gain
+ok 30 - pending asynchronous resume then dispose never enables loop gain
+  ---
+  duration_ms: 6.303727
+  ...
+# Subtest: first pending resume then mute creates no source and concurrent updates coalesce
+ok 31 - first pending resume then mute creates no source and concurrent updates coalesce
+  ---
+  duration_ms: 3.885273
+  ...
+# {
+#   "scope": "Node/VM behavior + static cache/attribution contracts; no browser or OS playback",
+#   "cases": [
+#     {
+#       "site": "root",
+#       "pass": true,
+#       "checks": [
+#         "exact official bytes",
+#         "relative asset + helper URLs",
+#         "cache chain",
+#         "gesture-only start",
+#         "one player after repeated input",
+#         "unchanged volume buses",
+#         "mute + persisted mute",
+#         "TD/cards/zombie exclusion",
+#         "hidden/pagehide/frozen silence",
+#         "late decode safety",
+#         "HTTP failure silence + gesture retry",
+#         "visible credits + links",
+#         "dialog guard + close focus"
+#       ]
+#     },
+#     {
+#       "site": "preview/",
+#       "pass": true,
+#       "checks": [
+#         "exact official bytes",
+#         "relative asset + helper URLs",
+#         "cache chain",
+#         "gesture-only start",
+#         "one player after repeated input",
+#         "unchanged volume buses",
+#         "mute + persisted mute",
+#         "TD/cards/zombie exclusion",
+#         "hidden/pagehide/frozen silence",
+#         "late decode safety",
+#         "HTTP failure silence + gesture retry",
+#         "visible credits + links",
+#         "dialog guard + close focus"
+#       ]
+#     }
+#   ]
+# }
+# Subtest: /workspace/bb70-d169/tests/formal/carefree-bgm.test.mjs
+ok 3 - /workspace/bb70-d169/tests/formal/carefree-bgm.test.mjs
+  ---
+  duration_ms: 263.409081
+  ...
+# Asia/Tokyo 2026-10-05T06:00:00Z R=2026-10-05T21:00:00.000Z => 06:00; four mirrors/four displays unchanged state/dayKey
+# Asia/Kuala_Lumpur 2026-10-05T06:00:00Z R=2026-10-05T21:00:00.000Z => 05:00; four mirrors/four displays unchanged state/dayKey
+# Asia/Kolkata 2026-10-05T06:00:00Z R=2026-10-05T21:00:00.000Z => 02:30; four mirrors/four displays unchanged state/dayKey
+# Asia/Kathmandu 2026-10-05T06:00:00Z R=2026-10-05T21:00:00.000Z => 02:45; four mirrors/four displays unchanged state/dayKey
+# America/New_York 2026-03-08T06:30:00Z R=2026-03-08T21:00:00.000Z => 17:00; four mirrors/four displays unchanged state/dayKey
+# America/New_York 2026-11-01T05:30:00Z R=2026-11-01T21:00:00.000Z => 16:00; four mirrors/four displays unchanged state/dayKey
+# Australia/Lord_Howe 2026-10-03T14:00:00Z R=2026-10-03T21:00:00.000Z => 08:00; four mirrors/four displays unchanged state/dayKey
+# Australia/Lord_Howe 2026-04-04T14:00:00Z R=2026-04-04T21:00:00.000Z => 07:30; four mirrors/four displays unchanged state/dayKey
+# Copy52 static cache closure: pass; no browser acceptance claimed.
+# Subtest: /workspace/bb70-d169/tests/formal/copy52-display.test.mjs
+ok 4 - /workspace/bb70-d169/tests/formal/copy52-display.test.mjs
+  ---
+  duration_ms: 270.264606
+  ...
+# Subtest: common gold/normal threshold and uniform card selection
+ok 34 - common gold/normal threshold and uniform card selection
+  ---
+  duration_ms: 89.021713
+  ...
+# Subtest: common full normal upgraded + normal dust; full golden + gold dust
+ok 35 - common full normal upgraded + normal dust; full golden + gold dust
+  ---
+  duration_ms: 4.271181
+  ...
+# Subtest: common normal craft cost/cap/no golden
+ok 36 - common normal craft cost/cap/no golden
+  ---
+  duration_ms: 1.971554
+  ...
+# Subtest: rare gold/normal threshold and uniform card selection
+ok 37 - rare gold/normal threshold and uniform card selection
+  ---
+  duration_ms: 40.281499
+  ...
+# Subtest: rare full normal upgraded + normal dust; full golden + gold dust
+ok 38 - rare full normal upgraded + normal dust; full golden + gold dust
+  ---
+  duration_ms: 22.693956
+  ...
+# Subtest: rare normal craft cost/cap/no golden
+ok 39 - rare normal craft cost/cap/no golden
+  ---
+  duration_ms: 4.17416
+  ...
+# Subtest: epic gold/normal threshold and uniform card selection
+ok 40 - epic gold/normal threshold and uniform card selection
+  ---
+  duration_ms: 23.453209
+  ...
+# Subtest: epic full normal upgraded + normal dust; full golden + gold dust
+ok 41 - epic full normal upgraded + normal dust; full golden + gold dust
+  ---
+  duration_ms: 4.352346
+  ...
+# Subtest: epic normal craft cost/cap/no golden
+ok 42 - epic normal craft cost/cap/no golden
+  ---
+  duration_ms: 1.348676
+  ...
+# Subtest: legendary gold/normal threshold and uniform card selection
+ok 43 - legendary gold/normal threshold and uniform card selection
+  ---
+  duration_ms: 6.668184
+  ...
+# Subtest: legendary full normal upgraded + normal dust; full golden + gold dust
+ok 44 - legendary full normal upgraded + normal dust; full golden + gold dust
+  ---
+  duration_ms: 4.334427
+  ...
+# Subtest: legendary normal craft cost/cap/no golden
+ok 45 - legendary normal craft cost/cap/no golden
+  ---
+  duration_ms: 1.275984
+  ...
+# Subtest: 50000 exact cap no overflow, max golden compensation before RNG
+ok 46 - 50000 exact cap no overflow, max golden compensation before RNG
+  ---
+  duration_ms: 1.971707
+  ...
+# Subtest: cancel leaves holdings/dust/preferences unchanged and no tickets
+ok 47 - cancel leaves holdings/dust/preferences unchanged and no tickets
+  ---
+  duration_ms: 0.751353
+  ...
+# Subtest: gild removed; replay restores new rules
+ok 48 - gild removed; replay restores new rules
+  ---
+  duration_ms: 3.06793
+  ...
+# Subtest: legacy completed state preserved, pending explicitly protected
+ok 49 - legacy completed state preserved, pending explicitly protected
+  ---
+  duration_ms: 12.354864
+  ...
+# Subtest: SHA256 UTF8 and multi-block match node crypto
+ok 50 - SHA256 UTF8 and multi-block match node crypto
+  ---
+  duration_ms: 48.783141
+  ...
+# Subtest: archive corruption across fresh coordinator cannot adopt or commit
+ok 51 - archive corruption across fresh coordinator cannot adopt or commit
+  ---
+  duration_ms: 32.431874
+  ...
+# Subtest: foreign tangzhe-formal-collection-v1-save during original write retained
+ok 52 - foreign tangzhe-formal-collection-v1-save during original write retained
+  ---
+  duration_ms: 6.693651
+  ...
+# Subtest: foreign tangzhe-formal-collection-v1-save-bak during original write retained
+ok 53 - foreign tangzhe-formal-collection-v1-save-bak during original write retained
+  ---
+  duration_ms: 6.612898
+  ...
+# Subtest: foreign tangzhe-formal-collection-v1-tab-lock during original write retained
+ok 54 - foreign tangzhe-formal-collection-v1-tab-lock during original write retained
+  ---
+  duration_ms: 8.305385
+  ...
+# Subtest: foreign tangzhe-formal-collection-v1-original during original write retained
+ok 55 - foreign tangzhe-formal-collection-v1-original during original write retained
+  ---
+  duration_ms: 11.07646
+  ...
+# Subtest: valid digest with invalid v15 shape protected {"format":1,"release":"15"}
+ok 56 - valid digest with invalid v15 shape protected {"format":1,"release":"15"}
+  ---
+  duration_ms: 7.478273
+  ...
+# Subtest: valid digest with invalid v15 shape protected {"format":1,"release":"15","main":{},"backup":7}
+ok 57 - valid digest with invalid v15 shape protected {"format":1,"release":"15","main":{},"backup":7}
+  ---
+  duration_ms: 7.204882
+  ...
+# Subtest: valid digest with invalid v15 shape protected {"format":1,"release":"15","main":null}
+ok 58 - valid digest with invalid v15 shape protected {"format":1,"release":"15","main":null}
+  ---
+  duration_ms: 7.755116
+  ...
+# Subtest: legacy rules explicit upgrade retains holdings, gold, dust and parent; cancel/inspect writes zero
+ok 59 - legacy rules explicit upgrade retains holdings, gold, dust and parent; cancel/inspect writes zero
+  ---
+  duration_ms: 52.249304
+  ...
+# Subtest: changed legacy source must reconfirm, no overwrite
+ok 60 - changed legacy source must reconfirm, no overwrite
+  ---
+  duration_ms: 19.559143
+  ...
+# Subtest: legacy active transaction protected with original bytes unchanged
+ok 61 - legacy active transaction protected with original bytes unchanged
+  ---
+  duration_ms: 14.820268
+  ...
+# Subtest: attack legal set honors taunt and has no friendly targets
+ok 62 - attack legal set honors taunt and has no friendly targets
+  ---
+  duration_ms: 29.894006
+  ...
+# Subtest: real affected group allMinions / bkVanEx1400
+ok 63 - real affected group allMinions / bkVanEx1400
+  ---
+  duration_ms: 27.604793
+  ...
+# Subtest: real affected group enemyMinions / bkVanCs2025
+ok 64 - real affected group enemyMinions / bkVanCs2025
+  ---
+  duration_ms: 15.682696
+  ...
+# Subtest: real affected group enemyMinions / bkVanCs2032
+ok 65 - real affected group enemyMinions / bkVanCs2032
+  ---
+  duration_ms: 28.513664
+  ...
+# Subtest: real affected group enemyCharacters / bkVanCs2093
+ok 66 - real affected group enemyCharacters / bkVanCs2093
+  ---
+  duration_ms: 48.509036
+  ...
+# Subtest: real affected group allCharacters / bkVanCs2062
+ok 67 - real affected group allCharacters / bkVanCs2062
+  ---
+  duration_ms: 4.843789
+  ...
+# Subtest: minion-only shield spell excludes heroes and supports both sides
+ok 68 - minion-only shield spell excludes heroes and supports both sides
+  ---
+  duration_ms: 4.909061
+  ...
+# Subtest: unsupported stealth and area heal are not invented by UI
+ok 69 - unsupported stealth and area heal are not invented by UI
+  ---
+  duration_ms: 0.22001
+  ...
+# Subtest: protocol3 50-stage upgrade/results dedup through new coordinator
+ok 70 - protocol3 50-stage upgrade/results dedup through new coordinator
+  ---
+  duration_ms: 190.724858
+  ...
+# Subtest: missing receipt extension remains valid and does not invent historical receipts
+ok 71 - missing receipt extension remains valid and does not invent historical receipts
+  ---
+  duration_ms: 15.375244
+  ...
+# Subtest: one atomic debit+level+receipt; full host reload replay and original result
+ok 72 - one atomic debit+level+receipt; full host reload replay and original result
+  ---
+  duration_ms: 29.818769
+  ...
+# Subtest: same id different payload, ruleset or extra fields rejected without debit
+ok 73 - same id different payload, ruleset or extra fields rejected without debit
+  ---
+  duration_ms: 15.935356
+  ...
+# Subtest: write failure retry preserves one receipt and one debit
+ok 74 - write failure retry preserves one receipt and one debit
+  ---
+  duration_ms: 19.423246
+  ...
+# Subtest: read failure retry preserves one receipt and one debit
+ok 75 - read failure retry preserves one receipt and one debit
+  ---
+  duration_ms: 20.246627
+  ...
+# Subtest: ordinary save cannot drop, alter or reorder persisted receipts
+ok 76 - ordinary save cannot drop, alter or reorder persisted receipts
+  ---
+  duration_ms: 20.512261
+  ...
+# Subtest: invalid/future receipt ledger protects original main
+ok 77 - invalid/future receipt ledger protects original main
+  ---
+  duration_ms: 14.518723
+  ...
+# Subtest: invalid/future receipt ledger protects original main
+ok 78 - invalid/future receipt ledger protects original main
+  ---
+  duration_ms: 14.02284
+  ...
+# Subtest: invalid/future receipt ledger protects original main
+ok 79 - invalid/future receipt ledger protects original main
+  ---
+  duration_ms: 18.157515
+  ...
+# Subtest: invalid/future receipt ledger protects original main
+ok 80 - invalid/future receipt ledger protects original main
+  ---
+  duration_ms: 9.81748
+  ...
+# Subtest: invalid/future receipt ledger protects original main
+ok 81 - invalid/future receipt ledger protects original main
+  ---
+  duration_ms: 10.299867
+  ...
+# Subtest: present null is invalid; old missing field remains valid
+ok 82 - present null is invalid; old missing field remains valid
+  ---
+  duration_ms: 6.91061
+  ...
+# Subtest: invalid or future receipt extension never falls back to valid old backup
+ok 83 - invalid or future receipt extension never falls back to valid old backup
+  ---
+  duration_ms: 15.166593
+  ...
+# Subtest:  actual parent entry gate and origin-checked iframe handshake (VM)
+ok 84 -  actual parent entry gate and origin-checked iframe handshake (VM)
+  ---
+  duration_ms: 10.535543
+  ...
+# Subtest:  battle removed, shared save/wallet callbacks retained, retired links inert
+ok 85 -  battle removed, shared save/wallet callbacks retained, retired links inert
+  ---
+  duration_ms: 4.556811
+  ...
+# Subtest: preview/ actual parent entry gate and origin-checked iframe handshake (VM)
+ok 86 - preview/ actual parent entry gate and origin-checked iframe handshake (VM)
+  ---
+  duration_ms: 2.933603
+  ...
+# Subtest: preview/ battle removed, shared save/wallet callbacks retained, retired links inert
+ok 87 - preview/ battle removed, shared save/wallet callbacks retained, retired links inert
+  ---
+  duration_ms: 3.361893
+  ...
+# Subtest: formal TD second gate, handshake/read-only protection and zero history mutation
+ok 88 - formal TD second gate, handshake/read-only protection and zero history mutation
+  ---
+  duration_ms: 7.986577
+  ...
+# Subtest: preview TD keeps legacy protocol/progress while using tea gate
+ok 89 - preview TD keeps legacy protocol/progress while using tea gate
+  ---
+  duration_ms: 11.607854
+  ...
+# Subtest: isolated real coordinator preserves card compatibility keys and TD history during business gacha save
+ok 90 - isolated real coordinator preserves card compatibility keys and TD history during business gacha save
+  ---
+  duration_ms: 43.634987
+  ...
+# Subtest: four entry version/changed-resource closure and preserved pet channel
+ok 91 - four entry version/changed-resource closure and preserved pet channel
+  ---
+  duration_ms: 9.041797
+  ...
+1..91
+# tests 91
+# suites 0
+# pass 91
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 711.61651
