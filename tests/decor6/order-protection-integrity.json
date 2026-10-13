@@ -16,7 +16,7 @@
     "path": "collectibles/entry.mjs",
     "start": "  const abort=new AbortController();",
     "end": "  makePanel('\u6b63\u5728\u6253\u5f00\u5b58\u6863'",
-    "sha256": "ef05561629f3a7942b87205244a7d514c34ab7bf973f038a254376d617761f95"
+    "sha256": "963bdd103ed0e39455c91f92b07893019962cae52954710300befd6d8d40b888"
   },
   {
     "path": "app.js",

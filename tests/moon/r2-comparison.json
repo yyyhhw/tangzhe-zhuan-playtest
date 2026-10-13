@@ -1,0 +1,137 @@
+{
+  "baseline": "4c51294a783b5d62cfb02297e3ed5086ffe5aa5d",
+  "main": "3a96a86a1c854bd681c0ff033de1e71ef724640e",
+  "node": "v24.19.0",
+  "commands": [
+    {
+      "file": "tests/formal/protocol.mjs",
+      "r1": 0,
+      "r2": 0
+    },
+    {
+      "file": "tests/formal/economy-v2.test.mjs",
+      "r1": 0,
+      "r2": 0
+    },
+    {
+      "file": "tests/formal/td-receipts.test.mjs",
+      "r1": 0,
+      "r2": 0
+    },
+    {
+      "file": "tests/formal/td-fc2.test.mjs",
+      "r1": 0,
+      "r2": 0
+    },
+    {
+      "file": "tests/formal/fc2-archive.test.mjs",
+      "r1": 0,
+      "r2": 0
+    },
+    {
+      "file": "tests/formal/copy52-display.test.mjs",
+      "r1": 0,
+      "r2": 0
+    },
+    {
+      "file": "tests/formal/carefree-bgm.test.mjs",
+      "r1": 0,
+      "r2": 0
+    },
+    {
+      "file": "test_economy.js",
+      "r1": 1,
+      "r2": 1
+    },
+    {
+      "file": "test_coin_safety.js",
+      "r1": 1,
+      "r2": 1
+    },
+    {
+      "file": "td/test_tdhost.js",
+      "r1": 1,
+      "r2": 1
+    },
+    {
+      "file": "td/test_td_bridge.js",
+      "r1": 1,
+      "r2": 1
+    },
+    {
+      "file": "td/test_td_protocol.js",
+      "r1": 1,
+      "r2": 1
+    },
+    {
+      "file": "preview/td/test_tdhost.js",
+      "r1": 1,
+      "r2": 1
+    },
+    {
+      "file": "preview/td/test_td_bridge.js",
+      "r1": 0,
+      "r2": 0
+    },
+    {
+      "file": "cards/tests/save.test.mjs",
+      "r1": 0,
+      "r2": 0
+    },
+    {
+      "file": "cards/tests/saved-decks.test.mjs",
+      "r1": 0,
+      "r2": 0
+    },
+    {
+      "file": "preview/cards/tests/save.test.mjs",
+      "r1": 1,
+      "r2": 1
+    },
+    {
+      "file": "preview/cards/tests/saved-decks.test.mjs",
+      "r1": 0,
+      "r2": 0
+    },
+    {
+      "file": "tests/formal/tea-entry-cards-out.test.mjs",
+      "r1": 0,
+      "r2": 0
+    },
+    {
+      "file": "test_root_keys.js",
+      "r1": 1,
+      "r2": 1
+    },
+    {
+      "file": "pet/game/test_petgame.js",
+      "r1": 1,
+      "r2": 1
+    },
+    {
+      "file": "preview/pet/game/test_petgame.js",
+      "r1": 1,
+      "r2": 1
+    }
+  ],
+  "groups": [
+    {
+      "command": "node --experimental-vm-modules --test --test-isolation=none tests/moon/*.test.mjs",
+      "pass": 106,
+      "fail": 0,
+      "skipped": 0
+    },
+    {
+      "command": "node --experimental-vm-modules --test --test-isolation=none tests/space01a/*.test.mjs",
+      "pass": 123,
+      "fail": 0,
+      "skipped": 0
+    },
+    {
+      "command": "node --experimental-vm-modules --test --test-isolation=none tests/wearables8/*.test.mjs",
+      "pass": 141,
+      "fail": 0,
+      "skipped": 0
+    }
+  ]
+}

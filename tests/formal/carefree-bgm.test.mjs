@@ -36,12 +36,13 @@ function setup(prefix, options={}){
  return {c,calls,events,devents,api:c.audioAPI,app};
 }
 for(const prefix of ['', 'preview/']){
- const assetVersion='hometint-all-20261014-r1';
- const version=(prefix?'preview-':'formal-')+assetVersion;
+ const assetVersion='xingtu-20261014-r1';
+ const uiVersion='xingtu-20261014-r1';
+ const pageVersion='xingtu-20261014-r1';const version=(prefix?'preview-':'formal-')+pageVersion;
  const app=read(prefix+'app.js'),html=read(prefix+'index.html'),boot=read(prefix+'collection/bootstrap.mjs');
  assert.equal(JSON.parse(read(prefix+'version.json')).v,version);
- assert(html.includes("var B='"+version+"'"));assert(html.includes('collection/bootstrap.mjs?v='+assetVersion));
- assert(boot.includes('app.js?'+(prefix?'collectionHost=1c&':'')+'v='+assetVersion));
+ assert(html.includes("var B='"+version+"'"));assert(html.includes('collection/bootstrap.mjs?v='+pageVersion));
+ assert(boot.includes('app.js?'+(prefix?'collectionHost=1c&':'')+'v='+uiVersion));
  assert(!app.includes('hot-springs-town.mp3'));assert(!app.includes('Wallpaper.mp3'));
  assert(html.includes('id="settings"'));assert(html.includes('aria-label="设置与关于／鸣谢"'));
  assert(html.indexOf('audio/loop-music.js')<html.indexOf('collection/bootstrap.mjs'));

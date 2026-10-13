@@ -90,12 +90,12 @@
     },
     {
       "path": "qa-protocol2/vendor/runtime/validator.mjs",
-      "sha256": "c224a7414111e8e0058147ea088b11e65a0e42b2efe7d02a0e909025aa82a9b4",
+      "sha256": "c32a7bab8aaf7ac94c41689bbcbd0739740b16caf5f3a45ac8ef485eb15f9029",
       "expectedChange": "Six-decoration hidden-pool/claim extension; behavioral coverage in tests/decor6. This full file is intentionally not identical to b16."
     },
     {
       "path": "qa-protocol2/real-page-facade.mjs",
-      "sha256": "a007a7da5db92aa286f56f1326b58130dc2f85358b5857adc0bc2f727d7fc79d",
+      "sha256": "49c5d3f253eb3ebc677a348bc2e1f411cda57d07f5f4bafd51182b81677db4e1",
       "expectedChange": "Six-decoration hidden-pool/claim extension; behavioral coverage in tests/decor6. This full file is intentionally not identical to b16."
     },
     {
@@ -116,7 +116,7 @@
     },
     {
       "path": "qa-protocol2/vendor/cards/card-coordinator.mjs",
-      "sha256": "f5e319b92ef2569921fca581767f5ed41836b8ccac4450a3755991d441c05a19",
+      "sha256": "50272cccfbf416327ea147f12d1b0bcb8f1ffd7a775fcd504ddd33c7a5855553",
       "expectedChange": "Six-decoration hidden-pool/claim extension; behavioral coverage in tests/decor6. This full file is intentionally not identical to b16."
     },
     {

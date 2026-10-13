@@ -1,18 +1,18 @@
-import {prepareDecor6Catalog} from './decor6-catalog.mjs?v=hometint-all-20261014-r1';
-import {prepareSecondEightCatalog} from './wearables18-catalog.mjs?v=hometint-all-20261014-r1';
+import {prepareDecor6Catalog} from './decor6-catalog.mjs?v=xingtu-20261014-r1';
+import {prepareSecondEightCatalog} from './wearables18-catalog.mjs?v=xingtu-20261014-r1';
 /** Production composition candidate; activation remains gated by release.mjs.
  * Synthetic review only until the independent browser/activation gate passes. */
-import {createCollectibleStorage} from './storage.mjs?v=hometint-all-20261014-r1';
-import {ensureLegacyReady} from './legacy-entry.mjs?v=hometint-all-20261014-r1';
-import {COLLECTIBLES_PRODUCTION_ENABLED,COLLECTIBLES_RELEASE} from './release.mjs?v=hometint-all-20261014-r1';
-import {createRealPageQAFacade} from '../qa-protocol2/real-page-facade.mjs?v=hometint-all-20261014-r1';
-import {createMigrationPlanner} from '../qa-protocol2/vendor/planner/migration.mjs?v=hometint-all-20261014-r1';
-import * as codec from '../qa-protocol2/vendor/codec/snapshot-codec.mjs?v=hometint-all-20261014-r1';
-import {createPetDomain} from '../qa-protocol2/vendor/runtime/pet-domain.mjs?v=hometint-all-20261014-r1';
-import {createProtocol2Validator} from '../qa-protocol2/vendor/runtime/validator.mjs?v=hometint-all-20261014-r1';
-import {createCardAwareSession} from '../qa-protocol2/vendor/cards/card-coordinator.mjs?v=hometint-all-20261014-r1';
-import {createHostModel} from '../qa-protocol2/vendor/host/host-model.mjs?v=hometint-all-20261014-r1';
-import {prepareEightWearableCatalog} from '../qa-protocol2/eight-catalog.mjs?v=hometint-all-20261014-r1';
+import {createCollectibleStorage} from './storage.mjs?v=xingtu-20261014-r1';
+import {ensureLegacyReady} from './legacy-entry.mjs?v=xingtu-20261014-r1';
+import {COLLECTIBLES_PRODUCTION_ENABLED,COLLECTIBLES_RELEASE} from './release.mjs?v=xingtu-20261014-r1';
+import {createRealPageQAFacade} from '../qa-protocol2/real-page-facade.mjs?v=xingtu-20261014-r1';
+import {createMigrationPlanner} from '../qa-protocol2/vendor/planner/migration.mjs?v=xingtu-20261014-r1';
+import * as codec from '../qa-protocol2/vendor/codec/snapshot-codec.mjs?v=xingtu-20261014-r1';
+import {createPetDomain} from '../qa-protocol2/vendor/runtime/pet-domain.mjs?v=xingtu-20261014-r1';
+import {createProtocol2Validator} from '../qa-protocol2/vendor/runtime/validator.mjs?v=xingtu-20261014-r1';
+import {createCardAwareSession} from '../qa-protocol2/vendor/cards/card-coordinator.mjs?v=xingtu-20261014-r1';
+import {createHostModel} from '../qa-protocol2/vendor/host/host-model.mjs?v=xingtu-20261014-r1';
+import {prepareEightWearableCatalog} from '../qa-protocol2/eight-catalog.mjs?v=xingtu-20261014-r1';
 
 const clone=x=>JSON.parse(JSON.stringify(x));
 async function loadClassic(url){await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=url.href;s.onload=resolve;s.onerror=()=>reject(Error('QA_LEGACY_ECONOMY_LOAD_FAILED'));document.head.append(s);});}
@@ -35,6 +35,7 @@ export async function launchProductionCollectibles(options){
   const abort=new AbortController();let current=true,owns=false,release,facade,foreignListener,appStarted=false,appStarting=false,pageHideSave=null;
   const lease=Object.freeze({owns:()=>owns&&current});
   const revoke=reason=>{if(!current)return;current=false;try{facade?.invalidate(reason);}finally{owns=false;abort.abort();release?.();}};
+  let cleaned=false;const cleanup=reason=>{if(cleaned)return;cleaned=true;owns=false;try{revoke(reason);}finally{try{globalThis.XingTu?.invalidate();}finally{if(foreignListener)removeEventListener('storage',foreignListener);}}};
   // Native event dispatch may drain microtasks BETWEEN listeners. Flush and revoke
   // in one synchronous callback so onHide retains every existing save/lock guard.
   addEventListener('pagehide',()=>{
@@ -47,7 +48,7 @@ export async function launchProductionCollectibles(options){
   makePanel('正在打开存档','同一作用域只能一个页面经营。若另一页仍在运行，请先关闭或刷新它。当前未读取或写入存档。');
   const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(canonical(config))))).map(x=>x.toString(16).padStart(2,'0')).join('');
   if(digest!==expectedConfigHash)throw Error('QA_TRIAL_CONFIG_HASH_MISMATCH');
-  await navigator.locks.request(expectedLock,{mode:'exclusive',signal:abort.signal},async()=>{
+  try{await navigator.locks.request(expectedLock,{mode:'exclusive',signal:abort.signal},async()=>{
     if(!current)throw Error('QA_STALE_LOCK_CALLBACK');owns=true;
     const lifetime=new Promise(resolve=>{release=resolve;});
     try{
@@ -99,16 +100,19 @@ export async function launchProductionCollectibles(options){
           decorCatalog.setActive(qaWearables8);
           secondEight.setActive(qaWearables8);
           wearableCatalog?.setActive(qaWearables8);
-          if(qaWearables8){const display=await import('../candidates/blindbox18/display.mjs?v=hometint-all-20261014-r1');if(!lease.owns())throw Error('QA_DISPLAY_LOADED_AFTER_REVOKE');globalThis.QAWearables8Display=display.default;const decor=await import('./decor6-display.mjs?v=hometint-all-20261014-r1');if(!lease.owns())throw Error('DECOR_DISPLAY_LOADED_AFTER_REVOKE');globalThis.Decor6Display=decor.default;}
+          if(qaWearables8){const display=await import('../candidates/blindbox18/display.mjs?v=xingtu-20261014-r1');if(!lease.owns())throw Error('QA_DISPLAY_LOADED_AFTER_REVOKE');globalThis.QAWearables8Display=display.default;const decor=await import('./decor6-display.mjs?v=xingtu-20261014-r1');if(!lease.owns())throw Error('DECOR_DISPLAY_LOADED_AFTER_REVOKE');globalThis.Decor6Display=decor.default;}
           const runtime={keys,storage,model,qaWearables8,decor6:qaWearables8,claimHidden:id=>facade.claimHidden(id),qa:false,qaScope:scope,qaProtocol2:true,entryEnabled:cardEntryEnabled===true,ownsLock:lease.owns,coordinator:facade.coordinator,
             registerPageHide:handler=>{if(typeof handler!=='function'||pageHideSave)throw Error('PAGE_HIDE_HANDLER_INVALID');pageHideSave=handler;},
-            logicalStorageKey:storage.logicalKey,handle:message=>facade.card(message),snapshot:()=>facade.snapshot(),reconcile:()=>facade.reconcile()};
+            logicalStorageKey:storage.logicalKey,handle:message=>facade.card(message),snapshot:()=>facade.snapshot(),reconcile:()=>{const result=facade.reconcile();if(result.ok)globalThis.XingTu?.resume();return result;}};
           globalThis[scope==='formal'?'FormalCollectionRuntime':'PreviewCollectionRuntime']=runtime;
           const pet=scope==='formal'&&location.pathname.startsWith(new URL('pet/game/',sourceBase).pathname);
           await import(new URL((pet?'pet/game/app.js':'app.js')+'?v='+COLLECTIBLES_RELEASE,sourceBase));
           if(!lease.owns())throw Error('QA_APP_LOADED_AFTER_REVOKE');
           const attached=facade.attachApp(globalThis.__tzz,{enabled:walletBridgeApproved===true,randomInt:n=>secureRandomInt(crypto,n),makeId:()=>`tx:${crypto.randomUUID()}`});
-          if(!attached.ok)throw Error(attached.code);appStarted=true;
+          if(!attached.ok)throw Error(attached.code);
+          const {installMoonOverlay}=await import('../space/overlay.mjs?v=xingtu-20261014-r1');
+          if(!lease.owns())throw Error('SPACE_LOADED_AFTER_REVOKE');
+          installMoonOverlay({app:globalThis.__tzz,runtime});appStarted=true;
           if(facade.view().canPlay)document.getElementById('collectionStartup')?.remove();render(facade.view());
         }catch(error){revoke(error.message||'QA_GAMEPLAY_IMPORT_FAILED');throw error;}
         finally{appStarting=false;}
@@ -127,7 +131,7 @@ export async function launchProductionCollectibles(options){
         const warning=document.createElement('p');warning.textContent=prompt?'升级前请关掉其他开着这个游戏的页面，免得旧页面把进度写回去。':'请保留原档和备份，不要清除浏览器数据或另开新档。';box.append(warning);
         const details=document.createElement('details'),summary=document.createElement('summary'),body=document.createElement('p');summary.textContent='查看存档保护说明';body.textContent=prompt?'升级后共58件：52普通、4超级、2隐藏条件领取。空收藏且非保底时，普通单件概率由90%/32变为90%/52；每次20万金币、超级10%、15抽保底与不重复规则保留。将先保存完整原文与备份，逐项核对后才提交协议2主档；升级不赠物品、不扣金币。确认弹窗等待与取消不会写入升级，取消后正常经营可以保存旧协议。正式与预览存档彼此独立。写入或读回不确定时保持只读，需明确核对并替换内存，不会自动回滚、重抽或伪造历史达成时间。':`状态：${view.code||view.phase}。准备阶段原文不能改动；提交结果不明时只读核对，不重放经营。核对成功后才替换内存并继续。恢复文件含本机游戏进度，请妥善保存，仅在需要时提供给维护者。`;details.append(summary,body);box.append(details);
         if(prompt||prepared){button(box,'collectibleUpgradeConfirm',prompt?'保留备份并升级':'明确重试升级',async()=>{const result=facade.confirmMigration();if(result.ok)await startApp().catch(()=>{});});if(prompt)button(box,'collectibleUpgradeCancel','先不升级',async()=>{const result=facade.cancelMigration();if(result.ok)await startApp().catch(()=>{});});}
-        if(prepared||view.phase==='protected')button(box,'collectibleReconcile','只读核对结果',()=>{const result=facade.reconcile();if(result.ok&&facade.view().canPlay&&!appStarted)startApp().catch(()=>{});});
+        if(prepared||view.phase==='protected')button(box,'collectibleReconcile','只读核对结果',()=>{const result=facade.reconcile();if(result.ok&&facade.view().canPlay&&!appStarted)startApp().catch(()=>{});if(result.ok&&appStarted)globalThis.XingTu?.resume();});
         button(box,'collectibleExport','保存本机恢复文件',exportEvidence);
         button(box,'collectibleReload','刷新重读',()=>location.reload());
         const confirm=document.getElementById('collectibleUpgradeConfirm');if(confirm)confirm.disabled=!view.canConfirm;
@@ -142,6 +146,6 @@ export async function launchProductionCollectibles(options){
       if(autoUpgrade&&result.ok&&['prompt','prepared'].includes(facade.view().phase)&&facade.view().canConfirm)facade.confirmMigration();
       if(result.ok&&facade.view().canPlay)await startApp();
       await lifetime;
-    }finally{try{facade?.invalidate('QA_LOCK_LIFETIME_ENDED');}finally{if(foreignListener)removeEventListener('storage',foreignListener);owns=false;current=false;abort.abort();release?.();}}
-  });
+    }finally{cleanup('QA_LOCK_LIFETIME_ENDED');}
+  });}finally{cleanup('QA_LOCK_LIFETIME_ENDED');}
 }

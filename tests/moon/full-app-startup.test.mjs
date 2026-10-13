@@ -1,0 +1,39 @@
+// Complete actual app source, synthetic DOM/canvas/scheduler and real isolated host runtime. Not browser.
+import test from 'node:test';import assert from 'node:assert/strict';import vm from 'node:vm';import {readFileSync} from 'node:fs';
+import {assembly,until,ORIGIN} from '../wearables8/production-harness.mjs';
+const root=new URL('../../',import.meta.url),read=p=>readFileSync(new URL(p,root),'utf8');
+async function fullStart({scope='formal',protocol=2,pet=false,sourceOverride}={}){
+ const h=await assembly({scope,protocol,mode:'bootstrap',path:pet?'/pet/game/':undefined});
+ if(protocol===1&&scope==='preview'){await until(()=>h.view()?.phase==='prompt','P1 choice');await h.click('collectibleUpgradeCancel');}
+ await until(()=>h.app&&h.context.XingTu||h.bootError,'host');assert.equal(h.bootError,null);assert(h.app);
+ h.context.XingTu.close();delete h.context.XingTu;
+ const elements=new Map(),events=[],frames=[];const noop=()=>{};
+ const drawing=new Proxy({getImageData:()=>({data:new Uint8ClampedArray(384*384*4)}),measureText:s=>({width:String(s).length*8}),createLinearGradient:()=>({addColorStop:noop}),createRadialGradient:()=>({addColorStop:noop}),createPattern:()=>null},{get:(o,k)=>k in o?o[k]:noop});
+ class Element{
+  constructor(id=''){this.id=id;this.style={};this.dataset={};this.children=[];this.classList={add:noop,remove:noop,toggle:noop,contains:()=>false};this.width=390;this.height=844;this.scrollTop=0;}
+  addEventListener(k,f){events.push({target:this.id,k,f});}removeEventListener(){}setAttribute(){}removeAttribute(){}
+  toDataURL(){return 'data:image/png;base64,synthetic';}getContext(){return drawing;}getBoundingClientRect(){return {x:0,y:0,left:0,top:0,right:390,bottom:844,width:390,height:844};}
+  querySelector(s){return get(s);}querySelectorAll(){return [];}append(...xs){this.children.push(...xs);}appendChild(x){this.append(x);return x;}remove(){}focus(){}closest(){return null;}
+ }
+ const get=id=>{if(!elements.has(id))elements.set(id,new Element(id));return elements.get(id);};
+ const document={hidden:false,visibilityState:'visible',baseURI:'https://example.test/',body:get('body'),head:get('head'),documentElement:get('html'),querySelector:s=>s.includes('storyReplay')?null:get(s),querySelectorAll:()=>[],getElementById:id=>get('#'+id),createElement:t=>new Element(t),addEventListener(k,f){events.push({target:'document',k,f});},removeEventListener:noop};
+ Object.assign(h.context,{document,innerWidth:390,innerHeight:844,devicePixelRatio:1,performance:{now:()=>1000},requestAnimationFrame:f=>{frames.push(f);return frames.length;},cancelAnimationFrame:noop,setTimeout:()=>1,clearTimeout:noop,setInterval:()=>1,clearInterval:noop,addEventListener(k,f){events.push({target:'window',k,f});},removeEventListener:noop,Path2D:class{},Image:class{set src(s){}},getComputedStyle:()=>({getPropertyValue:()=>'',display:'block'}),matchMedia:()=>({matches:false,addEventListener:noop}),scrollTo:noop});
+ h.context.Path2D=new Proxy(class {},{construct(){return new Proxy({},{get:()=>noop});}});
+ // Real classic TD dependencies, same filenames as real HTML; no TD host fake.
+ if(!pet)for(const p of ['td/tdcore.js','td/tdwaves.js','td/tdprogress.js','td/tdcampaign.js','td/tdcampaign-progress.js','td/tdupgrade-receipts.js','td/tdhost.js','zombie/zbcore.js']){try{vm.runInContext(read((scope==='preview'?'preview/':'')+p),h.context,{filename:p});}catch(e){if(e.code!=='ENOENT')throw e;}}
+ const file=pet?'pet/game/app.js':scope==='preview'?'preview/app.js':'app.js';
+ const source=sourceOverride??read(file),outer=source.includes('(async () => {')?'(async () => {':'(() => {';assert(source.includes(outer));
+ // Observe only the outer async IIFE promise. Every statement in the original app executes unchanged.
+ let error;try{vm.runInContext(source.replace(outer,'globalThis.__completeAppStartup = '+outer),h.context,{filename:file,importModuleDynamically:spec=>h.evaluate(new URL(spec,ORIGIN+'/'+file).href)});await h.context.__completeAppStartup;}catch(e){error=e;}
+ if(!error){const overlay=await h.evaluate(ORIGIN+'/space/overlay.mjs?v=xingtu-20261014-r1');overlay.namespace.installMoonOverlay({app:h.context.__tzz,runtime:h.runtime,document,window:h.context});}
+ return {h,error,events,frames,elements,file};
+}
+for(const scope of ['formal','preview'])for(const protocol of [1,2])test(`${scope} P${protocol}: complete app startup executes both registration groups and trailing hooks`,{timeout:15000},async t=>{
+ const r=await fullStart({scope,protocol});t.after(()=>r.h.close());assert.ifError(r.error);const app=r.h.context.__tzz;
+ for(const name of ['openTD','closeTD','tdOpen','openZombie','closeZombie','zbOpen','zbCeo','zbLastCeo','zbRun','openAssignTo','zbReply','xingtuContext','collectionReplaceState','collectionReadOnly'])assert(Object.hasOwn(app,name),name);
+ assert.equal(Object.getOwnPropertyDescriptor(app,'zbOpen').configurable,false);assert.equal(app.zbOpen,false);assert.equal(app.zbRun,null);assert.equal(typeof app.zbCeo,'function');assert.equal(typeof r.h.context.render_game_to_text,'function');assert.equal(typeof r.h.context.advanceTime,'function');assert(r.events.some(e=>e.target==='document'&&e.k==='keydown'&&String(e.f).includes('petPanelOpen')));assert(r.events.some(e=>e.target==='document'&&e.k==='keydown'&&String(e.f).includes('storyReplay')));assert(r.frames.length>0);assert(r.h.context.XingTu);assert(r.h.runtime.ownsLock());app.openZombie();assert.equal(app.zbOpen,true);assert.equal(app.xingtuContext().otherGame,true);app.openTD();assert.equal(app.tdOpen,false);app.closeZombie();assert.equal(app.zbOpen,false);
+});
+for(const protocol of [1,2])test(`formal pet P${protocol}: complete unaffected app startup`,{timeout:15000},async t=>{const r=await fullStart({protocol,pet:true});t.after(()=>r.h.close());assert.ifError(r.error);assert.equal(typeof r.h.context.__tzz.xingtuContext,'function');assert(r.frames.length>0);assert(r.h.context.XingTu);assert(r.h.runtime.ownsLock());});
+
+for(const scope of ['formal','preview'])test(scope+': r3 duplicate negative control fails complete source after partial zombie registration',{timeout:15000},async t=>{const file=scope==='preview'?'preview/app.js':'app.js',current=read(file),needle='Object.defineProperties(window.__tzz, {openTD:';assert.equal(current.split(needle).length,2);const r=await fullStart({scope,sourceOverride:current.replace(needle,'Object.defineProperties(window.__tzz, {zbOpen:{get:()=>zbOpen}, openTD:')});t.after(()=>r.h.close());assert.match(String(r.error),/Cannot redefine property: zbOpen/);const app=r.h.context.__tzz;assert.equal(typeof app.openZombie,'function');assert.equal(typeof app.closeZombie,'function');for(const k of ['zbCeo','zbLastCeo','zbRun','openAssignTo','zbReply'])assert(!Object.hasOwn(app,k),k);assert.equal(r.h.context.render_game_to_text,undefined);assert.equal(r.h.context.advanceTime,undefined);});
+test('root/preview/pet app imports all carry the xingtu release token',()=>{const token='xingtu-20261014-r1',legacy='hometint-all-20261014-r1',entry=read('collectibles/entry.mjs');assert(entry.includes("'?v='+COLLECTIBLES_RELEASE,sourceBase"));for(const [p,query]of [['collection/bootstrap.mjs',''],['preview/collection/bootstrap.mjs','collectionHost=1c&']]){const source=read(p),expected='../app.js?'+query+'v='+token;assert(source.includes(expected));assert(!source.includes('../app.js?'+query+'v='+legacy));assert.throws(()=>assert(source.replaceAll(expected,'../app.js?'+query+'v='+legacy).includes(expected)));}assert(!read('collection/bootstrap.mjs').includes(legacy));assert(read('qa-protocol2/entry.mjs').includes("'app.js?qaProtocol2=1&v="+token+"'"));for(const p of ['collection/bootstrap.mjs','preview/collection/bootstrap.mjs'])assert(read(p).includes('qa-protocol2/entry.mjs?v='+token));assert(read('app.js').includes('formal-'+token));assert(read('preview/app.js').includes('PREVIEW_WRITER_LEASE_REQUIRED'));});

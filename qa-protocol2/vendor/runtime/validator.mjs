@@ -1,6 +1,7 @@
-import {validateHiddenLedger} from '../../../collectibles/decor6-grants.mjs?v=hometint-all-20261014-r1';
+import {validateHiddenLedger} from '../../../collectibles/decor6-grants.mjs?v=xingtu-20261014-r1';
 /** Pure protocol2 validation: admitted catalog, immutable migration identity and
  * bounded hidden receipts. No normalization, award side effects or storage. */
+import {readSpace} from '../../../space/domain.mjs?v=xingtu-20261014-r1';
 export const PROTOCOL2_RUNTIME_ENABLED=false;
 const error=code=>{throw Error(code);};
 const object=x=>!!x&&typeof x==='object'&&!Array.isArray(x);
@@ -130,6 +131,7 @@ export function createProtocol2Validator({scope,economy:E,model,planner,codec,ca
   function validate(raw,{snapshotRaw=null,originalRaw=null}={}){
     try{
       const s=parse(raw);
+      const space=readSpace(s);if(!space.ok)error(space.code);
       if(!validFormalMirror(s))error('INVALID_FORMAL_ZOMBIE_MIRROR');
       if(!validFootprintMarkers(s))error('INVALID_FOOTPRINT_MIGRATION_MARKER');
       if(s._collectionProtocol===1){

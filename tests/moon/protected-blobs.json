@@ -1,0 +1,110 @@
+[
+  {
+    "path": "apple-touch-icon.png",
+    "sha256": "24a2022f3ff9d60e74a5b1180acd8be7e8dd8dd655b8080dc5a10c75b43636c6"
+  },
+  {
+    "path": "cards/index.html",
+    "sha256": "96fe1bf3b821e5970bec3056074d6f14bfd6c35558b2a492377da06f1efcecce"
+  },
+  {
+    "path": "cards/ui/index.html",
+    "sha256": "5b38d5ec4c36dd37dd3eee31f0085aca07309ca2ed35aecb855becdc8281e6bb"
+  },
+  {
+    "path": "economy.js",
+    "sha256": "c5a04023e6713b458724b095e68323f0ac0dca15bb5fbe8d61c9e2aaf6a7df28"
+  },
+  {
+    "path": "home-interaction.js",
+    "sha256": "8303c92c62f6089aac2db1bc2799c834d1c8c159f1d9a93001d08dae0734cf16"
+  },
+  {
+    "path": "icon.svg",
+    "sha256": "8319d2df41b4feec1d5421bf6ee289bc7a760f6c476154559d90d5bb114b7b1c"
+  },
+  {
+    "path": "pet/game/economy.js",
+    "sha256": "9d6b10ffebc00b8ba14113ef5080114a4319f834e938beb4f50a8568c2fc3a49"
+  },
+  {
+    "path": "pet/game/style.css",
+    "sha256": "ffb8bdb3287674d2cef2ab95fb54ff5d6e82eb4728164ed05ae7f4dee489730b"
+  },
+  {
+    "path": "preview/cards/index.html",
+    "sha256": "4782fc13030a55c7246487b8e5060a28d8d182d131c53183360855833c4c82e5"
+  },
+  {
+    "path": "preview/cards/ui/index.html",
+    "sha256": "086e30e3d0ef932e555594669d5e36d4a0b5094d1b9577fe6b534ff01b13993e"
+  },
+  {
+    "path": "preview/economy.js",
+    "sha256": "b005a82bd3ccd728bf5de62a48fa7007dbfb0e78b1d963163de2a47d31e20538"
+  },
+  {
+    "path": "preview/pet/game/app.js",
+    "sha256": "64755cf5eebb45e521995e298002cb82fd2b3ed96367d39d87b75b145fb05a10"
+  },
+  {
+    "path": "preview/pet/game/economy.js",
+    "sha256": "a3427641cfa19b45b447f37de736f29c058caee33bc3a6be13ebe19ede60c47f"
+  },
+  {
+    "path": "preview/pet/game/index.html",
+    "sha256": "d6bd9f4940bdd00ff7545de3b2e1502495f0b4d60ae1d7a8c0b34572577eb213"
+  },
+  {
+    "path": "preview/pet/game/petgame.css",
+    "sha256": "085a9ee656932d6ef5674078d170b7c7337cc9c7d72753d8f289e9d13c9707ba"
+  },
+  {
+    "path": "preview/pet/game/petgame.js",
+    "sha256": "674a7b85868681980800ee6c07355398e017a6f8aa69737e0cc191fcd7bb54f1"
+  },
+  {
+    "path": "preview/pet/game/style.css",
+    "sha256": "b881caa35b142822b9f43f3803cbd36757cbfe9db69acd2ff713a9daa5dab9ba"
+  },
+  {
+    "path": "preview/pet/game/test_petgame.js",
+    "sha256": "77e03cd327c1e000f425fb8ce7255cf4ea69e8ad6a2a574f1032b59ab01e23e1"
+  },
+  {
+    "path": "preview/pet/game/test_petgame_e2e.py",
+    "sha256": "40add479516b1d5424e7b11d180cb7f7422867c8245922e361f69cac069fbcde"
+  },
+  {
+    "path": "preview/pet/game/version.json",
+    "sha256": "d2e6ea9b98a730c711061c0aad39639facbcf5776b2302c1566b83f6614171fb"
+  },
+  {
+    "path": "preview/style.css",
+    "sha256": "b402a614ee62c0876eff1c9acd0552dd1907aaadb9ffaa5449606dcf431a506f"
+  },
+  {
+    "path": "preview/td/tdhost.js",
+    "sha256": "f041f8eeeb44d2275a933b597e0d472ca747a53962a0590ecbee34339921878b"
+  },
+  {
+    "path": "space/domain.mjs",
+    "sha256": "345e277f8564c444f17100b7e080ec3c81ca1a050546debff7cea277f63affbe"
+  },
+  {
+    "path": "style.css",
+    "sha256": "88271c17f4462c54ab8c554989977e3f107f5af086877bae68bd453f97164116"
+  },
+  {
+    "path": "td/td.css",
+    "sha256": "89fc5a9f19462eb2bf3b68c741746cdb0bc654b0efc4474e25d1b46d49084b23"
+  },
+  {
+    "path": "td/td.js",
+    "sha256": "fce7f4f758d0deed2fb7476bed20d37dab51c90964b9ba3ac81493d18914b3df"
+  },
+  {
+    "path": "td/tdhost.js",
+    "sha256": "3dd8c4775873e4d60cb4fa047c428cb04e1b890786de1a13276f85f7839bc9d8"
+  }
+]

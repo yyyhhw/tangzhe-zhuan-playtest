@@ -1,0 +1,201 @@
+{
+  "baseline": "472349b5f31df4446e79694b6be5bd6f66bd6db4",
+  "main": "3a96a86a1c854bd681c0ff033de1e71ef724640e",
+  "node": "v24.19.0",
+  "commands": [
+    {
+      "path": "tests/formal/protocol.mjs",
+      "command": "node tests/formal/protocol.mjs",
+      "baselineExit": 0,
+      "candidateExit": 0,
+      "sameFailureOutput": null,
+      "output": "final-tests_formal_protocol.mjs.log"
+    },
+    {
+      "path": "tests/formal/economy-v2.test.mjs",
+      "command": "node tests/formal/economy-v2.test.mjs",
+      "baselineExit": 0,
+      "candidateExit": 0,
+      "sameFailureOutput": null,
+      "output": "final-tests_formal_economy-v2.test.mjs.log"
+    },
+    {
+      "path": "tests/formal/td-receipts.test.mjs",
+      "command": "node tests/formal/td-receipts.test.mjs",
+      "baselineExit": 0,
+      "candidateExit": 0,
+      "sameFailureOutput": null,
+      "output": "final-tests_formal_td-receipts.test.mjs.log"
+    },
+    {
+      "path": "tests/formal/td-fc2.test.mjs",
+      "command": "node tests/formal/td-fc2.test.mjs",
+      "baselineExit": 0,
+      "candidateExit": 0,
+      "sameFailureOutput": null,
+      "output": "final-tests_formal_td-fc2.test.mjs.log"
+    },
+    {
+      "path": "tests/formal/fc2-archive.test.mjs",
+      "command": "node tests/formal/fc2-archive.test.mjs",
+      "baselineExit": 0,
+      "candidateExit": 0,
+      "sameFailureOutput": null,
+      "output": "final-tests_formal_fc2-archive.test.mjs.log"
+    },
+    {
+      "path": "tests/formal/copy52-display.test.mjs",
+      "command": "node tests/formal/copy52-display.test.mjs",
+      "baselineExit": 0,
+      "candidateExit": 0,
+      "sameFailureOutput": null,
+      "output": "final-tests_formal_copy52-display.test.mjs.log"
+    },
+    {
+      "path": "tests/formal/carefree-bgm.test.mjs",
+      "command": "node tests/formal/carefree-bgm.test.mjs",
+      "baselineExit": 0,
+      "candidateExit": 0,
+      "sameFailureOutput": null,
+      "output": "final-tests_formal_carefree-bgm.test.mjs.log"
+    },
+    {
+      "path": "test_economy.js",
+      "command": "node test_economy.js",
+      "baselineExit": 1,
+      "candidateExit": 1,
+      "sameFailureOutput": true,
+      "output": "final-test_economy.js.log"
+    },
+    {
+      "path": "test_coin_safety.js",
+      "command": "node test_coin_safety.js",
+      "baselineExit": 1,
+      "candidateExit": 1,
+      "sameFailureOutput": true,
+      "output": "final-test_coin_safety.js.log"
+    },
+    {
+      "path": "td/test_tdhost.js",
+      "command": "node td/test_tdhost.js",
+      "baselineExit": 1,
+      "candidateExit": 1,
+      "sameFailureOutput": true,
+      "output": "final-td_test_tdhost.js.log"
+    },
+    {
+      "path": "td/test_td_bridge.js",
+      "command": "node td/test_td_bridge.js",
+      "baselineExit": 1,
+      "candidateExit": 1,
+      "sameFailureOutput": true,
+      "output": "final-td_test_td_bridge.js.log"
+    },
+    {
+      "path": "td/test_td_protocol.js",
+      "command": "node td/test_td_protocol.js",
+      "baselineExit": 1,
+      "candidateExit": 1,
+      "sameFailureOutput": true,
+      "output": "final-td_test_td_protocol.js.log"
+    },
+    {
+      "path": "preview/td/test_tdhost.js",
+      "command": "node preview/td/test_tdhost.js",
+      "baselineExit": 1,
+      "candidateExit": 1,
+      "sameFailureOutput": true,
+      "output": "final-preview_td_test_tdhost.js.log"
+    },
+    {
+      "path": "preview/td/test_td_bridge.js",
+      "command": "node preview/td/test_td_bridge.js",
+      "baselineExit": 0,
+      "candidateExit": 0,
+      "sameFailureOutput": null,
+      "output": "final-preview_td_test_td_bridge.js.log"
+    },
+    {
+      "path": "cards/tests/save.test.mjs",
+      "command": "node cards/tests/save.test.mjs",
+      "baselineExit": 0,
+      "candidateExit": 0,
+      "sameFailureOutput": null,
+      "output": "final-cards_tests_save.test.mjs.log"
+    },
+    {
+      "path": "cards/tests/saved-decks.test.mjs",
+      "command": "node cards/tests/saved-decks.test.mjs",
+      "baselineExit": 0,
+      "candidateExit": 0,
+      "sameFailureOutput": null,
+      "output": "final-cards_tests_saved-decks.test.mjs.log"
+    },
+    {
+      "path": "preview/cards/tests/save.test.mjs",
+      "command": "node preview/cards/tests/save.test.mjs",
+      "baselineExit": 1,
+      "candidateExit": 1,
+      "sameFailureOutput": true,
+      "output": "final-preview_cards_tests_save.test.mjs.log"
+    },
+    {
+      "path": "preview/cards/tests/saved-decks.test.mjs",
+      "command": "node preview/cards/tests/saved-decks.test.mjs",
+      "baselineExit": 0,
+      "candidateExit": 0,
+      "sameFailureOutput": null,
+      "output": "final-preview_cards_tests_saved-decks.test.mjs.log"
+    },
+    {
+      "path": "tests/formal/tea-entry-cards-out.test.mjs",
+      "command": "node tests/formal/tea-entry-cards-out.test.mjs",
+      "baselineExit": 0,
+      "candidateExit": 0,
+      "sameFailureOutput": null,
+      "output": "final-tests_formal_tea-entry-cards-out.test.mjs.log"
+    },
+    {
+      "path": "test_root_keys.js",
+      "command": "node test_root_keys.js",
+      "baselineExit": 1,
+      "candidateExit": 1,
+      "sameFailureOutput": false,
+      "output": "final-test_root_keys.js.log"
+    },
+    {
+      "path": "pet/game/test_petgame.js",
+      "command": "node pet/game/test_petgame.js",
+      "baselineExit": 1,
+      "candidateExit": 1,
+      "sameFailureOutput": true,
+      "output": "final-pet_game_test_petgame.js.log"
+    },
+    {
+      "path": "preview/pet/game/test_petgame.js",
+      "command": "node preview/pet/game/test_petgame.js",
+      "baselineExit": 1,
+      "candidateExit": 1,
+      "sameFailureOutput": true,
+      "output": "final-preview_pet_game_test_petgame.js.log"
+    }
+  ],
+  "groups": {
+    "space01a": {
+      "baseline": 123,
+      "candidate": 123,
+      "failed": 0
+    },
+    "wearables8": {
+      "baseline": 141,
+      "candidate": 141,
+      "failed": 0
+    },
+    "moon": {
+      "candidate": 94,
+      "files": 6,
+      "failed": 0
+    }
+  },
+  "scope": "Selected44 Node/VM entries:34 success/10 existing failures; not whole repository or browser."
+}

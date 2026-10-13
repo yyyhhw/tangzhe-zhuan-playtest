@@ -21,19 +21,19 @@
     },
     {
       "path": "qa-protocol2/vendor/runtime/validator.mjs",
-      "sha256": "914f33f05ddf6b9c5658f386b83b4aa6228f29b003c49122eba0864137edb66b",
+      "sha256": "ccba20f02b2de6b7a9417b12b461cb3dac01de132feadf8a08695c8281eb5266",
       "originalSha256": "a6619f521e2d3c63945ab64ceff3cb0f1d44a39becac07bb3d045992aa0b484a",
       "expectedChange": "Previously reviewed decor16 catalog/hidden-grant extension from 89267ef; not claimed byte-identical to 7ce."
     },
     {
       "path": "qa-protocol2/vendor/cards/card-coordinator.mjs",
-      "sha256": "240af83aa0db88033e147eddddd73b9e5f7a02092b73e90a7ce91062f5d9ac41",
+      "sha256": "f7b900defc0a2e55eb5372626e8d6139551d2857a00c88036ee1789c981be196",
       "originalSha256": "82bf35fb2593a8ce6c5286fcd778409dc05380991ec9b1793457d7569b37c6d7",
       "expectedChange": "Previously reviewed decor16 catalog/hidden-grant extension from 89267ef; not claimed byte-identical to 7ce."
     },
     {
       "path": "qa-protocol2/real-page-facade.mjs",
-      "sha256": "a007a7da5db92aa286f56f1326b58130dc2f85358b5857adc0bc2f727d7fc79d",
+      "sha256": "9ecb57e7632c101b41b4fa76b92e3c7a998471b27a560c8efadef10c180c4389",
       "originalSha256": "2de83c71863a298369df5aa05a66b0e4e7fbd18de2d608b425e76f47414662ad",
       "expectedChange": "Previously reviewed decor16 catalog/hidden-grant extension from 89267ef; not claimed byte-identical to 7ce."
     },
