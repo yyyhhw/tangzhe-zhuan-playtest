@@ -13,7 +13,7 @@ for(const scope of ['formal','preview']){
  });
  test(scope+': old 44 ownership and opaque nested data survive activation without random giveaways',async t=>{
   const ids=['c_charcoal_vest','c_matcha_knit','c_ember_fan_mantle','c_grill_grid_tabard','h_guokui','h_antenna_clip','h_skewer_pinwheel','h_mushroom_parasol'];
-  const h=await app(t,{scope,configure:f=>{const s=JSON.parse(f.data.get(f.keys.main));s.gacha.owned.push(...ids);s.gacha.draws=44;s.gacha.future={raw:['keep',null]};s.future={nested:{keep:true}};f.data.set(f.keys.main,JSON.stringify(s));}});assert.equal(h.app.state.gacha.owned.length,44);assert.deepEqual(copy(h.app.state.gacha.future),{raw:['keep',null]});assert.deepEqual(copy(h.app.state.future),{nested:{keep:true}});assert.equal(h.initialE.gachaRemaining(h.app.state).length,4);assert.deepEqual(copy(h.app.state.collectiblesV1.grants),{});
+  const h=await app(t,{scope,configure:f=>{const s=JSON.parse(f.data.get(f.keys.main));s.gacha.owned.push(...ids);s.gacha.draws=44;s.gacha.future={raw:['keep',null]};s.future={nested:{keep:true}};f.data.set(f.keys.main,JSON.stringify(s));}});assert.equal(h.app.state.gacha.owned.length,44);assert.deepEqual(copy(h.app.state.gacha.future),{raw:['keep',null]});assert.deepEqual(copy(h.app.state.future),{nested:{keep:true}});assert.equal(h.initialE.gachaRemaining(h.app.state).length,12);assert.deepEqual(copy(h.app.state.collectiblesV1.grants),{});
  });
  test(scope+': failed claim main write does not publish ownership or replay on read-only reconcile',async t=>{
   // Fail only the claim write (after the pre-claim gameplay flush).

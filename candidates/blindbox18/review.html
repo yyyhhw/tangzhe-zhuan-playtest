@@ -1,0 +1,8 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>盲盒18 · 隔离渲染复核</title>
+<style>body{font:14px system-ui;background:#f4ecdf;color:#302a27;margin:16px}h1{font-size:22px}section{margin:24px 0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}.card{background:white;border:1px solid #cbbba8;border-radius:12px;padding:10px;text-align:center}canvas{max-width:100%;height:auto}.note{max-width:900px;line-height:1.6}.people{display:flex;flex-wrap:wrap;justify-content:center}.item-art img{width:100px}.t,.preview-note{display:block}.item{border-top:1px solid #ccc;padding:8px}small{display:block}button,select{font:inherit;padding:8px}#pose canvas{width:160px}#scene{max-width:100%}</style>
+<h1>盲盒18 · 第二批八件候选</h1><p class="note">仅合成目录与穿戴，无真实存档、抽奖或迁移。烧烤主题，四位店主均可穿。图鉴与穿戴共用 Canvas 几何；没有已审批 flavor，不显示该段。正式准入由主线统一处理。</p>
+<section><h2>图鉴与 12 / 24 / 32 缩略</h2><div id="catalog" class="grid"></div></section>
+<section><h2>四位 CEO · 衣柜挥手</h2><div id="wardrobe" class="grid"></div></section>
+<section><h2>店铺人物挂点 / 家宅坐卧挂点</h2><p>使用当前 app.js 人物函数与 home-interaction.js drawPose；此处为挂点隔离画板，不是完整游戏页面。</p><select id="choice"></select><div id="pose" class="people"></div><canvas id="scene" width="390" height="260"></canvas></section>
+<section><h2>目录文案（合成已拥有 / 未拥有）</h2><div id="copy" class="grid"></div></section>
+<script type="module" src="./review.mjs"></script>

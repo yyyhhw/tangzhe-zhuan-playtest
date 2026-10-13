@@ -1,0 +1,112 @@
+[
+  {
+    "width": 320,
+    "owned": 58,
+    "clicks": [
+      {
+        "id": "d_borrow_register",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      },
+      {
+        "id": "d_rocket_piggy",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      },
+      {
+        "id": "d_opening_photo",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      },
+      {
+        "id": "d_ward_charm",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      },
+      {
+        "id": "d_charcoal_chime",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      },
+      {
+        "id": "d_spice_turntable",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      }
+    ],
+    "saveMsAt4x": [
+      177.10000000009313,
+      165.30000000004657,
+      151.19999999995343,
+      153.4000000001397,
+      171.69999999995343,
+      190.19999999995343,
+      185.4000000001397,
+      158.20000000018626
+    ],
+    "errors": [],
+    "blocked": false,
+    "note": "Automated interaction evidence only; visually inspect all screenshots before acceptance"
+  },
+  {
+    "width": 390,
+    "owned": 58,
+    "clicks": [
+      {
+        "id": "d_borrow_register",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      },
+      {
+        "id": "d_rocket_piggy",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      },
+      {
+        "id": "d_opening_photo",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      },
+      {
+        "id": "d_ward_charm",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      },
+      {
+        "id": "d_charcoal_chime",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      },
+      {
+        "id": "d_spice_turntable",
+        "width": 60,
+        "height": 44,
+        "withinViewport": true
+      }
+    ],
+    "saveMsAt4x": [
+      186.89999999990687,
+      167,
+      157.20000000018626,
+      158.5,
+      167.5999999998603,
+      165,
+      158.30000000004657,
+      168.10000000009313
+    ],
+    "errors": [],
+    "blocked": false,
+    "note": "Automated interaction evidence only; visually inspect all screenshots before acceptance"
+  }
+]
