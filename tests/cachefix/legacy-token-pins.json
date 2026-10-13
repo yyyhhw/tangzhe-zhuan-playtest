@@ -1,0 +1,126 @@
+{
+  "index.html pet/game/petgame.css?v=15c": {
+    "path": "pet/game/petgame.css",
+    "sha256": "085a9ee656932d6ef5674078d170b7c7337cc9c7d72753d8f289e9d13c9707ba"
+  },
+  "index.html zombie/zbcore.js?v=15c": {
+    "path": "zombie/zbcore.js",
+    "sha256": "8bc6d71cf9e286b767403a70856ab4090a9f22ac599e66095290b3f5ed49ae49"
+  },
+  "index.html td/tdcore.js?v=tower39-copy34-clean01-20261012-r1": {
+    "path": "td/tdcore.js",
+    "sha256": "4c36596cec7f4043c15faf143536e76f31c0d34d14bd40f20890b38c1efed1ed"
+  },
+  "index.html td/tdwaves.js?v=15e-td-campaign-exp1-20261008": {
+    "path": "td/tdwaves.js",
+    "sha256": "2e5d16db671bc525cd9c35dd6b005e4ae88dc3474482757a546e2b08a1ceda71"
+  },
+  "index.html td/tdprogress.js?v=15e-td-campaign-exp1-20261008": {
+    "path": "td/tdprogress.js",
+    "sha256": "fba6ad9ca5bdf8469bf66b35c85e1c4da290ddafee0060c625b8db7fbb26ed1d"
+  },
+  "index.html td/tdcampaign.js?v=15e-td-campaign-exp1-20261008": {
+    "path": "td/tdcampaign.js",
+    "sha256": "f6608defb935737bfcd0f59691fc3b971e61ff3a49e28d067e20a0f92a892c8b"
+  },
+  "index.html td/tdcampaign-progress.js?v=15e-td-campaign-exp1-20261008": {
+    "path": "td/tdcampaign-progress.js",
+    "sha256": "e4e2c2add03e61e9d69cb42404614bdb113310c28733d61de2bf7d0bcfd332e5"
+  },
+  "index.html td/tdupgrade-receipts.js?v=formal-cards-candidate-7": {
+    "path": "td/tdupgrade-receipts.js",
+    "sha256": "c58a5cc6e1815dcb778aeda944773c186234509a4c71c1e8a73316f10d604860"
+  },
+  "index.html td/tdhost.js?v=tea-td-cards-out-20261012-r1": {
+    "path": "td/tdhost.js",
+    "sha256": "3dd8c4775873e4d60cb4fa047c428cb04e1b890786de1a13276f85f7839bc9d8"
+  },
+  "index.html pet/art.js?v=15c": {
+    "path": "pet/art.js",
+    "sha256": "0ef3344c4059e932b5df69e3ee8248406cbb9f9cb82e3be606c2f8df930e7903"
+  },
+  "index.html pet/puppy.js?v=15c": {
+    "path": "pet/puppy.js",
+    "sha256": "c3ece70109abdd721257872a0c43ac39ce5f84f56dd8f92c92c7068ab0ab3c13"
+  },
+  "index.html pet/room.js?v=15c": {
+    "path": "pet/room.js",
+    "sha256": "3f837ae9795edd47a792ce62c4ec6486ab0fe6d7fa75063d0a824e821b8b9a95"
+  },
+  "index.html pet/engine.js?v=15c": {
+    "path": "pet/engine.js",
+    "sha256": "00c553958c93f1e511d0556fcee49f635bcdfeada4e5798fd83e41a0ff1c976e"
+  },
+  "index.html pet/companions.js?v=15c": {
+    "path": "pet/companions.js",
+    "sha256": "e3a93e7ac77270d3053268b0bf933e6d0d1aae5d81ff10d39bf949257cb03e6c"
+  },
+  "index.html pet/game/petgame.js?v=15c": {
+    "path": "pet/game/petgame.js",
+    "sha256": "db2a70bea532902aeffeea3c7cc85db4aa4ce3f04b74b46e76b13b40294e00e0"
+  },
+  "index.html upgrade-snapshot.js?v=15c": {
+    "path": "upgrade-snapshot.js",
+    "sha256": "dbee2c687f47c2b55e3f127e710c2ab48e427d38beca7694c21d91f8d71733cc"
+  },
+  "index.html audio/loop-music.js?v=formal-cards-audio-candidate-8-r3": {
+    "path": "audio/loop-music.js",
+    "sha256": "a0e71dda479ee35a6f87169220a6336344623db01176bb349474fee8c75d0a2b"
+  },
+  "pet/game/index.html petgame.css?v=15c": {
+    "path": "pet/game/petgame.css",
+    "sha256": "085a9ee656932d6ef5674078d170b7c7337cc9c7d72753d8f289e9d13c9707ba"
+  },
+  "pet/game/index.html ../../td/tdcore.js?v=tower39-copy34-clean01-20261012-r1": {
+    "path": "td/tdcore.js",
+    "sha256": "4c36596cec7f4043c15faf143536e76f31c0d34d14bd40f20890b38c1efed1ed"
+  },
+  "pet/game/index.html ../../td/tdwaves.js?v=15e-td-campaign-exp1-20261008": {
+    "path": "td/tdwaves.js",
+    "sha256": "2e5d16db671bc525cd9c35dd6b005e4ae88dc3474482757a546e2b08a1ceda71"
+  },
+  "pet/game/index.html ../../td/tdprogress.js?v=15e-td-campaign-exp1-20261008": {
+    "path": "td/tdprogress.js",
+    "sha256": "fba6ad9ca5bdf8469bf66b35c85e1c4da290ddafee0060c625b8db7fbb26ed1d"
+  },
+  "pet/game/index.html ../../td/tdcampaign.js?v=15e-td-campaign-exp1-20261008": {
+    "path": "td/tdcampaign.js",
+    "sha256": "f6608defb935737bfcd0f59691fc3b971e61ff3a49e28d067e20a0f92a892c8b"
+  },
+  "pet/game/index.html ../../td/tdcampaign-progress.js?v=15e-td-campaign-exp1-20261008": {
+    "path": "td/tdcampaign-progress.js",
+    "sha256": "e4e2c2add03e61e9d69cb42404614bdb113310c28733d61de2bf7d0bcfd332e5"
+  },
+  "pet/game/index.html ../../td/tdupgrade-receipts.js?v=formal-cards-candidate-7": {
+    "path": "td/tdupgrade-receipts.js",
+    "sha256": "c58a5cc6e1815dcb778aeda944773c186234509a4c71c1e8a73316f10d604860"
+  },
+  "pet/game/index.html ../art.js?v=15c": {
+    "path": "pet/art.js",
+    "sha256": "0ef3344c4059e932b5df69e3ee8248406cbb9f9cb82e3be606c2f8df930e7903"
+  },
+  "pet/game/index.html ../puppy.js?v=15c": {
+    "path": "pet/puppy.js",
+    "sha256": "c3ece70109abdd721257872a0c43ac39ce5f84f56dd8f92c92c7068ab0ab3c13"
+  },
+  "pet/game/index.html ../room.js?v=15c": {
+    "path": "pet/room.js",
+    "sha256": "3f837ae9795edd47a792ce62c4ec6486ab0fe6d7fa75063d0a824e821b8b9a95"
+  },
+  "pet/game/index.html ../engine.js?v=15c": {
+    "path": "pet/engine.js",
+    "sha256": "00c553958c93f1e511d0556fcee49f635bcdfeada4e5798fd83e41a0ff1c976e"
+  },
+  "pet/game/index.html ../companions.js?v=15c": {
+    "path": "pet/companions.js",
+    "sha256": "e3a93e7ac77270d3053268b0bf933e6d0d1aae5d81ff10d39bf949257cb03e6c"
+  },
+  "pet/game/index.html petgame.js?v=15c": {
+    "path": "pet/game/petgame.js",
+    "sha256": "db2a70bea532902aeffeea3c7cc85db4aa4ce3f04b74b46e76b13b40294e00e0"
+  },
+  "pet/game/index.html ../../upgrade-snapshot.js?v=15c": {
+    "path": "upgrade-snapshot.js",
+    "sha256": "dbee2c687f47c2b55e3f127e710c2ab48e427d38beca7694c21d91f8d71733cc"
+  }
+}

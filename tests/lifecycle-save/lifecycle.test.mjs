@@ -19,5 +19,5 @@ for(const scope of ['formal','preview']) {
 
 test('protected implementations and explicit reviewed decor16 extensions retain their fingerprints',async()=>{
  const fs=await import('node:fs');const {createHash}=await import('node:crypto');const manifest=JSON.parse(fs.readFileSync(new URL('./protection-integrity.json',import.meta.url)));
- for(const row of manifest.files){const bytes=fs.readFileSync(new URL('../../'+row.path,import.meta.url),'utf8').replaceAll('autoupgrade-20261013-r2','autosave15-candidate-20261013-r2');assert.equal(createHash('sha256').update(bytes).digest('hex'),row.sha256,row.path);}
+ for(const row of manifest.files){const bytes=fs.readFileSync(new URL('../../'+row.path,import.meta.url),'utf8').replaceAll('cachefix-20261013-r1','autosave15-candidate-20261013-r2');assert.equal(createHash('sha256').update(bytes).digest('hex'),row.sha256,row.path);}
 });

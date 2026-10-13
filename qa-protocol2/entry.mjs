@@ -1,14 +1,14 @@
 /** QA-only real-page composition. No production route, seeding, or automatic consent. */
-import {installRealPageStorageGuard,validateRealPageQAGate} from './guard/storage-boundary.mjs?v=autoupgrade-20261013-r2';
-import {createRealPageQAStorage} from './host-storage.mjs?v=autoupgrade-20261013-r2';
-import {createRealPageQAFacade} from './real-page-facade.mjs?v=autoupgrade-20261013-r2';
-import {createMigrationPlanner} from './vendor/planner/migration.mjs?v=autoupgrade-20261013-r2';
-import * as codec from './vendor/codec/snapshot-codec.mjs?v=autoupgrade-20261013-r2';
-import {createPetDomain} from './vendor/runtime/pet-domain.mjs?v=autoupgrade-20261013-r2';
-import {createProtocol2Validator} from './vendor/runtime/validator.mjs?v=autoupgrade-20261013-r2';
-import {createCardAwareSession} from './vendor/cards/card-coordinator.mjs?v=autoupgrade-20261013-r2';
-import {createHostModel} from './vendor/host/host-model.mjs?v=autoupgrade-20261013-r2';
-import {prepareEightWearableCatalog} from './eight-catalog.mjs?v=autoupgrade-20261013-r2';
+import {installRealPageStorageGuard,validateRealPageQAGate} from './guard/storage-boundary.mjs?v=cachefix-20261013-r1';
+import {createRealPageQAStorage} from './host-storage.mjs?v=cachefix-20261013-r1';
+import {createRealPageQAFacade} from './real-page-facade.mjs?v=cachefix-20261013-r1';
+import {createMigrationPlanner} from './vendor/planner/migration.mjs?v=cachefix-20261013-r1';
+import * as codec from './vendor/codec/snapshot-codec.mjs?v=cachefix-20261013-r1';
+import {createPetDomain} from './vendor/runtime/pet-domain.mjs?v=cachefix-20261013-r1';
+import {createProtocol2Validator} from './vendor/runtime/validator.mjs?v=cachefix-20261013-r1';
+import {createCardAwareSession} from './vendor/cards/card-coordinator.mjs?v=cachefix-20261013-r1';
+import {createHostModel} from './vendor/host/host-model.mjs?v=cachefix-20261013-r1';
+import {prepareEightWearableCatalog} from './eight-catalog.mjs?v=cachefix-20261013-r1';
 export const PRODUCTION_PROTOCOL2_ENABLED=false;
 const clone=x=>JSON.parse(JSON.stringify(x));
 async function loadClassic(url){await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=url.href;s.onload=resolve;s.onerror=()=>reject(Error('QA_LEGACY_ECONOMY_LOAD_FAILED'));document.head.append(s);});}
@@ -42,7 +42,7 @@ export async function launchRealPageQA(options){
     try{
       const model=createApprovedTrialModel(config,{schemaVersion:1,approvedConfigCanonical:canonical(config),evidenceRefs:approvalEvidence,walletBridgeApproved:false});
       let legacyE;
-      try{await loadClassic(new URL('economy.js?qaLegacyValidator=1&v=autoupgrade-20261013-r2',sourceBase));legacyE=globalThis.Economy;}finally{globalThis.Economy=E;}
+      try{await loadClassic(new URL('economy.js?qaLegacyValidator=1&v=cachefix-20261013-r1',sourceBase));legacyE=globalThis.Economy;}finally{globalThis.Economy=E;}
       if(!lease.owns()||!legacyE||legacyE===E)throw Error('QA_LEGACY_ECONOMY_INSTANCE_REQUIRED');
       const legacy=createLegacyCoordinator({storage,economy:legacyE,model,ownsLock:lease.owns});
       const install=scope==='formal'?'installFormalCollectionProtocol':'installPreviewCollectionProtocol';legacyE[install](legacy);
@@ -58,12 +58,12 @@ export async function launchRealPageQA(options){
           const current=facade.coordinator.current();if(!current.ok)throw Error(current.code);
           const qaWearables8=!!wearableCatalog&&current.state._collectionProtocol===2;
           wearableCatalog?.setActive(qaWearables8);
-          if(qaWearables8){const display=await import('./wearables8-display.mjs?v=autoupgrade-20261013-r2');if(!lease.owns())throw Error('QA_DISPLAY_LOADED_AFTER_REVOKE');globalThis.QAWearables8Display=display.default;}
+          if(qaWearables8){const display=await import('./wearables8-display.mjs?v=cachefix-20261013-r1');if(!lease.owns())throw Error('QA_DISPLAY_LOADED_AFTER_REVOKE');globalThis.QAWearables8Display=display.default;}
           const runtime={keys,storage,model,qaWearables8,qa:true,qaScope:scope,qaProtocol2:true,entryEnabled:true,ownsLock:lease.owns,coordinator:facade.coordinator,
             logicalStorageKey:storage.logicalKey,handle:message=>facade.card(message),snapshot:()=>facade.snapshot(),reconcile:()=>facade.reconcile()};
           globalThis[scope==='formal'?'FormalCollectionRuntime':'PreviewCollectionRuntime']=runtime;
           const pet=scope==='formal'&&location.pathname.startsWith('/pet/game/');
-          await import(new URL(pet?'pet/game/app.js?qaProtocol2=1&v=autoupgrade-20261013-r2':'app.js?qaProtocol2=1&v=autoupgrade-20261013-r2',sourceBase));
+          await import(new URL(pet?'pet/game/app.js?qaProtocol2=1&v=cachefix-20261013-r1':'app.js?qaProtocol2=1&v=cachefix-20261013-r1',sourceBase));
           if(!lease.owns())throw Error('QA_APP_LOADED_AFTER_REVOKE');
           const attached=facade.attachApp(globalThis.__tzz,{enabled:true,randomInt:n=>secureRandomInt(crypto,n),makeId:()=>`tx:${crypto.randomUUID()}`});
           if(!attached.ok)throw Error(attached.code);appStarted=true;
