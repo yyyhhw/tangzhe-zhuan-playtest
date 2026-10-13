@@ -142,6 +142,9 @@ function fmtDur(sec) {
   return s + '秒';
 }
 function fmtClockLocal(ts) { const d = new Date(ts); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+// 盲盒-92：每天 5 次用完后写清什么时候恢复（本机时间；恢复时刻跟每日双倍同一个切日点，切日规则改了这里自动跟着变）
+function gachaResetText(t) { const r = E.nextResetTs(t); return (new Date(r).toDateString() === new Date(t).toDateString() ? '今天 ' : '明天 ') + fmtClockLocal(r) + ' 恢复'; }
+let gachaShownDay = null;   // 盲盒页按哪一天画的；停在盲盒页跨过切日点就重画，「今日剩余」和按钮自动恢复
 
 /* ================= 声音（切后台/锁屏立即暂停） ================= */
 const AU = { ctx:null, master:null, bgm:null, sfx:null, timer:null, nextT:0, step:0, started:false };
@@ -1441,6 +1444,7 @@ function renderCeo() {
 }
 function renderGacha() {
   const owned = E.ITEMS.filter(x=>x.hidden!==true&&state.gacha.owned.includes(x.id)).length, total = E.REGULAR_ITEMS.length + E.SUPER_ITEMS.length, rem = total - owned, unlocked = E.gachaUnlocked(state), price = E.gachaPrice(state), o = E.gachaOdds(state), dailyLeft = E.gachaDailyLeft(state, now());
+  gachaShownDay = E.dayKey(now());
   const box = `<svg viewBox="0 0 84 84"><rect x="10" y="30" width="64" height="46" rx="4" fill="${unlocked ? '#ffd23f' : '#ccc'}" stroke="#141414" stroke-width="4"/><rect x="6" y="20" width="72" height="16" rx="3" fill="${unlocked ? '#e63946' : '#aaa'}" stroke="#141414" stroke-width="4"/><rect x="36" y="20" width="12" height="56" fill="#fff" stroke="#141414" stroke-width="3"/><path d="M42 20 C30 4 18 10 26 20 M42 20 C54 4 66 10 58 20" fill="none" stroke="#141414" stroke-width="4"/><text x="42" y="64" font-size="18" font-weight="900" text-anchor="middle" fill="#141414">${unlocked ? '?' : '🔒'}</text></svg>`;
   const P = x => (x * 100 >= 10 || x === 0 ? (x * 100).toFixed(0) : (x * 100).toFixed(1)) + '%';
   const ownS = E.SUPER_ITEMS.filter(it => state.gacha.owned.includes(it.id)).length, ownR = owned - ownS;
@@ -1450,8 +1454,8 @@ function renderGacha() {
   } else {
     h += `<div class="box-hero"><div class="box-ico" id="boxIco">${box}</div><div class="info"><div class="name">已收集 ${owned}/${total}</div>
       <div class="desc">${rem ? `下一抽：<b>超级装饰 ${P(o.superP)}</b>${o.remSuper ? `（每件 ${P(o.perSuper)}）` : ''} · 普通收藏 ${P(o.regP)}${o.remReg ? `（每件 ${P(o.perReg)}）` : ''}<br>${o.remSuper ? (o.guaranteed ? '<b style="color:var(--red)">这一抽必出超级装饰！</b>' : `保底：再 <b>${o.pityLeft}</b> 抽内必出超级装饰`) : '超级装饰已集齐'}` : `${total} 件全收集！`}</div>
-      <div style="margin-top:6px">${!rem ? '<button class="buy no" disabled>已集齐</button>' : dailyLeft > 0 ? btn('draw', '', '开一个', price, 'red') : `<button class="buy no" id="gachaDailyDone" disabled>今天的 ${E.CFG.GACHA_DAILY_LIMIT} 次已开完，明天再来</button>`}</div>
-      ${rem ? `<div class="desc" id="gachaDailyLeft" style="margin-top:4px">今日剩余 ${dailyLeft}/${E.CFG.GACHA_DAILY_LIMIT}</div>` : ''}</div></div>`;
+      <div style="margin-top:6px">${!rem ? '<button class="buy no" disabled>已集齐</button>' : dailyLeft > 0 ? btn('draw', '', '开一个', price, 'red') : `<button class="buy no" id="gachaDailyDone" disabled>今天的 ${E.CFG.GACHA_DAILY_LIMIT} 次已开完</button>`}</div>
+      ${rem ? `<div class="desc" id="gachaDailyLeft" style="margin-top:4px">今日剩余 ${dailyLeft}/${E.CFG.GACHA_DAILY_LIMIT}${dailyLeft > 0 ? '' : ' · ' + gachaResetText(now())}</div>` : ''}</div></div>`;
   }
   h += `<div class="sec-title">超级装饰 ${ownS}/${E.SUPER_ITEMS.length}（每店一件，只能抽到）</div>`;
   h += E.SUPER_ITEMS.map(it => { const has = state.gacha.owned.includes(it.id);
@@ -1571,6 +1575,7 @@ function refreshDynamic(force) {
   const dc = $('#dailyChip'), can = E.canDouble(state, t);
   const dtxt = can ? '今日双倍 ✓' : '双倍 ' + fmtClockLocal(E.nextResetTs(t)) + ' 重置'; if (dc.textContent !== dtxt) dc.textContent = dtxt;
   dc.className = 'chip ' + (can ? 'on' : 'used');
+  if (tab === 'gacha' && gachaShownDay && E.dayKey(t) !== gachaShownDay) { gachaShownDay = null; dirty = true; }   // 盲盒-92：跨过切日点自动刷新
   // 按钮可买状态
   tabBody.querySelectorAll('[data-cost]').forEach(b => b.classList.toggle('no', !E.canAfford(state, +b.dataset.cost)));
   refreshCrit();   // 暴击说明不受 900ms 限制：连击中 / 刚断连都马上对上店景 HUD
