@@ -1,0 +1,230 @@
+[
+  {
+    "path": "/",
+    "action": "reload",
+    "memoryBefore": 567829773,
+    "diskBefore": 565628439,
+    "diskAfter": 565628439,
+    "savedTail": false,
+    "reopened": {
+      "coins": 566757363,
+      "pending": null,
+      "blocked": false
+    },
+    "reopenedCoinsPlusPending": 566757363,
+    "trace": [
+      {
+        "kind": "main-write",
+        "blocked": false,
+        "owns": true,
+        "coins": 561951395,
+        "at": 1791859927590
+      },
+      {
+        "kind": "main-write",
+        "blocked": false,
+        "owns": true,
+        "coins": 565628439,
+        "at": 1791859942608
+      },
+      {
+        "kind": "pagehide-1-start",
+        "blocked": false,
+        "owns": true,
+        "coins": 567833932,
+        "at": 1791859951626
+      },
+      {
+        "kind": "pagehide-1-end",
+        "blocked": false,
+        "owns": true,
+        "coins": 567833932,
+        "at": 1791859951626
+      },
+      {
+        "kind": "pagehide-1-microtask",
+        "blocked": true,
+        "owns": false,
+        "coins": 567833932,
+        "at": 1791859951630
+      },
+      {
+        "kind": "pagehide-2-start",
+        "blocked": true,
+        "owns": false,
+        "coins": 567833932,
+        "at": 1791859951632
+      },
+      {
+        "kind": "pagehide-2-end",
+        "blocked": true,
+        "owns": false,
+        "coins": 567833932,
+        "at": 1791859951632
+      },
+      {
+        "kind": "pagehide-2-microtask",
+        "blocked": true,
+        "owns": false,
+        "coins": 567833932,
+        "at": 1791859951632
+      },
+      {
+        "kind": "pagehide-3-start",
+        "blocked": true,
+        "owns": false,
+        "coins": 567833932,
+        "at": 1791859951632
+      },
+      {
+        "kind": "pagehide-3-end",
+        "blocked": true,
+        "owns": false,
+        "coins": 567833932,
+        "at": 1791859951632
+      },
+      {
+        "kind": "pagehide-3-microtask",
+        "blocked": true,
+        "owns": false,
+        "coins": 567833932,
+        "at": 1791859951632
+      },
+      {
+        "kind": "pagehide-4-start",
+        "blocked": true,
+        "owns": false,
+        "coins": 567833932,
+        "at": 1791859951632
+      },
+      {
+        "kind": "pagehide-4-end",
+        "blocked": true,
+        "owns": false,
+        "coins": 567833932,
+        "at": 1791859951632
+      },
+      {
+        "kind": "pagehide-4-microtask",
+        "blocked": true,
+        "owns": false,
+        "coins": 567833932,
+        "at": 1791859951632
+      }
+    ]
+  },
+  {
+    "path": "/",
+    "action": "close",
+    "memoryBefore": 570899848,
+    "diskBefore": 568694600,
+    "diskAfter": 568694600,
+    "savedTail": false,
+    "reopened": {
+      "coins": 569854349,
+      "pending": null,
+      "blocked": false
+    },
+    "reopenedCoinsPlusPending": 569854349,
+    "trace": [
+      {
+        "kind": "main-write",
+        "blocked": false,
+        "owns": true,
+        "coins": 565020981,
+        "at": 1791859952609
+      },
+      {
+        "kind": "main-write",
+        "blocked": false,
+        "owns": true,
+        "coins": 568694600,
+        "at": 1791859967631
+      },
+      {
+        "kind": "pagehide-1-start",
+        "blocked": false,
+        "owns": true,
+        "coins": 570899848,
+        "at": 1791859976649
+      },
+      {
+        "kind": "pagehide-1-end",
+        "blocked": false,
+        "owns": true,
+        "coins": 570899848,
+        "at": 1791859976649
+      },
+      {
+        "kind": "pagehide-1-microtask",
+        "blocked": true,
+        "owns": false,
+        "coins": 570899848,
+        "at": 1791859976651
+      },
+      {
+        "kind": "pagehide-2-start",
+        "blocked": true,
+        "owns": false,
+        "coins": 570899848,
+        "at": 1791859976652
+      },
+      {
+        "kind": "pagehide-2-end",
+        "blocked": true,
+        "owns": false,
+        "coins": 570899848,
+        "at": 1791859976652
+      },
+      {
+        "kind": "pagehide-2-microtask",
+        "blocked": true,
+        "owns": false,
+        "coins": 570899848,
+        "at": 1791859976652
+      },
+      {
+        "kind": "pagehide-3-start",
+        "blocked": true,
+        "owns": false,
+        "coins": 570899848,
+        "at": 1791859976652
+      },
+      {
+        "kind": "pagehide-3-end",
+        "blocked": true,
+        "owns": false,
+        "coins": 570899848,
+        "at": 1791859976652
+      },
+      {
+        "kind": "pagehide-3-microtask",
+        "blocked": true,
+        "owns": false,
+        "coins": 570899848,
+        "at": 1791859976652
+      },
+      {
+        "kind": "pagehide-4-start",
+        "blocked": true,
+        "owns": false,
+        "coins": 570899848,
+        "at": 1791859976652
+      },
+      {
+        "kind": "pagehide-4-end",
+        "blocked": true,
+        "owns": false,
+        "coins": 570899848,
+        "at": 1791859976652
+      },
+      {
+        "kind": "pagehide-4-microtask",
+        "blocked": true,
+        "owns": false,
+        "coins": 570899848,
+        "at": 1791859976652
+      }
+    ]
+  }
+]

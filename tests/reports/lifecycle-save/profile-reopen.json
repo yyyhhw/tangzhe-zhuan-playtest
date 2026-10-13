@@ -1,0 +1,17 @@
+[
+  {
+    "path": "/",
+    "savedTail": true,
+    "newPersistentContextExactRaw": true
+  },
+  {
+    "path": "/preview/",
+    "savedTail": true,
+    "newPersistentContextExactRaw": true
+  },
+  {
+    "path": "/pet/game/",
+    "savedTail": true,
+    "newPersistentContextExactRaw": true
+  }
+]

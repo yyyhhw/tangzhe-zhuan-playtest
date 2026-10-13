@@ -7,7 +7,7 @@ const COLLECTION = window.FormalCollectionRuntime;
 if (!COLLECTION?.ownsLock()) {
   // Stale HTML can fetch a new script before bootstrap. No storage access here.
   const url=new URL(location.href);
-  if(url.searchParams.get('v')!=='formal-autosave15-candidate-20261013-r2') {url.searchParams.set('v','formal-autosave15-candidate-20261013-r2');location.replace(url.href);}
+  if(url.searchParams.get('v')!=='formal-lifecycle-save-candidate-20261013-r1') {url.searchParams.set('v','formal-lifecycle-save-candidate-20261013-r1');location.replace(url.href);}
   else {const notice=document.createElement('p');notice.textContent='页面资源尚未更新完整，存档未写入。请关闭此页后重新打开。';document.body.prepend(notice);}
   return;
 }
@@ -2506,7 +2506,8 @@ function onShow() {
   tick(); audioResume(); lastFrame = performance.now(); petResume();
 }
 document.addEventListener('visibilitychange', () => { if (document.hidden) onHide(); else onShow(); });
-window.addEventListener('pagehide', onHide);
+if (COLLECTION.registerPageHide) COLLECTION.registerPageHide(onHide);
+else window.addEventListener('pagehide', onHide);
 window.addEventListener('pageshow', e => { if (e.persisted) onShow(); });
 window.addEventListener('blur', () => { if (!frozen && !petManual) persist(); });
 let resizeT = 0;

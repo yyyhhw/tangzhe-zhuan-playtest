@@ -1,0 +1,45 @@
+{
+  "baseline": "7ce857d2cccb06a9d4ab2b2531f4d5c1a4041cab",
+  "files": [
+    {
+      "path": "economy.js",
+      "sha256": "c2abc463c6612361a24feace0a697df86bf72f9a04a8148e112b6dd55e20a91a",
+      "unchangedAfterReleaseTokenNormalization": true
+    },
+    {
+      "path": "preview/economy.js",
+      "sha256": "ab0921e44ceae1f1694c345dd41cedc38c987b156b5db9ea4eb715388bf10f5f",
+      "unchangedAfterReleaseTokenNormalization": true
+    },
+    {
+      "path": "pet/game/economy.js",
+      "sha256": "4475552c124117f06322335a7befd168b51a0c6236b38446565d0030c41c14be",
+      "unchangedAfterReleaseTokenNormalization": true
+    },
+    {
+      "path": "qa-protocol2/vendor/runtime/validator.mjs",
+      "sha256": "a6619f521e2d3c63945ab64ceff3cb0f1d44a39becac07bb3d045992aa0b484a",
+      "unchangedAfterReleaseTokenNormalization": true
+    },
+    {
+      "path": "qa-protocol2/vendor/cards/card-coordinator.mjs",
+      "sha256": "82bf35fb2593a8ce6c5286fcd778409dc05380991ec9b1793457d7569b37c6d7",
+      "unchangedAfterReleaseTokenNormalization": true
+    },
+    {
+      "path": "qa-protocol2/real-page-facade.mjs",
+      "sha256": "2de83c71863a298369df5aa05a66b0e4e7fbd18de2d608b425e76f47414662ad",
+      "unchangedAfterReleaseTokenNormalization": true
+    },
+    {
+      "path": "qa-protocol2/vendor/planner/migration.mjs",
+      "sha256": "6711aad4117109b4c05bbc36d5c6d1189cc59bcfa680d0465eaf9e1756356bb2",
+      "unchangedAfterReleaseTokenNormalization": true
+    },
+    {
+      "path": "collectibles/storage.mjs",
+      "sha256": "3b934e7ee152a582abd415efeb3385c23cb980abe7542c7855d77f02edb6ffd3",
+      "unchangedAfterReleaseTokenNormalization": true
+    }
+  ]
+}
