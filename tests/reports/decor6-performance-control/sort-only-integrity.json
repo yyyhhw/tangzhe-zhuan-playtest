@@ -1,0 +1,21 @@
+{
+  "logicalDifferences": {
+    "rev": {
+      "C": 26,
+      "E": 28
+    }
+  },
+  "C_historyKeyOrder": [
+    "id",
+    "evidence",
+    "known",
+    "extra"
+  ],
+  "E_historyKeyOrder": [
+    "evidence",
+    "extra",
+    "id",
+    "known"
+  ],
+  "originalEvidenceUnchanged": true
+}

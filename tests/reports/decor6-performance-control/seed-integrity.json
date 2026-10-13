@@ -1,0 +1,42 @@
+{
+  "A": {
+    "mainChars": 515013,
+    "mainUtf8Bytes": 515022,
+    "mainSha256": "d8556535fb124c2f5e80c7ace723bb9badecfdf0b5342b07d59e5390c62ef5de",
+    "owned": 52,
+    "evidence": {
+      "tangzhe-formal-collectibles-v2-original": "eea465c859be7ecbc26e97f80cf4ea47ffe24e49c384084c15c46e847f6f4b6f",
+      "tangzhe-formal-collection-v1-original": "34e1b6ea95246d5b0c84930011c1c055840c7cc4fa935c157d0ecdd70e761388"
+    }
+  },
+  "B": {
+    "mainChars": 515013,
+    "mainUtf8Bytes": 515022,
+    "mainSha256": "d8556535fb124c2f5e80c7ace723bb9badecfdf0b5342b07d59e5390c62ef5de",
+    "owned": 52,
+    "evidence": {
+      "tangzhe-formal-collectibles-v2-original": "eea465c859be7ecbc26e97f80cf4ea47ffe24e49c384084c15c46e847f6f4b6f",
+      "tangzhe-formal-collection-v1-original": "34e1b6ea95246d5b0c84930011c1c055840c7cc4fa935c157d0ecdd70e761388"
+    }
+  },
+  "C": {
+    "mainChars": 515097,
+    "mainUtf8Bytes": 515106,
+    "mainSha256": "51cd18ff520aae25bccb10b31d826bf237614690506001401309273be7531123",
+    "owned": 56,
+    "evidence": {
+      "tangzhe-formal-collectibles-v2-original": "eea465c859be7ecbc26e97f80cf4ea47ffe24e49c384084c15c46e847f6f4b6f",
+      "tangzhe-formal-collection-v1-original": "34e1b6ea95246d5b0c84930011c1c055840c7cc4fa935c157d0ecdd70e761388"
+    }
+  },
+  "D": {
+    "mainChars": 515876,
+    "mainUtf8Bytes": 515885,
+    "mainSha256": "cd1ba114f979a24c4f54b26cf34718cb193f4bd884bc6c101abb28a71113a5d3",
+    "owned": 58,
+    "evidence": {
+      "tangzhe-formal-collectibles-v2-original": "eea465c859be7ecbc26e97f80cf4ea47ffe24e49c384084c15c46e847f6f4b6f",
+      "tangzhe-formal-collection-v1-original": "34e1b6ea95246d5b0c84930011c1c055840c7cc4fa935c157d0ecdd70e761388"
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "cpu": 4,
+  "batchMeansMsPerValidation": [
+    0.245,
+    0.1125,
+    0.115,
+    0.09400000000372528,
+    0.10349999999627471,
+    0.105,
+    0.10550000000279397,
+    0.09799999999813735
+  ],
+  "medianWarmMsPerValidation": 0.10424999999813736,
+  "validationsPerOrdinaryCommit": 3
+}
