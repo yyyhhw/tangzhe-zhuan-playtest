@@ -1,4 +1,4 @@
-import {validateHiddenLedger} from '../../../collectibles/decor6-grants.mjs?v=bb70-launch-notice-20261013-r4';
+import {validateHiddenLedger} from '../../../collectibles/decor6-grants.mjs?v=home86-bb86-20261013-r1';
 /** Pure protocol2 validation: admitted catalog, immutable migration identity and
  * bounded hidden receipts. No normalization, award side effects or storage. */
 export const PROTOCOL2_RUNTIME_ENABLED=false;

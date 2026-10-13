@@ -3,8 +3,8 @@
     "path": "qa-protocol2/vendor/planner/migration.mjs",
     "sourcePackage": "collectible-compat-candidate-v2",
     "sourcePath": "module/migration.mjs",
-    "bytes": 12622,
-    "sha256": "8160d1d9cb78bf4d38194174ce6d12d8e7b3d281d9d4dd1277ff8852d453e2f2",
+    "bytes": 12608,
+    "sha256": "3e0581469cd1d2e61d68f6e373b65b0cd7d87354285cbd8bcd213036dae87475",
     "reviewedInputSha256": "5bc0536dacecbaca2f910def14ac7410a7b8c19495625604688156cb89848c49",
     "reviewedInputBytes": 12549,
     "integrationChange": "only final cache import URLs; business logic unchanged"
@@ -27,8 +27,8 @@
     "path": "qa-protocol2/vendor/codec/snapshot-codec.mjs",
     "sourcePackage": "collectible-snapshot-codec-v1",
     "sourcePath": "module/snapshot-codec.mjs",
-    "bytes": 4365,
-    "sha256": "d366a429f3928e5b4f566d880855acbee5174e90a826d4af1b2e781ecd105c0a",
+    "bytes": 4351,
+    "sha256": "17ff510f840db842d3da42350c9f532337e83e0c990e820e6a2128ed04fb7188",
     "reviewedInputSha256": "420e687372a697b79e65da6776088234b9a0e6fbd39154b2582bdbe42b4b156b",
     "reviewedInputBytes": 4299,
     "integrationChange": "only final cache import URLs; business logic unchanged"
@@ -51,8 +51,8 @@
     "path": "qa-protocol2/vendor/runtime/validator.mjs",
     "sourcePackage": "collectible-protocol2-runtime-v1",
     "sourcePath": "module/validator.mjs",
-    "bytes": 13015,
-    "sha256": "a5337875dfa305554023c75bb9f3e04039e4bc30e071b56a602a43585173b80e",
+    "bytes": 13008,
+    "sha256": "bab8a50b89de103116d4da65d6c3eb7bf23ce13a62831d0c51cac2080cbc5d09",
     "sourceSha256": "b710aa9da4c979036e980ffdbdf2f8ed46259d13c5d7ac90bf07ea42a806511a",
     "sourceBytes": 8201,
     "derivation": "Revision 2 exact boot migration markers, formal leaderboard mirror, optional source-bound pet roster transition guard; original reviewed archive unchanged. Revision 3: instance-local, single-entry cache of fully verified immutable snapshot/original raw pairs; current validation and write protections unchanged."
@@ -61,8 +61,8 @@
     "path": "qa-protocol2/vendor/cards/card-coordinator.mjs",
     "sourcePackage": "collectible-card-adapter-v1",
     "sourcePath": "module/card-coordinator.mjs",
-    "bytes": 9141,
-    "sha256": "76dfd70d13f219e33060080b1121bb69655f003456b1195f4a72537e9a450c23",
+    "bytes": 9127,
+    "sha256": "59a0e1fdebddadbe7f73ca96a1d32d8c1ffdd50e2d5af2b76af8d4c9aa439b24",
     "reviewedInputSha256": "c39527224902c835f2cc611527a5fcec2a23293adebd3b78bbb8684d2b41a034",
     "reviewedInputBytes": 8203,
     "integrationChange": "only final cache import URLs; business logic unchanged"

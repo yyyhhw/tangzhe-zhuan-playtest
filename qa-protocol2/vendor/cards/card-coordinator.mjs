@@ -1,5 +1,5 @@
-import {planHiddenClaim,validHiddenTransition} from '../../../collectibles/decor6-grants.mjs?v=bb70-launch-notice-20261013-r4';
-import {createCardTransitionGuard} from './card-transition.mjs?v=bb70-launch-notice-20261013-r4';
+import {planHiddenClaim,validHiddenTransition} from '../../../collectibles/decor6-grants.mjs?v=home86-bb86-20261013-r1';
+import {createCardTransitionGuard} from './card-transition.mjs?v=home86-bb86-20261013-r1';
 export const CARD_ADAPTER_ENABLED=false;
 /** Synthetic-adapter coordinator candidate; no global storage or automatic launch. */
 const fail=code=>{throw Error(code);};
