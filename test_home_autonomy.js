@@ -8,12 +8,13 @@ const seq = vals => { let i = 0; return () => vals[i++ % vals.length]; };
 const deps = { capability:HI.capability, liveAct:E.furnLiveAct, itemSurf:E.itemSurf };
 const all = E.FURNITURE.map((f, i) => ({ uid:'u' + i, fid:f.id, x:0, y:0, rot:0 }));
 
-ok('白名单严格复用：能躺 21 + 能坐 26（含唯一地毯）+ 书架 + 衣柜 = 49，其它一律不选', () => {
+ok('白名单严格复用：能躺 21 + 能坐 26（含唯一地毯）+ 书架 + 衣柜 = 49；家宅-57 起桌子、暖桌 2 件从「坐」改走「吃」', () => {
   const list = HA.candidates(all, deps), by = k => list.filter(c => c.kind === k).length;
-  assert.strictEqual(by('lie'), 21); assert.strictEqual(by('sit'), 25); assert.strictEqual(by('rug'), 1);
-  assert.strictEqual(by('read'), 1); assert.strictEqual(by('dress'), 1); assert.strictEqual(list.length, 49);
+  assert.strictEqual(by('lie'), 21); assert.strictEqual(by('sit'), 23); assert.strictEqual(by('eat'), 2); assert.strictEqual(by('rug'), 1);
+  assert.strictEqual(by('read'), 1); assert.strictEqual(by('dress'), 1);
+  assert.strictEqual(by('lie') + by('sit') + by('eat') + by('rug') + by('read') + by('dress'), 49);
   assert.deepStrictEqual(list.filter(c => c.kind === 'rug').map(c => c.fid), ['furn_s77_quilt_island_rug']);
-  for (const fid of ['furn_rug', 'furn_plant', 'furn_lamp', 'furn_fridge', 'furn_painting', 'furn_otaku_bunk_manga']) assert(!list.some(c => c.fid === fid), fid);
+  for (const fid of ['furn_rug', 'furn_lamp', 'furn_otaku_bunk_manga']) assert(!list.some(c => c.fid === fid), fid);   // 没给时段 → 不选灯
 });
 ok('墙面挂件即使 id 命中也不选', () => {
   assert.strictEqual(HA.candidates([{ uid:'w', fid:'furn_bed', surf:'wall' }], deps).length, 0);

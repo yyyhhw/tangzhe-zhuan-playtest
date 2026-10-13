@@ -794,3 +794,10 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 .home-actor.ha-fade{animation:haFade .5s ease}
 @keyframes haFade{0%{opacity:0}100%{opacity:1}}
 @media (prefers-reduced-motion:reduce){.home-actor.ha-fade{animation-duration:.01s}}
+
+/* 家宅-57：开灯时灯旁淡入一圈暖色光晕，离开后 1.5 秒淡出（不改房间灯光、不加遮罩、不改灯的图） */
+.furn.ha-lit{animation:haLitIn .6s ease forwards}
+.furn.ha-lit-off{animation:haLitOut 1.5s ease forwards}
+@keyframes haLitIn{from{box-shadow:2px 2px 0 rgba(20,20,20,.55),0 0 0 0 rgba(255,196,96,0)}to{box-shadow:2px 2px 0 rgba(20,20,20,.55),0 0 18px 8px rgba(255,196,96,.7)}}
+@keyframes haLitOut{from{box-shadow:2px 2px 0 rgba(20,20,20,.55),0 0 18px 8px rgba(255,196,96,.7)}to{box-shadow:2px 2px 0 rgba(20,20,20,.55),0 0 0 0 rgba(255,196,96,0)}}
+@media (prefers-reduced-motion:reduce){.furn.ha-lit,.furn.ha-lit-off{animation-duration:.01s}}
