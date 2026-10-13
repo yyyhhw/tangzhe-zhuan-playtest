@@ -14,7 +14,7 @@ for(const scope of ['formal','preview']){
  for(const corrupt of (scope==='formal'?['snapshot','original','identity']:['snapshot','identity']))test(`${scope}: corrupt P2 ${corrupt} never downgrades or overwrites evidence`,opts,async t=>{
   const h=await ready(t,{scope,protocol:2,configure:f=>{if(corrupt==='snapshot')f.data.set(`tangzhe-${scope}-collectibles-v2-original`,'bad');else if(corrupt==='original')f.data.set(f.keys.original,'bad');else{const s=JSON.parse(f.data.get(f.keys.main));s.collectiblesV1.saveLineageId='forged';f.data.set(f.keys.main,JSON.stringify(s));}}});assert.equal(h.view().canPlay,false);assert.equal(h.writes().length,0);assert.equal(h.app,undefined);assert.equal(h.node('collectibleLegacyConfirm'),null);
  });
- test(`${scope}: prepared P1 keeps evidence readonly until explicit reconcile/retry`,opts,async t=>{const h=await ready(t,{scope,prepared:true});assert.equal(h.view().phase,'prepared');assert.equal(h.writes().length,0);assert.equal(h.node('collectibleLegacyConfirm'),null);assert.equal(h.app,undefined);assert.equal(h.node('collectibleUpgradeCancel'),null);const snapshot=h.data.get(`tangzhe-${scope}-collectibles-v2-original`);await h.click('collectibleReconcile');assert.equal(h.writes().length,0);await h.click('collectibleUpgradeConfirm');await until(()=>h.app||h.settled,'prepared retry');assert.equal(h.bootError,null);assert.equal(h.app.state._collectionProtocol,2);assert.equal(h.view().canPlay,true);assert.equal(h.data.get(`tangzhe-${scope}-collectibles-v2-original`),snapshot);});
+ (scope==='formal'?test.skip:test)(`${scope}: prepared P1 keeps evidence readonly until explicit reconcile/retry`,opts,async t=>{const h=await ready(t,{scope,prepared:true});assert.equal(h.view().phase,'prepared');assert.equal(h.writes().length,0);assert.equal(h.node('collectibleLegacyConfirm'),null);assert.equal(h.app,undefined);assert.equal(h.node('collectibleUpgradeCancel'),null);const snapshot=h.data.get(`tangzhe-${scope}-collectibles-v2-original`);await h.click('collectibleReconcile');assert.equal(h.writes().length,0);await h.click('collectibleUpgradeConfirm');await until(()=>h.app||h.settled,'prepared retry');assert.equal(h.bootError,null);assert.equal(h.app.state._collectionProtocol,2);assert.equal(h.view().canPlay,true);assert.equal(h.data.get(`tangzhe-${scope}-collectibles-v2-original`),snapshot);});
  test(`${scope}: orphan snapshot with missing main is terminal, zero writes and lock release`,opts,async t=>{const h=await ready(t,{scope,prepared:true,missing:true});assert.equal(h.bootError?.message,'ORPHAN_SNAPSHOT_READ_ONLY');assert.equal(h.writes().length,0);assert.equal(h.app,undefined);assert.equal(h.node('collectibleLegacyConfirm'),null);assert.equal(h.lock.active,false);assert.equal(h.lock.released,1);});
  for(const dataMode of ['source','empty'])for(const choice of (scope==='formal'?[]:['Confirm','Cancel']))test(`${scope}: missing main ${dataMode} requires original-card consent ${choice} before collectible prompt`,opts,async t=>{
   const h=await ready(t,{scope,dataMode}),before=new Map(h.data);assert.ok(h.node('collectibleLegacyConfirm'));assert.equal(h.view(),null);assert.equal(h.writes().length,0);assert.equal(h.initialE.ITEMS.length,36);
@@ -49,5 +49,35 @@ for(const path of ['/','/pet/game/']){
  for(const dataMode of ['source','empty'])test(`formal ${path}: new player (missing main ${dataMode}) auto-consents and auto-upgrades to P2 with original archive`,opts,async t=>{
   const h=await assembly({scope:'formal',path,dataMode});t.after(()=>h.close());const before=new Map(h.data);await until(()=>h.app||h.settled,'auto');assert.equal(h.bootError,null);assert.equal(h.node('collectibleLegacyConfirm'),null);assert.equal(h.app.state._collectionProtocol,2);assert(h.app.state.coins>=(dataMode==='empty'?0:712345));
   const archive=JSON.parse(h.data.get(h.t.keys.original));assert.equal(createHash('sha256').update(archive.payload).digest('hex'),archive.sha256);for(const key of [h.t.keys.source,h.t.keys.sourceBackup].filter(Boolean))assert.equal(h.data.get(key),before.get(key));
+ });
+}
+
+// 杨总 16:30：强制自动升级无提示。(1) 上次快照/备份写失败后，下次加载存储恢复即自动续升（快照→备份→P2），不需「明确重试升级」；(2) 正常自动升级途中不闪「升级准备已保留…请先核对，再明确重试」，仅真失败显示。
+const PREPARED_TEXT=/升级准备已保留|明确重试/;
+const shown=h=>h.created.some(n=>PREPARED_TEXT.test(String(n.textContent)));
+for(const path of ['/','/pet/game/']){
+ test(`formal ${path}: normal auto-upgrade never renders 升级准备已保留/明确重试 panel`,opts,async t=>{
+  const h=await assembly({scope:'formal',path});t.after(()=>h.close());await until(()=>h.app||h.settled,'auto');assert.equal(h.bootError,null);assert.equal(h.app.state._collectionProtocol,2);assert.equal(shown(h),false);assert.equal(h.node('collectibleUpgradeConfirm'),null);
+ });
+ test(`formal ${path}: existing prepared snapshot (earlier failure) auto-resumes on load without panel; snapshot unchanged, backup before P2`,opts,async t=>{
+  const h=await assembly({scope:'formal',path,prepared:true});t.after(()=>h.close());const snapshot=h.data.get('tangzhe-formal-collectibles-v2-original');
+  await until(()=>h.app||h.settled,'resume');assert.equal(h.bootError,null);assert.equal(h.app.state._collectionProtocol,2);assert.equal(h.view().canPlay,true);assert.equal(shown(h),false);assert.equal(h.node('collectibleUpgradeConfirm'),null);
+  assert.equal(h.data.get('tangzhe-formal-collectibles-v2-original'),snapshot);const w=h.writes().map(x=>x.key);assert(!w.includes('tangzhe-formal-collectibles-v2-original'),'snapshot not rewritten');const bak=w.indexOf(h.t.keys.backup),main=w.indexOf(h.t.keys.main);assert(bak>=0&&main>bak,w.join());
+ });
+ for(const [label,phase,code] of [['snapshot','protected','SNAPSHOT_WRITE_FAILED'],['backup','protected','BACKUP_WRITE_FAILED'],['main','prepared','MAIN_WRITE_FAILED']])
+ test(`formal ${path}: ${label} write failure shows protection only on real failure, then next load with working storage auto-resumes to P2`,opts,async t=>{
+  const fault={operation:null,key:null,afterWrite:false,armed:false};const h=await assembly({scope:'formal',path,storageFault:fault});t.after(()=>h.close());
+  Object.assign(fault,{operation:'setItem',key:label==='snapshot'?'tangzhe-formal-collectibles-v2-original':label==='backup'?h.t.keys.backup:h.t.keys.main});
+  await until(()=>['protected','prepared'].includes(h.view()?.phase)&&h.view()?.code||h.settled,'failure');assert.equal(h.view().phase,phase);assert.equal(h.view().code,code);assert.equal(h.app,undefined);assert.equal(JSON.parse(h.data.get(h.t.keys.main))._collectionProtocol,1);
+  if(phase==='prepared')assert.equal(shown(h),true,'real failure still explains');
+  const saved=new Map(h.data);const snapBefore=saved.get('tangzhe-formal-collectibles-v2-original');
+  const h2=await assembly({scope:'formal',path,configure:f=>{f.data.clear();for(const [k,v] of saved)f.data.set(k,v);}});t.after(()=>h2.close());
+  await until(()=>h2.app||h2.settled,'later load');assert.equal(h2.bootError,null);assert.equal(h2.app.state._collectionProtocol,2);assert.equal(h2.view().canPlay,true);assert.equal(shown(h2),false);assert.equal(h2.node('collectibleUpgradeConfirm'),null);
+  const snap=h2.data.get('tangzhe-formal-collectibles-v2-original');assert.ok(snap);if(snapBefore)assert.equal(snap,snapBefore);
+  const w=h2.writes().map(x=>x.key),bak=w.indexOf(h2.t.keys.backup),main=w.indexOf(h2.t.keys.main);assert(bak>=0&&main>bak,w.join());{const bk=JSON.parse(h2.writes().find(x=>x.key===h2.t.keys.backup).value),src=JSON.parse(saved.get(h.t.keys.main));assert.equal(bk._collectionProtocol,1);assert.equal(bk.coins,src.coins);assert.deepEqual(bk.gacha.owned,src.gacha.owned);}
+ });
+ test(`formal ${path}: resumed upgrade with corrupt snapshot never migrates`,opts,async t=>{
+  const h=await assembly({scope:'formal',path,prepared:true,configure:f=>f.data.set('tangzhe-formal-collectibles-v2-original','bad')});t.after(()=>h.close());await until(()=>['protected','revoked'].includes(h.view()?.phase)||h.settled,'protect');
+  assert.equal(h.app,undefined);assert.equal(JSON.parse(h.data.get(h.t.keys.main))._collectionProtocol,1);assert(!h.writes().some(x=>x.key===h.t.keys.main),'no P2 write');
  });
 }

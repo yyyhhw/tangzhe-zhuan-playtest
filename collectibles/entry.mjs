@@ -1,18 +1,18 @@
-import {prepareDecor6Catalog} from './decor6-catalog.mjs?v=copy89-home90-20261013-r1';
-import {prepareSecondEightCatalog} from './wearables18-catalog.mjs?v=copy89-home90-20261013-r1';
+import {prepareDecor6Catalog} from './decor6-catalog.mjs?v=autoupgrade-20261013-r2';
+import {prepareSecondEightCatalog} from './wearables18-catalog.mjs?v=autoupgrade-20261013-r2';
 /** Production composition candidate; activation remains gated by release.mjs.
  * Synthetic review only until the independent browser/activation gate passes. */
-import {createCollectibleStorage} from './storage.mjs?v=copy89-home90-20261013-r1';
-import {ensureLegacyReady} from './legacy-entry.mjs?v=copy89-home90-20261013-r1';
-import {COLLECTIBLES_PRODUCTION_ENABLED,COLLECTIBLES_RELEASE} from './release.mjs?v=copy89-home90-20261013-r1';
-import {createRealPageQAFacade} from '../qa-protocol2/real-page-facade.mjs?v=copy89-home90-20261013-r1';
-import {createMigrationPlanner} from '../qa-protocol2/vendor/planner/migration.mjs?v=copy89-home90-20261013-r1';
-import * as codec from '../qa-protocol2/vendor/codec/snapshot-codec.mjs?v=copy89-home90-20261013-r1';
-import {createPetDomain} from '../qa-protocol2/vendor/runtime/pet-domain.mjs?v=copy89-home90-20261013-r1';
-import {createProtocol2Validator} from '../qa-protocol2/vendor/runtime/validator.mjs?v=copy89-home90-20261013-r1';
-import {createCardAwareSession} from '../qa-protocol2/vendor/cards/card-coordinator.mjs?v=copy89-home90-20261013-r1';
-import {createHostModel} from '../qa-protocol2/vendor/host/host-model.mjs?v=copy89-home90-20261013-r1';
-import {prepareEightWearableCatalog} from '../qa-protocol2/eight-catalog.mjs?v=copy89-home90-20261013-r1';
+import {createCollectibleStorage} from './storage.mjs?v=autoupgrade-20261013-r2';
+import {ensureLegacyReady} from './legacy-entry.mjs?v=autoupgrade-20261013-r2';
+import {COLLECTIBLES_PRODUCTION_ENABLED,COLLECTIBLES_RELEASE} from './release.mjs?v=autoupgrade-20261013-r2';
+import {createRealPageQAFacade} from '../qa-protocol2/real-page-facade.mjs?v=autoupgrade-20261013-r2';
+import {createMigrationPlanner} from '../qa-protocol2/vendor/planner/migration.mjs?v=autoupgrade-20261013-r2';
+import * as codec from '../qa-protocol2/vendor/codec/snapshot-codec.mjs?v=autoupgrade-20261013-r2';
+import {createPetDomain} from '../qa-protocol2/vendor/runtime/pet-domain.mjs?v=autoupgrade-20261013-r2';
+import {createProtocol2Validator} from '../qa-protocol2/vendor/runtime/validator.mjs?v=autoupgrade-20261013-r2';
+import {createCardAwareSession} from '../qa-protocol2/vendor/cards/card-coordinator.mjs?v=autoupgrade-20261013-r2';
+import {createHostModel} from '../qa-protocol2/vendor/host/host-model.mjs?v=autoupgrade-20261013-r2';
+import {prepareEightWearableCatalog} from '../qa-protocol2/eight-catalog.mjs?v=autoupgrade-20261013-r2';
 
 const clone=x=>JSON.parse(JSON.stringify(x));
 async function loadClassic(url){await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=url.href;s.onload=resolve;s.onerror=()=>reject(Error('QA_LEGACY_ECONOMY_LOAD_FAILED'));document.head.append(s);});}
@@ -99,7 +99,7 @@ export async function launchProductionCollectibles(options){
           decorCatalog.setActive(qaWearables8);
           secondEight.setActive(qaWearables8);
           wearableCatalog?.setActive(qaWearables8);
-          if(qaWearables8){const display=await import('../candidates/blindbox18/display.mjs?v=copy89-home90-20261013-r1');if(!lease.owns())throw Error('QA_DISPLAY_LOADED_AFTER_REVOKE');globalThis.QAWearables8Display=display.default;const decor=await import('./decor6-display.mjs?v=copy89-home90-20261013-r1');if(!lease.owns())throw Error('DECOR_DISPLAY_LOADED_AFTER_REVOKE');globalThis.Decor6Display=decor.default;}
+          if(qaWearables8){const display=await import('../candidates/blindbox18/display.mjs?v=autoupgrade-20261013-r2');if(!lease.owns())throw Error('QA_DISPLAY_LOADED_AFTER_REVOKE');globalThis.QAWearables8Display=display.default;const decor=await import('./decor6-display.mjs?v=autoupgrade-20261013-r2');if(!lease.owns())throw Error('DECOR_DISPLAY_LOADED_AFTER_REVOKE');globalThis.Decor6Display=decor.default;}
           const runtime={keys,storage,model,qaWearables8,decor6:qaWearables8,claimHidden:id=>facade.claimHidden(id),qa:false,qaScope:scope,qaProtocol2:true,entryEnabled:cardEntryEnabled===true,ownsLock:lease.owns,coordinator:facade.coordinator,
             registerPageHide:handler=>{if(typeof handler!=='function'||pageHideSave)throw Error('PAGE_HIDE_HANDLER_INVALID');pageHideSave=handler;},
             logicalStorageKey:storage.logicalKey,handle:message=>facade.card(message),snapshot:()=>facade.snapshot(),reconcile:()=>facade.reconcile()};
@@ -121,6 +121,7 @@ export async function launchProductionCollectibles(options){
           return;
         }
         if(autoUpgrade&&view.phase==='prompt')return; // 杨总 16:05：正式存档 P1→P2 自动升级，不显示「开启新收藏？」，没有取消入口
+        if(autoUpgrade&&view.phase==='prepared'&&!view.code)return; // 杨总 16:30：正常自动升级途中不闪「升级准备已保留」；只有真失败（带 code）才显示
         const prompt=view.phase==='prompt',prepared=view.phase==='prepared';
         const box=makePanel(prompt?'开启新收藏？':prepared?'升级准备已保留，当前只读':'存档已保护',prompt?'升级后多出 16 件衣帽和 6 件店铺装饰。不想升级也行，照常玩原来的 36 件。':prepared?'原文已固定，现在不能继续经营或改档。请先核对，再明确重试。':'当前结果需要核对，已暂停写入；不会自动退款、回滚或重复执行。');
         const warning=document.createElement('p');warning.textContent=prompt?'升级前请关掉其他开着这个游戏的页面，免得旧页面把进度写回去。':'请保留原档和备份，不要清除浏览器数据或另开新档。';box.append(warning);
@@ -137,7 +138,8 @@ export async function launchProductionCollectibles(options){
       addEventListener('storage',foreignListener);
       // No production fault-injection or raw-save console export surface.
       const result=facade.start();
-      if(autoUpgrade&&result.ok&&facade.view().phase==='prompt'&&facade.view().canConfirm)facade.confirmMigration(); // P1（含以前取消过的）自动升级到 P2
+      // P1（含以前取消过的）自动升级到 P2。杨总 16:30：上次快照/备份写失败留下的 prepared，本次加载存储恢复后自动续升（host-model 先核验快照链，再写备份并读回，最后才写 P2），不再要求「明确重试升级」。每次加载只自动尝试一次。
+      if(autoUpgrade&&result.ok&&['prompt','prepared'].includes(facade.view().phase)&&facade.view().canConfirm)facade.confirmMigration();
       if(result.ok&&facade.view().canPlay)await startApp();
       await lifetime;
     }finally{try{facade?.invalidate('QA_LOCK_LIFETIME_ENDED');}finally{if(foreignListener)removeEventListener('storage',foreignListener);owns=false;current=false;abort.abort();release?.();}}

@@ -33,6 +33,7 @@ export async function assembly({scope='formal',path,query='',projectRoot='/',ena
   const prefix='';
   const data=new Map([...t.data].map(([key,value])=>[prefix+key,value]));
   const calls=[],classicLoads=[],economies=[],moduleLoads=[],dynamicImports=[],installed=[],errors=[],loadedSources=new Map();
+  const created=[];
   const lock={requests:[],active:false,released:0,pending:false};
   const context=vm.createContext({URL,URLSearchParams,TextEncoder,TextDecoder,AbortController,Blob,console,performance,queueMicrotask,setTimeout,clearTimeout,Date:class extends Date{static now(){return 1700000001000;}}});
   const winEvents=eventTarget(),docEvents=eventTarget();
@@ -49,7 +50,7 @@ export async function assembly({scope='formal',path,query='',projectRoot='/',ena
   }
   function walk(node){return [node,...node.children.flatMap(walk)];}
   const document={...docEvents,hidden:false,visibilityState:'visible',body:new Node('body'),head:new Node('head'),
-    createElement:tag=>new Node(tag),getElementById:id=>walk(document.body).find(node=>node.id===id)||null};
+    createElement:tag=>{const n=new Node(tag);created.push(n);return n;},getElementById:id=>walk(document.body).find(node=>node.id===id)||null};
   assert.ok(projectRoot.startsWith('/')&&projectRoot.endsWith('/'));
   const pathname=path||(projectRoot+(scope==='preview'?'preview/':''));
   const location=new URL(pathname+query,ORIGIN);location.reload=()=>{reloads++;};
@@ -154,7 +155,7 @@ export async function assembly({scope='formal',path,query='',projectRoot='/',ena
     const expectedConfigHash=hashMismatch?'mismatch':createHash('sha256').update(canonical(config)).digest('hex');
     completion=entry.namespace.launchProductionCollectibles({scope,E:initialE,keys:host.KEYS,lockName:host.LOCK_NAME,createLegacyCoordinator:host.createSaveCoordinator,createCollectionHost:wallet.createCollectionHost,secureRandomInt:wallet.secureRandomInt,createApprovedTrialModel:model.createApprovedTrialModel,config,canonical,expectedConfigHash,approvalEvidence:vm.runInContext('["synthetic-entry-review"]',context),sourceBase:new URL(support,ORIGIN+projectRoot),walletBridgeApproved,cardEntryEnabled,...entryOptions}).catch(e=>{bootError=e;}).finally(()=>{settled=true;});
   }
-  const h={context,data,calls,lock,classicLoads,economies,moduleLoads,dynamicImports,installed,initialE,loadedSources,errors,t,prefix,document,
+  const h={created,context,data,calls,lock,classicLoads,economies,moduleLoads,dynamicImports,installed,initialE,loadedSources,errors,t,prefix,document,
     get bootError(){return bootError;},get settled(){return settled;},get reloads(){return reloads;},get app(){return context.__tzz;},get runtime(){return context[scope==='formal'?'FormalCollectionRuntime':'PreviewCollectionRuntime'];},
     node:id=>document.getElementById(id),view:()=>context.__reviewFacade?copy(context.__reviewFacade.view()):null,writes:()=>calls.filter(x=>x.operation!=='getItem'),dump:()=>JSON.stringify([...data]),
     async click(id){assert.ok(h.node(id),id+' exists');await h.node(id).onclick({isTrusted:false});},
