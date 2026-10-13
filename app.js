@@ -2235,8 +2235,6 @@ function renderMall() {
     const cat = E.MALL_CATS.find(c => c.id === f.cat);
     return `<div class="card mall-card" data-fid="${f.id}"><div class="ava sq furn-ico" style="--fc:${f.color}">${furnInner(f.id, 0)}</div><div class="info">${E.furnStyles(f.id).length ? `<div class="fstyles">${E.furnStyles(f.id).map(s => `<span class="fst" style="--sc:${s.color}"><i class="sdot"></i>${s.name}</span>`).join('')}</div>` : ''}<div class="name">${f.name}<span class="tag match">豪华 +${f.lux}</span></div>
       <div class="desc">${cat ? cat.name + (f.sub ? ' · ' + (((cat.subs || []).find(x => x.id === f.sub) || {}).name || '') : '') + ' · ' : ''}占地 ${f.w}×${f.h} 格${f.layer === 'rug' ? ' · 可垫在家具下' : ''}${f.wall ? ' · 挂墙面（不占地板）' : ''}<br>已拥有 ${stt.owned}（摆出 ${stt.placed} / 仓库 ${stt.warehouse}）<br>摆在：${where}</div></div>${btn('homeBuy', f.id, '购买', f.price)}</div>`; }).join('');
-  // 留白：即使滤完也保留空位提示，方便以后加商品
-  if (list.length < 4) for (let i = list.length; i < 4; i++) h += `<div class="card mall-card mall-ghost" aria-hidden="true"><div class="ava sq">+</div><div class="info"><div class="name">敬请期待</div><div class="desc">商城还会加新家具，先把分类和搜索用起来。</div></div></div>`;
   const styleEmpty = mallStyle !== 'all' && !E.FURNITURE.some(f => E.furnStyles(f.id).some(s => s.id === mallStyle));
   if (!list.length) h += styleEmpty ? `<div class="note">「${E.FURN_STYLES.find(s => s.id === mallStyle).name}」的家具还在画，上架后在这里就能找到。</div>` : `<div class="note">没有符合条件的家具，试试清除筛选。</div>`;
   h += `</div><div class="note">商城只花游戏金币，和经营共用一个钱包。家具进公共仓库；一件同时只在一家，想多家都有就多买。家具只加豪华度，不加产速、不影响开店。</div>`;
