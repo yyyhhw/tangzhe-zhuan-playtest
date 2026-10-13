@@ -2042,6 +2042,10 @@ function homeAutoWallStand(id, p) {
 function homeAutoPets(id) { const out = []; for (const [uid, a] of petActors) if (a.rt.homeId === id && a.rt.w && a.rt.w.dog) out.push({ uid, x:a.rt.w.dog.x, y:a.rt.w.dog.y }); return out; }
 function homeAutoStandPoint(id, p, kind) { return kind === 'wall' ? homeAutoWallStand(id, p) : HA_STAND.includes(kind) ? homeAutoBeside(id, p) : true; }
 function homeAutoReset(id) { const ac = homeActor[id]; if (ac) homeAutoCancel(id, ac); }
+// 回前台（含 BFCache 恢复）时作废自主走动的那一段。单独挂监听，不改 onHide/onShow：
+// 那一段生命周期存档代码有 autosave15 基线指纹锁着（tests/autosave15/baseline-integrity.json）。只动内存，不碰存档。
+document.addEventListener('visibilitychange', () => { if (!document.hidden) for (const k in homeActor) homeAutoReset(k); });
+window.addEventListener('pageshow', e => { if (e.persisted) for (const k in homeActor) homeAutoReset(k); });
 // 玩家点家具 / 地板 / 切模式：立刻停，60 秒内不自己动；回来后从「闲站」重新开始
 function homeAutoHold(id) { if (!HA) return; const ac = homeActorOf(id); homeAutoCancel(id, ac); ac.autoHold = clock + HA.AFTER_PLAYER_SEC; }
 function homeAutoList(id) { return HA.candidates(E.homeOf(state, id).placed, { capability:HomeInteraction.capability, liveAct:E.furnLiveAct, itemSurf:E.itemSurf, period:homeAutoPeriod(), pets:HA.IDS ? homeAutoPets(id) : [], reachable:(p, kind) => !!homeAutoStandPoint(id, p, kind) }); }
@@ -2714,7 +2718,7 @@ let lastTouchEnd = 0;
 document.addEventListener('touchend', e => { const t = Date.now(); if (t - lastTouchEnd < 300 && !e.target.closest('button')) e.preventDefault(); lastTouchEnd = t; }, { passive:false });
 
 function onHide() { if ((COLLECTION.qaProtocol2 && saveBlocked) || frozen || petManual || persist.pending) return; petHiddenAt = now(); tick(); if (order) order = null; /* 离线不结算进行中的团单，避免和离线收益纠缠 */ special = null; state.lastSeen = now(); persist(); audioPause(); }
-function onShow() { for (const k in homeActor) homeAutoReset(k);
+function onShow() {
   if (frozen || petManual || persist.pending) return;
   if (!lockMine()) { freeze(); return; }
   if (storedRev() > state.rev) { freeze(); return; }
