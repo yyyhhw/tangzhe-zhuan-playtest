@@ -1,0 +1,80 @@
+[
+  {
+    "path": "/",
+    "fault": "backup-write",
+    "attempts": [
+      "tangzhe-formal-collection-v1-save-bak"
+    ],
+    "mainUnchanged": true,
+    "pass": true
+  },
+  {
+    "path": "/",
+    "fault": "main-readback",
+    "attempts": [
+      "tangzhe-formal-collection-v1-save-bak",
+      "tangzhe-formal-collection-v1-save"
+    ],
+    "mainUnchanged": false,
+    "pass": true
+  },
+  {
+    "path": "/",
+    "fault": "already-protected",
+    "attempts": [],
+    "mainUnchanged": true,
+    "pass": true
+  },
+  {
+    "path": "/preview/",
+    "fault": "backup-write",
+    "attempts": [
+      "tangzhe-preview-collection-v1-save-bak"
+    ],
+    "mainUnchanged": true,
+    "pass": true
+  },
+  {
+    "path": "/preview/",
+    "fault": "main-readback",
+    "attempts": [
+      "tangzhe-preview-collection-v1-save-bak",
+      "tangzhe-preview-collection-v1-save"
+    ],
+    "mainUnchanged": false,
+    "pass": true
+  },
+  {
+    "path": "/preview/",
+    "fault": "already-protected",
+    "attempts": [],
+    "mainUnchanged": true,
+    "pass": true
+  },
+  {
+    "path": "/pet/game/",
+    "fault": "backup-write",
+    "attempts": [
+      "tangzhe-formal-collection-v1-save-bak"
+    ],
+    "mainUnchanged": true,
+    "pass": true
+  },
+  {
+    "path": "/pet/game/",
+    "fault": "main-readback",
+    "attempts": [
+      "tangzhe-formal-collection-v1-save-bak",
+      "tangzhe-formal-collection-v1-save"
+    ],
+    "mainUnchanged": false,
+    "pass": true
+  },
+  {
+    "path": "/pet/game/",
+    "fault": "already-protected",
+    "attempts": [],
+    "mainUnchanged": true,
+    "pass": true
+  }
+]

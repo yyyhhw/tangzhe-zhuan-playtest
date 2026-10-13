@@ -186,6 +186,19 @@ export function createRealPageQAFacade({enabled = REAL_PAGE_QA_ENABLED, scope, f
     }
     return notify(result);
   }
+  function claimHidden(rewardId) {
+    if(!writable()||!app)return gate('HIDDEN_READ_ONLY');
+    // Flush current gameplay first; claim eligibility is checked from the verified
+    // durable state, never a caller-supplied achievement or amount.
+    if(app.persist()!==true)return protect(fail('HIDDEN_FLUSH_FAILED'));
+    const result=invoke('claimHidden',rewardId);
+    if(!result.ok){
+      if(owner.readOnly||owner.failed||writeFailures.has(result.code))return protect(result,{recoverCurrent:!owner.readOnly&&!owner.failed});
+      return notify(result);
+    }
+    try{app.collectionReplaceState(copy(result.state));}catch(error){return protect(fail(error?.message||'APP_STATE_REPLACE_FAILED'),{permanent:true});}
+    return notify(result);
+  }
   function snapshot() {
     if (!writable() || !host) return gate('CARD_READ_ONLY');
     try {
@@ -215,7 +228,7 @@ export function createRealPageQAFacade({enabled = REAL_PAGE_QA_ENABLED, scope, f
     return phase === 'playing' ? notify({ok: true, phase}) : invalidate('CONFIRMATION_REVOKED_ON_HIDE');
   }
   return Object.freeze({coordinator, start, cancelMigration, confirmMigration, attachApp,
-    card, snapshot, reconcile, invalidate, hidden, view});
+    card, claimHidden, snapshot, reconcile, invalidate, hidden, view});
 }
 
 /** Transport field boundary only. Semantic denials still follow the unchanged

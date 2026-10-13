@@ -12,16 +12,17 @@ for(const scope of ['formal','preview']){
  });
  test(scope+': all eight draw/equip/save through actual production coordinator and survive restart with opaque state',async t=>{
   const h=await assembly({scope,protocol:2,configure:f=>{const s=JSON.parse(f.data.get(f.keys.main));s.gacha.owned.push(...EIGHT_WEARABLES.map(x=>x.id));s.gacha.draws=44;s.wear.c77={clothes:'c_charcoal_vest',hat:'h_guokui'};s.gacha.future={keep:[1,'opaque',null]};f.data.set(f.keys.main,JSON.stringify(s));}});t.after(()=>h.close());await until(()=>h.app||h.settled,'app');assert.equal(h.bootError,null);const original=h.data.get(h.t.keys.original),snapshot=h.data.get(`tangzhe-${scope}-collectibles-v2-original`);
-  assert.equal(h.app.state.gacha.owned.length,44);assert.equal(h.initialE.gachaRemaining(h.app.state).length,8);assert(h.app.atomic(()=>{h.app.state.coins+=10000000;return {ok:true};},'synthetic funds').ok);
+  assert.equal(h.app.state.gacha.owned.length,44);assert.equal(h.initialE.gachaRemaining(h.app.state).length,12);assert(h.app.atomic(()=>{h.app.state.coins+=10000000;return {ok:true};},'synthetic funds').ok);
   const got=[];while(h.initialE.gachaRemaining(h.app.state).length){const r=h.app.atomic(()=>h.initialE.gachaDraw(h.app.state,0),'draw');assert(r.ok,r.why);got.push(r.item.id);if(SECOND_EIGHT_WEARABLES.some(x=>x.id===r.item.id)){assert(h.app.atomic(()=>{h.app.state.wear.c77[r.item.type]=r.item.id;return {ok:true};},'equip').ok);}}
-  for(const item of SECOND_EIGHT_WEARABLES)assert(got.includes(item.id));assert.equal(h.app.state.gacha.owned.length,52);assert(!h.app.state.gacha.owned.includes('d_ward_charm'));assert.deepEqual(copy(h.app.state.collectiblesV1.grants),{});assert.deepEqual(copy(h.app.state.gacha.future),{keep:[1,'opaque',null]});const final=copy(h.app.state),saved=[...h.data];await h.close();
+  for(const item of SECOND_EIGHT_WEARABLES)assert(got.includes(item.id));assert.equal(h.app.state.gacha.owned.length,56);assert(!h.app.state.gacha.owned.includes('d_ward_charm'));assert.deepEqual(copy(h.app.state.collectiblesV1.grants),{});assert.deepEqual(copy(h.app.state.gacha.future),{keep:[1,'opaque',null]});const final=copy(h.app.state),saved=[...h.data];await h.close();
   const re=await assembly({scope,protocol:2,configure:f=>{f.data.clear();for(const [k,v]of saved)f.data.set(k,v);}});t.after(()=>re.close());await until(()=>re.app||re.settled,'reopen');assert.equal(re.bootError,null);assert.deepEqual(copy(re.app.state.gacha),final.gacha);assert.deepEqual(copy(re.app.state.wear),final.wear);assert.equal(re.data.get(h.t.keys.original),original);assert.equal(re.data.get(`tangzhe-${scope}-collectibles-v2-original`),snapshot);assert.deepEqual(copy(re.app.state.customForwardField),final.customForwardField);
  });
 }
-for(const scope of ['formal','preview'])test(scope+': standalone pool excludes missing decor assets and grants no item on P2 boot',async t=>{
+for(const scope of ['formal','preview'])test(scope+': on52 pool admits four ordinary decorations and keeps hidden rewards out of random draws',async t=>{
  const h=await assembly({scope,protocol:2});t.after(()=>h.close());await until(()=>h.app||h.settled,'app');assert.equal(h.bootError,null);
  assert.equal(h.app.state.gacha.owned.length,36);assert.equal(h.app.state.gacha.draws,36);
- for(const id of ['d_borrow_register','d_rocket_piggy','d_opening_photo','d_ward_charm','d_charcoal_chime','d_spice_turntable'])assert.equal(h.initialE.ITEM_BY_ID[id],undefined,id);
- const before=JSON.stringify(h.app.state.gacha),result=h.app.atomic(()=>{h.app.state.gacha.owned.push('d_charcoal_chime');return {ok:true};},'negative missing decoration');
+ for(const id of ['d_borrow_register','d_rocket_piggy','d_charcoal_chime','d_spice_turntable'])assert(h.initialE.gachaRemaining(h.app.state).some(x=>x.id===id));
+ for(const id of ['d_opening_photo','d_ward_charm'])assert(!h.initialE.gachaRemaining(h.app.state).some(x=>x.id===id));
+ const before=JSON.stringify(h.app.state.gacha),result=h.app.atomic(()=>{h.app.state.gacha.owned.push('d_unapproved');return {ok:true};},'negative unknown decoration');
  assert.equal(result.ok,false);assert.equal(JSON.stringify(h.app.state.gacha),before);
 });

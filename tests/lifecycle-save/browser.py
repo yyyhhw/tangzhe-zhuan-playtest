@@ -22,7 +22,8 @@ with sync_playwright() as p:
    if action=='reload':
     pg.reload();pg.wait_for_function('!!window.__tzz');raw=pg.evaluate('(key)=>window.__initialStorage[key]',before['key']);trace=pg.evaluate('JSON.parse(window.__initialStorage.lifecycleTrace)')
    else:
-    pg.close(run_before_unload=True);pg=c.new_page();pg.goto(BASE+'/probe');raw=pg.evaluate('(key)=>localStorage.getItem(key)',before['key']);trace=pg.evaluate('JSON.parse(localStorage.lifecycleTrace)')
+    with pg.expect_event('close',timeout=30000):pg.close(run_before_unload=True)
+    pg=c.new_page();pg.goto(BASE+'/probe');raw=pg.evaluate('(key)=>localStorage.getItem(key)',before['key']);trace=pg.evaluate('JSON.parse(localStorage.lifecycleTrace)')
    after=json.loads(raw)
    if action=='close':pg.goto(BASE+path);pg.wait_for_function('!!window.__tzz')
    reopened=pg.evaluate('({coins:__tzz.state.coins,pending:__tzz.state.pending,blocked:__tzz.saveBlocked})')

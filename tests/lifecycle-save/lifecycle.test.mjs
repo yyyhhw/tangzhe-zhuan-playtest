@@ -17,7 +17,7 @@ for(const scope of ['formal','preview']) {
  });
 }
 
-test('full economy, current-save validation, original-evidence cache, CAS and uncertain-commit code preserved from published 7ce857d',async()=>{
+test('protected implementations and explicit reviewed decor16 extensions retain their fingerprints',async()=>{
  const fs=await import('node:fs');const {createHash}=await import('node:crypto');const manifest=JSON.parse(fs.readFileSync(new URL('./protection-integrity.json',import.meta.url)));
- for(const row of manifest.files){const bytes=fs.readFileSync(new URL('../../'+row.path,import.meta.url),'utf8').replaceAll('lifecycle-save-candidate-20261013-r1','autosave15-candidate-20261013-r2');assert.equal(createHash('sha256').update(bytes).digest('hex'),row.sha256,row.path);}
+ for(const row of manifest.files){const bytes=fs.readFileSync(new URL('../../'+row.path,import.meta.url),'utf8').replaceAll('decor6-preserve-order-20261013-r1','autosave15-candidate-20261013-r2');assert.equal(createHash('sha256').update(bytes).digest('hex'),row.sha256,row.path);}
 });

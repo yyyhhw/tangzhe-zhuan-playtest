@@ -544,7 +544,7 @@
   const CARD_COUNT = ITEMS.filter(it => it.type === 'card').length;
   const SET_REWARD = { id:'gold', name:'金牌摊主', clothes:'c_gold', hat:'h_gold', desc:'集齐 ' + CARD_COUNT + ' 张故事卡解锁：金马甲 + 金厨师帽' };
   function gachaUnlocked(st) { return !!(st.shops[3] && st.shops[3].open && st.shops[3].emp > 0); }
-  function gachaRemaining(st) { const own = new Set(st.gacha.owned); return ITEMS.filter(it => !own.has(it.id)); }
+  function gachaRemaining(st) { const own = new Set(st.gacha.owned); return ITEMS.filter(it => it.hidden !== true && !own.has(it.id)); }
   function gachaComplete(st) { return gachaRemaining(st).length === 0; }
   // 当前这一抽的概率：普通 / 超级分开算，带保底
   function gachaOdds(st) {
