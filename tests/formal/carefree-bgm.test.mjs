@@ -36,7 +36,7 @@ function setup(prefix, options={}){
  return {c,calls,events,devents,api:c.audioAPI,app};
 }
 for(const prefix of ['', 'preview/']){
- const assetVersion='wearables8-on-tea-cards-out-20261012-r1';
+ const assetVersion='save-evidence-cache-20261013-r1';
  const version=(prefix?'preview-':'formal-')+assetVersion;
  const app=read(prefix+'app.js'),html=read(prefix+'index.html'),boot=read(prefix+'collection/bootstrap.mjs');
  assert.equal(JSON.parse(read(prefix+'version.json')).v,version);

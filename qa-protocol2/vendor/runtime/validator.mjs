@@ -102,7 +102,19 @@ export function createProtocol2Validator({scope,economy:E,model,planner,codec,ca
     for(const c of E.CEOS){const w=s.wear[c.id];if(!(w.clothes===null||clothes.has(w.clothes))||!(w.hat===null||hats.has(w.hat)))error('INVALID_WEAR_SLOT');}
     if(!Array.isArray(s.decorHidden)||s.decorHidden.some(x=>typeof x!=='string'))error('INVALID_DECOR_HIDDEN');
   }
+  // Migration evidence is immutable within a writer session. Cache only one
+  // fully verified exact raw pair; current-save validation and coordinator
+  // evidence/read-back checks still run on every commit.
+  let snapshotCache=null;
+  function freezeEvidence(value){
+    if(value&&typeof value==='object'&&!Object.isFrozen(value)){
+      Object.values(value).forEach(freezeEvidence);Object.freeze(value);
+    }
+    return value;
+  }
   function snapshotChain(snapshotRaw,originalRaw){
+    if(snapshotCache&&snapshotCache.snapshotRaw===snapshotRaw&&snapshotCache.originalRaw===originalRaw)return snapshotCache.chain;
+    snapshotCache=null; // Never retain a successful entry across changed evidence.
     const record=codec.decodeSnapshot(snapshotRaw,{expectedScope:scope});
     const legacySnapshot=codec.encodeSnapshot(record,{format:1});
     const p=record.payload,input={scope,sourceRaw:p.sourceRaw,originalRaw:p.originalRaw,existingSnapshotRaw:legacySnapshot};
@@ -110,7 +122,9 @@ export function createProtocol2Validator({scope,economy:E,model,planner,codec,ca
     if(originalRaw!==p.originalRaw)error('ORIGINAL_CHANGED_READ_ONLY');
     const initial=planner.buildCandidate({...input,approval:{scope,toProtocol:2,snapshotSha256:reviewed.snapshotSha256}});
     planner.verifyPrepared({scope,candidateRaw:initial.candidateRaw,snapshotRaw:legacySnapshot});
-    return {source:parse(p.sourceRaw),initial:parse(initial.candidateRaw),initialRaw:initial.candidateRaw,reviewed,sourceRaw:p.sourceRaw};
+    const chain=freezeEvidence({source:parse(p.sourceRaw),initial:parse(initial.candidateRaw),initialRaw:initial.candidateRaw,reviewed,sourceRaw:p.sourceRaw});
+    snapshotCache={snapshotRaw,originalRaw,chain};
+    return chain;
   }
   function validate(raw,{snapshotRaw=null,originalRaw=null}={}){
     try{

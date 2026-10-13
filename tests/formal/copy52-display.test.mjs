@@ -8,7 +8,7 @@ const root=path.resolve(new URL('../..',import.meta.url).pathname);
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const require=createRequire(import.meta.url);
 const apps=['app.js','preview/app.js','pet/game/app.js','preview/pet/game/app.js'];
-const token='wearables8-on-tea-cards-out-20261012-r1';
+const token='save-evidence-cache-20261013-r1';
 const cases=[
  ['Asia/Tokyo','2026-10-05T06:00:00Z','06:00'],
  ['Asia/Kuala_Lumpur','2026-10-05T06:00:00Z','05:00'],
