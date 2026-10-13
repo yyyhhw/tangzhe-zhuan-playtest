@@ -4,8 +4,8 @@
  * An actual host must independently verify consent, original evidence, exclusive
  * ownership, unchanged raw, backups, commit readback and unknown outcomes.
  */
-import { canonical, freeze } from './lib/json.mjs?v=gacha-daily5-20261013-r1';
-import { sha256, validateV15 } from './lib/sha256.mjs?v=gacha-daily5-20261013-r1';
+import { canonical, freeze } from './lib/json.mjs?v=copy89-home90-20261013-r1';
+import { sha256, validateV15 } from './lib/sha256.mjs?v=copy89-home90-20261013-r1';
 
 export const CANDIDATE_ENABLED = false;
 export const TARGET_PROTOCOL = 2;
