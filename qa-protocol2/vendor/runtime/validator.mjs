@@ -1,5 +1,6 @@
-/** Default-disabled pure validation candidate; supported domain is legacy36 gameplay,
- * protocol2 identity and empty hidden ledgers. No normalization or awards. */
+import {validateHiddenLedger} from '../../../collectibles/decor6-grants.mjs?v=decor6-on52-candidate-20261013-r1';
+/** Pure protocol2 validation: admitted catalog, immutable migration identity and
+ * bounded hidden receipts. No normalization, award side effects or storage. */
 export const PROTOCOL2_RUNTIME_ENABLED=false;
 const error=code=>{throw Error(code);};
 const object=x=>!!x&&typeof x==='object'&&!Array.isArray(x);
@@ -142,7 +143,9 @@ export function createProtocol2Validator({scope,economy:E,model,planner,codec,ca
       if(validateCollection(s).length||E.validState(copy(s)).length||E.checkSave(copy(s)).length)error('INVALID_PARENT_OR_COLLECTION');
       collectibles(s);
       const chain=snapshotChain(snapshotRaw,originalRaw);
-      if(!exact(s.collectiblesV1,['schemaVersion','catalogVersion','saveLineageId','migration','grants','acknowledged'])||canonical(s.collectiblesV1)!==canonical(chain.initial.collectiblesV1))error('IDENTITY_OR_UNSUPPORTED_GRANTS');
+      if(!exact(s.collectiblesV1,['schemaVersion','catalogVersion','saveLineageId','migration','grants','acknowledged']))error('IDENTITY_OR_UNSUPPORTED_GRANTS');
+      const identity={...s.collectiblesV1,grants:{},acknowledged:{}};
+      if(canonical(identity)!==canonical(chain.initial.collectiblesV1)||!validateHiddenLedger(s))error('IDENTITY_OR_UNSUPPORTED_GRANTS');
       if(Object.hasOwn(s,'saveLineageId'))error('UNSUPPORTED_TOP_LEVEL_IDENTITY');
       if(s.rev<chain.initial.rev)error('REVISION_BEFORE_MIGRATION');
       if(canonical(s.collectionHost.migration)!==canonical(chain.source.collectionHost.migration))error('COLLECTION_ORIGINAL_BINDING');
