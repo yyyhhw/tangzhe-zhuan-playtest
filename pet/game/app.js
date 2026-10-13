@@ -7,7 +7,7 @@ const COLLECTION = window.FormalCollectionRuntime;
 if (!COLLECTION?.ownsLock()) {
   // Stale HTML can fetch a new script before bootstrap. No storage access here.
   const url=new URL(location.href);
-  if(url.searchParams.get('v')!=='formal-bb96-20261013-r1') {url.searchParams.set('v','formal-bb96-20261013-r1');location.replace(url.href);}
+  if(url.searchParams.get('v')!=='formal-home97-20261013-r1') {url.searchParams.set('v','formal-home97-20261013-r1');location.replace(url.href);}
   else {const notice=document.createElement('p');notice.textContent='页面资源尚未更新完整，存档未写入。请关闭此页后重新打开。';document.body.prepend(notice);}
   return;
 }
@@ -2177,13 +2177,14 @@ function homeLiveHint(id) {
   if (floor.some(p => !cap(p) && act(p) === 'dress')) parts.push('点衣柜换装');
   return '生活：' + parts.join(' · ');
 }
+function homeRoomName(id) { const c = E.CEO_BY_ID[id], lv = state.homes?.[id]?.lv || 1; return `${c.name} 的${E.homeTier(lv).name}`; }   // 家宅-97：卡片 / 墙牌 / 宠物面板用同一个房名（只读，不调 homeOf、不建房）
 function renderRoom() {
   const id = homeWho, c = E.CEO_BY_ID[id], H = E.homeOf(state, id), T = E.homeTier(H.lv), lux = E.homeLuxury(state, id);
   if (homeSel && !H.placed.some(p => p.uid === homeSel)) homeSel = null;
   const next = H.lv < E.HOME_MAX ? E.HOME_TIERS[H.lv] : null, sel = homeSel && H.placed.find(p => p.uid === homeSel);
   let h = `<div class="card home-card"><div class="ava sq">${HOME_ICON[H.lv - 1]}</div><div class="info"><div class="name">${c.name} 的${T.name}<span class="lv">Lv.${H.lv}</span></div>
-    <div class="desc">${T.cols}×${T.rows} 格 · 豪华度 <b class="lux" id="homeLux">${lux}</b>（家具 ${lux - T.bonus} + 房型 ${T.bonus}）</div>
-    <div class="gain">${next ? `升级 → ${next.name} ${next.cols}×${next.rows} 格，房型豪华 +${next.bonus}` : '已经是最高档豪宅'}</div></div>
+    <div class="desc">${T.cols}×${T.rows} 格 · 豪华度 <b class="lux" id="homeLux">${lux}</b></div>
+    <div class="gain">${next ? `升级成${next.name}：${next.cols}×${next.rows} 格，豪华度 +${next.bonus}` : '已经是最高档豪宅'}</div></div>
     ${next ? btn('homeUp', id, '升级', next.cost) : '<button class="buy no" disabled>顶级</button>'}</div>`;
   const isRug = p => E.FURN_BY_ID[p.fid].layer === 'rug' ? 0 : 1, footY = p => p.y + E.furnSize(p.fid, p.rot).h;
   const isWall = p => E.itemSurf(p) === 'wall';
@@ -2201,7 +2202,7 @@ function renderRoom() {
   const wallBlocks = E.wallBlockedCells(state, id).map(([x, y]) => `<i class="wall-block" style="left:${x / T.cols * 100}%;top:${y / E.WALL_ROWS * 100}%;width:${100 / T.cols}%;height:${100 / E.WALL_ROWS}%"></i>`).join('');
   h += `<div class="room tier-${T.id}${hasArt ? ' has-art' : ''}${dockHost ? ' pet-host-docked' : ''}" id="room" data-tier="${T.id}" style="--cols:${T.cols};--rows:${T.rows};--wall:${T.wall};--floor:${T.floor};--trim:${T.trim}">
     ${hasArt ? `<img class="room-art" src="../../art/home_${artKey}.webp?v=${ART_V}" data-homefb="1" alt="" onerror="this.closest('.room')&&this.closest('.room').classList.remove('has-art')">` : ''}
-    <div class="room-wall" id="roomWall"><span class="rw-deco">${T.id === 'hut' ? ic('window') : T.id === 'apt' ? ic('window') + ic('window') : ic('spark') + ic('candle') + ic('spark')}</span><span class="rw-name">${c.name}的${T.name}</span><div class="wall-grid" id="wallGrid">${wallBlocks}${wallItems}<div class="room-hl hidden" id="wallHl"></div></div></div>
+    <div class="room-wall" id="roomWall"><span class="rw-deco">${T.id === 'hut' ? ic('window') : T.id === 'apt' ? ic('window') + ic('window') : ic('spark') + ic('candle') + ic('spark')}</span><span class="rw-name">${c.name} 的${T.name}</span><div class="wall-grid" id="wallGrid">${wallBlocks}${wallItems}<div class="room-hl hidden" id="wallHl"></div></div></div>
     <div class="room-floor" id="roomFloor">${floorItems}<div class="home-actor" id="homeActor" style="left:${(homeActorOf(id).x + 0.5) / T.cols * 100}%;top:${(homeActorOf(id).y + 0.5) / T.rows * 100}%"><canvas class="ha-pose" width="240" height="240" aria-label="CEO坐卧姿态"></canvas><span class="ha-ava">${ava(id)}</span>${(() => { const ac = homeActorOf(id); return ac.line && ac.until > clock ? `<b class="ha-line">${ac.line}</b>` : ''; })()}<i class="ha-act">${(() => { const ac = homeActorOf(id); return ac.act === 'rest' ? ic('zz') : ac.act === 'read' ? ic('book') : ac.act === 'dress' ? ic('shirt') : ac.actIcon ? ic(ac.actIcon) : ''; })()}</i></div><div class="room-hl hidden" id="roomHl"></div></div></div>`;
   h += petInteractionBar();
   if(homeActorOf(id).pose)h += `<button class="buy alt" data-act="homeGetUp">起身</button>`;
@@ -2290,7 +2291,7 @@ function confirmHomeUp(id) {
   const H = E.homeOf(state, id), c = E.CEO_BY_ID[id]; if (H.lv >= E.HOME_MAX) return;
   const T = E.homeTier(H.lv), N = E.HOME_TIERS[H.lv], bal = E.balance(state), can = E.canAfford(state, N.cost);
   openModal(`<div class="mbubble">房子升级</div><div class="mtitle">${c.name}：${T.name} → ${N.name}</div>
-    <div class="mnote">${T.cols}×${T.rows} 格 → <b>${N.cols}×${N.rows} 格</b>，房型豪华 ${T.bonus} → ${N.bonus}。摆好的家具原位保留；挂画如果挡到新房的窗户 / 墙饰，会自动挪到空墙，挂不下就退回仓库，不会丢。</div>
+    <div class="mnote">${T.cols}×${T.rows} 格 → <b>${N.cols}×${N.rows} 格</b>，房间自带豪华度 ${T.bonus} → ${N.bonus}。摆好的家具原位保留；挂画如果挡到新房的窗户 / 墙饰，会自动挪到空墙，挂不下就退回仓库，不会丢。</div>
     <table class="pv-table"><tr><td>价格</td><td>${fmt(N.cost)}</td></tr><tr><td>当前余额</td><td>${fmt(bal)}</td></tr><tr class="total"><td>升级后余额</td><td class="${can ? '' : 'down'}">${can ? fmt(bal - N.cost) : '还差 ' + fmt(N.cost - bal)}</td></tr></table>
     <div class="mbtns two"><button class="buy ghost" id="mNo">再想想</button><button class="buy red" id="huYes" ${can ? '' : 'disabled'}>${can ? '确认升级' : '金币不够'}</button></div>`, false);
   $('#mNo').addEventListener('click', closeModal, { once:true });
@@ -2411,13 +2412,13 @@ function petPortal() {
   let detail='';
   if(!selected){const ready=petAvailable(P.species);detail=`<p>${ready?'每种只买一只，每个房间最多住两种宠物。':'这位伙伴还没开放购买。'}</p><button class="buy red" data-act="homePetBuy" data-arg="${homeWho}|${P.species}" ${ready?'':'disabled'}>${ready?'购买 · '+fmt(P.price)+' 金币':'待加入'}</button>`;}
   else {
-    const where=selected.compatibility?'兼容待命 · 旧同种记录，成长保留':selected.room?E.CEO_BY_ID[selected.room].name+'的家':'待命 · 成长保留';
+    const where=selected.compatibility?'兼容待命 · 旧同种记录，成长保留':selected.room?homeRoomName(selected.room):'待命 · 成长保留';
     const unsupported=['unsupported','opaque'].includes(PG.engSupport(selected));
     const action=selected.compatibility?'petActivate':'petPlace', disabled=!selected.compatibility&&(selected.room===homeWho||noFloor);
     detail=`<p class="pet-location">${petEsc(where)}</p><p class="pet-feedback" data-pet-status="${petEsc(selected.uid)}" aria-live="polite"></p>${records.length>1?`<div class="pet-records" aria-label="同种旧记录">${records.map((p,i)=>`<button class="buy alt ${p.uid===selected.uid?'on':''}" data-act="petSelectRecord" data-arg="${petEsc(p.uid)}" aria-pressed="${p.uid===selected.uid}">第 ${i+1} 只${p.compatibility?' · 兼容待命':''}</button>`).join('')}</div>`:''}<div class="pet-arrange"><button class="buy alt" data-act="${action}" data-arg="${petEsc(selected.uid)}" ${disabled?'disabled':''}>${selected.compatibility?'换用此只':selected.room===homeWho?'已在当前房间':noFloor?'没有空地':here.length>=2?'选择替换入住':'放入当前房间'}</button>${selected.room&&!selected.compatibility?`<button class="buy ghost" data-act="petStandby" data-arg="${petEsc(selected.uid)}">回待命</button>`:''}</div>${unsupported?'<p>成长记录已保留，当前版本暂不能运行。</p>':''}`;
   }
   const unknown=all.filter(p=>p.quarantined);
-  return `<section class="pet-manager pet-panel" id="petPanel" aria-label="宠物管理"><header><div><h3 id="petPanelTitle" tabindex="-1">🐾 宠物</h3><small>当前：${petEsc(E.CEO_BY_ID[homeWho].name)}的家 · ${here.length}/2</small></div><button class="buy ghost" data-act="petClose" aria-label="关闭宠物并返回">返回 ×</button></header><div class="pet-choices" aria-label="选择物种">${tabs}</div><article class="pet-selected" data-species="${P.species}"><h4>${P.emoji} ${P.name}</h4>${detail}</article>${unknown.length?`<details class="pet-quarantine"><summary>${unknown.length} 条未知物种记录已隔离</summary>${unknown.map(p=>`<p>${petEsc(p.uid)} · 原记录保留，暂停运行</p>`).join('')}</details>`:''}</section>`;
+  return `<section class="pet-manager pet-panel" id="petPanel" aria-label="宠物管理"><header><div><h3 id="petPanelTitle" tabindex="-1">🐾 宠物</h3><small>当前：${petEsc(homeRoomName(homeWho))} · ${here.length}/2</small></div><button class="buy ghost" data-act="petClose" aria-label="关闭宠物并返回">返回 ×</button></header><div class="pet-choices" aria-label="选择物种">${tabs}</div><article class="pet-selected" data-species="${P.species}"><h4>${P.emoji} ${P.name}</h4>${detail}</article>${unknown.length?`<details class="pet-quarantine"><summary>${unknown.length} 条未知物种记录已隔离</summary>${unknown.map(p=>`<p>${petEsc(p.uid)} · 原记录保留，暂停运行</p>`).join('')}</details>`:''}</section>`;
 }
 function petPanelFocus(open) {
   renderTab();dirty=false;
