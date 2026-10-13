@@ -1,6 +1,6 @@
 /** Read-only display adapter. Registration, awards and persistence belong to the host. */
-import * as first from './wearables8/first-eight.mjs?v=save-evidence-cache-20261013-r1';
-import * as bbq from './wearables8/bbq-six.mjs?v=save-evidence-cache-20261013-r1';
+import * as first from './wearables8/first-eight.mjs?v=blindbox18-candidate-20261013-r1';
+import * as bbq from './wearables8/bbq-six.mjs?v=blindbox18-candidate-20261013-r1';
 
 export const VERSION = 'qa-owned-wearables8-display-1';
 export const IDS = Object.freeze({
@@ -9,7 +9,7 @@ export const IDS = Object.freeze({
 });
 const types = Object.freeze(Object.fromEntries(Object.entries(IDS).flatMap(([type, ids]) => ids.map(id => [id, type]))));
 const art = Object.freeze(Object.fromEntries(Object.keys(types).map(id => [id, new URL(
-  './wearables8/art/' + id + (['c_charcoal_vest', 'c_matcha_knit', 'h_guokui', 'h_antenna_clip'].includes(id) ? '_catalog_v1.webp' : '.png') + '?v=save-evidence-cache-20261013-r1',
+  './wearables8/art/' + id + (['c_charcoal_vest', 'c_matcha_knit', 'h_guokui', 'h_antenna_clip'].includes(id) ? '_catalog_v1.webp' : '.png') + '?v=blindbox18-candidate-20261013-r1',
   import.meta.url,
 ).href])));
 export const has = id => Object.hasOwn(types, id);
@@ -53,7 +53,9 @@ export function catalogHTML(economy, state, id) {
   return `<div class="item ${collected ? '' : 'no'}" data-wearable-item="${id}"><span class="t">${types[id] === 'clothes' ? '衣服' : '帽子'}</span>${iconHTML(economy, state, id)}${collected ? escapeHTML(item.name) + descriptionHTML(economy, state, id) : '？？？<small class="preview-note" style="display:block;font-size:11px;line-height:1.5">' + escapeHTML(item.hint) + '</small>'}</div>`;
 }
 export function revealFlavorHTML(economy, state, id) {
-  return owned(economy, state, id) ? escapeHTML(economy.ITEM_BY_ID[id].flavor) + '<br>' : '';
+  if (!owned(economy, state, id)) return '';
+  const flavor = economy.ITEM_BY_ID[id].flavor;
+  return typeof flavor === 'string' && flavor.trim() ? escapeHTML(flavor) + '<br>' : '';
 }
 /** Remove duplicate wearable previews only in QA; keep the unrelated decorative preview. */
 export function remainingPreviewHTML(previews) {

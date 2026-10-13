@@ -1,0 +1,160 @@
+[
+  {
+    "scope": "formal",
+    "warm52SaveMs4x": [
+      23.09999999962747,
+      13.700000000186265,
+      14.299999999813735,
+      43.6999999997206,
+      20.399999999906868,
+      23,
+      23.199999999720603,
+      17.399999999906868
+    ],
+    "formalPoseCases": 8,
+    "previewPoseNote": null,
+    "checkedActualEquipClicks": 32,
+    "drawn": [
+      "c_charcoal_vest",
+      "c_matcha_knit",
+      "c_ember_fan_mantle",
+      "c_grill_grid_tabard",
+      "h_guokui",
+      "h_antenna_clip",
+      "h_skewer_pinwheel",
+      "h_mushroom_parasol",
+      "c_skewer_loop_tunic",
+      "c_smoke_split_bolero",
+      "c_pepper_scale_wrap",
+      "c_corn_rib_jacket",
+      "h_charcoal_crescent",
+      "h_grill_press",
+      "h_tin_foil_puff",
+      "h_corn_sail"
+    ],
+    "ownedAfterReload": 52,
+    "images": [
+      {
+        "id": "c_skewer_loop_tunic",
+        "w": 512,
+        "h": 512
+      },
+      {
+        "id": "c_smoke_split_bolero",
+        "w": 512,
+        "h": 512
+      },
+      {
+        "id": "c_pepper_scale_wrap",
+        "w": 512,
+        "h": 512
+      },
+      {
+        "id": "c_corn_rib_jacket",
+        "w": 512,
+        "h": 512
+      },
+      {
+        "id": "h_charcoal_crescent",
+        "w": 512,
+        "h": 512
+      },
+      {
+        "id": "h_grill_press",
+        "w": 512,
+        "h": 512
+      },
+      {
+        "id": "h_tin_foil_puff",
+        "w": 512,
+        "h": 512
+      },
+      {
+        "id": "h_corn_sail",
+        "w": 512,
+        "h": 512
+      }
+    ],
+    "errors": [],
+    "blocked": false
+  },
+  {
+    "scope": "preview",
+    "warm52SaveMs4x": [
+      15.300000000279397,
+      21.899999999906868,
+      17.09999999962747,
+      17.399999999906868,
+      18.799999999813735,
+      18.5,
+      22.399999999906868,
+      18.700000000186265
+    ],
+    "formalPoseCases": 0,
+    "previewPoseNote": "Preview baseline has no pose renderer; not added in this release",
+    "checkedActualEquipClicks": 32,
+    "drawn": [
+      "c_charcoal_vest",
+      "c_matcha_knit",
+      "c_ember_fan_mantle",
+      "c_grill_grid_tabard",
+      "h_guokui",
+      "h_antenna_clip",
+      "h_skewer_pinwheel",
+      "h_mushroom_parasol",
+      "c_skewer_loop_tunic",
+      "c_smoke_split_bolero",
+      "c_pepper_scale_wrap",
+      "c_corn_rib_jacket",
+      "h_charcoal_crescent",
+      "h_grill_press",
+      "h_tin_foil_puff",
+      "h_corn_sail"
+    ],
+    "ownedAfterReload": 52,
+    "images": [
+      {
+        "id": "c_skewer_loop_tunic",
+        "w": 512,
+        "h": 512
+      },
+      {
+        "id": "c_smoke_split_bolero",
+        "w": 512,
+        "h": 512
+      },
+      {
+        "id": "c_pepper_scale_wrap",
+        "w": 512,
+        "h": 512
+      },
+      {
+        "id": "c_corn_rib_jacket",
+        "w": 512,
+        "h": 512
+      },
+      {
+        "id": "h_charcoal_crescent",
+        "w": 512,
+        "h": 512
+      },
+      {
+        "id": "h_grill_press",
+        "w": 512,
+        "h": 512
+      },
+      {
+        "id": "h_tin_foil_puff",
+        "w": 512,
+        "h": 512
+      },
+      {
+        "id": "h_corn_sail",
+        "w": 512,
+        "h": 512
+      }
+    ],
+    "errors": [],
+    "blocked": false
+  }
+]

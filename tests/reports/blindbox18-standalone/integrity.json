@@ -1,0 +1,55 @@
+{
+  "unchangedCoreFiles": [
+    "economy.js",
+    "preview/economy.js",
+    "pet/game/economy.js",
+    "qa-protocol2/vendor/runtime/validator.mjs",
+    "qa-protocol2/real-page-facade.mjs",
+    "collectibles/storage.mjs",
+    "collectibles/legacy-entry.mjs",
+    "home-interaction.js"
+  ],
+  "coordinatorCodecPlanner": "only release token changed",
+  "approvedArt": [
+    {
+      "path": "candidates/blindbox18/art/c_smoke_split_bolero.png",
+      "sha256": "c901eee9e6b4718490f3603506bb674c35260f42a7f34b2c27843de03d608f94",
+      "bytes": 41190
+    },
+    {
+      "path": "candidates/blindbox18/art/c_skewer_loop_tunic.png",
+      "sha256": "3ac6f2fee12b39e320785886700a97c1b7af44fd15b0465db84a534d83e4f8b0",
+      "bytes": 49257
+    },
+    {
+      "path": "candidates/blindbox18/art/h_tin_foil_puff.png",
+      "sha256": "789d1cbde7fe0b056399dcb6d1c5abc1087719ac9277561a070a8681c9cf5066",
+      "bytes": 37757
+    },
+    {
+      "path": "candidates/blindbox18/art/h_charcoal_crescent.png",
+      "sha256": "281ddf718d98fe1638798ad474a3ad2d652e49054c606333be38f9f3f59e850b",
+      "bytes": 34315
+    },
+    {
+      "path": "candidates/blindbox18/art/h_corn_sail.png",
+      "sha256": "aa3e4b5689fa09f633be3e5940971087e56759e90a35e27f12fb1c152d76b75f",
+      "bytes": 48995
+    },
+    {
+      "path": "candidates/blindbox18/art/c_pepper_scale_wrap.png",
+      "sha256": "cd033a47f0149dd5ef18fb4993ce869ad999fc3fa97b4d9094e77f6a805c0466",
+      "bytes": 55589
+    },
+    {
+      "path": "candidates/blindbox18/art/c_corn_rib_jacket.png",
+      "sha256": "dbc1a204bf98ea09879f5c8db2026e9b59754ca2a0fd2d2cd4e3c0e3f7e35569",
+      "bytes": 32013
+    },
+    {
+      "path": "candidates/blindbox18/art/h_grill_press.png",
+      "sha256": "e967d40a26a0bcc6cf36f4ac45a2ebb7700e04dfd183ae18c61949f389af6118",
+      "bytes": 27236
+    }
+  ]
+}
