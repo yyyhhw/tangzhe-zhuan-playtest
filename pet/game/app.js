@@ -1899,7 +1899,17 @@ function homeOwner(room,uid){
   const furniture=item&&!ac.visualFallback&&!profile.ground&&profile.location!=='beside'?{x:item.x,y:item.y,...E.furnSize(item.fid,item.rot)}:null;
   return {x,y,furniture,revision:ac.revision,active,avoid:[...petActors].filter(([id,a])=>id!==uid&&a.rt.homeId===room&&a.rt.w).map(([,a])=>({x:a.rt.w.dog.x,y:a.rt.w.dog.y}))};
 }
-function homeDrawActor(){
+// 家宅-80：台词气泡靠边不被房间裁切。只改显示位置（左右平移 / 贴顶时翻到下方），不动台词、状态和存档。
+function homeFitLine(){
+  const el=$('#homeActor'),b=el&&el.querySelector('.ha-line'),room=el&&el.closest('.room');if(!b||!room)return;
+  b.style.setProperty('--ha-dx','0px');b.classList.remove('ha-below');
+  const r=room.getBoundingClientRect(),q=b.getBoundingClientRect(),pad=4;
+  const dx=q.left<r.left+pad?r.left+pad-q.left:q.right>r.right-pad?r.right-pad-q.right:0;
+  if(dx)b.style.setProperty('--ha-dx',Math.round(dx)+'px');
+  if(q.top<r.top+pad)b.classList.add('ha-below');
+}
+function homeDrawActor(){homeDrawActorPos();homeFitLine();}
+function homeDrawActorPos(){
   if(tab!=='home'||homeSub!=='room')return;const el=$('#homeActor'),floor=$('#roomFloor');if(!el||!floor)return;
   el.classList.toggle('ha-fade',(homeActor[homeWho]?.fadeUntil||0)>clock);
   const ac=homeActorOf(homeWho),T=E.homeTier(E.homeOf(state,homeWho).lv),p=ac.pose&&E.homeOf(state,homeWho).placed.find(p=>p.uid===ac.pose.uid),profile=p&&HomeInteraction.profile(p.fid);
