@@ -1,8 +1,9 @@
 import {localMinuteAt, resolveHomeAmbience, HOME_AMBIENCE_REFRESH_MS} from './home-ambience.mjs?v=home35-td46-home22-copy52-20261012-r1';
 
-// Readonly text + 家宅-65 room tone. The tone is only a data-room-tone attribute on the
-// existing .room (CSS tints room-art and the window glass block); no weather overlay,
-// particles, audio or poses, and never furniture / people / controls.
+// Readonly text + 家宅-65 room tone + 家宅-81 window weather. Both are only data-* attributes on
+// the existing .room: data-room-tone (CSS tints room-art and the window glass block) and
+// data-room-weather (CSS draws rain / snow inside the window glass box only). No audio, no poses,
+// never furniture / people / controls, nothing saved.
 // The host passes scalars for an already-existing room; no state object or
 // mutating homeOf helper is accepted. The clock is read once per refresh.
 const WEATHER_LABEL = Object.freeze({clear:'晴', rain:'雨', snow:'雪'});
@@ -25,7 +26,7 @@ export function createHomeStatusAdapter({document, window, now, gameDayAt}) {
     window.removeEventListener('pagehide', pageHidden);
     window.removeEventListener('pageshow', pageShown);
     if (node) { node.hidden = true; node.textContent = ''; }
-    if (room) delete room.dataset.roomTone;
+    if (room) { delete room.dataset.roomTone; delete room.dataset.roomWeather; }
     node = context = room = null;
     suspended = false;
   }
@@ -46,6 +47,7 @@ export function createHomeStatusAdapter({document, window, now, gameDayAt}) {
     node.hidden = false;
     room = node.closest('.room');
     if (room && room.dataset.roomTone !== value.roomTone) room.dataset.roomTone = value.roomTone;   // 家宅-65
+    if (room && room.dataset.roomWeather !== value.windowTone) room.dataset.roomWeather = value.windowTone;   // 家宅-81：clear / rain / snow
     const current = generation;
     timer = window.setTimeout(() => {
       if (current !== generation) return;

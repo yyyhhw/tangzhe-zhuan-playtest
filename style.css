@@ -803,3 +803,12 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 .room[data-room-tone="dusk"] .room-sky{opacity:.8;background:linear-gradient(#e9875c,#f6c48f)}
 .room[data-room-tone="night"] .room-sky{opacity:.92;background:radial-gradient(circle at 28% 30%,#fff 0 1px,transparent 1.6px),radial-gradient(circle at 64% 22%,#fff 0 .8px,transparent 1.4px),radial-gradient(circle at 78% 58%,#fff 0 1px,transparent 1.6px),linear-gradient(#18204a,#34396f)}
 @media (prefers-reduced-motion:reduce){.room[data-room-tone] .room-art,.room-sky{transition:none}}
+
+/* 家宅-81：雨天 / 雪天在窗玻璃里加雨丝和雪点。和 .room-sky 同一个窗玻璃框，只在框内画（overflow:hidden），
+   不用混合模式（夜晚也看得见），不碰家具、人物、按钮；由 home-status 写 data-room-weather。减少动态效果时只留静态。 */
+.room-wx{position:absolute;left:68.8%;top:4.4%;width:17%;height:15.6%;z-index:0;pointer-events:none;overflow:hidden;opacity:0;transition:opacity 1.5s ease}
+.room[data-room-weather="rain"] .room-wx{opacity:1;background:repeating-linear-gradient(104deg,transparent 0 5px,rgba(214,230,255,.85) 5px 6px,transparent 6px 11px),linear-gradient(rgba(96,118,146,.28),rgba(96,118,146,.18));background-size:22px 26px,100% 100%;animation:roomRain .55s linear infinite}
+.room[data-room-weather="snow"] .room-wx{opacity:1;background:radial-gradient(circle,#fff 0 1.3px,transparent 1.9px),radial-gradient(circle,rgba(255,255,255,.9) 0 1px,transparent 1.5px),linear-gradient(rgba(214,226,240,.3),rgba(214,226,240,.18));background-size:16px 16px,11px 13px,100% 100%;background-position:0 0,6px 5px,0 0;animation:roomSnow 4s linear infinite}
+@keyframes roomRain{to{background-position:-6px 26px,0 0}}
+@keyframes roomSnow{to{background-position:3px 32px,8px 31px,0 0}}
+@media (prefers-reduced-motion:reduce){.room-wx{transition:none}.room[data-room-weather] .room-wx{animation:none}}
