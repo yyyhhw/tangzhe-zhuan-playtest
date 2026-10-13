@@ -892,12 +892,13 @@ function tapShop(x, y) {
   earn(r.value); state.taps++; if (r.crit) state.crits++;
   const col = TIER_COLOR[r.tier];
   addText('+' + fmt(r.value) + (r.tier ? ' ×' + r.mult : ''), x, y, r.tier ? { size:(18 + r.tier * 4) * U, color:col, life:0.8 + r.tier * 0.15 } : {});
-  burstCoins(x, y, r.tier ? 4 + r.tier * 4 : 3);
+  const calm = homeAutoReduced();   // 系统开了「减少动态」：不震屏、不画集中线、不震手机，金币只溅 2 枚
+  burstCoins(x, y, calm ? 2 : r.tier ? 4 + r.tier * 4 : 3);
   if (r.tier) {
     critFx = { shop:i, tier:r.tier, x, y, t0:clock, seed:Math.random() * 1000 };
-    focusT = r.tier >= 2 ? 0.18 + r.tier * 0.06 : 0; shake = [0, 0.18, 0.32, 0.5][r.tier];
+    focusT = calm ? 0 : r.tier >= 2 ? 0.18 + r.tier * 0.06 : 0; shake = calm ? 0 : [0, 0.18, 0.32, 0.5][r.tier];
     popWord(CFG.CRIT_TIERS[r.tier - 1].word); sfx('crit' + r.tier);
-    try { if (navigator.vibrate) navigator.vibrate([0, 12, 22, 40][r.tier]); } catch (e) {}
+    if (!calm) try { if (navigator.vibrate) navigator.vibrate([0, 12, 22, 40][r.tier]); } catch (e) {}
   } else { sfx('tap'); if (Math.random() < 0.25) popWord(TAP_WORDS[Math.floor(Math.random() * TAP_WORDS.length)]); }
   // 每满 50 连击：三档各 +5 个百分点
   if (combo.n % CFG.COMBO_STEP === 0) { const pc = Math.round(E.critChance(state, i, now(), combo.n) * 100);
