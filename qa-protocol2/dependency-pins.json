@@ -3,8 +3,8 @@
     "path": "qa-protocol2/vendor/planner/migration.mjs",
     "sourcePackage": "collectible-compat-candidate-v2",
     "sourcePath": "module/migration.mjs",
-    "bytes": 12602,
-    "sha256": "732fb5ab5e4d3f5e191f2e210327fa11731dd3d7fdd5ac5c7945b80e021fd96e",
+    "bytes": 12608,
+    "sha256": "4766e9a3630f2775049d5a2218c4296f5e449e699bd86570605b4fd6d91d6fd2",
     "reviewedInputSha256": "5bc0536dacecbaca2f910def14ac7410a7b8c19495625604688156cb89848c49",
     "reviewedInputBytes": 12549,
     "integrationChange": "only final cache import URLs; business logic unchanged"
@@ -27,8 +27,8 @@
     "path": "qa-protocol2/vendor/codec/snapshot-codec.mjs",
     "sourcePackage": "collectible-snapshot-codec-v1",
     "sourcePath": "module/snapshot-codec.mjs",
-    "bytes": 4345,
-    "sha256": "365bc3f6692aecd79004e03edfd5dcf0aaf5517f6d59f6b28701b6568a9193e9",
+    "bytes": 4351,
+    "sha256": "352339abb1fa0a1c059f8a35ea428f1300824ada3ab792ad46dd33334d1ae792",
     "reviewedInputSha256": "420e687372a697b79e65da6776088234b9a0e6fbd39154b2582bdbe42b4b156b",
     "reviewedInputBytes": 4299,
     "integrationChange": "only final cache import URLs; business logic unchanged"
@@ -51,8 +51,8 @@
     "path": "qa-protocol2/vendor/runtime/validator.mjs",
     "sourcePackage": "collectible-protocol2-runtime-v1",
     "sourcePath": "module/validator.mjs",
-    "bytes": 13398,
-    "sha256": "47a6fcb2fd3d93a2e5b1e1eef9b58e74c4f349e335e0891b692426ba26887114",
+    "bytes": 13401,
+    "sha256": "44b4a7788a7acab40062bb4168d6861c81e385f9c4ccc0e18a536d87adc97ce3",
     "sourceSha256": "b710aa9da4c979036e980ffdbdf2f8ed46259d13c5d7ac90bf07ea42a806511a",
     "sourceBytes": 8201,
     "derivation": "Revision 2 exact boot migration markers, formal leaderboard mirror, optional source-bound pet roster transition guard; original reviewed archive unchanged. Revision 3: instance-local, single-entry cache of fully verified immutable snapshot/original raw pairs; current validation and write protections unchanged. Revision 4 (杨总 16:12): optional mutable gachaDaily {day,n} for the 5-per-day blind box limit; absent = 0 today."
@@ -61,8 +61,8 @@
     "path": "qa-protocol2/vendor/cards/card-coordinator.mjs",
     "sourcePackage": "collectible-card-adapter-v1",
     "sourcePath": "module/card-coordinator.mjs",
-    "bytes": 9121,
-    "sha256": "5f0c433e8fe71bef3f648ec14f205966e1aaad6adcb3166f954005be8f0741ce",
+    "bytes": 9127,
+    "sha256": "20e22377db879baf4604c3b0f6cade5772da4315d518e3b8bc398acc4773aea7",
     "reviewedInputSha256": "c39527224902c835f2cc611527a5fcec2a23293adebd3b78bbb8684d2b41a034",
     "reviewedInputBytes": 8203,
     "integrationChange": "only final cache import URLs; business logic unchanged"

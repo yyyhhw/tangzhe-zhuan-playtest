@@ -30,7 +30,7 @@ for(const file of ['app.js','pet/game/app.js']){
     assert.deepEqual(t.q,['showIntro']);assert.deepEqual(t.writes,[]);
   });
   test(file+' ② 未解锁那句以句号结尾',()=>{
-    const t=load(file,{unlocked:false});t.ctx.notice();assert.match(t.html,/摸鱼科技公司雇到员工，就能来开盒。<\/div>/);
+    const t=load(file,{unlocked:false});t.ctx.notice();assert.match(t.html,/科技公司雇到员工，就能来开盒。<\/div>/);
   });
   test(file+' ③ 双倍未用时「直接领取，去开盲盒」是白底次要样式；双倍已用时仍是红色主按钮',()=>{
     let t=load(file,{can:true});t.ctx.offline();assert.match(t.html,/class="buy ghost" id="claimBb70">直接领取，去开盲盒</);

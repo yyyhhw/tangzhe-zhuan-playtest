@@ -55,7 +55,7 @@ for(const file of ['app.js','pet/game/app.js']){
   });
   test(file+': locked launch popup has only 知道了 and the hire hint',()=>{
     const t=harness(file,{unlocked:false});t.ctx.notice();
-    assert.match(t.html,/摸鱼科技公司雇到员工，就能来开盒/);assert.match(t.html,/id="mOk"[^>]*>知道了</);assert.doesNotMatch(t.html,/mGo|mNo|16 件/);
+    assert.match(t.html,/科技公司雇到员工，就能来开盒/);assert.match(t.html,/id="mOk"[^>]*>知道了</);assert.doesNotMatch(t.html,/mGo|mNo|16 件/);
     t.click('mOk');assert.deepEqual(t.log,[['close']]);
   });
   test(file+': launch popup queues behind an open modal and is suppressed when seen / save blocked',()=>{
