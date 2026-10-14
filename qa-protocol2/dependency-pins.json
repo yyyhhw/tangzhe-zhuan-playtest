@@ -3,8 +3,8 @@
     "path": "qa-protocol2/vendor/planner/migration.mjs",
     "sourcePackage": "collectible-compat-candidate-v2",
     "sourcePath": "module/migration.mjs",
-    "bytes": 12612,
-    "sha256": "ad6f75268215b0bc8fc1dc56c3a838d6cf27c042e36ed25497ca4a928cb064cc",
+    "bytes": 12604,
+    "sha256": "894bf173c91fc82bee6586acb980b559d6c24a094878c19ed029beefc39e2d29",
     "reviewedInputSha256": "5bc0536dacecbaca2f910def14ac7410a7b8c19495625604688156cb89848c49",
     "reviewedInputBytes": 12549,
     "integrationChange": "only final cache import URLs; business logic unchanged"
@@ -27,8 +27,8 @@
     "path": "qa-protocol2/vendor/codec/snapshot-codec.mjs",
     "sourcePackage": "collectible-snapshot-codec-v1",
     "sourcePath": "module/snapshot-codec.mjs",
-    "bytes": 4355,
-    "sha256": "9173a91e405d73f79d3a7a26f7157ba550ab71895311d1ad10e586f8b22aa4af",
+    "bytes": 4347,
+    "sha256": "d54121f085fd5ff94f2bc94ae88dab28d7098b6842908614fce209fb7efd2fd3",
     "reviewedInputSha256": "420e687372a697b79e65da6776088234b9a0e6fbd39154b2582bdbe42b4b156b",
     "reviewedInputBytes": 4299,
     "integrationChange": "only final cache import URLs; business logic unchanged"
@@ -51,8 +51,8 @@
     "path": "qa-protocol2/vendor/runtime/validator.mjs",
     "sourcePackage": "collectible-protocol2-runtime-v1",
     "sourcePath": "module/validator.mjs",
-    "bytes": 13547,
-    "sha256": "3070730b5bd6df2247fec65505007a767a2479a6e7b171a96599a0cb31d51cb5",
+    "bytes": 13539,
+    "sha256": "2cf3884d899e35aa4e7f33df6a58c8e77b91567f431afd6b7e2dde1e4397e7b8",
     "sourceSha256": "b710aa9da4c979036e980ffdbdf2f8ed46259d13c5d7ac90bf07ea42a806511a",
     "sourceBytes": 8201,
     "derivation": "Revision 2 exact boot migration markers, formal leaderboard mirror, optional source-bound pet roster transition guard; original reviewed archive unchanged. Revision 3: instance-local, single-entry cache of fully verified immutable snapshot/original raw pairs; current validation and write protections unchanged. Revision 4 (杨总 16:12): optional mutable gachaDaily {day,n} for the 5-per-day blind box limit; absent = 0 today."
@@ -61,8 +61,8 @@
     "path": "qa-protocol2/vendor/cards/card-coordinator.mjs",
     "sourcePackage": "collectible-card-adapter-v1",
     "sourcePath": "module/card-coordinator.mjs",
-    "bytes": 12109,
-    "sha256": "bc7aba0e4a3fba6217e149f05e4c548011d38ab8d11317884bc8ed20daaf3d6e",
+    "bytes": 12093,
+    "sha256": "17679253a2169634336ebce15838c0a58b8d9e0e5ca1029eb17b3020dbbc2faf",
     "reviewedInputSha256": "c39527224902c835f2cc611527a5fcec2a23293adebd3b78bbb8684d2b41a034",
     "reviewedInputBytes": 8203,
     "integrationChange": "only final cache import URLs; business logic unchanged"
@@ -103,8 +103,8 @@
     "sourcePackage": "space01b04-author-increment",
     "sourceCommit": "472349b5f31df4446e79694b6be5bd6f66bd6db4",
     "derivation": "Reviewed01a domain unchanged; new authored candidate moon intent/overlay increment; artwork selectively from pinned a1bc784b demo",
-    "bytes": 5896,
-    "sha256": "997ce1584c65c0902ec6d5774df05e21882db119f894d6c135a656f4d2dc681f"
+    "bytes": 5892,
+    "sha256": "c0ecd8557d9a75cc2a178213416e2a826c9477ddc9a1cc83af801b9fb529f2bf"
   },
   {
     "path": "space/host.mjs",
@@ -119,8 +119,8 @@
     "sourcePackage": "space01b04-author-increment",
     "sourceCommit": "472349b5f31df4446e79694b6be5bd6f66bd6db4",
     "derivation": "Reviewed01a domain unchanged; new authored candidate moon intent/overlay increment; artwork selectively from pinned a1bc784b demo",
-    "bytes": 7974,
-    "sha256": "bf2228a8e53fc4c69ae40ed443f0efef61b9c74bcdc3b9a3d86504e695b496ca"
+    "bytes": 8258,
+    "sha256": "260650dbd7ecaec1a6fce5c62d35a312a17dd3ca036654aac2fe87c58845e8ce"
   },
   {
     "path": "space/art.mjs",
