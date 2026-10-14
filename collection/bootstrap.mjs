@@ -1,5 +1,5 @@
-import { COLLECTIBLES_PRODUCTION_ENABLED } from '../collectibles/release.mjs?v=xingtu04-20261014-r1';
-import { KEYS, LOCK_NAME, createSaveCoordinator } from './host-save.mjs?v=xingtu04-20261014-r1';
+import { COLLECTIBLES_PRODUCTION_ENABLED } from '../collectibles/release.mjs?v=xingtuv2-3-20261014-r2';
+import { KEYS, LOCK_NAME, createSaveCoordinator } from './host-save.mjs?v=xingtuv2-3-20261014-r2';
 import { createCollectionHost, secureRandomInt } from './host-wallet.mjs?v=formal-cards-candidate-7';
 import { WALLET_BRIDGE_APPROVED, EXPECTED_TRIAL_SHA256, APPROVAL_EVIDENCE, CARDS_ENTRY_ENABLED } from './release-gate.mjs?v=formal-cards-candidate-7';
 import { TRIAL_CONFIG } from './domain/trial-config.mjs?v=formal-cards-candidate-7';
@@ -33,7 +33,7 @@ async function launch() {
     const memory=new Map();
     const coordinator=createSaveCoordinator({storage:{getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v)},economy:E,model:createApprovedTrialModel(TRIAL_CONFIG,{schemaVersion:1,approvedConfigCanonical:canonical(TRIAL_CONFIG),evidenceRefs:APPROVAL_EVIDENCE,walletBridgeApproved:false}),ownsLock:()=>true});
     window.FormalCollectionRuntime={keys:KEYS,storage:{getItem:()=>null,setItem:()=>{}},coordinator,ownsLock:()=>true,entryEnabled:false};
-    await import(new URL(location.pathname.includes('/pet/game/')?'../pet/game/app.js?v=xingtu04-20261014-r1':'../app.js?v=xingtu04-20261014-r1',import.meta.url));return;
+    await import(new URL(location.pathname.includes('/pet/game/')?'../pet/game/app.js?v=xingtuv2-3-20261014-r2':'../app.js?v=xingtuv2-3-20261014-r2',import.meta.url));return;
   }
   if(!navigator.locks?.request){notice('SAFE_WEB_LOCK_UNAVAILABLE');return;}
   if(!crypto?.subtle||!crypto?.getRandomValues){notice('SECURE_CONTEXT_REQUIRED');return;}
@@ -76,7 +76,7 @@ async function launch() {
     window.FormalCollectionRuntime={entryEnabled:CARDS_ENTRY_ENABLED,keys:KEYS,storage:scopedStorage(),coordinator,model,qa,ownsLock:()=>ownsLock,handle:null};
     document.getElementById('collectionStartup')?.remove();
     if(qa){const badge=document.createElement('div');badge.textContent='QA 独立测试存档 · 不读写实际经营存档';badge.style.cssText='position:fixed;top:0;left:0;right:0;z-index:70;background:#ffdf6c;color:#141414;text-align:center;font:12px/1.5 system-ui';document.body.append(badge);}
-    await import(new URL(location.pathname.includes('/pet/game/')?'../pet/game/app.js?v=xingtu04-20261014-r1':'../app.js?v=xingtu04-20261014-r1',import.meta.url));
+    await import(new URL(location.pathname.includes('/pet/game/')?'../pet/game/app.js?v=xingtuv2-3-20261014-r2':'../app.js?v=xingtuv2-3-20261014-r2',import.meta.url));
     const host=createCollectionHost({coordinator,model,economy:E,getState:()=>window.__tzz.state,replaceState:s=>window.__tzz.collectionReplaceState(s),flush:()=>window.__tzz.persist(),enabled:WALLET_BRIDGE_APPROVED,randomInt:n=>secureRandomInt(crypto,n),makeId:()=>`tx:${crypto.randomUUID()}`});
     window.FormalCollectionRuntime.handle=message=>host.handle(message);
     window.FormalCollectionRuntime.snapshot=()=>host.snapshot();
@@ -86,14 +86,14 @@ async function launch() {
 // The candidate is opt-in only through the existing localhost synthetic QA flag.
 // Production activation is explicit; when disabled the original launch remains.
 if((new URLSearchParams(location.search).has('collectionQA')||new URLSearchParams(location.search).has('wearables8')) && ['localhost','127.0.0.1','[::1]'].includes(location.hostname)) {
-  import('../qa-protocol2/entry.mjs?v=xingtu04-20261014-r1').then(module=>module.launchRealPageQA({
+  import('../qa-protocol2/entry.mjs?v=xingtuv2-3-20261014-r2').then(module=>module.launchRealPageQA({
     scope:'formal',E,keys:KEYS,lockName:LOCK_NAME,createLegacyCoordinator:createSaveCoordinator,
     createCollectionHost,secureRandomInt,createApprovedTrialModel,config:TRIAL_CONFIG,canonical,
     expectedConfigHash:EXPECTED_TRIAL_SHA256,approvalEvidence:APPROVAL_EVIDENCE,
     sourceBase:new URL('../',import.meta.url),notice,
   })).catch(()=>notice('QA_PROTOCOL2_BOOT_FAILED_READ_ONLY'));
 } else if(COLLECTIBLES_PRODUCTION_ENABLED && new URLSearchParams(location.search).get('test')!=='homes') {
-  import('../collectibles/entry.mjs?v=xingtu04-20261014-r1').then(module=>module.launchProductionCollectibles({
+  import('../collectibles/entry.mjs?v=xingtuv2-3-20261014-r2').then(module=>module.launchProductionCollectibles({
     walletBridgeApproved:WALLET_BRIDGE_APPROVED,cardEntryEnabled:false,
     scope:'formal',E,keys:KEYS,lockName:LOCK_NAME,createLegacyCoordinator:createSaveCoordinator,
     createCollectionHost,secureRandomInt,createApprovedTrialModel,config:TRIAL_CONFIG,canonical,

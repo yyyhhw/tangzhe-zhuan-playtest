@@ -1,7 +1,7 @@
-import {planHiddenClaim,validHiddenTransition} from '../../../collectibles/decor6-grants.mjs?v=xingtu04-20261014-r1';
-import {moonView,planMoon} from '../../../space/moon.mjs?v=xingtu04-20261014-r1';
-import {migrateSpace,spaceTransition} from '../../../space/domain.mjs?v=xingtu04-20261014-r1';
-import {createCardTransitionGuard} from './card-transition.mjs?v=xingtu04-20261014-r1';
+import {planHiddenClaim,validHiddenTransition} from '../../../collectibles/decor6-grants.mjs?v=xingtuv2-3-20261014-r2';
+import {moonView,planMoon} from '../../../space/moon.mjs?v=xingtuv2-3-20261014-r2';
+import {migrateSpace,spaceTransition} from '../../../space/domain.mjs?v=xingtuv2-3-20261014-r2';
+import {createCardTransitionGuard} from './card-transition.mjs?v=xingtuv2-3-20261014-r2';
 export const CARD_ADAPTER_ENABLED=false;
 /** Synthetic-adapter coordinator candidate; no global storage or automatic launch. */
 const fail=code=>{throw Error(code);};

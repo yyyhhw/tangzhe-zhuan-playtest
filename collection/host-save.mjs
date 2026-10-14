@@ -1,4 +1,4 @@
-import {readSpace,migrateSpace,spaceTransition} from '../space/domain.mjs?v=xingtu04-20261014-r1';
+import {readSpace,migrateSpace,spaceTransition} from '../space/domain.mjs?v=xingtuv2-3-20261014-r2';
 /** FORMAL isolated save protocol. No global storage, no automatic import, no rollback writes. */
 import {sha256,validateV15} from './domain/sha256.mjs?v=formal-cards-candidate-7';
 import { canonical } from './domain/json.mjs?v=formal-cards-candidate-7';

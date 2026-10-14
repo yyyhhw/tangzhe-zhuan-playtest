@@ -2,8 +2,8 @@
  * 其余批次等熊大的图齐了再把批次名加进来（同时 art/collectibles/box200/<ID>.png 必须存在）。
  * 隐藏款（rarity=hidden）不进普通池、开盒永远抽不到；盲盒-109 起达成特殊目标直接获得（见 box200-hidden.mjs），不占每天 5 次。
  * 隐藏款（batch box200-hidden）先于图放行：没图时图鉴/店景走「图示暂不可用」兜底。 */
-import {BOX200_ITEMS} from './box200-items.mjs?v=xingtu04-20261014-r1';
-import {BOX200_COPY} from './box200-copy.mjs?v=xingtu04-20261014-r1';
+import {BOX200_ITEMS} from './box200-items.mjs?v=xingtuv2-3-20261014-r2';
+import {BOX200_COPY} from './box200-copy.mjs?v=xingtuv2-3-20261014-r2';
 export const LIVE_BATCHES=Object.freeze(['盲盒-83','box200-w1','box200-hidden','box200-w2','box200-w3','box200-w4','box200-w5']);
 export function liveItems(batches=LIVE_BATCHES){return BOX200_ITEMS.filter(x=>batches.includes(x.batch)).map(x=>{const c=BOX200_COPY[x.id];if(!c||!c.name)throw Error('BOX200_COPY_MISSING:'+x.id);
   return Object.freeze({id:x.id,type:x.type,shop:x.shop,name:c.name,hint:c.hint||'',desc:c.desc||'',...(c.flavor?{flavor:c.flavor}:{}),...(x.rarity==='hidden'?{hidden:true,unlock:c.unlock||''}:{}),box200:true});});}
