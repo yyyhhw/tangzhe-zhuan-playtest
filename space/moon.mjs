@@ -1,12 +1,20 @@
 /** Candidate-only moon rules. Pure host planner; no Storage, timers, UI results or wallet changes. */
-import {readSpace} from './domain.mjs?v=xingtuv2-2-20261014-r1';
-import {ROUTE_BY_ID,albumOk,awardFor,applyAward} from './album.mjs?v=xingtuv2-2-20261014-r1';
-import {EVENT_IDS,readVoyageEv,pickEvent,defaultEvState,resolveEvent,outcomeFor,rewardPoints} from './voyage-ev.mjs?v=xingtuv2-2-20261014-r1';
+import {readSpace} from './domain.mjs?v=xingtuv2-3-20261014-r1';
+import {ROUTE_BY_ID,albumOk,awardFor,applyAward} from './album.mjs?v=xingtuv2-3-20261014-r1';
+import {gate} from './xingtu-views.mjs?v=xingtuv2-3-20261014-r1';
+import {EVENT_IDS,readVoyageEv,pickEvent,defaultEvState,resolveEvent,outcomeFor,rewardPoints} from './voyage-ev.mjs?v=xingtuv2-3-20261014-r1';
 // 杨总 2026-10-14 01:32「星途所有店铺35级就可以了」：全部店铺 Lv35+ 解锁。正式航程 10 分钟、每次 8 探索点。
 export const MOON_RULES=Object.freeze({id:'xingtu-moon-10min-8pts-v1',route:'moon',duration:600000,points:8,minShopLevel:35});
 // 星途-113：新规则版本，新出航一律挂一件返航事件（星途-07）。旧 v1 航程/回执照旧可读可领（8 点、ev:null）。
 export const MOON_EV_RULES=Object.freeze({id:'xingtu-moon-10min-ev-v2',route:'moon',duration:600000,points:8,minShopLevel:35});
-const RULESETS=[MOON_RULES.id,MOON_EV_RULES.id];
+// 星途 v2-A（杨总 22:27 / 王大妈 22:30）：多航线 + 科研升级。月面照旧走 v2 规则；其它航线新规则 v3（时长按圈，探索点 = 事件点 × 航线倍数）。
+export const ROUTE_RULES=Object.freeze({id:'xingtu-routes-v3',dur:Object.freeze({station:1800000,mars:3600000,venus:3600000,belt:7200000,pirate:7200000,europa:14400000,saturn:14400000}),mult:Object.freeze({station:1,mars:2.5,venus:2.5,belt:5,pirate:5,europa:10,saturn:10})});
+export const ROUTE_IDS=Object.freeze(['moon',...Object.keys(ROUTE_RULES.dur)]);
+export const LV_COST=Object.freeze([20,60,150,400]);// 科研 1→2 … 4→5 花的探索点（demo LV_COST）
+export const SYS_KEYS=Object.freeze(['tech','war','med','life']);
+const durOf=(route,ruleset)=>ruleset===ROUTE_RULES.id?ROUTE_RULES.dur[route]:route==='moon'&&ruleset!==ROUTE_RULES.id?MOON_RULES.duration:undefined;
+export const routePoints=(route,ev,choice,outcome)=>{const p=rewardPoints(ev,choice,outcome);return p===null?null:route==='moon'?p:Math.round(p*ROUTE_RULES.mult[route]);};
+const RULESETS=[MOON_RULES.id,MOON_EV_RULES.id,ROUTE_RULES.id];
 export const spaceUnlocked=state=>Array.isArray(state?.shops)&&state.shops.length>0&&state.shops.every(s=>s?.open===true&&Number.isSafeInteger(s.lv)&&s.lv>=MOON_RULES.minShopLevel);
 const copy=x=>JSON.parse(JSON.stringify(x)),own=(x,k)=>Object.hasOwn(x,k),int=(x,min=0)=>Number.isSafeInteger(x)&&x>=min;
 const bad=code=>({ok:false,code}),MAX_TIME=8640000000000000;
@@ -26,17 +34,17 @@ function awardOk(r,space){
 }
 function receiptOk(r,ledger,scope,space){
  if(!r||typeof r!=='object'||!RULESETS.includes(r.ruleset))return false;
- const v2=r.ruleset===MOON_EV_RULES.id,base=v2?[...R2]:[...R1];
- if(!(keys(r,[...base])||keys(r,[...base,...AW]))||!awardOk(r,space)||r.sequence!==ledger.claimed||parseVoyageId(r.voyageId,scope)?.seq!==r.sequence||r.route!=='moon'||!int(r.start)||!int(r.arrival)||r.arrival!==r.start+MOON_RULES.duration||!int(r.claimedAt)||r.claimedAt<r.arrival||r.claimedAt>MAX_TIME)return false;
+ const v2=r.ruleset!==MOON_RULES.id,base=v2?[...R2]:[...R1];
+ if(!(keys(r,[...base])||keys(r,[...base,...AW]))||!awardOk(r,space)||r.sequence!==ledger.claimed||parseVoyageId(r.voyageId,scope)?.seq!==r.sequence||!ROUTE_IDS.includes(r.route)||(r.route==='moon')===(r.ruleset===ROUTE_RULES.id)||!int(r.start)||!int(r.arrival)||r.arrival!==r.start+durOf(r.route,r.ruleset)||!int(r.claimedAt)||r.claimedAt<r.arrival||r.claimedAt>MAX_TIME)return false;
  if(!v2)return r.points===MOON_RULES.points;
- return EVENT_IDS.includes(r.ev)&&r.outcome===outcomeFor(r.voyageId,r.ev,r.choice)&&r.points===rewardPoints(r.ev,r.choice,r.outcome);
+ return EVENT_IDS.includes(r.ev)&&r.outcome===outcomeFor(r.voyageId,r.ev,r.choice)&&r.points===routePoints(r.route,r.ev,r.choice,r.outcome);
 }
 // v2 航程事件：必须有显式 evState；已选 → 成败/奖励必须和确定性规则一致（坏档只读，不猜不洗）。
 function voyageEvOk(v,arrival){
  if(v.ruleset===MOON_RULES.id)return v.ev===null&&!own(v,'evState')?{event:null}:null;
  const e=readVoyageEv(v);if(!e.ok||!e.event||e.event.implicit)return null;
  const st=e.event.state;
- if(st.choice!==null){const pts=rewardPoints(st.id,st.choice,st.outcome);if(st.outcome!==outcomeFor(v.voyageId,st.id,st.choice)||!keys(st.reward,['pts'])||st.reward.pts!==pts||st.resolvedAt<arrival)return null;}
+ if(st.choice!==null){const pts=routePoints(v.route,st.id,st.choice,st.outcome);if(st.outcome!==outcomeFor(v.voyageId,st.id,st.choice)||!keys(st.reward,['pts'])||st.reward.pts!==pts||st.resolvedAt<arrival)return null;}
  return {event:st};
 }
 export function moonView(state,{scope,now}){
@@ -50,28 +58,37 @@ export function moonView(state,{scope,now}){
   if(ledger.claimed===0?r!==null:!receiptOk(r,ledger,scope,space))return bad('SPACE_RECEIPT_COMPATIBILITY');
  }
  if(v!==null){
-  if(!ledger||!int(v.sequence,1)||v.sequence!==ledger.sequence||parseVoyageId(v.voyageId,scope)?.seq!==v.sequence||v.route!=='moon'||!RULESETS.includes(v.ruleset)||v.dur!==MOON_RULES.duration||!voyageEvOk(v,v.start+v.dur)||typeof v.completed!=='boolean'||!int(v.start)||v.start+v.dur>MAX_TIME)return bad('SPACE_VOYAGE_COMPATIBILITY');
-  if(v.completed?(ledger.claimed!==v.sequence||ledger.lastReceipt?.voyageId!==v.voyageId||ledger.lastReceipt.start!==v.start||ledger.lastReceipt.arrival!==v.start+v.dur||ledger.lastReceipt.ruleset!==v.ruleset||(v.ruleset===MOON_EV_RULES.id&&(v.evState.choice===null||ledger.lastReceipt.ev!==v.ev||ledger.lastReceipt.choice!==v.evState.choice||ledger.lastReceipt.outcome!==v.evState.outcome||ledger.lastReceipt.points!==v.evState.reward.pts||v.evState.resolvedAt>ledger.lastReceipt.claimedAt))):(ledger.claimed!==v.sequence-1||ledger.lastReceipt&&ledger.lastReceipt.claimedAt>v.start))return bad('SPACE_VOYAGE_COMPATIBILITY');
+  if(!ledger||!int(v.sequence,1)||v.sequence!==ledger.sequence||parseVoyageId(v.voyageId,scope)?.seq!==v.sequence||!ROUTE_IDS.includes(v.route)||!RULESETS.includes(v.ruleset)||v.dur!==durOf(v.route,v.ruleset)||!voyageEvOk(v,v.start+v.dur)||typeof v.completed!=='boolean'||!int(v.start)||v.start+v.dur>MAX_TIME)return bad('SPACE_VOYAGE_COMPATIBILITY');
+  if(v.completed?(ledger.claimed!==v.sequence||ledger.lastReceipt?.voyageId!==v.voyageId||ledger.lastReceipt.start!==v.start||ledger.lastReceipt.arrival!==v.start+v.dur||ledger.lastReceipt.ruleset!==v.ruleset||(v.ruleset!==MOON_RULES.id&&(v.evState.choice===null||ledger.lastReceipt.ev!==v.ev||ledger.lastReceipt.choice!==v.evState.choice||ledger.lastReceipt.outcome!==v.evState.outcome||ledger.lastReceipt.points!==v.evState.reward.pts||v.evState.resolvedAt>ledger.lastReceipt.claimedAt))):(ledger.claimed!==v.sequence-1||ledger.lastReceipt&&ledger.lastReceipt.claimedAt>v.start))return bad('SPACE_VOYAGE_COMPATIBILITY');
   if(now<v.start)return bad('SPACE_TIME_BACKWARDS');
  }else if(ledger&&ledger.sequence!==0)return bad('SPACE_LEDGER_COMPATIBILITY');
  if(ledger?.lastReceipt&&now<ledger.lastReceipt.claimedAt)return bad('SPACE_TIME_BACKWARDS');
  if(!albumOk(space))return bad('SPACE_ALBUM_COMPATIBILITY');
  const unlocked=spaceUnlocked(state),ev=v?voyageEvOk(v,v.start+v.dur).event:null;
  if(ev&&ev.resolvedAt!==null&&now<ev.resolvedAt)return bad('SPACE_TIME_BACKWARDS');
- const award=v&&!v.completed?awardFor(space,'moon'):null;
+ const award=v&&!v.completed?awardFor(space,v.route):null;
  return {ok:true,award,event:ev?copy(ev):null,needsChoice:!!(ev&&ev.choice===null&&v&&!v.completed),unlocked,missing:read.missing,space:copy(space),ledger:copy(ledger),voyage:copy(v),receipt:copy(ledger?.lastReceipt??null),phase:v===null?'ready':v.completed?'report':now>=v.start+v.dur?'arrived':'flying',remaining:v&&!v.completed?Math.max(0,v.start+v.dur-now):0,arrival:v?v.start+v.dur:null,ruleset:v?v.ruleset:MOON_EV_RULES.id};
 }
 export function planMoon(state,intent,{scope,now,makeId,hiddenRules}){
  const input=readSpace({intent});if(!input.ok)return bad('SPACE_INTENT_INVALID');
  const view=moonView(state,{scope,now});if(!view.ok)return view;
  if(!view.unlocked)return bad('SPACE_TECH_LEVEL_REQUIRED');
- const depart=keys(intent,['type','route'])&&intent.type==='depart'&&intent.route==='moon';
+ const depart=keys(intent,['type','route'])&&intent.type==='depart'&&ROUTE_IDS.includes(intent.route);
+ const upgrade=keys(intent,['type','sys'])&&intent.type==='upgrade'&&SYS_KEYS.includes(intent.sys);
  const claim=keys(intent,['type','voyageId'])&&intent.type==='claim'&&typeof intent.voyageId==='string';
  const choose=keys(intent,['type','voyageId','choice'])&&intent.type==='choose'&&typeof intent.voyageId==='string'&&['a','b'].includes(intent.choice);
- if(!depart&&!claim&&!choose)return bad('SPACE_INTENT_INVALID');
+ if(!depart&&!claim&&!choose&&!upgrade)return bad('SPACE_INTENT_INVALID');
  const space=copy(view.space),ledger=copy(view.ledger??{schemaVersion:1,sequence:0,claimed:0,lastReceipt:null});
- if(depart){
+ if(upgrade){
+  // 科研升级：花探索点，1→5 级；飞行中也能升（demo 同）。不动航程/回执。
+  const lv=space.lv[intent.sys];if(!int(lv,1))return bad('SPACE_INTENT_INVALID');
+  if(lv>=5)return {ok:true,noop:true,code:'SPACE_LV_MAX',view};
+  const cost=LV_COST[lv-1];if(space.pts<cost)return bad('SPACE_PTS_NOT_ENOUGH');
+  space.pts-=cost;space.lv[intent.sys]=lv+1;
+ }else if(depart){
   if(view.voyage&&!view.voyage.completed)return {ok:true,noop:true,code:'SPACE_ALREADY_IN_FLIGHT',view};
+  // 出航需要四个岗位科研（圈最低级 + 合计 + 短板），月面也查
+  if(!gate(space,intent.route).ok)return bad('SPACE_POSTS_REQUIRED');
   if(ledger.sequence===Number.MAX_SAFE_INTEGER||now+MOON_RULES.duration>MAX_TIME)return bad('SPACE_OVERFLOW');
   if(typeof makeId!=='function')return bad('SPACE_ID_REQUIRED');
   const sequence=ledger.sequence+1,uuid=makeId(),voyageId=`moon:${scope}:${sequence}:${uuid}`;
@@ -79,7 +96,9 @@ export function planMoon(state,intent,{scope,now,makeId,hiddenRules}){
   ledger.sequence=sequence;space.moonLoop=ledger;
   const ev=pickEvent(voyageId);if(!ev)return bad('SPACE_EV_UNKNOWN');
   const base=copy(space.voyage??{});delete base.evState;// 上一趟的事件状态不带进新航程；其它未知扩展照旧保留
-  space.voyage={...base,route:'moon',start:now,dur:MOON_EV_RULES.duration,ev,evState:defaultEvState(ev),voyageId,sequence,ruleset:MOON_EV_RULES.id,completed:false};
+  const moon=intent.route==='moon',ruleset=moon?MOON_EV_RULES.id:ROUTE_RULES.id,dur=durOf(intent.route,ruleset);
+  if(now+dur>MAX_TIME)return bad('SPACE_OVERFLOW');
+  space.voyage={...base,route:intent.route,start:now,dur,ev,evState:defaultEvState(ev),voyageId,sequence,ruleset,completed:false};
  }else if(choose){
   const parsed=parseVoyageId(intent.voyageId,scope);
   if(!parsed)return bad('SPACE_VOYAGE_ID_INVALID');
@@ -88,7 +107,7 @@ export function planMoon(state,intent,{scope,now,makeId,hiddenRules}){
   if(view.phase!=='arrived')return bad('SPACE_NOT_ARRIVED');
   if(!view.event)return bad('SPACE_EV_NONE');
   if(view.event.choice!==null)return {ok:true,noop:true,code:'SPACE_EV_ALREADY_CHOSEN',view};// 已选过：只读，绝不重掷
-  const outcome=outcomeFor(intent.voyageId,view.event.id,intent.choice),pts=rewardPoints(view.event.id,intent.choice,outcome);
+  const outcome=outcomeFor(intent.voyageId,view.event.id,intent.choice),pts=routePoints(view.voyage.route,view.event.id,intent.choice,outcome);
   const r=resolveEvent(space.voyage,{choice:intent.choice,outcome,reward:{pts},now});if(!r.ok)return r;
   space.voyage=r.voyage;
  }else{
@@ -98,15 +117,15 @@ export function planMoon(state,intent,{scope,now,makeId,hiddenRules}){
   if(!view.voyage||intent.voyageId!==view.voyage.voyageId)return bad('SPACE_VOYAGE_ID_MISMATCH');
   if(view.phase!=='arrived')return bad('SPACE_NOT_ARRIVED');
   if(view.needsChoice)return bad('SPACE_EV_CHOICE_REQUIRED');
-  const v2=view.voyage.ruleset===MOON_EV_RULES.id,points=v2?view.event.reward.pts:MOON_RULES.points;
-  const visits=space.visits.moon??0;
+  const v2=view.voyage.ruleset!==MOON_RULES.id,points=v2?view.event.reward.pts:MOON_RULES.points,route=view.voyage.route;
+  const visits=space.visits[route]??0;
   if(!int(visits)||space.pts>Number.MAX_SAFE_INTEGER-points||visits===Number.MAX_SAFE_INTEGER)return bad('SPACE_OVERFLOW');
   // 星途-114：剧情卡/隐藏物和探索点、回执在同一笔私有写里落盘；按已发张数推进，同一张卡/同一件隐藏物不可能发两次。
-  const award=awardFor(space,'moon',hiddenRules),awarded=applyAward(space,'moon',award);if(!awarded)return bad('SPACE_OVERFLOW');
+  const award=awardFor(space,route,hiddenRules),awarded=applyAward(space,route,award);if(!awarded)return bad('SPACE_OVERFLOW');
   for(const k of ['cards','hidden','alienCards'])space[k]=awarded[k];
-  space.pts+=points;space.visits.moon=visits+1;space.voyage.completed=true;
+  space.pts+=points;space.visits[route]=visits+1;space.voyage.completed=true;
   ledger.claimed=view.voyage.sequence;
-  ledger.lastReceipt={voyageId:intent.voyageId,sequence:view.voyage.sequence,route:'moon',ruleset:view.voyage.ruleset,start:view.voyage.start,arrival:view.arrival,claimedAt:now,points,...(v2?{ev:view.event.id,choice:view.event.choice,outcome:view.event.outcome}:{}),card:award.card,hidden:award.hidden};space.moonLoop=ledger;
+  ledger.lastReceipt={voyageId:intent.voyageId,sequence:view.voyage.sequence,route,ruleset:view.voyage.ruleset,start:view.voyage.start,arrival:view.arrival,claimedAt:now,points,...(v2?{ev:view.event.id,choice:view.event.choice,outcome:view.event.outcome}:{}),card:award.card,hidden:award.hidden};space.moonLoop=ledger;
  }
  const next=copy(state);next.space=space;
  const checked=moonView(next,{scope,now});if(!checked.ok)return checked;

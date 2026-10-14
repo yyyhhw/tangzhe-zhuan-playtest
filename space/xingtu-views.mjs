@@ -1,8 +1,8 @@
 // 星途 v2 第一批：星图（5 圈 9 航线 + 出航需要四个岗位科研）与飞船（四个舱室）——只读，不写存档。
 // 画面与数值直接搬自王大妈 demo（wangdama/xingtu-demo、xingtu-4post-mock fd614ae）。
-import * as A from './xingtu-art.mjs?v=xingtuv2-2-20261014-r1';
+import * as A from './xingtu-art.mjs?v=xingtuv2-3-20261014-r1';
 export const RING_MIN=A.RING_MIN,RING_SUM=A.RING_SUM,ORDER=A.ORDER,POST=A.POST;
-export const OPEN_NOW=['moon'];
+export const OPEN_NOW=['moon','station','mars','venus','belt','pirate','europa','saturn'];// 星途 v2-A：未知信号源留给结局批
 const LVK=['tech','war','med','life'];
 function demoState(space,sel){
  const lv={};for(const k of LVK){const v=space?.lv?.[k];lv[k]=Number.isInteger(v)&&v>=1?Math.min(5,v):1;}
@@ -19,7 +19,7 @@ export function gate(space,id){
  const lack=posts.filter(p=>!p.ok).map(p=>`${p.post}（${p.ceo}）科研 Lv${p.need}`).join('、')||(sumOk?'':`四岗科研合计 ${RING_SUM[r.ring]}`);
  return {route:r,posts,total,sum:RING_SUM[r.ring],sumOk,ok,lack};
 }
-export function renderMap(parent,{doc,space,pick,onPick,goVoyage}){
+export function renderMap(parent,{doc,space,pick,onPick,goVoyage,launch,flying=false}){
  const S=demoState(space,pick);A.use(S);const g=gate(space,pick),r=g.route,info=A.ROUTE_INFO[r.id];
  const box=doc.createElement('div');box.className='box mapbox';box.id='xingtuMap2';box.innerHTML=A.mapSvg();parent.append(box);
  box.querySelectorAll('[data-r]').forEach(n=>{const go=()=>onPick(n.getAttribute('data-r'));n.addEventListener('click',go);n.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go();}});});
@@ -35,13 +35,14 @@ export function renderMap(parent,{doc,space,pick,onPick,goVoyage}){
  <div class="pd-stats"><span><b>${r.pts[0]}–${r.pts[1]}</b>探索点</span><span><b>${r.cards.length}</b>剧情卡</span>${r.ring>=1&&!r.final?'<span class="alienchip"><b>👽</b>有外星剧情</span>':''}</div>`;
  const b=doc.createElement('button');b.type='button';b.id='xingtuLaunch';b.className='btn launch';
  if(!g.ok){b.disabled=true;b.textContent='岗位科研不够，先去升级';}
- else if(open){b.textContent='出航 →';b.onclick=goVoyage;}
+ else if(flying){b.disabled=true;b.textContent='飞船还在路上';b.onclick=goVoyage;}
+ else if(open){b.textContent='出航 →';b.onclick=()=>launch?launch(r.id):goVoyage();}
  else{b.disabled=true;b.textContent='这条航线下一版开放';}
  d.append(b);
  if(!g.ok){const l=doc.createElement('div');l.className='lackline';l.id='xingtuLack';l.textContent=`还差：${g.lack}`;d.append(l);}
  parent.append(d);
 }
-export function renderShip(parent,{doc,space,room,onRoom}){
+export function renderShip(parent,{doc,space,room,onRoom,upgrade,cabinArt}){
  const S=demoState(space,'moon');A.use(S);const k=room,lv=S.lv[k],st=A.STAGES[k][lv-1],sy=A.SYSK[k];
  const box=doc.createElement('div');box.className='box shipbox';box.id='xingtuShip';box.innerHTML=A.shipSvg(k);parent.append(box);
  box.querySelectorAll('[data-room]').forEach(n=>n.addEventListener('click',()=>onRoom(n.getAttribute('data-room'))));
@@ -54,8 +55,12 @@ export function renderShip(parent,{doc,space,room,onRoom}){
  <div class="stages">${A.STAGES[k].map((s,i)=>{const L=i+1,o=L<=lv;return `<div class="stg${L===lv?' on':''}${o?'':' lock'}"><svg viewBox="0 0 ${A.W0} ${A.H0}" aria-hidden="true">${A.roomInner(k,L,{bare:true})}</svg><span>${o?'Lv'+L:'🔒 Lv'+L}</span></div>`;}).join('')}</div>
  <div class="unl">${A.ITEMS[k].map((n,i)=>S.items[k+':'+(i+1)]?`<span class="y">${n}</span>`:`<span class="n">${i+1} 级 · ？？？</span>`).join('')}</div>
  <div class="muted">每升一级，舱室换一张新插画。已摆进 ${have} / 5 件科研成果，没抽到的显示成全息虚影。点飞船上的舱室可以切换。</div>`;
- const up=doc.createElement('button');up.type='button';up.id='xingtuUpgrade';up.className='btn';up.disabled=true;
- up.textContent=lv>=5?'已满级':`升到 ${lv+1} 级 · ${cost} 探索点（下一版开放）`;c.append(up);parent.append(c);
+ // 熊大写实插画接口：art/xingtu-cabins/<tech|war|med|life>-<1..5>.webp；没有图时（加载失败）留 SVG 场景
+ if(cabinArt){const big=c.querySelector?.('.bigroom');if(big){const img=doc.createElement('img');img.className='cabinart';img.alt=st[0];img.src=cabinArt(k,lv);img.decoding='async';img.onerror=()=>{img.remove?.();};img.onload=()=>{big.classList?.add?.('hasart');};big.append(img);}}
+ const pts=Number.isInteger(space?.pts)?space.pts:0;
+ const up=doc.createElement('button');up.type='button';up.id='xingtuUpgrade';up.className='btn';up.disabled=lv>=5||pts<cost||!upgrade;
+ up.textContent=lv>=5?'已满级':`升到 ${lv+1} 级 · ${cost} 探索点`;if(upgrade)up.onclick=()=>upgrade(k);c.append(up);
+ const have2=doc.createElement('div');have2.className='muted';have2.id='xingtuPts';have2.textContent=`现有探索点 ${pts}`;c.append(have2);parent.append(c);
  const sl=doc.createElement('div');sl.className='box sumline';sl.innerHTML=`<span>四人等级合计</span><span class="num">${LVK.reduce((a,x)=>a+S.lv[x],0)} / 20</span>`;parent.append(sl);
 }
 export {A as ART};

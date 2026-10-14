@@ -10,11 +10,11 @@ for(const [scope,path,projectRoot='/'] of [['formal','/'],['formal','/pet/game/'
  h.node('xingtuTabVoyage').onclick();
  for(let n=1;n<=3;n++){
   assert(h.node('xingtuDepart').onclick().ok);now+=601000;host.refresh();assert(h.node('xingtuChoiceB').onclick().ok);
-  const reward=h.node('xingtuNewCard').querySelector('img');assert.equal(reward.src,`https://play.example.invalid${projectRoot}art/spacecards/moon_${n}.webp?v=xingtuv2-2-20261014-r1`);assert.equal(reward.width,1024);assert.equal(reward.height,768);
+  const reward=h.node('xingtuNewCard').querySelector('img');assert.equal(reward.src,`https://play.example.invalid${projectRoot}art/spacecards/moon_${n}.webp?v=xingtuv2-3-20261014-r1`);assert.equal(reward.width,1024);assert.equal(reward.height,768);
   assert(h.node('xingtuClaim').onclick().ok);const writes=h.writes().length;h.node('xingtuTabAlbum').onclick();
   assert.equal(h.node('xingtuContent').querySelectorAll('img').length,n);
   for(let i=1;i<=3;i++){const b=h.node(`xingtuCard-moon-${i}`);assert.equal(!!b.querySelector('img'),i<=n);b.onclick();assert.equal(!!h.node('xingtuCardDetail').querySelector('img'),i<=n);}
-  assert.equal(h.node('xingtuCard-station-1'),null);assert.equal(h.writes().length,writes);
+  assert.equal(h.node('xingtuCard-signal-1'),null);assert.equal(h.writes().length,writes);// 星途 v2-A：只剩信号源没开航
   h.node('xingtuCard-moon-1').onclick();const img=h.node('xingtuCardDetail').querySelector('img');img.onerror();assert.equal(img.hidden,true);assert.match(h.node('xingtuCardDetail').textContent,/月面第一串/);
   h.node('xingtuTabVoyage').onclick();
  }
