@@ -1,14 +1,14 @@
 /** Candidate-only moon rules. Pure host planner; no Storage, timers, UI results or wallet changes. */
-import {readSpace} from './domain.mjs?v=xingtuv2-5-20261014-r1';
-import {ROUTE_BY_ID,albumOk,awardFor,applyAward} from './album.mjs?v=xingtuv2-5-20261014-r1';
-import {gate} from './xingtu-views.mjs?v=xingtuv2-5-20261014-r1';
-import {EVENT_IDS,readVoyageEv,pickEvent,defaultEvState,resolveEvent,outcomeFor,rewardPoints} from './voyage-ev.mjs?v=xingtuv2-5-20261014-r1';
+import {readSpace} from './domain.mjs?v=xingtuv2-6-20261014-r1';
+import {ROUTE_BY_ID,albumOk,awardFor,applyAward} from './album.mjs?v=xingtuv2-6-20261014-r1';
+import {gate} from './xingtu-views.mjs?v=xingtuv2-6-20261014-r1';
+import {EVENT_IDS,readVoyageEv,pickEvent,defaultEvState,resolveEvent,outcomeFor,rewardPoints} from './voyage-ev.mjs?v=xingtuv2-6-20261014-r1';
 // 杨总 2026-10-14 01:32「星途所有店铺35级就可以了」：全部店铺 Lv35+ 解锁。正式航程 10 分钟、每次 8 探索点。
 export const MOON_RULES=Object.freeze({id:'xingtu-moon-10min-8pts-v1',route:'moon',duration:600000,points:8,minShopLevel:35});
 // 星途-113：新规则版本，新出航一律挂一件返航事件（星途-07）。旧 v1 航程/回执照旧可读可领（8 点、ev:null）。
 export const MOON_EV_RULES=Object.freeze({id:'xingtu-moon-10min-ev-v2',route:'moon',duration:600000,points:8,minShopLevel:35});
 // 星途 v2-A（杨总 22:27 / 王大妈 22:30）：多航线 + 科研升级。月面照旧走 v2 规则；其它航线新规则 v3（时长按圈，探索点 = 事件点 × 航线倍数）。
-export const ROUTE_RULES=Object.freeze({id:'xingtu-routes-v3',dur:Object.freeze({station:1800000,mars:3600000,venus:3600000,belt:7200000,pirate:7200000,europa:14400000,saturn:14400000}),mult:Object.freeze({station:1,mars:2.5,venus:2.5,belt:5,pirate:5,europa:10,saturn:10})});
+export const ROUTE_RULES=Object.freeze({id:'xingtu-routes-v3',dur:Object.freeze({station:1800000,mars:3600000,venus:3600000,belt:7200000,pirate:7200000,europa:14400000,saturn:14400000,signal:28800000}),mult:Object.freeze({station:1,mars:2.5,venus:2.5,belt:5,pirate:5,europa:10,saturn:10,signal:20})});
 export const ROUTE_IDS=Object.freeze(['moon',...Object.keys(ROUTE_RULES.dur)]);
 export const LV_COST=Object.freeze([20,60,150,400]);// 科研 1→2 … 4→5 花的探索点（demo LV_COST）
 export const SYS_KEYS=Object.freeze(['tech','war','med','life']);
@@ -21,8 +21,12 @@ export const RESEARCH_TOTAL_PER_POST=1e11;
 export const TIER_PRICE=Object.freeze((()=>{const w=[1,10,100,1000,10000],W=11111,p=w.map(x=>Math.round(RESEARCH_TOTAL_PER_POST*x/W));p[4]=RESEARCH_TOTAL_PER_POST-p[0]-p[1]-p[2]-p[3];return p;})());
 const ITEM_RE=/^(tech|war|med|life):([1-5])$/;
 /** 两份 space 之间买科研成果花了多少金币：只允许新增 'sys:t'=1；删、改、未知 key 一律 null（不是科研购买）。 */
+// 星途 v2-D：买下地球 = 金币上限 1000 万亿（1e15），只能在收到回信（ended）之后买一次。
+export const EARTH_PRICE=1e15;
 export function researchSpend(prev,next){
  const a=prev?.items??{},b=next?.items??{};let sum=0;
+ if(prev?.earth===true&&next?.earth!==true)return null;
+ if(prev?.earth!==true&&next?.earth===true)sum+=EARTH_PRICE;
  for(const k of Object.keys(a))if(b[k]!==a[k])return null;
  for(const k of Object.keys(b)){if(Object.hasOwn(a,k))continue;const m=k.match(ITEM_RE);if(!m||b[k]!==1)return null;sum+=TIER_PRICE[Number(m[2])-1];}
  return sum;
@@ -87,13 +91,19 @@ export function planMoon(state,intent,{scope,now,makeId,hiddenRules}){
  if(!view.unlocked)return bad('SPACE_TECH_LEVEL_REQUIRED');
  const depart=keys(intent,['type','route'])&&intent.type==='depart'&&ROUTE_IDS.includes(intent.route);
  const upgrade=keys(intent,['type','sys'])&&intent.type==='upgrade'&&SYS_KEYS.includes(intent.sys);
+ const earth=keys(intent,['type'])&&intent.type==='earth';
  const research=keys(intent,['type','sys','tier'])&&intent.type==='research'&&SYS_KEYS.includes(intent.sys)&&[1,2,3,4,5].includes(intent.tier);
  const claim=keys(intent,['type','voyageId'])&&intent.type==='claim'&&typeof intent.voyageId==='string';
  const choose=keys(intent,['type','voyageId','choice'])&&intent.type==='choose'&&typeof intent.voyageId==='string'&&['a','b'].includes(intent.choice);
- if(!depart&&!claim&&!choose&&!upgrade&&!research)return bad('SPACE_INTENT_INVALID');
+ if(!depart&&!claim&&!choose&&!upgrade&&!research&&!earth)return bad('SPACE_INTENT_INVALID');
  const space=copy(view.space),ledger=copy(view.ledger??{schemaVersion:1,sequence:0,claimed:0,lastReceipt:null});
  let coins=null;
- if(research){
+ if(earth){
+  if(space.earth)return {ok:true,noop:true,code:'SPACE_EARTH_OWNED',view};
+  if(!space.ended)return bad('SPACE_ENDING_REQUIRED');
+  if(!(Number.isSafeInteger(state.coins)&&state.coins>=EARTH_PRICE))return bad('SPACE_COINS_NOT_ENOUGH');
+  space.earth=true;coins=state.coins-EARTH_PRICE;
+ }else if(research){
   const key=`${intent.sys}:${intent.tier}`,price=TIER_PRICE[intent.tier-1];
   if(space.items[key])return {ok:true,noop:true,code:'SPACE_RESEARCH_OWNED',view};
   if(space.lv[intent.sys]<intent.tier)return bad('SPACE_RESEARCH_LV_REQUIRED');
@@ -143,7 +153,7 @@ export function planMoon(state,intent,{scope,now,makeId,hiddenRules}){
   // 星途-114：剧情卡/隐藏物和探索点、回执在同一笔私有写里落盘；按已发张数推进，同一张卡/同一件隐藏物不可能发两次。
   const award=awardFor(space,route,hiddenRules),awarded=applyAward(space,route,award);if(!awarded)return bad('SPACE_OVERFLOW');
   for(const k of ['cards','hidden','alienCards'])space[k]=awarded[k];
-  space.pts+=points;space.visits[route]=visits+1;space.voyage.completed=true;
+  space.pts+=points;space.visits[route]=visits+1;if(route==='signal')space.ended=true;/* 收到回信 = 结局 */space.voyage.completed=true;
   ledger.claimed=view.voyage.sequence;
   ledger.lastReceipt={voyageId:intent.voyageId,sequence:view.voyage.sequence,route,ruleset:view.voyage.ruleset,start:view.voyage.start,arrival:view.arrival,claimedAt:now,points,...(v2?{ev:view.event.id,choice:view.event.choice,outcome:view.event.outcome}:{}),card:award.card,hidden:award.hidden};space.moonLoop=ledger;
  }

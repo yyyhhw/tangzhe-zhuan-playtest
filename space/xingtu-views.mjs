@@ -1,8 +1,8 @@
 // 星途 v2 第一批：星图（5 圈 9 航线 + 出航需要四个岗位科研）与飞船（四个舱室）——只读，不写存档。
 // 画面与数值直接搬自王大妈 demo（wangdama/xingtu-demo、xingtu-4post-mock fd614ae）。
-import * as A from './xingtu-art.mjs?v=xingtuv2-5-20261014-r1';
+import * as A from './xingtu-art.mjs?v=xingtuv2-6-20261014-r1';
 export const RING_MIN=A.RING_MIN,RING_SUM=A.RING_SUM,ORDER=A.ORDER,POST=A.POST;
-export const OPEN_NOW=['moon','station','mars','venus','belt','pirate','europa','saturn'];// 星途 v2-A：未知信号源留给结局批
+export const OPEN_NOW=['moon','station','mars','venus','belt','pirate','europa','saturn','signal'];
 const LVK=['tech','war','med','life'];
 function demoState(space,sel){
  const lv={};for(const k of LVK){const v=space?.lv?.[k];lv[k]=Number.isInteger(v)&&v>=1?Math.min(5,v):1;}
@@ -71,3 +71,37 @@ export function renderShip(parent,{doc,space,room,onRoom,upgrade,cabinArt,resear
  const sl=doc.createElement('div');sl.className='box sumline';sl.innerHTML=`<span>四人等级合计</span><span class="num">${LVK.reduce((a,x)=>a+S.lv[x],0)} / 20</span>`;parent.append(sl);
 }
 export {A as ART};
+// ===== 星途 v2-D：结局「回信」四格 / 制作手记 / 买下地球 / 创业史（画面和文案照 demo） =====
+const btn=(doc,id,label,fn,cls='btn')=>{const b=doc.createElement('button');b.type='button';b.id=id;b.className=cls;b.textContent=label;if(fn)b.onclick=fn;return b;};
+export function renderEnding(parent,{doc,next}){
+ const box=doc.createElement('div');box.className='box sheet';box.id='xingtuEnding';
+ box.innerHTML=`<span class="hudline dark">◢ 未知信号源 · 已解码</span><h3>回信</h3><div class="muted">信号是一段漫画。四个人一格一格看下去。</div>
+ <div class="endcomic">${A.ENDING.map((p,i)=>`<figure><svg viewBox="0 0 320 200" aria-hidden="true">${p.art()}</svg><figcaption>${i+1} · ${p.cap}</figcaption></figure>`).join('')}</div>`;
+ box.append(btn(doc,'xingtuToCredits','看制作手记 →',next));parent.append(box);
+}
+export function renderCredits(parent,{doc,next}){
+ const box=doc.createElement('div');box.className='credits';box.id='xingtuCredits';
+ box.innerHTML=`<span class="kick">制作手记</span><h2>谢谢你玩到这里</h2>
+ <div class="figs"><div><b>8 天</b><span>从第一句话到星途（10月5日—10月12日）</span></div><div><b>5 位</b><span>AI 电子员工，加 1 位制作人</span></div></div>
+ <h3 class="sec">这个游戏是怎么做出来的</h3><div class="comic">${A.COMIC.map(A.comicPanel).join('')}</div>
+ <blockquote class="first"><span>第一句话 · 10月5日</span>${A.esc(A.COMIC[0].quote)}</blockquote>
+ <h3 class="sec">电子员工群</h3><div class="cast">${A.CAST.map(c=>`<div class="mem" style="--tint:${c.tint}"><svg viewBox="-4 -6 108 126" aria-hidden="true"><use href="#c-${c.id}"/></svg><b>${c.name}</b><span class="r">${c.role}</span><span class="l">「${c.line}」</span></div>`).join('')}</div>`;
+ box.append(btn(doc,'xingtuCreditsDone','继续经营 · 新目标：买下地球 →',next));parent.append(box);
+}
+export const EARTH_PRICE=1e15;
+export function renderEarth(parent,{doc,space,coins,buy,recap}){
+ const box=doc.createElement('div');box.className='box pdetail';box.id='xingtuEarth';
+ if(space?.earth){box.innerHTML=`<span class="hudline">◢ 地球 · 已买下</span><h3>宇宙级摸鱼大王</h3>`;box.append(btn(doc,'xingtuRecap','看看我的创业史 →',recap));parent.append(box);return;}
+ box.innerHTML=`<span class="hudline">◢ 最后一站 · 买下地球</span><h3>目标：买下地球</h3><div class="pd-desc">要 1000 万亿金币（金币上限）。现在 ${coins===null?'—':money(coins)}。</div>`;
+ const b=btn(doc,'xingtuBuyEarth','买下地球 · 1000 万亿金币',buy);b.disabled=!(coins>=EARTH_PRICE)||!buy;box.append(b);parent.append(box);
+}
+export function renderRecap(parent,{doc,space,next}){
+ const cards=Object.values(space?.cards??{}).reduce((a,b)=>a+(Number.isInteger(b)?b:0),0),hidden=Object.values(space?.hidden??{}).filter(x=>x===true).length;
+ const items=Object.keys(space?.items??{}).length,trips=Object.values(space?.visits??{}).reduce((a,b)=>a+(Number.isInteger(b)?b:0),0);
+ const box=doc.createElement('div');box.className='credits';box.id='xingtuRecapView';
+ box.innerHTML=`<span class="kick">你的创业史</span><h2>从一个烧烤摊，到整个地球</h2>
+ <div class="hero-yang"><svg viewBox="-4 -6 108 126" aria-hidden="true"><use href="#c-yang"/></svg><div class="bub static">恭喜！你买下了整个地球。</div></div>
+ <div class="figs"><div><b>${trips}</b><span>次星途出航</span></div><div><b>${cards}</b><span>张星途剧情卡</span></div><div><b>${hidden}</b><span>件隐藏物</span></div><div><b>${items}</b><span>件科研成果</span></div></div>
+ <div class="strip">${A.PRE.map(([n,sub,,ic],i)=>`<div class="cell" style="--tilt:${i%2?0.8:-0.8}deg"><div class="ic" style="background:#fff4d6">${A.icon(ic)}</div><b>${n}</b>${sub?`<span class="sub">${sub}</span>`:''}</div>`).join('')}${[['第一次出航','rocket'],['收到回信','mail'],['买下地球','earth']].map(([n,ic])=>`<div class="cell${n==='买下地球'?' last':''}"><div class="ic" style="background:#e6f0ff">${A.icon(ic)}</div><b>${n}</b></div>`).join('')}</div>`;
+ box.append(btn(doc,'xingtuRecapDone','继续经营 →',next));parent.append(box);
+}

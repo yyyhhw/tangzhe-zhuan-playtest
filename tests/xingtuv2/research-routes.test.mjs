@@ -19,7 +19,7 @@ test('科研升级：20/60/150/400 探索点，满 5 级不再扣；不够就拒
 test('出航需要四个岗位科研：火星四岗都≥2 + 合计≥7 + 科技≥2；不够拒绝',()=>{
   assert.equal(plan(fresh(),{type:'depart',route:'mars'},T).code,'SPACE_POSTS_REQUIRED');
   assert.equal(plan(fresh({tech:3,war:3,med:3,life:1}),{type:'depart',route:'mars'},T).code,'SPACE_POSTS_REQUIRED');
-  assert.equal(plan(fresh(),{type:'depart',route:'signal'},T).code,'SPACE_INTENT_INVALID','信号源留给结局批');
+  assert.equal(plan(fresh(),{type:'depart',route:'signal'},T).code,'SPACE_POSTS_REQUIRED','v2-D 起信号源开航，但要四岗 4 级');
   assert.equal(plan(fresh({tech:2,war:2,med:2,life:2}),{type:'depart',route:'belt'},T).code,'SPACE_POSTS_REQUIRED');
 });
 test('火星一趟：1 小时、事件点×2.5、发火星第 1 张卡、visits.mars+1；回执能被再次校验',()=>{
@@ -38,7 +38,7 @@ test('火星一趟：1 小时、事件点×2.5、发火星第 1 张卡、visits.
 test('月面照旧：v2 规则、10 分钟、点数不乘倍数',()=>{
   const s=go(fresh(),{type:'depart',route:'moon'},T);assert.equal(s.space.voyage.ruleset,MOON_EV_RULES.id);assert.equal(s.space.voyage.dur,600000);
   for(const ev of ['ev_pod']) if(rewardPoints(ev,'b','success')!==null)assert.equal(routePoints('moon',ev,'b','success'),rewardPoints(ev,'b','success'));
-  assert.deepEqual(ROUTE_RULES.dur,{station:1800000,mars:3600000,venus:3600000,belt:7200000,pirate:7200000,europa:14400000,saturn:14400000});
+  assert.deepEqual(ROUTE_RULES.dur,{station:1800000,mars:3600000,venus:3600000,belt:7200000,pirate:7200000,europa:14400000,saturn:14400000,signal:28800000});
 });
 import {assembly,until} from '../wearables8/production-harness.mjs';
 for(const scope of ['formal','preview'])test(scope+'：飞船页点升级 → 一笔写，舰桥 Lv2、探索点 -20',{timeout:20000},async t=>{

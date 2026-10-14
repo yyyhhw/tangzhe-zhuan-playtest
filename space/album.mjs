@@ -27,13 +27,13 @@ export const ROUTE_BY_ID=Object.freeze(Object.fromEntries(ROUTES.map(r=>[r.id,r]
 export const TOTAL_CARDS=ROUTES.reduce((a,r)=>a+r.cards.length,0);// 25
 export const ALIEN_DENOM=6;// 星途-12 第 5 条推荐 A；熊大若定 7 只改这里
 /** 现在开放的航线（只有月面基地）。别的航线「还没开航」：不露卡名、不露隐藏物线索。 */
-export const OPEN_ROUTES=Object.freeze(['moon','station','mars','venus','belt','pirate','europa','saturn']);// 星途 v2-A：除「未知信号源」（结局批）外都开航
+export const OPEN_ROUTES=Object.freeze(['moon','station','mars','venus','belt','pirate','europa','saturn','signal']);// 星途 v2-A：除「未知信号源」（结局批）外都开航
 /** 隐藏物条件。月面「旧时代的国旗」要雷达（星途-06 科研/道具还没做）→ 现在谁都拿不到；条件数值不显示给玩家。
  * 其余航线没开航，条件留空（false）。上线新条件只改这里 + 测试。 */
 // 星途 v2-A：照 demo 条件（在本趟领取前的存档上判断）。月面要雷达、土星要雷达/科技 5、海盗要连胜——雷达和遭遇战胜场等科研成果批再接，现在月面/海盗还拿不到。
 const L=(s,k)=>s.lv?.[k]??1;
 export const HIDDEN_RULES=Object.freeze({moon:s=>s.items?.['tech:3']>=1,// v2-B：「曲率雷达」（科技 3 级成果）就是雷达
- station:s=>L(s,'med')>=2,mars:s=>L(s,'life')>=3,venus:s=>L(s,'med')>=3,belt:s=>(s.visits?.belt??0)>=2,pirate:s=>s.wins>=3,europa:s=>L(s,'life')>=5,saturn:s=>L(s,'tech')>=5});
+ station:s=>L(s,'med')>=2,mars:s=>L(s,'life')>=3,venus:s=>L(s,'med')>=3,belt:s=>(s.visits?.belt??0)>=2,pirate:s=>s.wins>=3,europa:s=>L(s,'life')>=5,saturn:s=>L(s,'tech')>=5,signal:()=>true});
 const own=(x,k)=>Object.hasOwn(x,k),int=(x,min=0)=>Number.isSafeInteger(x)&&x>=min;
 /** 册子读档校验：已发张数不能超过该航线卡数；隐藏物只能是 true/false（domain 已校验类型）。坏档只读，不修。 */
 export function albumOk(space){
