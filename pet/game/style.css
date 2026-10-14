@@ -266,7 +266,8 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 .lock-txt{font-size:13px;color:#555;margin-bottom:14px;line-height:1.5}
 
 #toast{position:fixed;left:50%;bottom:calc(var(--sab) + 84px);transform:translateX(-50%);z-index:60;background:var(--ink);color:#fff;font-weight:800;font-size:14px;
-  padding:9px 16px;border-radius:20px;max-width:88vw;text-align:center;animation:toastin .25s ease-out;pointer-events:none}
+  padding:9px 16px;border-radius:20px;width:max-content;max-width:88vw;text-align:center;word-break:keep-all;overflow-wrap:anywhere;text-wrap:balance;animation:toastin .25s ease-out;pointer-events:none}
+/* 文案-108：left:50% 时宽度只剩半屏，toast 被挤成窄条把「明天」拆开；改按内容宽（上限 88vw），中文只在空格/标点处换行，放不下才强拆 */
 @keyframes toastin{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
 
 @media (max-height:700px){
