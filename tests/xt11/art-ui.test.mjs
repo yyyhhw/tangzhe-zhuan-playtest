@@ -10,7 +10,7 @@ for(const [scope,path,projectRoot='/'] of [['formal','/'],['formal','/pet/game/'
  h.node('xingtuTabVoyage').onclick();
  for(let n=1;n<=3;n++){
   assert(h.node('xingtuDepart').onclick().ok);now+=601000;host.refresh();assert(h.node('xingtuChoiceB').onclick().ok);
-  const reward=h.node('xingtuNewCard').querySelector('img');assert.equal(reward.src,`https://play.example.invalid${projectRoot}art/spacecards/moon_${n}.webp?v=xt11art-20261014-r1`);assert.equal(reward.width,1024);assert.equal(reward.height,768);
+  const reward=h.node('xingtuNewCard').querySelector('img');assert.equal(reward.src,`https://play.example.invalid${projectRoot}art/spacecards/moon_${n}.webp?v=copy122-20261014-r1`);assert.equal(reward.width,1024);assert.equal(reward.height,768);
   assert(h.node('xingtuClaim').onclick().ok);const writes=h.writes().length;h.node('xingtuTabAlbum').onclick();
   assert.equal(h.node('xingtuContent').querySelectorAll('img').length,n);
   for(let i=1;i<=3;i++){const b=h.node(`xingtuCard-moon-${i}`);assert.equal(!!b.querySelector('img'),i<=n);b.onclick();assert.equal(!!h.node('xingtuCardDetail').querySelector('img'),i<=n);}
