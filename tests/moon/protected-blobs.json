@@ -13,7 +13,7 @@
   },
   {
     "path": "economy.js",
-    "sha256": "ab43dcfea5965c942859b7706134cc3474da7c0350dab4aff9afe55bcce3a414"
+    "sha256": "15146ebce631f71b8573dfb6255b3353d77ca2e0ed923f4cbafcbd84c177fecb"
   },
   {
     "path": "home-interaction.js",
@@ -25,7 +25,7 @@
   },
   {
     "path": "pet/game/economy.js",
-    "sha256": "1bbd6113e3e6cef12a4d627006c0728346d6524b64be695dc044072bf2c5d9c7"
+    "sha256": "f2c0d958dff22ede603ffd4b6c68a77fa13e193579849592b6d2e385fef1e220"
   },
   {
     "path": "pet/game/style.css",
@@ -41,7 +41,7 @@
   },
   {
     "path": "preview/economy.js",
-    "sha256": "b005a82bd3ccd728bf5de62a48fa7007dbfb0e78b1d963163de2a47d31e20538"
+    "sha256": "6fdade200dcb8d1f904eda2533b50ed9af16054b40e6f205fb5fad55d91a6855"
   },
   {
     "path": "preview/pet/game/app.js",
