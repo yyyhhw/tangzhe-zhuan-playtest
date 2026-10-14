@@ -6,7 +6,7 @@ const COLLECTION = window.FormalCollectionRuntime;
 if (!COLLECTION?.ownsLock()) {
   // Stale HTML can fetch a new script before bootstrap. No storage access here.
   const url=new URL(location.href);
-  if(url.searchParams.get('v')!=='formal-xingtuv2-cabin2-20261014-r1') {url.searchParams.set('v','formal-xingtuv2-cabin2-20261014-r1');location.replace(url.href);}
+  if(url.searchParams.get('v')!=='formal-copy126-20261014-r1') {url.searchParams.set('v','formal-copy126-20261014-r1');location.replace(url.href);}
   else {const notice=document.createElement('p');notice.textContent='页面资源尚未更新完整，存档未写入。请关闭此页后重新打开。';document.body.prepend(notice);}
   return;
 }
@@ -2005,7 +2005,7 @@ const HOME_ICON = ['home', 'apt', 'villa'].map(n => ic(n)); // 12c1：家宅升�
 let homeWho = 'c77', homeSub = 'room', homeMode = 'live', homeSel = null, homeDrag = null;
 // Home22: optional readonly status for the existing c77 Lv1 room only.
 let homeStatusContext = null, homeStatusAdapter = null;
-import('./home/home-status.mjs?v=xingtuv2-cabin2-20261014-r1').then(({createHomeStatusAdapter}) => {
+import('./home/home-status.mjs?v=copy126-20261014-r1').then(({createHomeStatusAdapter}) => {
   homeStatusAdapter = createHomeStatusAdapter({document, window, now, gameDayAt:E.dayKey});
   homeStatusAdapter.sync(document.getElementById('homeAmbienceStatus'), homeStatusContext);
 }).catch(error => console.warn('家宅时间与游戏内天气状态未加载', error));
@@ -2046,7 +2046,7 @@ const LIVE_LINES = {
   c77:    { walk:['走两步耍下！','地板巴适得很。','莫慌，慢慢逛。'], rest:['瞌睡来了……','躺平！串串味儿还在。','眯一会儿，招牌自己烤。'], read:['……看不懂，但装得很认真。','书里有没有烤串秘方？','阿宅教的，我翻两页。'], dress:['换件围裙耍帅！','金马甲呢？在仓库。','穿好了，出摊！'] },
   pearl:  { walk:['脚步要轻，账本怕震。','茶香这边更浓。','客人看不见，我自己逛逛。'], rest:['珍珠姐也要歇会儿。','躺一会儿，账明天再对。','Q弹的梦，三分钟。'], read:['这本讲成本核算。','漫画？偶尔也扫一眼。','笔记写在杯套上。'], dress:['旗袍要平整。','换一身再营业。','珍珠发夹——不能掉。'] },
   otaku:  { walk:['分镜走位，从这格到那格。','地板也是画框。','别踩到我的手办投影。'], rest:['存档点……睡着了。','梦里下一话更新。','被窝是我的次元。'], read:['这本我标了书签！','名场面在第 42 页。','读完去改招牌文案。'], dress:['连帽衫＋新徽章。','换上角色扮演装。','镜子前先摆个 pose。'] },
-  rocket: { walk:['舱内巡检开始。','步进电机：启动。','火星还远，先在屋里走一圈。'], rest:['休眠模式 ON。','充电 20 分钟。','梦到小店起飞。'], read:['说明书：怎么把床送上轨道。','这页有推力公式。','读完继续画火箭。'], dress:['胸针要亮。','换发射正装。','装备检查完毕，穿上！'] },
+  rocket: { walk:['舱内巡检开始。','步进电机：启动。','火星还远，先在屋里走一圈。'], rest:['休眠模式：开启。','充电 20 分钟。','梦到小店起飞。'], read:['说明书：怎么把床送上轨道。','这页有推力公式。','读完继续画火箭。'], dress:['胸针要亮。','换发射正装。','装备检查完毕，穿上！'] },
 };
 function liveLine(id, act) { if(act==='sit'){const s=window.HomeAutonomy?.linesFor?.('sit',id);return s?s[Math.floor(Math.random()*s.length)]:'坐一会儿，歇歇脚。';}   /* 家宅-57：坐换成每位 CEO 两句专属台词 */const pack = LIVE_LINES[id] || LIVE_LINES.c77, arr = pack[act] || pack.walk; return arr[Math.floor(Math.random() * arr.length)]; }
 function homeFreePoint(id,x,y) {
@@ -2066,15 +2066,15 @@ function homeActorOf(id) {
     else {const z=E.furnSize(p.fid,p.rot),key=[p.uid,p.x,p.y,p.rot].join(':');if(ac.pose.key!==key){ac.pose.key=key;ac.revision++;}if(HomeInteraction.profile(p.fid).ground){
       const q=HomeInteraction.rugPoint(E,H,p,ac);
       if(q){if(q.x!==ac.x||q.y!==ac.y)ac.revision++;Object.assign(ac,q);}
-      else{ac.pose=null;ac.pendingPose=null;ac.tx=ac.ty=null;ac.revision++;const free=homeFreePoint(id,ac.x,ac.y);if(free)Object.assign(ac,free);toast('地毯上没有空位了，先起身；挪开家具再坐吧');}
+      else{ac.pose=null;ac.pendingPose=null;ac.tx=ac.ty=null;ac.revision++;const free=homeFreePoint(id,ac.x,ac.y);if(free)Object.assign(ac,free);toast('地毯上挤满了，先站起来了');}
     }else if(HomeInteraction.profile(p.fid).location==='beside'){const q=homeFreePoint(id,p.x+z.w,p.y+z.h-1);if(q)Object.assign(ac,q);else{ac.pose=null;ac.revision++;}}else{ac.x=p.x+z.w/2-.5;ac.y=p.y+z.h/2-.5;}}}
   if(ac.pendingPose){const p=H.placed.find(p=>p.uid===ac.pendingPose.uid);
     if(!p){ac.pendingPose=null;ac.tx=ac.ty=null;ac.revision++;}
-    else if(HomeInteraction.profile(p.fid)?.ground){const q=HomeInteraction.rugPoint(E,H,p,{x:ac.tx??ac.x,y:ac.ty??ac.y});if(q){ac.tx=q.x;ac.ty=q.y;}else{ac.pendingPose=null;ac.tx=ac.ty=null;ac.revision++;toast('地毯上没有空位了，挪开家具再坐吧');}}
+    else if(HomeInteraction.profile(p.fid)?.ground){const q=HomeInteraction.rugPoint(E,H,p,{x:ac.tx??ac.x,y:ac.ty??ac.y});if(q){ac.tx=q.x;ac.ty=q.y;}else{ac.pendingPose=null;ac.tx=ac.ty=null;ac.revision++;toast('地毯上挤满了，挪开一件家具再坐');}}
   }
   return ac;
 }
-function homeLeavePose(id) {const ac=homeActorOf(id),p=ac.pose?homeFreePoint(id,ac.x,ac.y):null;if(ac.pose&&!p){toast('没有可以站立的空地，先挪开一些家具吧');return null;}ac.pose=ac.pendingPose=null;ac.revision++;ac.act=null;if(p)Object.assign(ac,p);return ac;}
+function homeLeavePose(id) {const ac=homeActorOf(id),p=ac.pose?homeFreePoint(id,ac.x,ac.y):null;if(ac.pose&&!p){toast('屋里站不下了，挪开一两件家具吧');return null;}ac.pose=ac.pendingPose=null;ac.revision++;ac.act=null;if(p)Object.assign(ac,p);return ac;}
 function homeOwner(room,uid){
   const ac=homeActorOf(room),active=tab==='home'&&homeWho===room&&homeSub==='room'&&homeMode==='live';
   let x=(ac.visualFallback||ac).x+.5,y=(ac.visualFallback||ac).y+.5;
@@ -2285,7 +2285,7 @@ function homeLiveHint(id) {
   if (floor.some(p => cap(p) === 'sit')) parts.push('点座椅坐下');
   if (floor.some(p => !cap(p) && act(p) === 'read')) parts.push('点书架看书');
   if (floor.some(p => !cap(p) && act(p) === 'dress')) parts.push('点衣柜换装');
-  return '生活：' + parts.join(' · ');
+  return parts.join(' · ');
 }
 function homeRoomName(id) { const c = E.CEO_BY_ID[id], lv = state.homes?.[id]?.lv || 1; return `${c.name} 的${E.homeTier(lv).name}`; }   // 家宅-97：卡片 / 墙牌 / 宠物面板用同一个房名（只读，不调 homeOf、不建房）
 function renderRoom() {
@@ -2317,13 +2317,13 @@ function renderRoom() {
   h += `<div class="room tier-${T.id}${hasArt ? ' has-art' : ''}${dockHost ? ' pet-host-docked' : ''}" id="room" data-tier="${T.id}" style="--cols:${T.cols};--rows:${T.rows};--wall:${T.wall};--floor:${T.floor};--trim:${T.trim}">
     ${hasArt ? `<img class="room-art" src="art/home_${artKey}.webp?v=${ART_V}" data-homefb="1" alt="" onerror="this.closest('.room')&&this.closest('.room').classList.remove('has-art')">` : ''}${homeStatusContext ? homeWindowLayers(artKey) : ''}
     <div class="room-wall" id="roomWall"><span class="rw-deco">${T.id === 'hut' ? ic('window') : T.id === 'apt' ? ic('window') + ic('window') : ic('spark') + ic('candle') + ic('spark')}</span><span class="rw-name">${c.name} 的${T.name}${homeStatusContext ? '<span class="rw-status" id="homeAmbienceStatus" hidden></span>' : ''}</span><div class="wall-grid" id="wallGrid">${wallBlocks}${wallItems}<div class="room-hl hidden" id="wallHl"></div></div></div>
-    <div class="room-floor" id="roomFloor">${floorItems}<div class="home-actor" id="homeActor" style="left:${(homeActorOf(id).x + 0.5) / T.cols * 100}%;top:${(homeActorOf(id).y + 0.5) / T.rows * 100}%"><canvas class="ha-pose" width="240" height="240" aria-label="CEO坐卧姿态"></canvas><span class="ha-ava">${ava(id)}</span>${(() => { const ac = homeActorOf(id); return ac.line && ac.until > clock ? `<b class="ha-line">${ac.line}</b>` : ''; })()}<i class="ha-act">${(() => { const ac = homeActorOf(id); return ac.act === 'rest' ? ic('zz') : ac.act === 'read' ? ic('book') : ac.act === 'dress' ? ic('shirt') : ac.actIcon ? ic(ac.actIcon) : ''; })()}</i></div><div class="room-hl hidden" id="roomHl"></div></div></div>`;
+    <div class="room-floor" id="roomFloor">${floorItems}<div class="home-actor" id="homeActor" style="left:${(homeActorOf(id).x + 0.5) / T.cols * 100}%;top:${(homeActorOf(id).y + 0.5) / T.rows * 100}%"><canvas class="ha-pose" width="240" height="240" aria-label="${c.name}"></canvas><span class="ha-ava">${ava(id)}</span>${(() => { const ac = homeActorOf(id); return ac.line && ac.until > clock ? `<b class="ha-line">${ac.line}</b>` : ''; })()}<i class="ha-act">${(() => { const ac = homeActorOf(id); return ac.act === 'rest' ? ic('zz') : ac.act === 'read' ? ic('book') : ac.act === 'dress' ? ic('shirt') : ac.actIcon ? ic(ac.actIcon) : ''; })()}</i></div><div class="room-hl hidden" id="roomHl"></div></div></div>`;
   h += petInteractionBar();
   if(homeActorOf(id).pose)h += `<button class="buy alt" data-act="homeGetUp">起身</button>`;
   const st = undoStack(id);
   h += `<div class="mode-tabs" role="tablist"><button class="mt ${homeMode === 'live' ? 'on' : ''}" data-act="homeMode" data-arg="live">${ic('live')}生活</button><button class="mt ${homeMode === 'decor' ? 'on' : ''}" data-act="homeMode" data-arg="decor">${ic('decor')}布置</button></div>`;
   h += `<div class="room-tools">${homeMode === 'decor' ? (sel ? `<span class="rt-sel">已选：<b>${E.FURN_BY_ID[sel.fid].name}</b></span><button class="buy alt" data-act="homeRot" data-arg="${sel.uid}">↻ 旋转</button><button class="buy alt" data-act="homeStore" data-arg="${sel.uid}">${ic('box')}收回</button>`
-    : '<span class="rt-sel">布置：点家具选中 / 拖动换位；挂画拖到墙面</span>') : `<span class="rt-sel">${homeLiveHint(id)}</span>`}
+    : '<span class="rt-sel">点家具选中，拖动换位置</span>') : `<span class="rt-sel">${homeLiveHint(id)}</span>`}
     ${homeMode === 'decor' ? `<button class="buy alt" data-act="homeUndo" data-arg="${id}" ${st.length ? '' : 'disabled'}>↶ 撤销${st.length ? ' ' + st.length : ''}</button>` : ''}</div>`;
   h += petRoomBar(id);
   const inv = Object.entries(E.furnInvOf(state)).filter(([, n]) => n > 0);
@@ -2332,7 +2332,7 @@ function renderRoom() {
     h += inv.length ? `<div class="inv-strip">${inv.map(([fid, n]) => { const f = E.FURN_BY_ID[fid], stt = E.furnStats(state, fid);
         const where = stt.where.length ? stt.where.map(w => w.name).join('、') : '';
         return `<div class="inv-item" data-fid="${fid}" style="--fc:${f.color}" title="${f.name} ${f.w}×${f.h}${where ? ' · 另有在 ' + where : ''}"><span class="ie">${f.emoji}</span><b>${f.name}</b><small>${f.w}×${f.h}</small><i>×${n}</i></div>`; }).join('')}</div>
-        <div class="note">布置模式：拖家具、旋转、收回。挂画只挂墙。生活模式下去点空地 / 床 / 书架 / 衣柜互动。</div>`
+        <div class="note">选中家具后可以旋转、收回。挂画只能挂在墙上。</div>`
       : `<div class="note">仓库空空。去商城买家具，再回来布置 ${c.name} 的房间。</div>`;
   } else {
     h += `<button class="buy alt mall-go" data-act="homeSub" data-arg="mall">${ic('mall')}去商城</button>`;
@@ -2705,7 +2705,7 @@ function homeLiveTap(e) {
   const go = (x, y, act) => {
     if(!homeLeavePose(id))return;
     x = Math.max(0, Math.min(T.cols - 1, x | 0)); y = Math.max(0, Math.min(T.rows - 1, y | 0));
-    const free=homeFreePoint(id,x,y);if(!free){toast('没有可以站立的空地，先挪开一些家具吧');return;}
+    const free=homeFreePoint(id,x,y);if(!free){toast('屋里站不下了，挪开一两件家具吧');return;}
     ac.tx = free.x; ac.ty = free.y; ac.act = act || null; ac.line = liveLine(id, act || 'walk'); ac.until = clock + 2.4;
     sfx('tap'); dirty = true;return true;
   };
@@ -2714,10 +2714,10 @@ function homeLiveTap(e) {
     const f = E.FURN_BY_ID[p.fid], sz = E.furnSize(p.fid, p.rot);
     const cx = p.x + Math.floor(sz.w / 2), cy = p.y + Math.floor(sz.h / 2);
     const cap=HomeInteraction.capability(p.fid),act=E.furnLiveAct(p.fid);
-    if(cap){let point={x:cx,y:cy};if(HomeInteraction.profile(p.fid).ground){const r=floor.getBoundingClientRect();point=HomeInteraction.rugPoint(E,E.homeOf(state,id),p,{x:(e.clientX-r.left)/r.width*T.cols-.5,y:(e.clientY-r.top)/r.height*T.rows-.5});if(!point){toast('地毯上没有可以坐的空位，挪开家具再试吧');return;}}
+    if(cap){let point={x:cx,y:cy};if(HomeInteraction.profile(p.fid).ground){const r=floor.getBoundingClientRect();point=HomeInteraction.rugPoint(E,E.homeOf(state,id),p,{x:(e.clientX-r.left)/r.width*T.cols-.5,y:(e.clientY-r.top)/r.height*T.rows-.5});if(!point){toast('地毯上挤满了，挪开一件家具再坐');return;}}
       if(go(point.x,point.y,cap==='lie'?'rest':'sit'))ac.pendingPose={uid:p.uid,kind:cap};return;}
     if(act==='read'||act==='dress')return go(cx,cy,act);
-    go(cx,cy,'walk');toast('这件家具先在旁边看看，不坐上去');return;
+    go(cx,cy,'walk');toast('这件只能看看，坐不上去');return;
   }
   if (!e.target.closest('#roomFloor')) return;
   const r = floor.getBoundingClientRect(), x = Math.floor((e.clientX - r.left) / r.width * T.cols), y = Math.floor((e.clientY - r.top) / r.height * T.rows);
@@ -2971,7 +2971,7 @@ const tdController = window.TDHost.create({
 function openTD() {
   if (frozen || tdOpen || zbOpen || window.XingTu?.isOpen() || !state.shops[1].open) return;
   tdOpen = true; const f = $('#tdFrame'), generation = ++tdGeneration;
-  const target = new URL('td/index.html?embed=1&v=xingtuv2-cabin2-20261014-r1', location.href);
+  const target = new URL('td/index.html?embed=1&v=copy126-20261014-r1', location.href);
   f.onload = () => {
     if (!tdOpen || generation !== tdGeneration) return;
     // Verify the actual loaded document, not merely an iframe src attribute.
