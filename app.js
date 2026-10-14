@@ -6,7 +6,7 @@ const COLLECTION = window.FormalCollectionRuntime;
 if (!COLLECTION?.ownsLock()) {
   // Stale HTML can fetch a new script before bootstrap. No storage access here.
   const url=new URL(location.href);
-  if(url.searchParams.get('v')!=='formal-box109-fix-20261014-r1') {url.searchParams.set('v','formal-box109-fix-20261014-r1');location.replace(url.href);}
+  if(url.searchParams.get('v')!=='formal-sfx112-20261014-r1') {url.searchParams.set('v','formal-sfx112-20261014-r1');location.replace(url.href);}
   else {const notice=document.createElement('p');notice.textContent='页面资源尚未更新完整，存档未写入。请关闭此页后重新打开。';document.body.prepend(notice);}
   return;
 }
@@ -1992,7 +1992,7 @@ const HOME_ICON = ['home', 'apt', 'villa'].map(n => ic(n)); // 12c1：家宅升�
 let homeWho = 'c77', homeSub = 'room', homeMode = 'live', homeSel = null, homeDrag = null;
 // Home22: optional readonly status for the existing c77 Lv1 room only.
 let homeStatusContext = null, homeStatusAdapter = null;
-import('./home/home-status.mjs?v=box109-fix-20261014-r1').then(({createHomeStatusAdapter}) => {
+import('./home/home-status.mjs?v=sfx112-20261014-r1').then(({createHomeStatusAdapter}) => {
   homeStatusAdapter = createHomeStatusAdapter({document, window, now, gameDayAt:E.dayKey});
   homeStatusAdapter.sync(document.getElementById('homeAmbienceStatus'), homeStatusContext);
 }).catch(error => console.warn('家宅时间与游戏内天气状态未加载', error));
@@ -2958,7 +2958,7 @@ const tdController = window.TDHost.create({
 function openTD() {
   if (frozen || tdOpen || zbOpen || window.XingTu?.isOpen() || !state.shops[1].open) return;
   tdOpen = true; const f = $('#tdFrame'), generation = ++tdGeneration;
-  const target = new URL('td/index.html?embed=1&v=box109-fix-20261014-r1', location.href);
+  const target = new URL('td/index.html?embed=1&v=sfx112-20261014-r1', location.href);
   f.onload = () => {
     if (!tdOpen || generation !== tdGeneration) return;
     // Verify the actual loaded document, not merely an iframe src attribute.
@@ -2982,7 +2982,7 @@ function closeTD() {
 }
 Object.defineProperties(window.__tzz, {openTD:{value:openTD}, closeTD:{value:closeTD}, tdOpen:{get:() => tdOpen}, tdRun:{get:() => tdController.run}, tdReply:{value:() => tdController.reply()}});
 
-Object.defineProperties(window.__tzz, { xingtuContext:{value:()=>({blocked:frozen||saveBlocked||!!persist.pending||!!state.pending||E.isBlocked(state)||!E.walletOk(state)||!!(typeof loadInfo!=='undefined'&&loadInfo&&(loadInfo.unsafe||loadInfo.blocked))||document.hidden||!COLLECTION.ownsLock()||!!(window.__tzz.tdOpen||window.__tzz.zbOpen),otherGame:!!(window.__tzz.tdOpen||window.__tzz.zbOpen),offlinePending:!!state.pending,muted:!!state.muted})}, xingtuAudioPause:{value:()=>audioPause()}, xingtuAudioResume:{value:()=>audioResume()}, collectionReplaceState:{value:s=>{state=s;lastGood=COLLECTION.coordinator.raw;if(!COLLECTION.coordinator.failed&&COLLECTION.ownsLock())saveBlocked=false;dirty=true;}}, collectionReadOnly:{value:code=>{saveBlocked=true;showCollectionProtection(code);}} });
+Object.defineProperties(window.__tzz, { xingtuContext:{value:()=>({blocked:frozen||saveBlocked||!!persist.pending||!!state.pending||E.isBlocked(state)||!E.walletOk(state)||!!(typeof loadInfo!=='undefined'&&loadInfo&&(loadInfo.unsafe||loadInfo.blocked))||document.hidden||!COLLECTION.ownsLock()||!!(window.__tzz.tdOpen||window.__tzz.zbOpen),otherGame:!!(window.__tzz.tdOpen||window.__tzz.zbOpen),offlinePending:!!state.pending,muted:!!state.muted})}, xingtuAudioPause:{value:()=>stopBgm()}, xingtuAudioResume:{value:()=>audioResume()}, xingtuSfx:{value:n=>{if(!document.hidden&&!frozen)sfx(n);}}, collectionReplaceState:{value:s=>{state=s;lastGood=COLLECTION.coordinator.raw;if(!COLLECTION.coordinator.failed&&COLLECTION.ownsLock())saveBlocked=false;dirty=true;}}, collectionReadOnly:{value:code=>{saveBlocked=true;showCollectionProtection(code);}} });
 
 /* ================= 打僵尸（zombie/?embed=1，全屏 iframe）=================
    只和经营共用金币：价格、等级上限、进度校验都在这边按 ZBCore 算，训练扣款和结算进度都走 txn → E.transact（扣款 + 改状态 + persist 一起成功，失败整体回滚）。

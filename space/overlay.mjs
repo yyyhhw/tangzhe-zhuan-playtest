@@ -1,6 +1,6 @@
-import {createMoonHost} from './host.mjs?v=box109-fix-20261014-r1';
-import {moonArt} from './art.mjs?v=box109-fix-20261014-r1';
-import {MOON_CSS} from './styles.mjs?v=box109-fix-20261014-r1';
+import {createMoonHost} from './host.mjs?v=sfx112-20261014-r1';
+import {moonArt} from './art.mjs?v=sfx112-20261014-r1';
+import {MOON_CSS} from './styles.mjs?v=sfx112-20261014-r1';
 export function installMoonOverlay({app,runtime,document:doc=globalThis.document,window:win=globalThis}){
  if(win.XingTu)throw Error('SPACE_HOST_ALREADY_INSTALLED');
  let cover=null,body=null,content=null,timer=null,host,closeButton=null,origin=null,signature=null,revoked=false,renderFailed=false;
@@ -41,7 +41,9 @@ export function installMoonOverlay({app,runtime,document:doc=globalThis.document
   const art=node('div','xingtuStarMap');art.className='xingtu-art';art.innerHTML=moonArt(view.phase==='flying'?1-view.remaining/600000:0);content.append(art);
   const status=node('div','xingtuStatus');status.className='xingtu-status';content.append(status);
   const token=host.token,actions=node('div','xingtuActions');actions.className='xingtu-actions';content.append(actions);
-  const act=(intent)=>{const r=host.perform(intent,token);if(!r.ok&&content){const message=node('p','xingtuSaveResult',r.status==='unknown'?'这一步还没确认存上，星途先停一下。刷新页面，看看实际存下的结果。':'这一步没存上，航程和探索点都还是原样，稍后再点一次就行。');message.className='xingtu-error';content.append(message,detail(r.code));}return r;};
+  const act=(intent)=>{const r=host.perform(intent,token);if(!r.ok&&content){const message=node('p','xingtuSaveResult',r.status==='unknown'?'这一步还没确认存上，星途先停一下。刷新页面，看看实际存下的结果。':'这一步没存上，航程和探索点都还是原样，稍后再点一次就行。');message.className='xingtu-error';content.append(message,detail(r.code));}
+   // 音效-112：星途开着只停 BGM，音效照常；出航 swoosh、领返航报告 reveal（静音/后台由 app 侧挡）
+   if(r.ok){const n=intent.type==='depart'?'swoosh':intent.type==='claim'?'reveal':null;if(n)try{app.xingtuSfx?.(n);}catch{}}return r;};
   if(view.phase==='flying'){
    status.append(node('p',null,'航线：地球 → 月面基地 → 地球'),node('p','xingtuRemaining',`剩余 ${fmt(view.remaining)}`),node('p','xingtuArrival',`${when(view.arrival)} 到达`));
    const progress=node('progress','xingtuProgress');progress.max=600000;progress.value=600000-view.remaining;status.append(progress);
