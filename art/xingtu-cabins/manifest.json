@@ -10,6 +10,36 @@
     "sha256": "75f255f95b9d448fc90114f8a5498052d5a96e687fc66a1c51539ec798ca057f"
   },
   {
+    "path": "art/xingtu-cabins/bridge-2.webp",
+    "size": [
+      1200,
+      900
+    ],
+    "format": "WEBP",
+    "bytes": 421722,
+    "sha256": "bb41651463b009a8293966d0068e9d79cffc8c212f767937460d5397ea8abd58"
+  },
+  {
+    "path": "art/xingtu-cabins/bridge-3.webp",
+    "size": [
+      1200,
+      900
+    ],
+    "format": "WEBP",
+    "bytes": 433294,
+    "sha256": "31e98c5a85d673ded37a4006a6dcecaefbc992887754188f73fdaf1e519fb6c8"
+  },
+  {
+    "path": "art/xingtu-cabins/bridge-4.webp",
+    "size": [
+      1200,
+      900
+    ],
+    "format": "WEBP",
+    "bytes": 437678,
+    "sha256": "55224dcc0d7d1cf0109d57ebd19c69dcd1131d8acfa67a5c098fa1e851198488"
+  },
+  {
     "path": "art/xingtu-cabins/bridge-5.webp",
     "size": [
       1200,
@@ -28,6 +58,36 @@
     "format": "WEBP",
     "bytes": 388044,
     "sha256": "1bcc0232c988cbd28658540509d45731e9e82c4672d03370677ee21fc8e6795c"
+  },
+  {
+    "path": "art/xingtu-cabins/gun-2.webp",
+    "size": [
+      1200,
+      900
+    ],
+    "format": "WEBP",
+    "bytes": 386246,
+    "sha256": "0f375c7ee91922716e32e7bc2babb1eeb3f26374af97a1dd3120179b3cb2b01a"
+  },
+  {
+    "path": "art/xingtu-cabins/gun-3.webp",
+    "size": [
+      1200,
+      900
+    ],
+    "format": "WEBP",
+    "bytes": 407572,
+    "sha256": "79b435a4e99fb2c29080382c6cf4cf05ee7897b01e3ac3970f377cdd0ac1df9a"
+  },
+  {
+    "path": "art/xingtu-cabins/gun-4.webp",
+    "size": [
+      1200,
+      900
+    ],
+    "format": "WEBP",
+    "bytes": 382730,
+    "sha256": "5464706eb22924643b3332ac4b608ebcbe83189382601f4c02eb90fcf225d0b5"
   },
   {
     "path": "art/xingtu-cabins/gun-5.webp",
@@ -50,14 +110,44 @@
     "sha256": "75536ddd6af30bff7d99fd0ac67dfd01945d333d27273258e90a9535af827c33"
   },
   {
+    "path": "art/xingtu-cabins/kitchen-2.webp",
+    "size": [
+      1200,
+      900
+    ],
+    "format": "WEBP",
+    "bytes": 401098,
+    "sha256": "b22ceab2c328bee2edeca1e98b032ed5e0631f379e5e8551a731fca8c1dd0eba"
+  },
+  {
+    "path": "art/xingtu-cabins/kitchen-3.webp",
+    "size": [
+      1200,
+      900
+    ],
+    "format": "WEBP",
+    "bytes": 372342,
+    "sha256": "5cec86c50459021780c231cc264549405d5d3e0c87e0f70e5f54aea9d665f1b2"
+  },
+  {
+    "path": "art/xingtu-cabins/kitchen-4.webp",
+    "size": [
+      1200,
+      900
+    ],
+    "format": "WEBP",
+    "bytes": 382146,
+    "sha256": "06e4639a707ba49aa28c271414727d307aaf7f87a8ba871e21f53a3af8118b97"
+  },
+  {
     "path": "art/xingtu-cabins/kitchen-5.webp",
     "size": [
       1200,
       900
     ],
     "format": "WEBP",
-    "bytes": 469560,
-    "sha256": "310d09c88ecc8b80e6833e3d59d1117f136d0d8f049ae7f59f0c07d51a2fbcda"
+    "bytes": 421610,
+    "sha256": "b30189c3085f21055b5513c419b7513c9b5b058191af1108140755881acb08d3"
   },
   {
     "path": "art/xingtu-cabins/medical-1.webp",
@@ -70,13 +160,43 @@
     "sha256": "38815798b54149299a2844850498efbd20098d4d48c16fbcaad979caaa4ec2b5"
   },
   {
+    "path": "art/xingtu-cabins/medical-2.webp",
+    "size": [
+      1200,
+      900
+    ],
+    "format": "WEBP",
+    "bytes": 332226,
+    "sha256": "6079de9846f6151761632116486c1c2680e27c130ae647827eb7aa52b0c7c03c"
+  },
+  {
+    "path": "art/xingtu-cabins/medical-3.webp",
+    "size": [
+      1200,
+      900
+    ],
+    "format": "WEBP",
+    "bytes": 407640,
+    "sha256": "3ff4924f88f917b527ccafb936260937a10b1714897ac89c869e9d8ea9e5cbf9"
+  },
+  {
+    "path": "art/xingtu-cabins/medical-4.webp",
+    "size": [
+      1200,
+      900
+    ],
+    "format": "WEBP",
+    "bytes": 414178,
+    "sha256": "b2978bf20e0778d88598e9b53665092c1535d119e54db3fe21288a281163c30b"
+  },
+  {
     "path": "art/xingtu-cabins/medical-5.webp",
     "size": [
       1200,
       900
     ],
     "format": "WEBP",
-    "bytes": 430008,
-    "sha256": "4664acc4ff9e3407aa3427f0f5d87660e1984bc17367eee227351ba78ebe1761"
+    "bytes": 398802,
+    "sha256": "27f2daa044d54fa129a4b79a63f849ff3d28131a7024182dc6096c53dd828338"
   }
 ]

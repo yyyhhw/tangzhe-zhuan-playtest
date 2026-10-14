@@ -1,7 +1,7 @@
 // 星途 v2 第一批：星图（5 圈 9 航线 + 出航需要四个岗位科研）与飞船（四个舱室）——只读，不写存档。
 // 画面与数值直接搬自王大妈 demo（wangdama/xingtu-demo、xingtu-4post-mock fd614ae）。
-import * as A from './xingtu-art.mjs?v=xingtu04-20261014-r1';
-import {EVENTS,rewardPoints} from './voyage-ev.mjs?v=xingtu04-20261014-r1';
+import * as A from './xingtu-art.mjs?v=xingtuv2-cabin2-20261014-r1';
+import {EVENTS,rewardPoints} from './voyage-ev.mjs?v=xingtuv2-cabin2-20261014-r1';
 // 星途-04（王大妈 23:13）：航程按航线写；探索点范围按 routePoints（事件点 × 航线倍数，和 v2-A 规则同一张表）算出来
 export const ROUTE_TIME=Object.freeze({moon:'10 分钟',station:'30 分钟',mars:'1 小时',venus:'1 小时',belt:'2 小时',pirate:'2 小时',europa:'4 小时',saturn:'4 小时',signal:'8 小时'});
 export const ROUTE_MULT=Object.freeze({moon:1,station:1,mars:2.5,venus:2.5,belt:5,pirate:5,europa:10,saturn:10,signal:20});
@@ -52,7 +52,7 @@ export function renderMap(parent,{doc,space,pick,onPick,goVoyage}){
 // 熊大舱室写实插画（xiongda/xt05-cabin-art f6e9338）：art/xingtu-cabins/<bridge|gun|medical|kitchen>-<lv>.webp。
 // 只列已经交付的级别——没交付的不发请求（不 404），继续显示 SVG 场景。新图交来只改 CABIN_LEVELS。
 export const CABIN_FILE=Object.freeze({tech:'bridge',war:'gun',med:'medical',life:'kitchen'});
-export const CABIN_LEVELS=Object.freeze({tech:[1,5],war:[1,5],med:[1,5],life:[1,5]});
+export const CABIN_LEVELS=Object.freeze({tech:[1,2,3,4,5],war:[1,2,3,4,5],med:[1,2,3,4,5],life:[1,2,3,4,5]});
 export const cabinArtPath=(k,lv)=>CABIN_LEVELS[k]?.includes(lv)?`../art/xingtu-cabins/${CABIN_FILE[k]}-${lv}.webp`:null;
 export function renderShip(parent,{doc,space,room,onRoom,artUrl}){
  const S=demoState(space,'moon');A.use(S);const k=room,lv=S.lv[k],st=A.STAGES[k][lv-1],sy=A.SYSK[k];
