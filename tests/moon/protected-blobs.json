@@ -29,7 +29,7 @@
   },
   {
     "path": "pet/game/style.css",
-    "sha256": "e0f480a74dd60acc819ca59cc351132bc19dd4ef8bd9ac5e39b1694bd1d7a19b"
+    "sha256": "f9635204d12f01ca86a92ac3a5208be5fe967b1a03d7506d24677603d86a7056"
   },
   {
     "path": "preview/cards/index.html",
@@ -45,7 +45,7 @@
   },
   {
     "path": "preview/pet/game/app.js",
-    "sha256": "64755cf5eebb45e521995e298002cb82fd2b3ed96367d39d87b75b145fb05a10"
+    "sha256": "6e89616d51ed36782ca8e17c7f54e2d254bd5f9b1cfd4a5f481aec7f3b4ea537"
   },
   {
     "path": "preview/pet/game/economy.js",
@@ -65,7 +65,7 @@
   },
   {
     "path": "preview/pet/game/style.css",
-    "sha256": "b881caa35b142822b9f43f3803cbd36757cbfe9db69acd2ff713a9daa5dab9ba"
+    "sha256": "0cb5cc5b39b7b98de14bc516ec8712d6fea1d7cd1c27e44d819041b4caac2bb2"
   },
   {
     "path": "preview/pet/game/test_petgame.js",
@@ -81,7 +81,7 @@
   },
   {
     "path": "preview/style.css",
-    "sha256": "b402a614ee62c0876eff1c9acd0552dd1907aaadb9ffaa5449606dcf431a506f"
+    "sha256": "a4585973e67451084a8cc25c1804ff1b004bbe0bbe2b479a88bdd7713d2bc4b0"
   },
   {
     "path": "preview/td/tdhost.js",
@@ -93,7 +93,7 @@
   },
   {
     "path": "style.css",
-    "sha256": "ab689e0cd0094505d50efe7ed38b5e5dfc03b1b4edb57f6de122cf9035bd8aa8"
+    "sha256": "a6112debce321524e86024f2a464fddf11691b73db352d8ba1ed016206ca8ada"
   },
   {
     "path": "td/td.css",

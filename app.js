@@ -6,7 +6,7 @@ const COLLECTION = window.FormalCollectionRuntime;
 if (!COLLECTION?.ownsLock()) {
   // Stale HTML can fetch a new script before bootstrap. No storage access here.
   const url=new URL(location.href);
-  if(url.searchParams.get('v')!=='formal-xingtu113-20261014-r1') {url.searchParams.set('v','formal-xingtu113-20261014-r1');location.replace(url.href);}
+  if(url.searchParams.get('v')!=='formal-copy115-20261014-r1') {url.searchParams.set('v','formal-copy115-20261014-r1');location.replace(url.href);}
   else {const notice=document.createElement('p');notice.textContent='页面资源尚未更新完整，存档未写入。请关闭此页后重新打开。';document.body.prepend(notice);}
   return;
 }
@@ -811,6 +811,10 @@ let toastTimer = 0, toastGeneration = 0, toastActive = null, toastQueue = [], to
 // Pending feedback: newest 3, FIFO, 8s TTL. Ambient: latest 1, 3s TTL.
 // Expiry uses both clocks so suspension or a wall-clock adjustment cannot replay old events.
 const TOAST_ERROR = /保存失败|存档异常|数据异常|没有生效/;
+// 文案-115：图标按情绪分。到账/获得/完成 → 金色对勾（toast-good）；错误、被挡、金币不够等其余一律保留红「!」。只改样式，不动优先级/队列。
+const TOAST_GOOD = /到账 ?\+|收入 \+|小红包|已入账|已领取：|已摆出|安排已保存|！收益 ×|完成/;
+const TOAST_BAD = /不够|失败|异常|没有生效|阻止|保护|不能|还没|不发/;
+function toastMood(item) { return item.priority < 2 && TOAST_GOOD.test(item.msg) && !TOAST_BAD.test(item.msg) ? 'good' : 'alert'; }
 function toastExpired(item) { return performance.now() >= item.until || Date.now() >= item.wallUntil; }
 function toastStop() {
   clearTimeout(toastTimer); toastTimer = 0; toastGeneration++;
@@ -828,6 +832,7 @@ function toastShow(item) {
   toastActive = { ...item, until:performance.now() + item.ms, wallUntil:Date.now() + item.ms };
   toastEl.classList.toggle('toast-header', item.placement === 'header');
   toastEl.setAttribute('role', item.priority === 2 ? 'alert' : 'status');
+  toastEl.classList.toggle('toast-good', toastMood(item) === 'good');
   toastEl.textContent = item.msg; toastEl.classList.remove('hidden');
   toastEl.style.animation = 'none'; void toastEl.offsetWidth; toastEl.style.animation = '';
   const generation = toastGeneration;
@@ -1995,7 +2000,7 @@ const HOME_ICON = ['home', 'apt', 'villa'].map(n => ic(n)); // 12c1：家宅升�
 let homeWho = 'c77', homeSub = 'room', homeMode = 'live', homeSel = null, homeDrag = null;
 // Home22: optional readonly status for the existing c77 Lv1 room only.
 let homeStatusContext = null, homeStatusAdapter = null;
-import('./home/home-status.mjs?v=xingtu113-20261014-r1').then(({createHomeStatusAdapter}) => {
+import('./home/home-status.mjs?v=copy115-20261014-r1').then(({createHomeStatusAdapter}) => {
   homeStatusAdapter = createHomeStatusAdapter({document, window, now, gameDayAt:E.dayKey});
   homeStatusAdapter.sync(document.getElementById('homeAmbienceStatus'), homeStatusContext);
 }).catch(error => console.warn('家宅时间与游戏内天气状态未加载', error));
@@ -2961,7 +2966,7 @@ const tdController = window.TDHost.create({
 function openTD() {
   if (frozen || tdOpen || zbOpen || window.XingTu?.isOpen() || !state.shops[1].open) return;
   tdOpen = true; const f = $('#tdFrame'), generation = ++tdGeneration;
-  const target = new URL('td/index.html?embed=1&v=xingtu113-20261014-r1', location.href);
+  const target = new URL('td/index.html?embed=1&v=copy115-20261014-r1', location.href);
   f.onload = () => {
     if (!tdOpen || generation !== tdGeneration) return;
     // Verify the actual loaded document, not merely an iframe src attribute.

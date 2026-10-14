@@ -754,6 +754,10 @@ let toastTimer = 0, toastGeneration = 0, toastActive = null, toastQueue = [], to
 // Pending feedback: newest 3, FIFO, 8s TTL. Ambient: latest 1, 3s TTL.
 // Expiry uses both clocks so suspension or a wall-clock adjustment cannot replay old events.
 const TOAST_ERROR = /保存失败|存档异常|数据异常|没有生效/;
+// 文案-115：图标按情绪分。到账/获得/完成 → 金色对勾（toast-good）；错误、被挡、金币不够等其余一律保留红「!」。只改样式，不动优先级/队列。
+const TOAST_GOOD = /到账 ?\+|收入 \+|小红包|已入账|已领取：|已摆出|安排已保存|！收益 ×|完成/;
+const TOAST_BAD = /不够|失败|异常|没有生效|阻止|保护|不能|还没|不发/;
+function toastMood(item) { return item.priority < 2 && TOAST_GOOD.test(item.msg) && !TOAST_BAD.test(item.msg) ? 'good' : 'alert'; }
 function toastExpired(item) { return performance.now() >= item.until || Date.now() >= item.wallUntil; }
 function toastStop() {
   clearTimeout(toastTimer); toastTimer = 0; toastGeneration++;
@@ -771,6 +775,7 @@ function toastShow(item) {
   toastActive = { ...item, until:performance.now() + item.ms, wallUntil:Date.now() + item.ms };
   toastEl.classList.toggle('toast-header', item.placement === 'header');
   toastEl.setAttribute('role', item.priority === 2 ? 'alert' : 'status');
+  toastEl.classList.toggle('toast-good', toastMood(item) === 'good');
   toastEl.textContent = item.msg; toastEl.classList.remove('hidden');
   toastEl.style.animation = 'none'; void toastEl.offsetWidth; toastEl.style.animation = '';
   const generation = toastGeneration;

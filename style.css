@@ -653,6 +653,7 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 /* 提示条：说明框（caption box） */
 #toast{background:#fffbe3;color:var(--ink);border:var(--lw-2) solid var(--ink);border-radius:var(--r-sm);box-shadow:var(--sh-2);font-weight:900;padding:8px 14px 8px 34px;line-height:1.4}
 #toast::before{content:"!";position:absolute;left:9px;top:50%;margin-top:-9px;width:18px;height:18px;border-radius:50%;background:var(--red);color:#fff;border:var(--lw-1) solid var(--ink);font-size:12px;line-height:15px;text-align:center;box-sizing:border-box}
+#toast.toast-good::before{content:"✓";background:var(--yellow);color:var(--ink);font-weight:900}   /* 文案-115：到账/获得/完成 用金色对勾；错误/被挡/金币不够 仍是红「!」 */
 .lock-card{border:3px solid var(--ink);border-radius:var(--r-lg);box-shadow:var(--sh-4);background:var(--panel)}
 
 /* --- 小屏：375 / 320 宽不挤 --- */

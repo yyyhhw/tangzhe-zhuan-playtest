@@ -112,7 +112,7 @@
     },
     {
       "path": "preview/pet/game/app.js",
-      "sha256": "64755cf5eebb45e521995e298002cb82fd2b3ed96367d39d87b75b145fb05a10"
+      "sha256": "6e89616d51ed36782ca8e17c7f54e2d254bd5f9b1cfd4a5f481aec7f3b4ea537"
     },
     {
       "path": "qa-protocol2/vendor/cards/card-coordinator.mjs",
