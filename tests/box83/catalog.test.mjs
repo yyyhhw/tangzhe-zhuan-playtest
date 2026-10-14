@@ -2,7 +2,7 @@ import test from 'node:test';import assert from 'node:assert/strict';import fs f
 import {prepareEightWearableCatalog} from '../../qa-protocol2/eight-catalog.mjs';
 import {prepareSecondEightCatalog} from '../../collectibles/wearables18-catalog.mjs';
 import {prepareDecor6Catalog} from '../../collectibles/decor6-catalog.mjs';
-import {prepareBox200Catalog,liveItems,LIVE_BATCHES,HIDDEN_BONUS_P} from '../../collectibles/box200-catalog.mjs';
+import {prepareBox200Catalog,liveItems,LIVE_BATCHES} from '../../collectibles/box200-catalog.mjs';
 import {BOX200_ITEMS} from '../../collectibles/box200-items.mjs';
 import {BOX200_COPY,COPY_STATUS} from '../../collectibles/box200-copy.mjs';
 import {wrapWearables,wrapDecor,artURL} from '../../collectibles/box200-display.mjs';
@@ -27,7 +27,7 @@ test('盲盒-83 + box200 live batches: only LIVE_BATCHES admitted, 58→58+live;
   assert.throws(()=>prepareBox200Catalog(E),/BOX200_BASELINE_MISMATCH/);
 });
 test('live art: every live item has a 512x512 PNG; every art path is art/collectibles/box200/<ID>.png',()=>{
-  for(const id of LIVE){const b=fs.readFileSync(new URL('../../art/collectibles/box200/'+id+'.png',import.meta.url));assert.equal(b.toString('latin1',1,4),'PNG');assert.equal(b.readUInt32BE(16),512);assert.equal(b.readUInt32BE(20),512);}
+  for(const id of LIVE_REG.map(x=>x.id)){const b=fs.readFileSync(new URL('../../art/collectibles/box200/'+id+'.png',import.meta.url));assert.equal(b.toString('latin1',1,4),'PNG');assert.equal(b.readUInt32BE(16),512);assert.equal(b.readUInt32BE(20),512);}
   for(const x of BOX200_ITEMS)assert(new URL(artURL(x.id)).pathname.endsWith('/art/collectibles/box200/'+x.id+'.png'));
 });
 test('rules kept with all live items: 5 per game day, 06:00 JST reset, no duplicates, no cost on 6th',()=>{
@@ -38,19 +38,19 @@ test('rules kept with all live items: 5 per game day, 06:00 JST reset, no duplic
   const t=E.newState(1);t.shops.forEach(x=>{x.open=true;x.emp=1;});t.coins=1e15;const seen=new Set();while(E.gachaRemaining(t).length){const q=E.gachaDraw(t,Math.random());assert(q.ok&&!seen.has(q.item.id));seen.add(q.item.id);}
   assert.equal(seen.size,58-2+LIVE_REG.length);for(const x of LIVE_REG)if(!seen.has(x.id))assert.fail(x.id);for(const id of B83)assert(seen.has(id));
 });
-test('hidden 1% bonus (provisional): only when hidden items are live; inert for 盲盒-83',()=>{
-  assert.equal(HIDDEN_BONUS_P,.01);const E=fresh(),orig=E.gachaDraw;prepareBox200Catalog(E).setActive(true);if(!LIVE_HID.length)assert.equal(E.gachaDraw,orig);else assert.notEqual(E.gachaDraw,orig);
-  const all=[...new Set(BOX200_ITEMS.map(x=>x.batch))],H=fresh();const reg=prepareBox200Catalog(H,{batches:all});reg.setActive(true);
+test('盲盒-109: no hidden bonus drop — box opens never yield hidden items, gachaDraw untouched, even with every batch live',()=>{
+  const E=fresh(),orig=E.gachaDraw;prepareBox200Catalog(E).setActive(true);assert.equal(E.gachaDraw,orig);
+  const all=[...new Set(BOX200_ITEMS.map(x=>x.batch))],H=fresh(),o2=H.gachaDraw;const reg=prepareBox200Catalog(H,{batches:all});reg.setActive(true);assert.equal(H.gachaDraw,o2);
   assert.equal(H.ITEMS.length,200);assert.equal(H.REGULAR_ITEMS.length,52+136);assert.equal(H.gachaRemaining(full(H)).length,200-2-6,'hidden never in normal pool');
-  const s=full(H);let bonus=0;for(let i=0;i<150;i++){const r=H.gachaDraw(s,(i*0.6180339887)%1);assert(r.ok);if(r.bonus)bonus++;}
-  const own=s.gacha.owned;assert.equal(new Set(own).size,own.length);assert(bonus<=6);assert(own.filter(id=>BOX200_ITEMS.find(x=>x.id===id)?.rarity==='hidden').length===bonus);
-  reg.setActive(false);assert.equal(H.ITEMS.length,58);assert.notEqual(typeof H.gachaDraw,'undefined');
+  const s=full(H);for(let i=0;i<150;i++){const r=H.gachaDraw(s,(i*0.6180339887)%1);assert(r.ok);assert(!r.bonus);}
+  const own=s.gacha.owned;assert.equal(new Set(own).size,own.length);assert.equal(own.filter(id=>H.ITEM_BY_ID[id]?.hidden).length,0);
+  reg.setActive(false);assert.equal(H.ITEMS.length,58);
 });
 test('display: owned 83 items render box200 PNG icon, unowned ❓, equip survives only when owned; decor wrap falls through',()=>{
   const E=fresh();prepareBox200Catalog(E).setActive(true);const W=wrapWearables(second),D=wrapDecor(decor6),s=full(E);
   assert.equal(W.version,second.version);for(const id of B83){assert(W.has(id));assert(W.iconHTML(E,s,id).includes('❓'));}
   s.gacha.owned.push('h_garlic_bulb','c_beer_foam_overall');s.wear.c77={hat:'h_garlic_bulb',clothes:'c_beer_foam_overall'};
-  assert(W.iconHTML(E,s,'h_garlic_bulb').includes('art/collectibles/box200/h_garlic_bulb.png?v=copy108-20261014-r1'));
+  assert(W.iconHTML(E,s,'h_garlic_bulb').includes('art/collectibles/box200/h_garlic_bulb.png?v=box109-20261014-r1'));
   assert.deepEqual(W.equipment(E,s,'c77'),{...W.equipment(E,s,'c77'),hat:'h_garlic_bulb',clothes:'c_beer_foam_overall'});
   s.wear.pearl={hat:'h_tofu_block'};assert.equal(W.equipment(E,s,'pearl').hat,null);
   assert(D.has('d_charcoal_chime'));assert(!D.has('h_garlic_bulb'));assert(W.has('c_skewer_loop_tunic'));

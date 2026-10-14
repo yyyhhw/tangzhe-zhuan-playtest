@@ -1,9 +1,9 @@
-import '../../home-interaction.js?v=copy108-20261014-r1';
-import display from './display.mjs?v=copy108-20261014-r1';
-import baseDisplay from '../../qa-protocol2/wearables8-display.mjs?v=copy108-20261014-r1';
-import {ITEMS} from './catalog.mjs?v=copy108-20261014-r1';
-import * as render from './render.mjs?v=copy108-20261014-r1';
-import {EIGHT_WEARABLES} from '../../qa-protocol2/eight-catalog.mjs?v=copy108-20261014-r1';
+import '../../home-interaction.js?v=box109-20261014-r1';
+import display from './display.mjs?v=box109-20261014-r1';
+import baseDisplay from '../../qa-protocol2/wearables8-display.mjs?v=box109-20261014-r1';
+import {ITEMS} from './catalog.mjs?v=box109-20261014-r1';
+import * as render from './render.mjs?v=box109-20261014-r1';
+import {EIGHT_WEARABLES} from '../../qa-protocol2/eight-catalog.mjs?v=box109-20261014-r1';
 const source=await (await fetch('../../app.js')).text();
 // Execute the actual shipped person implementation, with only explicit dependency injection.
 const looks=source.slice(source.indexOf('const LOOKS ='),source.indexOf('const CLOTHES ='));

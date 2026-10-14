@@ -17,7 +17,7 @@
   },
   {
     "path": "collectibles/entry.mjs",
-    "sha256AfterReleaseNormalization": "9b51590da29f578ad2c53d37531940c5ed615b5c714f2921e202059373892eae"
+    "sha256AfterReleaseNormalization": "65fc87ed5fa123c66a0909f981b8d7e5bb040361c59a25d6599b78545c2cb498"
   },
   {
     "path": "qa-protocol2/real-page-facade.mjs",

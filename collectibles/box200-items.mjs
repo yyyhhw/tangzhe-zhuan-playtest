@@ -958,41 +958,41 @@ export const BOX200_ITEMS=Object.freeze([
 "type": "clothes",
 "shop": "街区",
 "rarity": "hidden",
-"batch": "box200"
+"batch": "box200-hidden"
 },
 {
 "id": "h_golden_skewer_crown",
 "type": "hat",
 "shop": "烧烤摊",
 "rarity": "hidden",
-"batch": "box200"
+"batch": "box200-hidden"
 },
 {
 "id": "h_pearl_halo",
 "type": "hat",
 "shop": "奶茶店",
 "rarity": "hidden",
-"batch": "box200"
+"batch": "box200-hidden"
 },
 {
 "id": "d_street_neon_arch",
 "type": "decor",
 "shop": "街区",
 "rarity": "hidden",
-"batch": "box200"
+"batch": "box200-hidden"
 },
 {
 "id": "d_comet_jar",
 "type": "decor",
 "shop": "科技公司",
 "rarity": "hidden",
-"batch": "box200"
+"batch": "box200-hidden"
 },
 {
 "id": "d_manga_golden_page",
 "type": "decor",
 "shop": "漫画书店",
 "rarity": "hidden",
-"batch": "box200"
+"batch": "box200-hidden"
 }
 ].map(Object.freeze));
