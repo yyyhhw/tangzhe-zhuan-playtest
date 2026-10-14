@@ -54,7 +54,8 @@ export function installMoonOverlay({app,runtime,document:doc=globalThis.document
  const c=runtime.coordinator;
  host=createMoonHost({app,coordinator:c,readReconcile:()=>runtime.reconcile(),render,closeView,audioPause:()=>app.xingtuAudioPause(),audioResume:()=>app.xingtuAudioResume()});
  const style=node('style','xingtuStyles');style.textContent=MOON_CSS;doc.head.append(style);
- const hide=()=>{if(doc.hidden){clearTimer();host.suspend();}else queueMicrotask(()=>host.resume());};
+ // 星途-101: back in front with offline earnings waiting -> close the star map so the parent's offline modal is reachable; otherwise refresh as before.
+ const hide=()=>{if(doc.hidden){clearTimer();host.suspend();}else queueMicrotask(()=>{const r=host.resume();if(r.ok||!host.isOpen())return;let offline=false;try{offline=!!app.xingtuContext().offlinePending;}catch{}if(offline)host.close();});};
  doc.addEventListener('visibilitychange',hide);win.addEventListener('pagehide',()=>{revoked=true;host.invalidate();},{once:true});win.addEventListener('pageshow',e=>{if(e.persisted){revoked=true;host.invalidate();}});doc.addEventListener('keydown',e=>{
   if(!host.isOpen())return;if(e.key==='Escape'){e.preventDefault?.();host.close();return;}if(e.key!=='Tab')return;
   const list=controls(),first=list[0]??closeButton,last=list.at(-1)??closeButton,active=doc.activeElement;
