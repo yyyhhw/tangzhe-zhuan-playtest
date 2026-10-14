@@ -1914,7 +1914,7 @@ const LIVE_LINES = {
   c77:    { walk:['走两步耍下！','地板巴适得很。','莫慌，慢慢逛。'], rest:['瞌睡来了……','躺平！串串味儿还在。','眯一会儿，招牌自己烤。'], read:['……看不懂，但装得很认真。','书里有没有烤串秘方？','阿宅教的，我翻两页。'], dress:['换件围裙耍帅！','金马甲呢？在仓库。','穿好了，出摊！'] },
   pearl:  { walk:['脚步要轻，账本怕震。','茶香这边更浓。','客人看不见，我自己逛逛。'], rest:['珍珠姐也要午休。','躺平不等于躺不平账。','Q弹的梦，三分钟。'], read:['这本讲成本核算。','漫画？偶尔也扫一眼。','笔记写在杯套上。'], dress:['旗袍要平整。','换一身再营业。','珍珠发夹——不能掉。'] },
   otaku:  { walk:['分镜走位，从这格到那格。','地板也是画框。','别踩到我的手办投影。'], rest:['存档点……睡着了。','梦里下一话更新。','被窝是我的次元。'], read:['这本我标了书签！','名场面在第 42 页。','读完去改招牌文案。'], dress:['连帽衫＋新徽章。','换上角色扮演装。','镜子前先摆个 pose。'] },
-  rocket: { walk:['舱内巡检开始。','步进电机：启动。','火星还远，先走到窗边。'], rest:['休眠模式 ON。','充电 20 分钟。','梦到小店起飞。'], read:['说明书：怎么把床送上轨道。','这页有推力公式。','读完继续画火箭。'], dress:['胸针要亮。','换发射正装。','地上的装备，穿上！'] },
+  rocket: { walk:['舱内巡检开始。','步进电机：启动。','火星还远，先走到窗边。'], rest:['休眠模式：开启。','充电 20 分钟。','梦到小店起飞。'], read:['说明书：怎么把床送上轨道。','这页有推力公式。','读完继续画火箭。'], dress:['胸针要亮。','换发射正装。','地上的装备，穿上！'] },
 };
 function liveLine(id, act) { const pack = LIVE_LINES[id] || LIVE_LINES.c77, arr = pack[act] || pack.walk; return arr[Math.floor(Math.random() * arr.length)]; }
 function homeActorOf(id) {
@@ -1959,7 +1959,7 @@ function renderRoom() {
   const st = undoStack(id);
   h += `<div class="mode-tabs" role="tablist"><button class="mt ${homeMode === 'live' ? 'on' : ''}" data-act="homeMode" data-arg="live">${ic('live')}生活</button><button class="mt ${homeMode === 'decor' ? 'on' : ''}" data-act="homeMode" data-arg="decor">${ic('decor')}布置</button></div>`;
   h += `<div class="room-tools">${homeMode === 'decor' ? (sel ? `<span class="rt-sel">已选：<b>${E.FURN_BY_ID[sel.fid].name}</b></span><button class="buy alt" data-act="homeRot" data-arg="${sel.uid}">↻ 旋转</button><button class="buy alt" data-act="homeStore" data-arg="${sel.uid}">${ic('box')}收回</button>`
-    : '<span class="rt-sel">布置：点家具选中 / 拖动换位；挂画拖到墙面</span>') : '<span class="rt-sel">生活：点空地走过去 · 点床休息 · 点书架看书 · 点衣柜换装</span>'}
+    : '<span class="rt-sel">点家具选中，拖动换位置</span>') : '<span class="rt-sel">点空地走过去 · 点床休息 · 点书架看书 · 点衣柜换装</span>'}
     ${homeMode === 'decor' ? `<button class="buy alt" data-act="homeUndo" data-arg="${id}" ${st.length ? '' : 'disabled'}>↶ 撤销${st.length ? ' ' + st.length : ''}</button>` : ''}</div>`;
   h += petRoomBar(id);
   const inv = Object.entries(E.furnInvOf(state)).filter(([, n]) => n > 0);
@@ -1968,7 +1968,7 @@ function renderRoom() {
     h += inv.length ? `<div class="inv-strip">${inv.map(([fid, n]) => { const f = E.FURN_BY_ID[fid], stt = E.furnStats(state, fid);
         const where = stt.where.length ? stt.where.map(w => w.name).join('、') : '';
         return `<div class="inv-item" data-fid="${fid}" style="--fc:${f.color}" title="${f.name} ${f.w}×${f.h}${where ? ' · 另有在 ' + where : ''}"><span class="ie">${f.emoji}</span><b>${f.name}</b><small>${f.w}×${f.h}</small><i>×${n}</i></div>`; }).join('')}</div>
-        <div class="note">布置模式：拖家具、旋转、收回。挂画只挂墙。生活模式下去点空地 / 床 / 书架 / 衣柜互动。</div>`
+        <div class="note">选中家具后可以旋转、收回。挂画只能挂在墙上。</div>`
       : `<div class="note">仓库空空。去商城买家具，再回来布置 ${c.name} 的房间。</div>`;
   } else {
     h += `<div class="note live-note">生活模式：点地板空位让 ${c.name} 走过去；点<b>床</b>休息、点<b>书架</b>看书、点<b>衣柜</b>换装。要摆家具请切到「布置」。</div>
