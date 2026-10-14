@@ -1,7 +1,7 @@
 /** Candidate-only moon rules. Pure host planner; no Storage, timers, UI results or wallet changes. */
-import {readSpace} from './domain.mjs?v=xingtu114-20261014-r1';
-import {ROUTE_BY_ID,albumOk,awardFor,applyAward} from './album.mjs?v=xingtu114-20261014-r1';
-import {EVENT_IDS,readVoyageEv,pickEvent,defaultEvState,resolveEvent,outcomeFor,rewardPoints} from './voyage-ev.mjs?v=xingtu114-20261014-r1';
+import {readSpace} from './domain.mjs?v=sfx117-20261014-r1';
+import {ROUTE_BY_ID,albumOk,awardFor,applyAward} from './album.mjs?v=sfx117-20261014-r1';
+import {EVENT_IDS,readVoyageEv,pickEvent,defaultEvState,resolveEvent,outcomeFor,rewardPoints} from './voyage-ev.mjs?v=sfx117-20261014-r1';
 // 杨总 2026-10-14 01:32「星途所有店铺35级就可以了」：全部店铺 Lv35+ 解锁。正式航程 10 分钟、每次 8 探索点。
 export const MOON_RULES=Object.freeze({id:'xingtu-moon-10min-8pts-v1',route:'moon',duration:600000,points:8,minShopLevel:35});
 // 星途-113：新规则版本，新出航一律挂一件返航事件（星途-07）。旧 v1 航程/回执照旧可读可领（8 点、ev:null）。
