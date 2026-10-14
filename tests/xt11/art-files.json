@@ -1,26 +1,277 @@
 [
   {
+    "key": "moon_1",
+    "title": "月面第一串",
     "path": "art/spacecards/moon_1.webp",
     "size": [
       1024,
       768
     ],
+    "bytes": 269538,
     "sha256": "e2e2c10858bee0a31ef90655166b8086350f6fc7b0ffa01fab3fb6b5fb316fe4"
   },
   {
+    "key": "moon_2",
+    "title": "月球车代驾",
     "path": "art/spacecards/moon_2.webp",
     "size": [
       1024,
       768
     ],
+    "bytes": 293526,
     "sha256": "04d44538df1050f97788de375fe112281c8bbe7a3df151627117f8d5c1caf145"
   },
   {
+    "key": "moon_3",
+    "title": "地球升起",
     "path": "art/spacecards/moon_3.webp",
     "size": [
       1024,
       768
     ],
+    "bytes": 288368,
     "sha256": "a4a3fff92d885949ce1e80e3d75107d91e53f4113cbe55539bd5f16815323060"
+  },
+  {
+    "key": "station_1",
+    "title": "废墟里的工位",
+    "path": "art/spacecards/station_1.webp",
+    "size": [
+      1024,
+      768
+    ],
+    "bytes": 251290,
+    "sha256": "c9a8e4df397cf8abed21515488e54086673f2d479db683f69215ca85f07e486b"
+  },
+  {
+    "key": "station_2",
+    "title": "漂浮的便利贴",
+    "path": "art/spacecards/station_2.webp",
+    "size": [
+      1024,
+      768
+    ],
+    "bytes": 208120,
+    "sha256": "abac91bb8bb5bb59e064ec97eb0dbc2d401dd074ef4e76dd8ad9ee39520fdb65"
+  },
+  {
+    "key": "station_3",
+    "title": "重新通电",
+    "path": "art/spacecards/station_3.webp",
+    "size": [
+      1024,
+      768
+    ],
+    "bytes": 299116,
+    "sha256": "f65d42e53ccadd26484b8a21acb0a4ba46773b0ef5d4b77a626883210fc2c76b"
+  },
+  {
+    "key": "mars_1",
+    "title": "红色峡谷",
+    "path": "art/spacecards/mars_1.webp",
+    "size": [
+      1024,
+      768
+    ],
+    "bytes": 290732,
+    "sha256": "7804f6a59adfec82051edb18a0fd2eeb0d604e8a8aca896b5f940170fc4e8486"
+  },
+  {
+    "key": "mars_2",
+    "title": "火星外卖",
+    "path": "art/spacecards/mars_2.webp",
+    "size": [
+      1024,
+      768
+    ],
+    "bytes": 267656,
+    "sha256": "f7941a6ac3a7417b2b05f7589001f68215586978a595a3e24db4007ecb95ad67"
+  },
+  {
+    "key": "mars_3",
+    "title": "峡谷里的邻居",
+    "path": "art/spacecards/mars_3.webp",
+    "size": [
+      1024,
+      768
+    ],
+    "bytes": 321184,
+    "sha256": "bd4babe7f9c3c2b61adf23fdf3bdb727d6466747a6d20df87e8f7c927e087036"
+  },
+  {
+    "key": "venus_1",
+    "title": "云上茶会",
+    "path": "art/spacecards/venus_1.webp",
+    "size": [
+      1024,
+      768
+    ],
+    "bytes": 305254,
+    "sha256": "33f0ad03ba15e46069c22630cdba1468d1c71936a6bccf0cefd02189d9aee17d"
+  },
+  {
+    "key": "venus_2",
+    "title": "酸雨伞",
+    "path": "art/spacecards/venus_2.webp",
+    "size": [
+      1024,
+      768
+    ],
+    "bytes": 340294,
+    "sha256": "59015d292f581aa3f6d747f621c4bc6cfe6b386090f8b21d5dea90a77a4f9d32"
+  },
+  {
+    "key": "venus_3",
+    "title": "云城的客人",
+    "path": "art/spacecards/venus_3.webp",
+    "size": [
+      1024,
+      768
+    ],
+    "bytes": 286104,
+    "sha256": "496a5c2a76f7d731086423fab0667d5df44de0360d7eabb411a6ca604b11b33c"
+  },
+  {
+    "key": "belt_1",
+    "title": "挖到宝了",
+    "path": "art/spacecards/belt_1.webp",
+    "size": [
+      1024,
+      768
+    ],
+    "bytes": 292688,
+    "sha256": "ed411a8c9c4ffcee5e3bb65b34b8c42f5d318c28bd15b618ed714885567577ea"
+  },
+  {
+    "key": "belt_2",
+    "title": "矿工食堂",
+    "path": "art/spacecards/belt_2.webp",
+    "size": [
+      1024,
+      768
+    ],
+    "bytes": 300728,
+    "sha256": "994bf71784e5298572d0a5f4148b7dde2eaf57deb3d68b70a6684d9082319d98"
+  },
+  {
+    "key": "belt_3",
+    "title": "会唱歌的矿工",
+    "path": "art/spacecards/belt_3.webp",
+    "size": [
+      1024,
+      768
+    ],
+    "bytes": 329246,
+    "sha256": "4339a1e14ad3d1f022df58c683e8d8e09951a3319aeb017a1aecc1fcf127e92b"
+  },
+  {
+    "key": "pirate_1",
+    "title": "海盗旗",
+    "path": "art/spacecards/pirate_1.webp",
+    "size": [
+      1024,
+      768
+    ],
+    "bytes": 329288,
+    "sha256": "ebf1b94dc7d8203781aa2ab51dc96a2a607a5a5974ffeba098053d04a612d5bb"
+  },
+  {
+    "key": "pirate_2",
+    "title": "名场面",
+    "path": "art/spacecards/pirate_2.webp",
+    "size": [
+      1024,
+      768
+    ],
+    "bytes": 294490,
+    "sha256": "799dff087cc30881c1b93d6c4040309ed8f09fe9548a6e28a38d82ec86caf3dd"
+  },
+  {
+    "key": "pirate_3",
+    "title": "船长摘下帽子",
+    "path": "art/spacecards/pirate_3.webp",
+    "size": [
+      1024,
+      768
+    ],
+    "bytes": 271280,
+    "sha256": "450ed9331f1683c9abebd03fcf77926a428329bd0dd6dfc4be4f81500b6aa9b0"
+  },
+  {
+    "key": "europa_1",
+    "title": "冰上钓鱼",
+    "path": "art/spacecards/europa_1.webp",
+    "size": [
+      1024,
+      768
+    ],
+    "bytes": 296002,
+    "sha256": "6657a1cd00d9d3b98d685ac56027acea2992651bfde13cad3d2f990bcb1f8d15"
+  },
+  {
+    "key": "europa_2",
+    "title": "冰下的光",
+    "path": "art/spacecards/europa_2.webp",
+    "size": [
+      1024,
+      768
+    ],
+    "bytes": 311250,
+    "sha256": "51d606c41c35699043f5dbc06ed7a430ff22902b9a08a4e34a3f470055a39a62"
+  },
+  {
+    "key": "europa_3",
+    "title": "唱歌的鲸",
+    "path": "art/spacecards/europa_3.webp",
+    "size": [
+      1024,
+      768
+    ],
+    "bytes": 373116,
+    "sha256": "7173e91270e1500640146a2f56fff194eae59450725d408632ff3a60c68be602"
+  },
+  {
+    "key": "saturn_1",
+    "title": "环上冲浪",
+    "path": "art/spacecards/saturn_1.webp",
+    "size": [
+      1024,
+      768
+    ],
+    "bytes": 287844,
+    "sha256": "deba77219d75062f1a41792abc30cd72e2b98515481ba8c3d77495d34b68b59a"
+  },
+  {
+    "key": "saturn_2",
+    "title": "环里的光盘",
+    "path": "art/spacecards/saturn_2.webp",
+    "size": [
+      1024,
+      768
+    ],
+    "bytes": 251754,
+    "sha256": "5e75da002a9f8afc28a528a34b32f403610049e39c147ce10b4601623855e50c"
+  },
+  {
+    "key": "saturn_3",
+    "title": "土星交易所",
+    "path": "art/spacecards/saturn_3.webp",
+    "size": [
+      1024,
+      768
+    ],
+    "bytes": 278270,
+    "sha256": "bf99a23481377eaf7410b95b2a7ffc5856b1f676508e69b0ea478178d9f51c6a"
+  },
+  {
+    "key": "signal_1",
+    "title": "回信",
+    "path": "art/spacecards/signal_1.webp",
+    "size": [
+      1024,
+      768
+    ],
+    "bytes": 312004,
+    "sha256": "61ccedb7cb97db824d73c9e1bd12c883f1c3d73abb83bdccb9e6d954197bab4d"
   }
 ]

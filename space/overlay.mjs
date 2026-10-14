@@ -15,7 +15,7 @@ export function installMoonOverlay({app,runtime,document:doc=globalThis.document
  const restoreBackground=()=>{for(const {n,inert,attribute}of background){n.inert=inert;if(attribute!==undefined){if(attribute===null)n.removeAttribute?.('inert');else n.setAttribute('inert',attribute);}}background=[];};
  const node=(tag,id,text)=>{const n=doc.createElement(tag);if(id)n.id=id;if(text!==undefined)n.textContent=text;return n;};
  const cardImage=(route,n,title,thumb=false)=>{
-  if(!OPEN_ROUTES.includes(route)||route!=='moon'||!Number.isInteger(n)||n<1||n>3)return null;
+  if(!OPEN_ROUTES.includes(route)||!Number.isInteger(n)||!cardOf(route,n))return null;
   const img=node('img');img.className='xingtu-cardart'+(thumb?' xingtu-cardart-thumb':'');img.src=new URL(`../art/spacecards/${route}_${n}.webp`,import.meta.url).href;img.alt=thumb?'':title;img.width=1024;img.height=768;img.loading=thumb?'lazy':'eager';img.decoding='async';img.onerror=()=>{img.hidden=true;};return img;
  };
  const appendCardImage=(parent,route,n,title,thumb=false)=>{const img=cardImage(route,n,title,thumb);if(img)parent.append(img);};

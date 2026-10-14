@@ -20,7 +20,7 @@ with sync_playwright() as p:
   page.evaluate('''async()=>{const {installMoonOverlay}=await import('/space/overlay.mjs');window.fixtureView={ok:true,unlocked:true,phase:'idle',space:{pts:24,visits:{moon:3},cards:{moon:0},hidden:{},alienCards:0}};const app={xingtuContext:()=>({}),persist:()=>true,xingtuAudioPause(){},xingtuAudioResume(){}};installMoonOverlay({app,runtime:{coordinator:{readOnly:false,spaceView:()=>window.fixtureView}}}).open();}''')
   page.locator('#xingtuTabAlbum').click();assert page.locator('#xingtuContent img').count()==0
   page.locator('#xingtuCard-moon-1').click();assert page.locator('#xingtuCardDetail img').count()==0
-  page.evaluate("fixtureView.space.cards.moon=3;XingTu.close();XingTu.open()")
+  page.evaluate("fixtureView.space.cards.moon=3;fixtureView.space.cards.station=3;XingTu.close();XingTu.open()")
   page.locator('#xingtuTabAlbum').click();assert page.locator('#xingtuContent img').count()==3
   for i in range(1,4):
    page.locator(f'#xingtuCard-moon-{i}').click();img=page.locator('#xingtuCardDetail img');img.wait_for()
