@@ -14,6 +14,11 @@ export function installMoonOverlay({app,runtime,document:doc=globalThis.document
  const isolate=()=>{background=[...(doc.body.children??[])].filter(n=>n!==cover).map(n=>({n,inert:n.inert,attribute:n.getAttribute?.('inert')}));for(const {n} of background)n.inert=true;};
  const restoreBackground=()=>{for(const {n,inert,attribute}of background){n.inert=inert;if(attribute!==undefined){if(attribute===null)n.removeAttribute?.('inert');else n.setAttribute('inert',attribute);}}background=[];};
  const node=(tag,id,text)=>{const n=doc.createElement(tag);if(id)n.id=id;if(text!==undefined)n.textContent=text;return n;};
+ const cardImage=(route,n,title,thumb=false)=>{
+  if(!OPEN_ROUTES.includes(route)||route!=='moon'||!Number.isInteger(n)||n<1||n>3)return null;
+  const img=node('img');img.className='xingtu-cardart'+(thumb?' xingtu-cardart-thumb':'');img.src=new URL(`../art/spacecards/${route}_${n}.webp`,import.meta.url).href;img.alt=thumb?'':title;img.width=1024;img.height=768;img.loading=thumb?'lazy':'eager';img.decoding='async';img.onerror=()=>{img.hidden=true;};return img;
+ };
+ const appendCardImage=(parent,route,n,title,thumb=false)=>{const img=cardImage(route,n,title,thumb);if(img)parent.append(img);};
  const fmt=ms=>{const s=Math.ceil(ms/1000);return `${Math.floor(s/60)}分${String(s%60).padStart(2,'0')}秒`;};
  // 文案-102: phone-local wall time — 今天/明天/昨天 HH:MM, else M月D日 (other year: YYYY年M月D日).
  const when=t=>{const a=new Date(t),b=new Date(Date.now()),dd=Math.round((new Date(a.getFullYear(),a.getMonth(),a.getDate())-new Date(b.getFullYear(),b.getMonth(),b.getDate()))/864e5),hm=`${String(a.getHours()).padStart(2,'0')}:${String(a.getMinutes()).padStart(2,'0')}`;return `${dd===0?'今天':dd===1?'明天':dd===-1?'昨天':a.getFullYear()===b.getFullYear()?`${a.getMonth()+1}月${a.getDate()}日`:`${a.getFullYear()}年${a.getMonth()+1}月${a.getDate()}日`} ${hm}`;};
@@ -86,7 +91,7 @@ export function installMoonOverlay({app,runtime,document:doc=globalThis.document
  // 星途-114：返航报告里的「新剧情卡」块 + 隐藏物金色一行（点一下展开介绍）。显示的就是 claim 会写入的（同一个 awardFor）。
  function awardBlocks(parent,view){
   const a=view.award;if(!a)return;
-  if(a.card){const c=cardOf('moon',a.card),box=node('div','xingtuNewCard');box.className='xingtu-newcard'+(c.alien?' xingtu-alien':'');box.append(node('p','xingtuNewCardTag',c.alien?'外星来客':'新剧情卡'),node('h4','xingtuNewCardTitle',c.title),node('p','xingtuNewCardText',c.text));parent.append(box);}
+  if(a.card){const c=cardOf('moon',a.card),box=node('div','xingtuNewCard');box.className='xingtu-newcard'+(c.alien?' xingtu-alien':'');appendCardImage(box,'moon',a.card,c.title);box.append(node('p','xingtuNewCardTag',c.alien?'外星来客':'新剧情卡'),node('h4','xingtuNewCardTitle',c.title),node('p','xingtuNewCardText',c.text));parent.append(box);}
   if(a.hidden){const h=ROUTE_BY_ID[a.hidden].hid,line=button('xingtuNewHidden',`◆ 找到隐藏物「${h.name}」`,()=>{const d=doc.getElementById('xingtuNewHiddenIntro');if(d)d.hidden=!d.hidden;});line.className='xingtu-hidline';const intro=node('p','xingtuNewHiddenIntro',h.intro);intro.hidden=true;parent.append(line,intro);}
  }
  // 星途-114：册子页签。只有已开航的航线露卡名/线索；别的整行「还没开航」。外星卡不写产速加成（等星途-09）。
@@ -103,9 +108,9 @@ export function installMoonOverlay({app,runtime,document:doc=globalThis.document
    row.append(node('p',null,`${r.name}${r.ring?' · '+r.ring:''}    ${n}/${r.cards.length}`));
    if(!open){const bar=node('div',null,'还没开航');bar.className='xingtu-closed';row.append(bar);content.append(row);continue;}
    const list=node('div');list.className='xingtu-cards';
-   r.cards.forEach((c,i)=>{const have=i<n,b=button(`xingtuCard-${r.id}-${i+1}`,have?c.title:`第 ${i+1} 张${c.alien?' · 外星来客':''}`,()=>{albumPick=`c:${r.id}:${i+1}`;signature=null;host.refresh();});b.className='xingtu-cardcell'+(have?' on':'')+(c.alien?' xingtu-alien':'');if(!have){const s=node('small',null,`再去一趟${r.name}`);b.append(s);}list.append(b);});
+   r.cards.forEach((c,i)=>{const have=i<n,b=button(`xingtuCard-${r.id}-${i+1}`,have?c.title:`第 ${i+1} 张${c.alien?' · 外星来客':''}`,()=>{albumPick=`c:${r.id}:${i+1}`;signature=null;host.refresh();});b.className='xingtu-cardcell'+(have?' on':'')+(c.alien?' xingtu-alien':'');if(have)appendCardImage(b,r.id,i+1,c.title,true);if(!have){const s=node('small',null,`再去一趟${r.name}`);b.append(s);}list.append(b);});
    row.append(list);
-   if(albumPick?.startsWith(`c:${r.id}:`)){const k=Number(albumPick.split(':')[2]),c=r.cards[k-1],have=k<=n;const d=node('p','xingtuCardDetail',have?`${c.title}：${c.text}`:`第 ${k} 张还没拿到，再去一趟${r.name}。`);d.className='xingtu-detailtext';row.append(d);}
+   if(albumPick?.startsWith(`c:${r.id}:`)){const k=Number(albumPick.split(':')[2]),c=r.cards[k-1],have=k<=n;const d=node('p','xingtuCardDetail',have?`${c.title}：${c.text}`:`第 ${k} 张还没拿到，再去一趟${r.name}。`);d.className='xingtu-detailtext';if(have)appendCardImage(d,r.id,k,c.title);row.append(d);}
    content.append(row);}
  }
  const c=runtime.coordinator;

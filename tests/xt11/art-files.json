@@ -1,0 +1,26 @@
+[
+  {
+    "path": "art/spacecards/moon_1.webp",
+    "size": [
+      1024,
+      768
+    ],
+    "sha256": "e2e2c10858bee0a31ef90655166b8086350f6fc7b0ffa01fab3fb6b5fb316fe4"
+  },
+  {
+    "path": "art/spacecards/moon_2.webp",
+    "size": [
+      1024,
+      768
+    ],
+    "sha256": "04d44538df1050f97788de375fe112281c8bbe7a3df151627117f8d5c1caf145"
+  },
+  {
+    "path": "art/spacecards/moon_3.webp",
+    "size": [
+      1024,
+      768
+    ],
+    "sha256": "a4a3fff92d885949ce1e80e3d75107d91e53f4113cbe55539bd5f16815323060"
+  }
+]

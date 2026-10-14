@@ -1,0 +1,27 @@
+{
+  "browser": "system Chromium",
+  "fixture": "actual overlay, mocked read-only coordinator, no Storage",
+  "results": [
+    {
+      "entry": "/",
+      "lockedImages": 0,
+      "earnedThumbnails": 3,
+      "detailImagesLoaded": 3,
+      "overflow": false
+    },
+    {
+      "entry": "/pet/game/",
+      "lockedImages": 0,
+      "earnedThumbnails": 3,
+      "detailImagesLoaded": 3,
+      "overflow": false
+    },
+    {
+      "entry": "/preview/",
+      "lockedImages": 0,
+      "earnedThumbnails": 3,
+      "detailImagesLoaded": 3,
+      "overflow": false
+    }
+  ]
+}
