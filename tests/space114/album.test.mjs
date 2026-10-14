@@ -12,7 +12,8 @@ test('copy: 25 cards / 9 hidden from 星途-08; alien prefix stripped for displa
  assert.equal(TOTAL_CARDS,25);assert.equal(ROUTES.length,9);assert.equal(ROUTES.flatMap(r=>r.cards).filter(c=>c.alien).length,ALIEN_DENOM);
  for(const c of ROUTES.flatMap(r=>r.cards)){assert(!c.title.startsWith('外星来客'));assert(c.title.length<=12,c.title);assert(c.text.length<=40,c.text);}
  assert.equal(ROUTES[0].cards[0].title,'月面第一串');assert.equal(ROUTES[4].hid.name,'会哼歌的石头');assert.equal(ROUTES[8].hid.name,'回信的信封');
- const {readFileSync}=await import('node:fs');for(const f of ['space/album.mjs','space/overlay.mjs'])assert(!/产速/.test(readFileSync(new URL('../../'+f,import.meta.url),'utf8').replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g,'')),f);
+ const {readFileSync}=await import('node:fs');// 星途 v2-C（星途-09）上线：外星卡写「四家店产速永久 +25%」，只许出现在 overlay 的外星卡标签里
+ for(const f of ['space/album.mjs'])assert(!/产速/.test(readFileSync(new URL('../../'+f,import.meta.url),'utf8').replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g,'')),f);
 });
 test('nth moon return → story card n (1,2,3), then nothing more; preview == what claim writes; same write as points+receipt',()=>{
  let s=fresh(),t=1000;for(const n of [1,2,3,null,null]){const r=trip(s,t);assert.equal(r.preview.card,n);const sp=r.s.space;assert.equal(sp.cards.moon??0,n??3);assert.equal(sp.moonLoop.lastReceipt.card,n);assert.equal(sp.moonLoop.lastReceipt.hidden,null);assert.equal(sp.alienCards,0);s=r.s;t+=700000;}

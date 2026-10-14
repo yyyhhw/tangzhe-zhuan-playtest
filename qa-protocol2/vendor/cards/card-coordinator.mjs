@@ -1,7 +1,7 @@
-import {planHiddenClaim,validHiddenTransition} from '../../../collectibles/decor6-grants.mjs?v=lockfix-20261014-r1';
-import {moonView,planMoon} from '../../../space/moon.mjs?v=lockfix-20261014-r1';
-import {migrateSpace,spaceTransition} from '../../../space/domain.mjs?v=lockfix-20261014-r1';
-import {createCardTransitionGuard} from './card-transition.mjs?v=lockfix-20261014-r1';
+import {planHiddenClaim,validHiddenTransition} from '../../../collectibles/decor6-grants.mjs?v=xingtuv2-full-20261015-r1';
+import {moonView,planMoon,researchSpend} from '../../../space/moon.mjs?v=xingtuv2-full-20261015-r1';
+import {migrateSpace,spaceTransition} from '../../../space/domain.mjs?v=xingtuv2-full-20261015-r1';
+import {createCardTransitionGuard} from './card-transition.mjs?v=xingtuv2-full-20261015-r1';
 export const CARD_ADAPTER_ENABLED=false;
 /** Synthetic-adapter coordinator candidate; no global storage or automatic launch. */
 const fail=code=>{throw Error(code);};
@@ -61,6 +61,9 @@ export function createCardAwareSession({scope,storage,lease,validator,canonical,
     const initializing=spaceToken===spaceCapability,moon=moonToken===moonCapability;
     if(moon){
       const projected=copy(state);if(Object.hasOwn(previous.state,'space'))projected.space=copy(previous.state.space);else delete projected.space;
+      // 星途 v2-B：唯一允许和 space 一起变的是 coins——必须正好等于这笔新买的科研成果的金币价（researchSpend），其它一律 SPACE_INTENT_ONLY。
+      const spent=researchSpend(previous.state.space??null,state.space??null);if(spent===null)return {ok:false,code:'SPACE_INTENT_ONLY'};
+      if(spent>0){if(!(Number.isSafeInteger(previous.state.coins)&&Number.isSafeInteger(state.coins)&&state.coins>=0&&previous.state.coins-spent===state.coins))return {ok:false,code:'SPACE_GOLD_MISMATCH'};projected.coins=previous.state.coins;}
       if(initializing||allowCollectionChange||canonical(projected)!==canonical(previous.state))return {ok:false,code:'SPACE_INTENT_ONLY'};
       const checked=moonView(state,{scope,now:spaceClock()});if(!checked.ok)return checked;
     }else{const transition=spaceTransition(previous.state,state,{initialize:initializing});if(!transition.ok)return transition;}

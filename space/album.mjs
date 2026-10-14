@@ -22,15 +22,18 @@ export const ROUTES=Object.freeze([
   hid:{name:'土星环光盘',clue:'雷达要能看清冰块里的东西。',intro:'“第一季”只有一集，阿宅已经看了二十遍。'}},
  {id:'signal',name:'未知信号源',cards:[['回信','信号是一段漫画，最后一格画着一条亮着灯的街。']],
   hid:{name:'回信的信封',clue:'信封上写着：给那条街的四个人。',intro:'信封是空的，信已经在册子里了。'}}
-].map(r=>Object.freeze({...r,cards:Object.freeze(r.cards.map(([t,x])=>Object.freeze({tag:t,alien:t.startsWith('外星来客：'),title:t.replace(/^外星来客：/,''),text:x})))})));
+].map(r=>Object.freeze({...r,cards:Object.freeze(r.cards.map(([t,x])=>Object.freeze({tag:t,alien:t.startsWith('外星来客：')||t==='回信',title:t.replace(/^外星来客：/,''),text:x})))})));
 export const ROUTE_BY_ID=Object.freeze(Object.fromEntries(ROUTES.map(r=>[r.id,r])));
 export const TOTAL_CARDS=ROUTES.reduce((a,r)=>a+r.cards.length,0);// 25
-export const ALIEN_DENOM=6;// 星途-12 第 5 条推荐 A；熊大若定 7 只改这里
+export const ALIEN_DENOM=7;// 杨总 2026-10-15 01:30 拍板：第 7 张外星卡 = 未知信号源「回信」
 /** 现在开放的航线（只有月面基地）。别的航线「还没开航」：不露卡名、不露隐藏物线索。 */
-export const OPEN_ROUTES=Object.freeze(['moon']);
+export const OPEN_ROUTES=Object.freeze(['moon','station','mars','venus','belt','pirate','europa','saturn','signal']);// 星途 v2-A：除「未知信号源」（结局批）外都开航
 /** 隐藏物条件。月面「旧时代的国旗」要雷达（星途-06 科研/道具还没做）→ 现在谁都拿不到；条件数值不显示给玩家。
  * 其余航线没开航，条件留空（false）。上线新条件只改这里 + 测试。 */
-export const HIDDEN_RULES=Object.freeze({moon:()=>false});
+// 星途 v2-A：照 demo 条件（在本趟领取前的存档上判断）。月面要雷达、土星要雷达/科技 5、海盗要连胜——雷达和遭遇战胜场等科研成果批再接，现在月面/海盗还拿不到。
+const L=(s,k)=>s.lv?.[k]??1;
+export const HIDDEN_RULES=Object.freeze({moon:s=>s.items?.['tech:3']>=1,// v2-B：「曲率雷达」（科技 3 级成果）就是雷达
+ station:s=>L(s,'med')>=2,mars:s=>L(s,'life')>=3,venus:s=>L(s,'med')>=3,belt:s=>(s.visits?.belt??0)>=2,pirate:s=>s.wins>=3,europa:s=>L(s,'life')>=5,saturn:s=>L(s,'tech')>=5,signal:()=>true});
 const own=(x,k)=>Object.hasOwn(x,k),int=(x,min=0)=>Number.isSafeInteger(x)&&x>=min;
 /** 册子读档校验：已发张数不能超过该航线卡数；隐藏物只能是 true/false（domain 已校验类型）。坏档只读，不修。 */
 export function albumOk(space){

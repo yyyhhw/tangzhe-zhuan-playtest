@@ -3,19 +3,19 @@
   "files": [
     {
       "path": "economy.js",
-      "sha256": "ab43dcfea5965c942859b7706134cc3474da7c0350dab4aff9afe55bcce3a414",
+      "sha256": "66c8877ecaece5cce7e2dbde7a313bcd3a3d8c23e2b53e3a9d8ff8ceda4457b2",
       "originalSha256": "c2abc463c6612361a24feace0a697df86bf72f9a04a8148e112b6dd55e20a91a",
       "expectedChange": "Previously reviewed decor16 catalog/hidden-grant extension from 89267ef; not claimed byte-identical to 7ce."
     },
     {
       "path": "preview/economy.js",
-      "sha256": "b005a82bd3ccd728bf5de62a48fa7007dbfb0e78b1d963163de2a47d31e20538",
+      "sha256": "9cfc88f7a040b06cacb0f45af342982c25089ad96bfed00dfebce07ca1123d7c",
       "originalSha256": "ab0921e44ceae1f1694c345dd41cedc38c987b156b5db9ea4eb715388bf10f5f",
       "expectedChange": "Previously reviewed decor16 catalog/hidden-grant extension from 89267ef; not claimed byte-identical to 7ce."
     },
     {
       "path": "pet/game/economy.js",
-      "sha256": "1bbd6113e3e6cef12a4d627006c0728346d6524b64be695dc044072bf2c5d9c7",
+      "sha256": "39b7a59a29f7929112e8e000ff03af2c75adfc962efc87fda4d1877b6470001f",
       "originalSha256": "4475552c124117f06322335a7befd168b51a0c6236b38446565d0030c41c14be",
       "expectedChange": "Previously reviewed decor16 catalog/hidden-grant extension from 89267ef; not claimed byte-identical to 7ce."
     },
@@ -27,9 +27,9 @@
     },
     {
       "path": "qa-protocol2/vendor/cards/card-coordinator.mjs",
-      "sha256": "f7b900defc0a2e55eb5372626e8d6139551d2857a00c88036ee1789c981be196",
+      "sha256": "a9348a2d6a7d61505b099b1241eb30d125cccfcb2e65ed2bac70e77e2b33b5c1",
       "originalSha256": "82bf35fb2593a8ce6c5286fcd778409dc05380991ec9b1793457d7569b37c6d7",
-      "expectedChange": "Previously reviewed decor16 catalog/hidden-grant extension from 89267ef; not claimed byte-identical to 7ce."
+      "expectedChange": "Previously reviewed decor16 catalog/hidden-grant extension from 89267ef; not claimed byte-identical to 7ce. 星途 v2-B (xingtuv2/b-gold-research): moon commits may also lower coins by exactly researchSpend(prev.space,next.space); reviewed by cross-check."
     },
     {
       "path": "qa-protocol2/real-page-facade.mjs",

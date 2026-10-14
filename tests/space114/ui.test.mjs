@@ -10,9 +10,9 @@ for(const [scope,path] of [['formal',undefined],['formal','/pet/game/'],['previe
  assert.equal(h.app.state.space.cards.moon??0,0,'nothing before 收下');const claim=h.node('xingtuClaim');assert(claim.onclick().ok);assert.equal(h.app.state.space.cards.moon,1);const w=h.writes().length;claim.onclick();assert.equal(h.writes().length,w);assert.equal(h.app.state.space.cards.moon,1);
  assert.match(txt(h,'xingtuReport'),/剧情卡「月面第一串」/);
  const w2=h.writes().length;h.node('xingtuTabAlbum').onclick();assert.equal(h.writes().length,w2,'album is read-only');
- assert.equal(txt(h,'xingtuAlbumHead'),'1/25 剧情卡   0/9 隐藏物   0/6 外星');assert.equal(txt(h,'xingtuCard-moon-1'),'月面第一串');assert.match(txt(h,'xingtuCard-moon-2'),/^第 2 张/);assert.notEqual(txt(h,'xingtuCard-moon-2'),'月球车代驾');
- assert(h.node('xingtuRow-station'));assert.equal(h.node('xingtuCard-station-1'),null,'closed route hides card names');
- h.node('xingtuHid-moon').onclick();assert.equal(txt(h,'xingtuHidDetail'),'线索：带着雷达去，看看月坑背面。');h.node('xingtuHid-mars').onclick();assert.equal(txt(h,'xingtuHidDetail'),'还没开航');
+ assert.equal(txt(h,'xingtuAlbumHead'),'1/25 剧情卡   0/9 隐藏物   0/7 外星');assert.equal(txt(h,'xingtuCard-moon-1'),'月面第一串');assert.match(txt(h,'xingtuCard-moon-2'),/^第 2 张/);assert.notEqual(txt(h,'xingtuCard-moon-2'),'月球车代驾');
+ assert(h.node('xingtuRow-station'));assert(h.node('xingtuRow-signal'));// 星途 v2-D：9 条航线全开航，没有「还没开航」的行了
+ h.node('xingtuHid-moon').onclick();assert.equal(txt(h,'xingtuHidDetail'),'线索：带着雷达去，看看月坑背面。');h.node('xingtuHid-signal').onclick();assert.equal(txt(h,'xingtuHidDetail'),'线索：信封上写着：给那条街的四个人。');
  h.node('xingtuCard-moon-1').onclick();assert.equal(txt(h,'xingtuCardDetail'),'月面第一串：77 在月坑边支起烤架：“低重力，孜然撒得特别匀。”');
  
  h.node('xingtuTabVoyage').onclick();assert(h.node('xingtuDepart'));

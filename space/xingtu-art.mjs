@@ -107,6 +107,128 @@ const CASTBY = {}; CAST.forEach(c => CASTBY[c.id] = c);
 function defsSvg(){
   return `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><pattern id="dots" width="8" height="8" patternUnits="userSpaceOnUse"><circle cx="4" cy="4" r="1.6" fill="#141414"/></pattern><pattern id="dotsw" width="8" height="8" patternUnits="userSpaceOnUse"><circle cx="4" cy="4" r="1.2" fill="#e9f1ff"/></pattern><radialGradient id="glow"><stop offset="0" stop-color="#fff" stop-opacity=".9"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>${CAST.map(c => `<symbol id="c-${c.id}" viewBox="-4 -6 108 126">${c.svg}</symbol>`).join('')}${shipDefs()}${techDefs()}${sceneDefs()}</defs></svg>`;
 }
+function put(id, x, y, w, flip){ const h = w * 1.17; return `<use href="#c-${id}" x="${x}" y="${y}" width="${w}" height="${h}"${flip ? ` transform="translate(${2*x+w} 0) scale(-1 1)"` : ''}/>`; }
+const ROCKET = (x,y,s) => `<g transform="translate(${x} ${y}) scale(${s})"><path d="M20 0 q16 20 16 52 v20 h-32 v-20 q0-32 16-52z" fill="#fffaf0" stroke="${K}" stroke-width="3"/><circle cx="20" cy="34" r="7" fill="#2f6fb5" stroke="${K}" stroke-width="3"/><path d="M4 56 l-10 20 h10z M36 56 l10 20 h-10z" fill="#e63946" stroke="${K}" stroke-width="3"/><path d="M8 72 h24 l-12 26z" fill="#ffd23f" stroke="${K}" stroke-width="2.5"/></g>`;
+const STARS = n => { let s = '', seed = n * 31 + 7; for (let i = 0; i < 26; i++) { seed = (seed * 16807) % 2147483647; const x = seed % 320; seed = (seed * 16807) % 2147483647; const y = seed % 200; s += `<rect x="${x}" y="${y}" width="2" height="2" fill="#e9f1ff" opacity=".8"/>`; } return s; };
+const SHOPS4 = `<g stroke="${K}" stroke-width="2.5">${['#c8743a','#e58aa8','#2f6fb5','#7a7a72'].map((c,i) => `<rect x="${150+i*40}" y="${104}" width="36" height="40" fill="#fffaf0"/><path d="M${148+i*40} 104 h40 l-4 -12 h-32z" fill="${c}"/><rect x="${160+i*40}" y="120" width="16" height="24" fill="#ffd23f"/>`).join('')}</g>`;
+const CARDS = `<g stroke="${K}" stroke-width="2.5">${[[170,40,-18,'#ffd23f'],[210,30,6,'#fffaf0'],[250,48,22,'#d9d2ff']].map(([x,y,r,c]) => `<g transform="rotate(${r} ${x+18} ${y+26})"><rect x="${x}" y="${y}" width="36" height="52" rx="4" fill="${c}"/><circle cx="${x+18}" cy="${y+22}" r="8" fill="#e63946"/><path d="M${x+8} ${y+40}h20" /></g>`).join('')}</g>`;
+const BOARD = `<rect x="96" y="20" width="128" height="78" fill="#c8743a" stroke="${K}" stroke-width="3"/><rect x="102" y="26" width="116" height="66" fill="#fffaf0" stroke="${K}" stroke-width="2"/>${[[108,32,'#ffd23f'],[146,32,'#bde0fe'],[184,32,'#ffc4d6'],[108,62,'#d8f3dc'],[146,62,'#ffd23f'],[184,62,'#e7ffe9']].map(([x,y,c]) => `<rect x="${x}" y="${y}" width="28" height="24" fill="${c}" stroke="${K}" stroke-width="1.5"/><path d="M${x+5} ${y+9}h18M${x+5} ${y+15}h12" stroke="${K}" stroke-width="1.2"/>`).join('')}`;
+const EARTHG = (x,y,r) => `<circle cx="${x}" cy="${y}" r="${r}" fill="#2f6fb5" stroke="${K}" stroke-width="3"/><path d="M${x-r*.6} ${y-r*.3} q${r*.3} -${r*.5} ${r*.7} -${r*.1} q${r*.2} ${r*.4} -${r*.2} ${r*.6} q-${r*.4} ${r*.1} -${r*.5} -${r*.5}z M${x+r*.2} ${y+r*.2} q${r*.4} -${r*.1} ${r*.5} ${r*.3} q-${r*.2} ${r*.4} -${r*.5} ${r*.2}z" fill="#6fbf73" stroke="${K}" stroke-width="2"/>`;
+const CEOU = (k, x, y, w) => `<use href="#ceo-${k}" x="${x}" y="${y}" width="${w}" height="${w*1.17}"/>`;
+const GRILL = `<g stroke="${K}" stroke-width="2.5"><path d="M196 150 l-8 40 M290 150 l8 40" /><rect x="186" y="128" width="114" height="22" rx="4" fill="#3a3a3a"/>${[200,222,244,266,288].map(x => `<path d="M${x} 96 v34" stroke="#8a6a4a" stroke-width="2"/><circle cx="${x}" cy="104" r="5" fill="#c0583d"/><circle cx="${x}" cy="116" r="5" fill="#e9c46a"/>`).join('')}</g><path d="M220 90 q-8 -14 2 -26 M248 90 q-8 -14 2 -26" stroke="#fff" stroke-width="4" opacity=".6" fill="none" stroke-linecap="round"/>`;
+const GBOX = `<g transform="translate(128 112) rotate(-10)" stroke="${K}" stroke-width="2.5"><rect width="40" height="34" fill="#e63946"/><rect x="-4" y="-10" width="48" height="12" fill="#ffd23f"/><path d="M20 -10 v44" /><text x="20" y="28" text-anchor="middle" font-size="18" font-weight="900" fill="#fff" stroke="none">?</text></g>`;
+const HOUSES = `<g stroke="${K}" stroke-width="2.5">${[['#c8743a',150],['#e58aa8',192],['#6b4fd8',234],['#2f6fb5',276]].map(([c,x]) => `<rect x="${x-18}" y="110" width="36" height="40" fill="#fffaf0"/><path d="M${x-24} 112 L${x} 86 L${x+24} 112z" fill="${c}"/><rect x="${x-6}" y="128" width="12" height="22" fill="#ffd23f"/>`).join('')}</g>`;
+const PET = `<g transform="translate(232 120)" stroke="${K}" stroke-width="3"><ellipse rx="40" ry="32" fill="#ffd6a5"/><path d="M-30 -22 l-8 -22 l20 12z M30 -22 l8 -22 l-20 12z" fill="#ffd6a5"/><ellipse cx="-13" cy="-4" rx="5" ry="7" fill="${K}"/><ellipse cx="13" cy="-4" rx="5" ry="7" fill="${K}"/><circle cx="-15" cy="-7" r="2" fill="#fff" stroke="none"/><circle cx="11" cy="-7" r="2" fill="#fff" stroke="none"/><path d="M-5 8 q5 5 10 0" fill="none"/><ellipse cx="-24" cy="8" rx="6" ry="3" fill="#ff8fab" stroke="none"/><ellipse cx="24" cy="8" rx="6" ry="3" fill="#ff8fab" stroke="none"/></g><path d="M232 66 c-6 -10 -20 -2 -10 8 l10 9 l10 -9 c10 -10 -4 -18 -10 -8z" fill="#e63946" stroke="${K}" stroke-width="2"/>`;
+const ZOMBIE = `<rect x="0" y="160" width="320" height="40" fill="#5a4a3a"/>${[[180,'#6fbf73'],[240,'#80b26a'],[290,'#6fbf73']].map(([x,c]) => `<path d="M${x} 162 v-36 l-8 -10 M${x} 126 v-16 M${x+7} 128 v-18 M${x+13} 132 v-14" stroke="${K}" stroke-width="12" stroke-linecap="round"/><path d="M${x} 162 v-36 l-8 -10 M${x} 126 v-16 M${x+7} 128 v-18 M${x+13} 132 v-14" stroke="${c}" stroke-width="7" stroke-linecap="round"/>`).join('')}`;
+const TOWER = `<g transform="translate(220 76)" stroke="${K}" stroke-width="2.5"><rect x="-18" y="40" width="36" height="34" fill="#9aa5b5"/><rect x="-24" y="30" width="48" height="12" fill="#cfd8e3"/><circle cy="20" r="14" fill="#2a9d8f"/><rect x="8" y="14" width="30" height="8" fill="#3a4556"/></g><g transform="translate(286 104)" stroke="${K}" stroke-width="2.5"><path d="M-14 -20 h28 l-4 44 h-20z" fill="#f1dcc0"/><g fill="${K}"><circle cx="-4" cy="16" r="3"/><circle cx="4" cy="18" r="3"/></g><path d="M4 -20 l6 -14"/></g>${[[150,60],[170,90],[140,110]].map(([x,y]) => `<g transform="translate(${x} ${y})"><circle r="9" fill="#80ed99" stroke="${K}" stroke-width="2"/><path d="M-9 0 l-5 -3 M9 0 l5 -3 M0 -9 v-5" stroke="${K}" stroke-width="2"/></g>`).join('')}`;
+const COMIC = [
+  {date:'10月5日 15:15', title:'第一句话', bg:'#ffe2b8',
+   art:`<rect x="0" y="150" width="320" height="50" fill="#f4d29c"/><path d="M20 150 l40 -40 h70 l-10 40" fill="#fffaf0" stroke="${K}" stroke-width="3"/><path d="M40 150 v30 M118 150 v30" stroke="${K}" stroke-width="3"/>${put('yang',38,52,96)}${put('xd',200,78,70)}${put('xe',256,82,62,true)}`,
+   bubbles:[{x:3,y:10,w:56,who:'yang',t:'iphone 简单的游戏制作。以挂机为主题。'},{x:62,y:10,w:34,who:'xd',t:'收到！'}],
+   quote:'熊大熊二 新工作，iphone简单的游戏制作。以挂机为主题。挂机可以有收益，画面按照2D的漫画风格'},
+  {date:'10月5日 15:25', title:'烧烤摊和盲盒', bg:'#fff4d6',
+   art:`<rect x="0" y="160" width="320" height="40" fill="#e6e4dc"/>${GRILL}${GBOX}${put('yang',14,62,96)}`,
+   bubbles:[{x:3,y:10,w:58,who:'yang',t:'和 77 烧烤来一个梦幻联动。抽盲盒，可以抽到衣服、帽子、店里的装饰品。'}]},
+  {date:'10月5日 16:12', title:'第一版能玩了', bg:'#e6f0ff',
+   art:`<rect x="0" y="144" width="320" height="56" fill="#cfd8e3"/>${SHOPS4}${put('xe',20,66,92)}<text x="248" y="60" text-anchor="middle" font-size="30" font-weight="900" fill="#e63946" stroke="${K}" stroke-width="1.5" transform="rotate(-8 248 60)">能玩了！</text>`,
+   bubbles:[{x:4,y:10,w:44,who:'xe',t:'第一版试玩链接好了！'}]},
+  {date:'10月5日 17:37', title:'每人一个家', bg:'#ffe9cc',
+   art:`<rect x="0" y="150" width="320" height="50" fill="#d9a46c"/>${HOUSES}${put('yang',14,62,96)}`,
+   bubbles:[{x:3,y:10,w:50,who:'yang',t:'每个 CEO 一人一个自己的家。'}]},
+  {date:'10月6日 12:28', title:'小宠物', bg:'#fde8ef',
+   art:`<rect x="0" y="160" width="320" height="40" fill="#f3c9d6"/>${PET}${put('yang',30,62,96)}`,
+   bubbles:[{x:3,y:10,w:56,who:'yang',t:'确实像一只真的小生命，不只是一个动画头像。'}]},
+  {date:'10月7日 06:02', title:'烧烤摊打僵尸', bg:'#2a2233', dark:true,
+   art:`${STARS(5)}${ZOMBIE}${CEOU('life',70,74,72)}${put('yang',2,70,80)}<text x="250" y="70" text-anchor="middle" font-size="26" font-weight="900" fill="#ffd23f" style="paint-order:stroke" stroke="${K}" stroke-width="4" transform="rotate(6 250 70)">嘿哈！</text>`,
+   bubbles:[{x:3,y:10,w:46,who:'yang',t:'这样烧烤店是打僵尸。'}]},
+  {date:'10月7日 11:34', title:'保卫奶茶', bg:'#e6f6f4',
+   art:`<rect x="0" y="150" width="320" height="50" fill="#c7e6e2"/>${TOWER}${put('bz',10,66,92)}`,
+   bubbles:[{x:3,y:10,w:58,who:'yang',t:'塔防游戏板砖给我一个样品，也是公用金币系统。'},{x:66,y:30,w:30,who:'bz',t:'样品来了。'}]},
+  {date:'10月8日 20:54', title:'书店要打牌', bg:'#d9d2ff',
+   art:`${CARDS}${put('yang',22,62,96)}`,
+   bubbles:[{x:3,y:10,w:52,who:'yang',t:'第三个小游戏，我打算在书店安排一个类似炉石传说的卡牌游戏。'}]},
+  {date:'10月10日', title:'王大妈来了', bg:'#ffe3ec',
+   art:`<rect x="0" y="156" width="320" height="44" fill="#f4c6d4"/>${put('wdm',116,58,100)}<path d="M40 60 l20 10 M36 90 h22 M40 120 l20 -10 M280 60 l-20 10 M284 90 h-22 M280 120 l-20 -10" stroke="${K}" stroke-width="3" stroke-linecap="round"/>`,
+   bubbles:[{x:3,y:10,w:44,who:'wdm',t:'群里的事，大妈帮你盯着。'}]},
+  {date:'10月12日', title:'任务池开张', bg:'#f4efe2',
+   art:`${BOARD}${put('xd',4,108,62)}${put('xe',62,112,58)}${put('bz',196,112,58,true)}${put('lb',248,108,62,true)}${put('wdm',134,118,54)}`,
+   bubbles:[{x:68,y:10,w:30,who:'xe',t:'新任务，谁来认领？'},{x:2,y:10,w:22,who:'xd',t:'我！'}]},
+  {date:'10月12日', title:'去太空', bg:'#14213d', dark:true,
+   art:`${STARS(3)}${EARTHG(60,190,60)}${ROCKET(210,36,1.15)}${put('yang',30,70,84)}`,
+   bubbles:[{x:3,y:10,w:52,who:'yang',t:'4 个 CEO 驾驶飞船去太空探索。'}]},
+  {date:'最后一站', title:'买下地球', bg:'#14213d', dark:true,
+   art:`${STARS(9)}${EARTHG(160,92,52)}<g transform="rotate(-12 222 52)"><rect x="196" y="38" width="56" height="26" rx="4" fill="#ffd23f" stroke="${K}" stroke-width="3"/><text x="224" y="57" text-anchor="middle" font-size="15" font-weight="900" fill="${K}">已售</text></g>${put('xd',2,128,56)}${put('xe',52,132,52)}${put('yang',134,132,58)}${put('bz',214,132,52,true)}${put('lb',262,128,56,true)}`,
+   bubbles:[{x:3,y:10,w:40,who:'yang',t:'目标：买下地球。'}]},
+];
+function burst(cx, cy, r, c){ let d = ''; for (let i = 0; i < 24; i++) { const a = i / 24 * Math.PI * 2, a2 = a + Math.PI / 48; d += `M${cx} ${cy} L${(cx + Math.cos(a) * r).toFixed(1)} ${(cy + Math.sin(a) * r).toFixed(1)} L${(cx + Math.cos(a2) * r).toFixed(1)} ${(cy + Math.sin(a2) * r).toFixed(1)}z`; } return `<path d="${d}" fill="${c}"/>`; }
+function esc(t){ return String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function comicPanel(p, i){
+  const deco = p.dark ? `<rect width="320" height="240" fill="url(#dotsw)" opacity=".12"/><circle cx="${p.glow || 250}" cy="70" r="90" fill="url(#glow)" opacity=".18"/>`
+                      : `<rect width="320" height="240" fill="url(#dots)" opacity=".07"/>${burst(p.bx || 160, p.by || 150, 260, 'rgba(255,255,255,.35)')}`;
+  return `<figure class="cp${p.dark ? ' dark' : ''}${p.wide === false ? '' : ''}">
+    <div class="cp-art"><svg viewBox="0 0 320 240" role="img" aria-label="${esc(p.title)}"><rect width="320" height="240" fill="${p.bg}"/>${deco}<g transform="translate(0 40)">${p.art}</g></svg>
+    <span class="cp-date">${esc(p.date)}</span>
+    ${p.bubbles.map(b => `<span class="bub" style="left:${b.x}%;top:${b.y}%;width:${b.w}%">${esc(b.t)}</span>`).join('')}
+    <figcaption class="cp-cap">${esc(p.title)}</figcaption></div></figure>`;
+}
+const IC = {
+  shop:`<rect x="18" y="24" width="44" height="30" fill="#fffaf0" stroke="${K}" stroke-width="3"/><path d="M14 24 h52 l-6 -14 h-40z" fill="#c8743a" stroke="${K}" stroke-width="3"/><rect x="34" y="34" width="12" height="20" fill="#ffd23f" stroke="${K}" stroke-width="2"/>`,
+  staff:`<circle cx="40" cy="22" r="12" fill="#ffe0c2" stroke="${K}" stroke-width="3"/><rect x="28" y="34" width="24" height="20" rx="8" fill="#2a9d8f" stroke="${K}" stroke-width="3"/><circle cx="36" cy="22" r="2" fill="${K}"/><circle cx="44" cy="22" r="2" fill="${K}"/>`,
+  box:`<rect x="20" y="24" width="40" height="30" fill="#e63946" stroke="${K}" stroke-width="3"/><rect x="16" y="16" width="48" height="10" fill="#ffd23f" stroke="${K}" stroke-width="3"/><path d="M40 16 v38" stroke="${K}" stroke-width="3"/><text x="40" y="47" text-anchor="middle" font-size="14" font-weight="900" fill="#fff">?</text>`,
+  tea:`<path d="M26 18 h28 l-4 36 h-20z" fill="#fffaf0" stroke="${K}" stroke-width="3"/><path d="M44 18 l6 -12" stroke="${K}" stroke-width="3"/><g fill="${K}"><circle cx="34" cy="46" r="3"/><circle cx="42" cy="48" r="3"/><circle cx="46" cy="42" r="3"/></g>`,
+  zombie:`<rect x="10" y="44" width="60" height="12" fill="#8a6a4a" stroke="${K}" stroke-width="3"/><path d="M34 44 v-18 l-6 -6 M34 26 l0 -12 M40 26 v-14 M46 26 v-10 M46 30 l6 -6" stroke="#6fbf73" stroke-width="7" stroke-linecap="round"/>`,
+  book:`<path d="M10 16 q15 -4 30 4 q15 -8 30 -4 v36 q-15 -4 -30 4 q-15 -8 -30 -4z" fill="#fffaf0" stroke="${K}" stroke-width="3"/><path d="M40 20 v36" stroke="${K}" stroke-width="2"/>`,
+  card:`<rect x="18" y="12" width="26" height="38" rx="3" fill="#d9d2ff" stroke="${K}" stroke-width="3" transform="rotate(-10 31 31)"/><rect x="36" y="12" width="26" height="38" rx="3" fill="#ffd23f" stroke="${K}" stroke-width="3" transform="rotate(8 49 31)"/>`,
+  office:`<rect x="24" y="8" width="32" height="46" fill="#cfd8e3" stroke="${K}" stroke-width="3"/>${[14,24,34].map(y => `<rect x="30" y="${y}" width="7" height="6" fill="#ffd23f"/><rect x="43" y="${y}" width="7" height="6" fill="#ffd23f"/>`).join('')}`,
+  rocket:`<g transform="translate(30 4) scale(.5)">${'<path d="M20 0 q16 20 16 52 v20 h-32 v-20 q0-32 16-52z" fill="#fffaf0" stroke="#141414" stroke-width="5"/><circle cx="20" cy="34" r="7" fill="#2f6fb5" stroke="#141414" stroke-width="4"/><path d="M8 72 h24 l-12 26z" fill="#ffd23f" stroke="#141414" stroke-width="4"/>'}</g>`,
+  shield:`<path d="M40 8 l22 8 v14 q0 16 -22 26 q-22 -10 -22 -26 v-14z" fill="#2a9d8f" stroke="${K}" stroke-width="3"/><path d="M40 20 q8 10 0 18 q-8 -8 0 -18z" fill="#fffaf0" stroke="${K}" stroke-width="2"/>`,
+  medal:`<path d="M30 6 l10 16 l10 -16" stroke="#e63946" stroke-width="6" fill="none"/><circle cx="40" cy="36" r="16" fill="#ffd23f" stroke="${K}" stroke-width="3"/><text x="40" y="42" text-anchor="middle" font-size="14" font-weight="900" fill="${K}">50</text>`,
+  gear:`<circle cx="40" cy="30" r="16" fill="#7a7a72" stroke="${K}" stroke-width="3" stroke-dasharray="8 4"/><circle cx="40" cy="30" r="7" fill="#fffaf0" stroke="${K}" stroke-width="3"/>`,
+  story:`<rect x="20" y="8" width="40" height="46" rx="3" fill="#fffaf0" stroke="${K}" stroke-width="3"/><rect x="26" y="14" width="28" height="18" fill="#bde0fe" stroke="${K}" stroke-width="2"/><path d="M26 40h28M26 46h18" stroke="${K}" stroke-width="2"/>`,
+  alien:`<path d="M40 4 v8 M30 8 l4 6 M50 8 l-4 6" stroke="${K}" stroke-width="2.5"/><ellipse cx="40" cy="32" rx="20" ry="18" fill="#80ed99" stroke="${K}" stroke-width="3"/><ellipse cx="32" cy="30" rx="5" ry="7" fill="${K}"/><ellipse cx="48" cy="30" rx="5" ry="7" fill="${K}"/><path d="M34 42 q6 4 12 0" stroke="${K}" stroke-width="2.5" fill="none"/>`,
+  gift:`<rect x="20" y="26" width="40" height="28" fill="#9b5de5" stroke="${K}" stroke-width="3"/><rect x="16" y="18" width="48" height="10" fill="#ffd23f" stroke="${K}" stroke-width="3"/><path d="M40 18 v36 M40 18 q-12 -14 -14 -2 M40 18 q12 -14 14 -2" stroke="${K}" stroke-width="3" fill="none"/>`,
+  stars:`<text x="40" y="40" text-anchor="middle" font-size="22" fill="#ffd23f" stroke="${K}" stroke-width="1.5">★★★</text>`,
+  mail:`<rect x="14" y="14" width="52" height="34" fill="#fffaf0" stroke="${K}" stroke-width="3"/><path d="M14 14 l26 20 l26 -20" fill="none" stroke="${K}" stroke-width="3"/><circle cx="58" cy="44" r="7" fill="#e63946" stroke="${K}" stroke-width="2"/>`,
+  earth:EARTHG(40,30,22),
+};
+function icon(k){ return `<svg viewBox="0 0 80 60" aria-hidden="true">${IC[k] || ''}</svg>`; }
+function streetPanel(n){
+  const lit = n >= 1, all = n >= 3;
+  const shops = [['#c8743a', n >= 1], ['#e58aa8', n >= 1], ['#2f6fb5', n >= 2], ['#7a7a72', n >= 2]];
+  let s = `<rect width="320" height="200" fill="${all ? '#2b1838' : '#0d1424'}"/>${stars(30,0,0,320,90,5 + n)}`;
+  if (all) s += `<rect width="320" height="200" fill="#ffb347" opacity=".12"/>`;
+  s += `<rect y="160" width="320" height="40" fill="#2a2f3a"/>`;
+  shops.forEach(([c, on], i) => {
+    const x = 14 + i*76;
+    s += `<rect x="${x}" y="84" width="66" height="76" fill="${on ? '#fffaf0' : '#3a4556'}" stroke="#0b0f17" stroke-width="2"/><path d="M${x-4} 84 h74 l-6 -16 h-62z" fill="${on ? c : '#56647d'}" stroke="#0b0f17" stroke-width="2"/><rect x="${x+20}" y="116" width="26" height="44" fill="${on ? '#ffd23f' : '#1b2433'}" stroke="#0b0f17" stroke-width="1.5"/>`;
+    if (on) s += `<rect x="${x-6}" y="110" width="78" height="60" fill="#ffd23f" opacity=".15"/>`;
+  });
+  if (all) s += `<path d="M0 60 Q80 80 160 60 T320 60" fill="none" stroke="#0b0f17"/>${[20,60,100,140,180,220,260,300].map((x,i) => `<circle cx="${x}" cy="${66 + Math.sin(i)*6}" r="5" fill="${['#ffd23f','#ff8fab','#7df9ff'][i%3]}"/>`).join('')}`;
+  return s;
+}
+const ENDING = [
+  {cap:'一条很普通的街，四家店，灯都还没开。', art:() => streetPanel(0)},
+  {cap:'77 的烤架冒起烟，珍珠姐煮好第一锅珍珠。', art:() => streetPanel(1) + `<use href="#ceo-life" x="20" y="112" width="52" height="64"/><use href="#ceo-med" x="96" y="112" width="52" height="64"/><path d="M40 100 q-6 -12 2 -22 M52 100 q-6 -12 2 -22" stroke="#fff" stroke-width="3" opacity=".5" fill="none"/>`},
+  {cap:'阿宅把书架摆满，火箭老板的服务器亮了。', art:() => streetPanel(2) + `<use href="#ceo-war" x="172" y="112" width="52" height="64"/><use href="#ceo-tech" x="248" y="112" width="52" height="64"/>`},
+  {cap:'一条街的灯全亮了。', art:() => streetPanel(3) + ['life','med','war','tech'].map((k,i) => `<use href="#ceo-${k}" x="${22 + i*76}" y="112" width="52" height="64"/>`).join('') + `<g transform="translate(160 30)"><rect x="-62" y="-14" width="124" height="28" rx="4" fill="#fffaf0" stroke="#0b0f17" stroke-width="2"/><text text-anchor="middle" y="6" font-size="15" font-weight="900" fill="#e63946">欢迎回家</text></g>`},
+];
+const PRE = [
+  ['开张第一家店','77烧烤摊', 0, 'shop'],
+  ['雇来第一个员工','阿炭', 2*60e3, 'staff'],
+  ['第一次开盲盒','', 40*60e3, 'box'],
+  ['开张奶茶店','珍珠姐加入', 3*3600e3, 'tea'],
+  ['第一次打僵尸','', 9*3600e3, 'zombie'],
+  ['开张漫画书店','阿宅店长加入', 26*3600e3, 'book'],
+  ['第一次在书店打牌','「书页之间」', 2*86400e3, 'card'],
+  ['开张科技公司','', 4*86400e3, 'office'],
+  ['火箭老板加入','科技公司 Lv25', 5*86400e3, 'rocket'],
+  ['塔防第一关通关','保卫奶茶', 6*86400e3, 'shield'],
+  ['四家店都过 Lv50','星途开放', 12*86400e3, 'medal'],
+];
+function dur(ms){
+  ms = Math.max(0, ms); const d = Math.floor(ms/86400e3), h = Math.floor(ms%86400e3/3600e3), m = Math.floor(ms%3600e3/60e3), s = Math.floor(ms%60e3/1000);
+  if (d) return `${d} 天 ${h} 小时`; if (h) return `${h} 小时 ${m} 分`; if (m) return `${m} 分 ${s} 秒`; return `${s} 秒`;
+}
 const CEO_ART = {
   life: human({body:'#d62828', mood:'grin',
     back:`<path d="M66 14 q30 6 24 40 q-4 22 6 34 q-18 -2 -22 -22 q-4 -18 -8 -52z" fill="#5a3a22" stroke="${K}" stroke-width="2.5"/><path d="M60 8 l10 -8 l4 10 l10 -2 l-6 10z" fill="#ff8fab" stroke="${K}" stroke-width="2"/>`,
@@ -439,5 +561,5 @@ function mapSvg(){
   return s + `</svg>`;
 }
 export function use(state){S=state;}
-export {SYS,SYSK,LV_COST,ITEMS,RING,RING_SUM,RING_MIN,POST,ORDER,ROUTES as DEMO_ROUTES,ROOM,FLOORS,STAGES,W0,H0,REAL,REAL_STYLE,ROUTE_INFO,IT,sum,stat,unlocked,itemPower,planet,mapSvg,shipSvg,roomInner,nodePos,stars};
+export {CAST,SYS,SYSK,LV_COST,ITEMS,RING,RING_SUM,RING_MIN,POST,ORDER,ROUTES as DEMO_ROUTES,ROOM,FLOORS,STAGES,W0,H0,REAL,REAL_STYLE,ROUTE_INFO,IT,COMIC,ENDING,PRE,comicPanel,esc,icon,dur,sum,stat,unlocked,itemPower,planet,mapSvg,shipSvg,roomInner,nodePos,stars};
 export function allDefs(){return defsSvg().replace('</defs>',spaceDefs()+'</defs>');}

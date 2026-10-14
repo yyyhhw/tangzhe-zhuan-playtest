@@ -225,6 +225,15 @@
   /* ===== 超级装饰（每店一件，只能从盲盒抽到；效果常驻，不用摆放） ===== */
   const SUPER_OF_SHOP = ['s_panda', 's_fountain', 's_portal', 's_sun'];
   function hasSuper(st, i) { return !!(st.gacha && st.gacha.owned && st.gacha.owned.indexOf(SUPER_OF_SHOP[i]) >= 0); }
+  // 星途 v2-C（星途-09）：外星剧情卡——每张让四家店产速永久 +25%（在线、离线都走 shopRate）。
+  // 只按册子里真正发到的外星卡算（各航线第 3 张），不认旧字段 space.alienCards（demo 留下的可能虚高）。
+  // 杨总 10-15 01:30：第 7 张外星卡 =「回信」（未知信号源第 1 张），集齐 7 张 ×2.75。
+  const ALIEN_ROUTES = ['mars', 'venus', 'belt', 'pirate', 'europa', 'saturn', 'signal'], ALIEN_NTH = { signal: 1 }, ALIEN_ADD = 0.25;
+  function alienCount(st) {
+    const c = st && st.space && st.space.cards; if (!c || typeof c !== 'object') return 0;
+    let n = 0; for (const r of ALIEN_ROUTES) { const v = c[r]; if (Number.isSafeInteger(v) && v >= (ALIEN_NTH[r] || 3)) n++; } return n;
+  }
+  function alienMult(st) { return 1 + ALIEN_ADD * alienCount(st); }
   function superMult(st, i) { return hasSuper(st, i) ? CFG.SUPER_RATE : 1; }
   const RUSH_SEC = { tea:'FOUNTAIN_SEC', tech:'SUN_SEC' };
   function rushActive(st, k, now) { const e = st.rush && st.rush[k]; return !!e && e > now && e - now <= CFG[RUSH_SEC[k]] * 1000 + 1000; }
@@ -268,7 +277,7 @@
   }
   function shopRate(st, i) {
     const s = st.shops[i]; if (!s || !s.open || s.emp <= 0) return 0;
-    const r = shopBase(i, s.lv) * empMult(s.emp) * ceoInfo(st, i).mult * superMult(st, i);
+    const r = shopBase(i, s.lv) * empMult(s.emp) * ceoInfo(st, i).mult * superMult(st, i) * alienMult(st);
     return isAmt(r) ? r : 0;   // 12d：产速只认有限非负数（坏档 / 内存坏值不会产出 NaN / ∞）
   }
   function baseRate(st) { let r = 0; for (let i = 0; i < SHOPS.length; i++) r += shopRate(st, i); return r; }
@@ -1475,7 +1484,7 @@
   }
 
   return { CFG, ROCKET_NAME, TYPES, SHOPS, CEOS, CEO_BY_ID, SIGNS, CROSS, ITEMS, ITEM_BY_ID, REGULAR_ITEMS, SUPER_ITEMS, CARD_COUNT, SET_REWARD, MILESTONES,
-    SUPER_OF_SHOP, hasSuper, superMult, rushActive, rushMult, startRush, critChance, critMult, portalReward, gachaComplete,
+    SUPER_OF_SHOP, hasSuper, superMult, alienCount, alienMult, rushActive, rushMult, startRush, critChance, critMult, portalReward, gachaComplete,
     COIN_CAP:CFG.COIN_CAP, SAFE_COINS:SAFE, normEarned, walletOk, normWallet, balance, overCap, addCoins, spendCoins, canAfford, priceOk, pendingOk,
     installPreviewCollectionProtocol, shopMaxLv, empMaxLv, ceoMaxLv, shopMaxed, empMaxed, ceoMaxed, shopBuyCount, checkSave, validState, loadSave, transact, commitSave, isBlocked, markBlocked,
     milestoneMult, nextMilestone, upgradeCost, bulkUpgradeCost, empCost, ceoCost, empMult, shopBase,
