@@ -1,6 +1,6 @@
 // 星途 v2 第一批：星图（5 圈 9 航线 + 出航需要四个岗位科研）与飞船（四个舱室）——只读，不写存档。
 // 画面与数值直接搬自王大妈 demo（wangdama/xingtu-demo、xingtu-4post-mock fd614ae）。
-import * as A from './xingtu-art.mjs?v=xingtuv2-2-20261014-r1';
+import * as A from './xingtu-art.mjs?v=xingtuv2-cabin1-20261014-r1';
 export const RING_MIN=A.RING_MIN,RING_SUM=A.RING_SUM,ORDER=A.ORDER,POST=A.POST;
 export const OPEN_NOW=['moon'];
 const LVK=['tech','war','med','life'];
@@ -41,7 +41,12 @@ export function renderMap(parent,{doc,space,pick,onPick,goVoyage}){
  if(!g.ok){const l=doc.createElement('div');l.className='lackline';l.id='xingtuLack';l.textContent=`还差：${g.lack}`;d.append(l);}
  parent.append(d);
 }
-export function renderShip(parent,{doc,space,room,onRoom}){
+// 熊大舱室写实插画（xiongda/xt05-cabin-art f6e9338）：art/xingtu-cabins/<bridge|gun|medical|kitchen>-<lv>.webp。
+// 只列已经交付的级别——没交付的不发请求（不 404），继续显示 SVG 场景。新图交来只改 CABIN_LEVELS。
+export const CABIN_FILE=Object.freeze({tech:'bridge',war:'gun',med:'medical',life:'kitchen'});
+export const CABIN_LEVELS=Object.freeze({tech:[1,5],war:[1,5],med:[1,5],life:[1,5]});
+export const cabinArtPath=(k,lv)=>CABIN_LEVELS[k]?.includes(lv)?`../art/xingtu-cabins/${CABIN_FILE[k]}-${lv}.webp`:null;
+export function renderShip(parent,{doc,space,room,onRoom,artUrl}){
  const S=demoState(space,'moon');A.use(S);const k=room,lv=S.lv[k],st=A.STAGES[k][lv-1],sy=A.SYSK[k];
  const box=doc.createElement('div');box.className='box shipbox';box.id='xingtuShip';box.innerHTML=A.shipSvg(k);parent.append(box);
  box.querySelectorAll('[data-room]').forEach(n=>n.addEventListener('click',()=>onRoom(n.getAttribute('data-room'))));
@@ -54,6 +59,7 @@ export function renderShip(parent,{doc,space,room,onRoom}){
  <div class="stages">${A.STAGES[k].map((s,i)=>{const L=i+1,o=L<=lv;return `<div class="stg${L===lv?' on':''}${o?'':' lock'}"><svg viewBox="0 0 ${A.W0} ${A.H0}" aria-hidden="true">${A.roomInner(k,L,{bare:true})}</svg><span>${o?'Lv'+L:'🔒 Lv'+L}</span></div>`;}).join('')}</div>
  <div class="unl">${A.ITEMS[k].map((n,i)=>S.items[k+':'+(i+1)]?`<span class="y">${n}</span>`:`<span class="n">${i+1} 级 · ？？？</span>`).join('')}</div>
  <div class="muted">每升一级，舱室换一张新插画。已摆进 ${have} / 5 件科研成果，没抽到的显示成全息虚影。点飞船上的舱室可以切换。</div>`;
+ const rel=cabinArtPath(k,lv);if(rel&&artUrl){const big=c.querySelector?.('.bigroom');if(big){const img=doc.createElement('img');img.id='xingtuCabinArt';img.className='cabinart';img.alt=st[0];img.decoding='async';img.onload=()=>big.classList?.add?.('hasart');img.onerror=()=>img.remove?.();img.src=artUrl(rel);big.append(img);}}
  const up=doc.createElement('button');up.type='button';up.id='xingtuUpgrade';up.className='btn';up.disabled=true;
  up.textContent=lv>=5?'已满级':`升到 ${lv+1} 级 · ${cost} 探索点（下一版开放）`;c.append(up);parent.append(c);
  const sl=doc.createElement('div');sl.className='box sumline';sl.innerHTML=`<span>四人等级合计</span><span class="num">${LVK.reduce((a,x)=>a+S.lv[x],0)} / 20</span>`;parent.append(sl);

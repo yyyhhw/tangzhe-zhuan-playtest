@@ -6,7 +6,7 @@ const COLLECTION = window.FormalCollectionRuntime;
 if (!COLLECTION?.ownsLock()) {
   // Stale HTML can fetch a new script before bootstrap. No storage access here.
   const url=new URL(location.href);
-  if(url.searchParams.get('v')!=='formal-xingtuv2-2-20261014-r1') {url.searchParams.set('v','formal-xingtuv2-2-20261014-r1');location.replace(url.href);}
+  if(url.searchParams.get('v')!=='formal-xingtuv2-cabin1-20261014-r1') {url.searchParams.set('v','formal-xingtuv2-cabin1-20261014-r1');location.replace(url.href);}
   else {const notice=document.createElement('p');notice.textContent='页面资源尚未更新完整，存档未写入。请关闭此页后重新打开。';document.body.prepend(notice);}
   return;
 }
@@ -2005,7 +2005,7 @@ const HOME_ICON = ['home', 'apt', 'villa'].map(n => ic(n)); // 12c1：家宅升�
 let homeWho = 'c77', homeSub = 'room', homeMode = 'live', homeSel = null, homeDrag = null;
 // Home22: optional readonly status for the existing c77 Lv1 room only.
 let homeStatusContext = null, homeStatusAdapter = null;
-import('./home/home-status.mjs?v=xingtuv2-2-20261014-r1').then(({createHomeStatusAdapter}) => {
+import('./home/home-status.mjs?v=xingtuv2-cabin1-20261014-r1').then(({createHomeStatusAdapter}) => {
   homeStatusAdapter = createHomeStatusAdapter({document, window, now, gameDayAt:E.dayKey});
   homeStatusAdapter.sync(document.getElementById('homeAmbienceStatus'), homeStatusContext);
 }).catch(error => console.warn('家宅时间与游戏内天气状态未加载', error));
@@ -2971,7 +2971,7 @@ const tdController = window.TDHost.create({
 function openTD() {
   if (frozen || tdOpen || zbOpen || window.XingTu?.isOpen() || !state.shops[1].open) return;
   tdOpen = true; const f = $('#tdFrame'), generation = ++tdGeneration;
-  const target = new URL('td/index.html?embed=1&v=xingtuv2-2-20261014-r1', location.href);
+  const target = new URL('td/index.html?embed=1&v=xingtuv2-cabin1-20261014-r1', location.href);
   f.onload = () => {
     if (!tdOpen || generation !== tdGeneration) return;
     // Verify the actual loaded document, not merely an iframe src attribute.

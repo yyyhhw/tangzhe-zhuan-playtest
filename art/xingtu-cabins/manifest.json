@@ -1,0 +1,82 @@
+[
+  {
+    "path": "art/xingtu-cabins/bridge-1.webp",
+    "size": [
+      1200,
+      900
+    ],
+    "format": "WEBP",
+    "bytes": 441850,
+    "sha256": "75f255f95b9d448fc90114f8a5498052d5a96e687fc66a1c51539ec798ca057f"
+  },
+  {
+    "path": "art/xingtu-cabins/bridge-5.webp",
+    "size": [
+      1200,
+      900
+    ],
+    "format": "WEBP",
+    "bytes": 490556,
+    "sha256": "6bfa1b9b72980722c52659ed65ad06440376a6cd5027877413c76fc36c3f7ef1"
+  },
+  {
+    "path": "art/xingtu-cabins/gun-1.webp",
+    "size": [
+      1200,
+      900
+    ],
+    "format": "WEBP",
+    "bytes": 388044,
+    "sha256": "1bcc0232c988cbd28658540509d45731e9e82c4672d03370677ee21fc8e6795c"
+  },
+  {
+    "path": "art/xingtu-cabins/gun-5.webp",
+    "size": [
+      1200,
+      900
+    ],
+    "format": "WEBP",
+    "bytes": 451464,
+    "sha256": "685ce4de9ae1df181159862500d6437a798ab0e7032f1bab6314a598655cf853"
+  },
+  {
+    "path": "art/xingtu-cabins/kitchen-1.webp",
+    "size": [
+      1200,
+      900
+    ],
+    "format": "WEBP",
+    "bytes": 421636,
+    "sha256": "75536ddd6af30bff7d99fd0ac67dfd01945d333d27273258e90a9535af827c33"
+  },
+  {
+    "path": "art/xingtu-cabins/kitchen-5.webp",
+    "size": [
+      1200,
+      900
+    ],
+    "format": "WEBP",
+    "bytes": 469560,
+    "sha256": "310d09c88ecc8b80e6833e3d59d1117f136d0d8f049ae7f59f0c07d51a2fbcda"
+  },
+  {
+    "path": "art/xingtu-cabins/medical-1.webp",
+    "size": [
+      1200,
+      900
+    ],
+    "format": "WEBP",
+    "bytes": 350794,
+    "sha256": "38815798b54149299a2844850498efbd20098d4d48c16fbcaad979caaa4ec2b5"
+  },
+  {
+    "path": "art/xingtu-cabins/medical-5.webp",
+    "size": [
+      1200,
+      900
+    ],
+    "format": "WEBP",
+    "bytes": 430008,
+    "sha256": "4664acc4ff9e3407aa3427f0f5d87660e1984bc17367eee227351ba78ebe1761"
+  }
+]
