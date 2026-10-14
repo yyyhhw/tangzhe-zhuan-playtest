@@ -816,6 +816,9 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 .room-wx{position:absolute;left:68.8%;top:4.4%;width:17%;height:15.6%;z-index:0;pointer-events:none;overflow:hidden;opacity:0;transition:opacity 1.5s ease}
 .room[data-room-weather="rain"] .room-wx{opacity:1;background:repeating-linear-gradient(104deg,transparent 0 5px,rgba(214,230,255,.85) 5px 6px,transparent 6px 11px),linear-gradient(rgba(96,118,146,.28),rgba(96,118,146,.18));background-size:22px 26px,100% 100%;animation:roomRain .55s linear infinite}
 .room[data-room-weather="snow"] .room-wx{opacity:1;background:radial-gradient(circle,#fff 0 1.3px,transparent 1.9px),radial-gradient(circle,rgba(255,255,255,.9) 0 1px,transparent 1.5px),linear-gradient(rgba(214,226,240,.3),rgba(214,226,240,.18));background-size:16px 16px,11px 13px,100% 100%;background-position:0 0,6px 5px,0 0;animation:roomSnow 4s linear infinite}
+/* 家宅-82：窗位改由 app.js HOME_WINDOWS 按底图写 inline left/top/width/height（上面 c77_1 的位置留作默认）；拱窗 / 圆窗把色块裁成窗形 */
+.room-sky.win-arch,.room-wx.win-arch{border-radius:50% 50% 0 0/44% 44% 0 0}
+.room-sky.win-round,.room-wx.win-round{border-radius:50%}
 @keyframes roomRain{to{background-position:-6px 26px,0 0}}
 @keyframes roomSnow{to{background-position:3px 32px,8px 31px,0 0}}
 @media (prefers-reduced-motion:reduce){.room-wx{transition:none}.room[data-room-weather] .room-wx{animation:none}}

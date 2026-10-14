@@ -1955,6 +1955,18 @@ function showIntro() {
 // 房间底图：art/home_<ceo>_<lv>.webp（ceo=c77/pearl/otaku/rocket，lv=1/2/3），例 { c77_1:1 }
 // 底图规格：宽 = 列数×200px，高 = (2 + 行数)×200px；上面 2 格高是后墙，下面是地板格，平行投影无消失点。Lv1 6×4 → 1200×1200，墙地分界 y=400
 const HOME_ART = { c77_1: 1, pearl_1: 1, otaku_1: 1, rocket_1: 1, c77_2: 1, c77_3: 1, pearl_2: 1, pearl_3: 1, otaku_2: 1, otaku_3: 1, rocket_2: 1, rocket_3: 1 };  // 熊大四位 CEO 的 Lv1（原图墙 / 地板在踢脚线底边处分开，分别缩放到 1200×400 + 1200×800）；12b1：77 / 珍珠姐 Lv2 1600×400+1600×1000、Lv3 2000×400+2000×1200，同样在踢脚线底边切开；12b2：阿宅 / 火箭老板 Lv2/Lv3 同法
+// 家宅-82：窗玻璃天空层（.room-sky 时段色 + .room-wx 雨雪）在每张底图上的窗位，[左, 上, 宽, 高]（占底图百分比），第 5 项 'arch' = 拱顶、'round' = 圆窗。
+// 只给看得到户外的窗：pearl_1 / otaku_2 / otaku_3 没有窗；rocket_2 是看向舱内的观察窗、rocket_3 窗外本来就是星空，都不加。
+const HOME_WINDOWS = {
+  c77_1: [[68.8, 4.4, 17, 15.6]],
+  c77_2: [[64, 10.2, 16.2, 11.8]],
+  c77_3: [[55.2, 2.6, 20.6, 17.6, 'arch'], [79, 2.6, 17.6, 17.6, 'arch']],
+  otaku_1: [[65.6, 10.6, 26.9, 14.4]],
+  pearl_2: [[53.6, 6.4, 40.4, 15.6, 'arch']],
+  pearl_3: [[45.4, 0, 54.6, 20.3]],
+  rocket_1: [[78.7, 6.5, 14.9, 15.3, 'round']],
+};
+const homeWindowLayers = artKey => (HOME_WINDOWS[artKey] || []).map(([l, t, w, h, shape]) => { const st = `left:${l}%;top:${t}%;width:${w}%;height:${h}%`, cls = shape ? ` win-${shape}` : ''; return `<span class="room-sky${cls}" style="${st}" aria-hidden="true"></span><span class="room-wx${cls}" style="${st}" aria-hidden="true"></span>`; }).join('');
 const FURN_ART = { bed:1, bookshelf:1, wardrobe:1, table:1, fridge:1, sofa:1, rug:1, plant:1, lamp:1, tv:1, painting:1, catbed:1, rocket_rocket_model:1, rocket_meteor_stand:1, rocket_biosphere_dome:1, s77_cloud_canopy:1, rocket_capsule_bunk:1 };  // +火箭模型/陨石展座/生态圆顶/云朵纱帐床；宽=占地×200（1格240）
 const furnName = fid => fid.replace(/^furn_/, '');
 // 高家具：占地只有底下那排格子，图按「高 / 宽」比例往上伸（盖住后墙），底脚对齐占地底边；值 = 图高 / 图宽（400×600 → 1.5）
@@ -2289,7 +2301,7 @@ function renderRoom() {
   // 墙面禁区（和 E.canPlace / E.findFree 同一份 E.wallBlockedCells）：平时隐藏，拖挂画时斜纹标红
   const wallBlocks = E.wallBlockedCells(state, id).map(([x, y]) => `<i class="wall-block" style="left:${x / T.cols * 100}%;top:${y / E.WALL_ROWS * 100}%;width:${100 / T.cols}%;height:${100 / E.WALL_ROWS}%"></i>`).join('');
   h += `<div class="room tier-${T.id}${hasArt ? ' has-art' : ''}${dockHost ? ' pet-host-docked' : ''}" id="room" data-tier="${T.id}" style="--cols:${T.cols};--rows:${T.rows};--wall:${T.wall};--floor:${T.floor};--trim:${T.trim}">
-    ${hasArt ? `<img class="room-art" src="art/home_${artKey}.webp?v=${ART_V}" data-homefb="1" alt="" onerror="this.closest('.room')&&this.closest('.room').classList.remove('has-art')">` : ''}${homeStatusContext && artKey === 'c77_1' ? '<span class="room-sky" aria-hidden="true"></span><span class="room-wx" aria-hidden="true"></span>' : ''}
+    ${hasArt ? `<img class="room-art" src="art/home_${artKey}.webp?v=${ART_V}" data-homefb="1" alt="" onerror="this.closest('.room')&&this.closest('.room').classList.remove('has-art')">` : ''}${homeStatusContext ? homeWindowLayers(artKey) : ''}
     <div class="room-wall" id="roomWall"><span class="rw-deco">${T.id === 'hut' ? ic('window') : T.id === 'apt' ? ic('window') + ic('window') : ic('spark') + ic('candle') + ic('spark')}</span><span class="rw-name">${c.name} 的${T.name}${homeStatusContext ? '<span class="rw-status" id="homeAmbienceStatus" hidden></span>' : ''}</span><div class="wall-grid" id="wallGrid">${wallBlocks}${wallItems}<div class="room-hl hidden" id="wallHl"></div></div></div>
     <div class="room-floor" id="roomFloor">${floorItems}<div class="home-actor" id="homeActor" style="left:${(homeActorOf(id).x + 0.5) / T.cols * 100}%;top:${(homeActorOf(id).y + 0.5) / T.rows * 100}%"><canvas class="ha-pose" width="240" height="240" aria-label="CEO坐卧姿态"></canvas><span class="ha-ava">${ava(id)}</span>${(() => { const ac = homeActorOf(id); return ac.line && ac.until > clock ? `<b class="ha-line">${ac.line}</b>` : ''; })()}<i class="ha-act">${(() => { const ac = homeActorOf(id); return ac.act === 'rest' ? ic('zz') : ac.act === 'read' ? ic('book') : ac.act === 'dress' ? ic('shirt') : ac.actIcon ? ic(ac.actIcon) : ''; })()}</i></div><div class="room-hl hidden" id="roomHl"></div></div></div>`;
   h += petInteractionBar();
