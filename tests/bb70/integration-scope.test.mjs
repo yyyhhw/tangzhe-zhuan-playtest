@@ -1,7 +1,7 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import {createHash} from 'node:crypto';
 test('70 combination preserves 16 catalogs, renderer, ordered clone, protection, lifecycle entry, economics and preview byte-for-byte except resource token',()=>{
  const rows=JSON.parse(fs.readFileSync(new URL('./integration-integrity.json',import.meta.url)));
- for(const row of rows){const s=fs.readFileSync(new URL('../../'+row.path,import.meta.url),'utf8').replaceAll('xingtuv2-3-20261014-r1','decor6-preserve-order-20261013-r1');assert.equal(createHash('sha256').update(s).digest('hex'),row.sha256AfterReleaseNormalization,row.path);}
+ for(const row of rows){const s=fs.readFileSync(new URL('../../'+row.path,import.meta.url),'utf8').replaceAll('xingtuv2-4-20261014-r1','decor6-preserve-order-20261013-r1');assert.equal(createHash('sha256').update(s).digest('hex'),row.sha256AfterReleaseNormalization,row.path);}
 });
 test('both changed bb70 stylesheets use current release URLs; stale prior CSS URL fails the check',()=>{
  const release=fs.readFileSync(new URL('../../collectibles/release.mjs',import.meta.url),'utf8').match(/COLLECTIBLES_RELEASE\s*=\s*['"]([^'"]+)/)[1];

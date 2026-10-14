@@ -116,8 +116,8 @@
     },
     {
       "path": "qa-protocol2/vendor/cards/card-coordinator.mjs",
-      "sha256": "50272cccfbf416327ea147f12d1b0bcb8f1ffd7a775fcd504ddd33c7a5855553",
-      "expectedChange": "Six-decoration hidden-pool/claim extension; behavioral coverage in tests/decor6. This full file is intentionally not identical to b16."
+      "sha256": "069e4b2d79f1900ac37774bdfa1474037a65d9611979a9ef97a803e137e48558",
+      "expectedChange": "Six-decoration hidden-pool/claim extension; behavioral coverage in tests/decor6. This full file is intentionally not identical to b16. 星途 v2-B (xingtuv2/b-gold-research): moon commits may also lower coins by exactly researchSpend(prev.space,next.space); reviewed by cross-check."
     },
     {
       "path": "qa-protocol2/vendor/codec/snapshot-codec.mjs",

@@ -27,9 +27,9 @@
     },
     {
       "path": "qa-protocol2/vendor/cards/card-coordinator.mjs",
-      "sha256": "f7b900defc0a2e55eb5372626e8d6139551d2857a00c88036ee1789c981be196",
+      "sha256": "a9348a2d6a7d61505b099b1241eb30d125cccfcb2e65ed2bac70e77e2b33b5c1",
       "originalSha256": "82bf35fb2593a8ce6c5286fcd778409dc05380991ec9b1793457d7569b37c6d7",
-      "expectedChange": "Previously reviewed decor16 catalog/hidden-grant extension from 89267ef; not claimed byte-identical to 7ce."
+      "expectedChange": "Previously reviewed decor16 catalog/hidden-grant extension from 89267ef; not claimed byte-identical to 7ce. 星途 v2-B (xingtuv2/b-gold-research): moon commits may also lower coins by exactly researchSpend(prev.space,next.space); reviewed by cross-check."
     },
     {
       "path": "qa-protocol2/real-page-facade.mjs",

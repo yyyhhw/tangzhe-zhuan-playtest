@@ -1,8 +1,8 @@
 /** Candidate-only moon rules. Pure host planner; no Storage, timers, UI results or wallet changes. */
-import {readSpace} from './domain.mjs?v=xingtuv2-3-20261014-r1';
-import {ROUTE_BY_ID,albumOk,awardFor,applyAward} from './album.mjs?v=xingtuv2-3-20261014-r1';
-import {gate} from './xingtu-views.mjs?v=xingtuv2-3-20261014-r1';
-import {EVENT_IDS,readVoyageEv,pickEvent,defaultEvState,resolveEvent,outcomeFor,rewardPoints} from './voyage-ev.mjs?v=xingtuv2-3-20261014-r1';
+import {readSpace} from './domain.mjs?v=xingtuv2-4-20261014-r1';
+import {ROUTE_BY_ID,albumOk,awardFor,applyAward} from './album.mjs?v=xingtuv2-4-20261014-r1';
+import {gate} from './xingtu-views.mjs?v=xingtuv2-4-20261014-r1';
+import {EVENT_IDS,readVoyageEv,pickEvent,defaultEvState,resolveEvent,outcomeFor,rewardPoints} from './voyage-ev.mjs?v=xingtuv2-4-20261014-r1';
 // 杨总 2026-10-14 01:32「星途所有店铺35级就可以了」：全部店铺 Lv35+ 解锁。正式航程 10 分钟、每次 8 探索点。
 export const MOON_RULES=Object.freeze({id:'xingtu-moon-10min-8pts-v1',route:'moon',duration:600000,points:8,minShopLevel:35});
 // 星途-113：新规则版本，新出航一律挂一件返航事件（星途-07）。旧 v1 航程/回执照旧可读可领（8 点、ev:null）。
@@ -15,6 +15,18 @@ export const SYS_KEYS=Object.freeze(['tech','war','med','life']);
 const durOf=(route,ruleset)=>ruleset===ROUTE_RULES.id?ROUTE_RULES.dur[route]:route==='moon'&&ruleset!==ROUTE_RULES.id?MOON_RULES.duration:undefined;
 export const routePoints=(route,ev,choice,outcome)=>{const p=rewardPoints(ev,choice,outcome);return p===null?null:route==='moon'?p:Math.round(p*ROUTE_RULES.mult[route]);};
 const RULESETS=[MOON_RULES.id,MOON_EV_RULES.id,ROUTE_RULES.id];
+// 星途 v2-B（杨总 22:28 steering）：科研成果用金币买，每个岗位 5 件升满合计正好 1000 亿，四岗 4000 亿；按 demo 曲线每档 ×10（1:10:100:1000:10000）。
+// 一件一买（不抽卡），买第 t 件要该岗位科研 ≥ t 级。最后一档吸收取整误差，保证合计精确。
+export const RESEARCH_TOTAL_PER_POST=1e11;
+export const TIER_PRICE=Object.freeze((()=>{const w=[1,10,100,1000,10000],W=11111,p=w.map(x=>Math.round(RESEARCH_TOTAL_PER_POST*x/W));p[4]=RESEARCH_TOTAL_PER_POST-p[0]-p[1]-p[2]-p[3];return p;})());
+const ITEM_RE=/^(tech|war|med|life):([1-5])$/;
+/** 两份 space 之间买科研成果花了多少金币：只允许新增 'sys:t'=1；删、改、未知 key 一律 null（不是科研购买）。 */
+export function researchSpend(prev,next){
+ const a=prev?.items??{},b=next?.items??{};let sum=0;
+ for(const k of Object.keys(a))if(b[k]!==a[k])return null;
+ for(const k of Object.keys(b)){if(Object.hasOwn(a,k))continue;const m=k.match(ITEM_RE);if(!m||b[k]!==1)return null;sum+=TIER_PRICE[Number(m[2])-1];}
+ return sum;
+}
 export const spaceUnlocked=state=>Array.isArray(state?.shops)&&state.shops.length>0&&state.shops.every(s=>s?.open===true&&Number.isSafeInteger(s.lv)&&s.lv>=MOON_RULES.minShopLevel);
 const copy=x=>JSON.parse(JSON.stringify(x)),own=(x,k)=>Object.hasOwn(x,k),int=(x,min=0)=>Number.isSafeInteger(x)&&x>=min;
 const bad=code=>({ok:false,code}),MAX_TIME=8640000000000000;
@@ -75,11 +87,19 @@ export function planMoon(state,intent,{scope,now,makeId,hiddenRules}){
  if(!view.unlocked)return bad('SPACE_TECH_LEVEL_REQUIRED');
  const depart=keys(intent,['type','route'])&&intent.type==='depart'&&ROUTE_IDS.includes(intent.route);
  const upgrade=keys(intent,['type','sys'])&&intent.type==='upgrade'&&SYS_KEYS.includes(intent.sys);
+ const research=keys(intent,['type','sys','tier'])&&intent.type==='research'&&SYS_KEYS.includes(intent.sys)&&[1,2,3,4,5].includes(intent.tier);
  const claim=keys(intent,['type','voyageId'])&&intent.type==='claim'&&typeof intent.voyageId==='string';
  const choose=keys(intent,['type','voyageId','choice'])&&intent.type==='choose'&&typeof intent.voyageId==='string'&&['a','b'].includes(intent.choice);
- if(!depart&&!claim&&!choose&&!upgrade)return bad('SPACE_INTENT_INVALID');
+ if(!depart&&!claim&&!choose&&!upgrade&&!research)return bad('SPACE_INTENT_INVALID');
  const space=copy(view.space),ledger=copy(view.ledger??{schemaVersion:1,sequence:0,claimed:0,lastReceipt:null});
- if(upgrade){
+ let coins=null;
+ if(research){
+  const key=`${intent.sys}:${intent.tier}`,price=TIER_PRICE[intent.tier-1];
+  if(space.items[key])return {ok:true,noop:true,code:'SPACE_RESEARCH_OWNED',view};
+  if(space.lv[intent.sys]<intent.tier)return bad('SPACE_RESEARCH_LV_REQUIRED');
+  if(!(Number.isSafeInteger(state.coins)&&state.coins>=price))return bad('SPACE_COINS_NOT_ENOUGH');
+  space.items[key]=1;coins=state.coins-price;
+ }else if(upgrade){
   // 科研升级：花探索点，1→5 级；飞行中也能升（demo 同）。不动航程/回执。
   const lv=space.lv[intent.sys];if(!int(lv,1))return bad('SPACE_INTENT_INVALID');
   if(lv>=5)return {ok:true,noop:true,code:'SPACE_LV_MAX',view};
@@ -127,7 +147,7 @@ export function planMoon(state,intent,{scope,now,makeId,hiddenRules}){
   ledger.claimed=view.voyage.sequence;
   ledger.lastReceipt={voyageId:intent.voyageId,sequence:view.voyage.sequence,route,ruleset:view.voyage.ruleset,start:view.voyage.start,arrival:view.arrival,claimedAt:now,points,...(v2?{ev:view.event.id,choice:view.event.choice,outcome:view.event.outcome}:{}),card:award.card,hidden:award.hidden};space.moonLoop=ledger;
  }
- const next=copy(state);next.space=space;
+ const next=copy(state);next.space=space;if(coins!==null)next.coins=coins;
  const checked=moonView(next,{scope,now});if(!checked.ok)return checked;
  return {ok:true,noop:false,state:next,view:checked};
 }

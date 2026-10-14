@@ -29,7 +29,7 @@
   },
   {
     "path": "qa-protocol2/vendor/cards/card-coordinator.mjs",
-    "sha256AfterReleaseNormalization": "9291b2347b61176e1bdb1d3468837921af2de93482e527657481e39eeeeb3ec8"
+    "sha256AfterReleaseNormalization": "196446a3846c67b5605204093c3e4d08a8266562d03ca3d621e4fb363280b5fd"
   },
   {
     "path": "economy.js",

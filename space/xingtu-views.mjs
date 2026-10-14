@@ -1,6 +1,6 @@
 // 星途 v2 第一批：星图（5 圈 9 航线 + 出航需要四个岗位科研）与飞船（四个舱室）——只读，不写存档。
 // 画面与数值直接搬自王大妈 demo（wangdama/xingtu-demo、xingtu-4post-mock fd614ae）。
-import * as A from './xingtu-art.mjs?v=xingtuv2-3-20261014-r1';
+import * as A from './xingtu-art.mjs?v=xingtuv2-4-20261014-r1';
 export const RING_MIN=A.RING_MIN,RING_SUM=A.RING_SUM,ORDER=A.ORDER,POST=A.POST;
 export const OPEN_NOW=['moon','station','mars','venus','belt','pirate','europa','saturn'];// 星途 v2-A：未知信号源留给结局批
 const LVK=['tech','war','med','life'];
@@ -42,7 +42,8 @@ export function renderMap(parent,{doc,space,pick,onPick,goVoyage,launch,flying=f
  if(!g.ok){const l=doc.createElement('div');l.className='lackline';l.id='xingtuLack';l.textContent=`还差：${g.lack}`;d.append(l);}
  parent.append(d);
 }
-export function renderShip(parent,{doc,space,room,onRoom,upgrade,cabinArt}){
+export const money=n=>n>=1e12?`${+(n/1e12).toFixed(2)} 万亿`:n>=1e8?`${+(n/1e8).toFixed(2)} 亿`:n>=1e4?`${+(n/1e4).toFixed(2)} 万`:String(n);
+export function renderShip(parent,{doc,space,room,onRoom,upgrade,cabinArt,research,coins=null,prices=null}){
  const S=demoState(space,'moon');A.use(S);const k=room,lv=S.lv[k],st=A.STAGES[k][lv-1],sy=A.SYSK[k];
  const box=doc.createElement('div');box.className='box shipbox';box.id='xingtuShip';box.innerHTML=A.shipSvg(k);parent.append(box);
  box.querySelectorAll('[data-room]').forEach(n=>n.addEventListener('click',()=>onRoom(n.getAttribute('data-room'))));
@@ -54,13 +55,19 @@ export function renderShip(parent,{doc,space,room,onRoom,upgrade,cabinArt}){
  <div class="blurb">${st[1]}</div>
  <div class="stages">${A.STAGES[k].map((s,i)=>{const L=i+1,o=L<=lv;return `<div class="stg${L===lv?' on':''}${o?'':' lock'}"><svg viewBox="0 0 ${A.W0} ${A.H0}" aria-hidden="true">${A.roomInner(k,L,{bare:true})}</svg><span>${o?'Lv'+L:'🔒 Lv'+L}</span></div>`;}).join('')}</div>
  <div class="unl">${A.ITEMS[k].map((n,i)=>S.items[k+':'+(i+1)]?`<span class="y">${n}</span>`:`<span class="n">${i+1} 级 · ？？？</span>`).join('')}</div>
- <div class="muted">每升一级，舱室换一张新插画。已摆进 ${have} / 5 件科研成果，没抽到的显示成全息虚影。点飞船上的舱室可以切换。</div>`;
+ <div class="muted">每升一级，舱室换一张新插画。已摆进 ${have} / 5 件科研成果，还没买的显示成全息虚影。点飞船上的舱室可以切换。</div>`;
  // 熊大写实插画接口：art/xingtu-cabins/<tech|war|med|life>-<1..5>.webp；没有图时（加载失败）留 SVG 场景
  if(cabinArt){const big=c.querySelector?.('.bigroom');if(big){const img=doc.createElement('img');img.className='cabinart';img.alt=st[0];img.src=cabinArt(k,lv);img.decoding='async';img.onerror=()=>{img.remove?.();};img.onload=()=>{big.classList?.add?.('hasart');};big.append(img);}}
  const pts=Number.isInteger(space?.pts)?space.pts:0;
  const up=doc.createElement('button');up.type='button';up.id='xingtuUpgrade';up.className='btn';up.disabled=lv>=5||pts<cost||!upgrade;
  up.textContent=lv>=5?'已满级':`升到 ${lv+1} 级 · ${cost} 探索点`;if(upgrade)up.onclick=()=>upgrade(k);c.append(up);
- const have2=doc.createElement('div');have2.className='muted';have2.id='xingtuPts';have2.textContent=`现有探索点 ${pts}`;c.append(have2);parent.append(c);
+ const have2=doc.createElement('div');have2.className='muted';have2.id='xingtuPts';have2.textContent=`现有探索点 ${pts}`;c.append(have2);
+ // 星途 v2-B：科研成果用金币买（一件一买；第 t 件要科研 t 级）
+ if(research&&prices){const lab=doc.createElement('div');lab.className='lab2';lab.id='xingtuLab';
+  const h=doc.createElement('div');h.className='hudline';h.textContent=`◢ ${sy.ceo} 的研究台 · 金币 ${coins===null?'—':money(coins)}`;lab.append(h);
+  A.ITEMS[k].forEach((n,i)=>{const t=i+1,own=!!S.items[k+':'+t],price=prices[i],b=doc.createElement('button');b.type='button';b.id=`xingtuBuy-${k}-${t}`;b.className='btn small'+(own?' ghost':'');
+   b.textContent=own?`✓ ${n}`:t>lv?`${t} 级 · 科研 ${t} 级可买`:`${t} 级 · ${n} · ${money(price)} 金币`;b.disabled=own||t>lv||!(coins>=price);if(!b.disabled)b.onclick=()=>research(k,t);lab.append(b);});
+  const sumv=doc.createElement('div');sumv.className='muted';sumv.textContent=`这一岗 5 件全买合计 ${money(prices.reduce((a,b)=>a+b,0))} 金币`;lab.append(sumv);c.append(lab);}parent.append(c);
  const sl=doc.createElement('div');sl.className='box sumline';sl.innerHTML=`<span>四人等级合计</span><span class="num">${LVK.reduce((a,x)=>a+S.lv[x],0)} / 20</span>`;parent.append(sl);
 }
 export {A as ART};
