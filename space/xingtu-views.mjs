@@ -1,6 +1,6 @@
 // 星途 v2 第一批：星图（5 圈 9 航线 + 出航需要四个岗位科研）与飞船（四个舱室）——只读，不写存档。
 // 画面与数值直接搬自王大妈 demo（wangdama/xingtu-demo、xingtu-4post-mock fd614ae）。
-import * as A from './xingtu-art.mjs?v=xingtuv2-1-20261014-r1';
+import * as A from './xingtu-art.mjs?v=xingtuv2-2-20261014-r1';
 export const RING_MIN=A.RING_MIN,RING_SUM=A.RING_SUM,ORDER=A.ORDER,POST=A.POST;
 export const OPEN_NOW=['moon'];
 const LVK=['tech','war','med','life'];

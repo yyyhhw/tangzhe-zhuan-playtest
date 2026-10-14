@@ -1,10 +1,10 @@
-import {createMoonHost} from './host.mjs?v=xingtuv2-1-20261014-r1';
-import {moonArt} from './art.mjs?v=xingtuv2-1-20261014-r1';
-import {MOON_CSS} from './styles.mjs?v=xingtuv2-1-20261014-r1';
-import {EVENTS} from './voyage-ev.mjs?v=xingtuv2-1-20261014-r1';
-import {XT2_CSS} from './xingtu-css.mjs?v=xingtuv2-1-20261014-r1';
-import {renderMap,renderShip,gate,ART} from './xingtu-views.mjs?v=xingtuv2-1-20261014-r1';
-import {ROUTES,ROUTE_BY_ID,OPEN_ROUTES,TOTAL_CARDS,ALIEN_DENOM,cardOf} from './album.mjs?v=xingtuv2-1-20261014-r1';
+import {createMoonHost} from './host.mjs?v=xingtuv2-2-20261014-r1';
+import {moonArt} from './art.mjs?v=xingtuv2-2-20261014-r1';
+import {MOON_CSS} from './styles.mjs?v=xingtuv2-2-20261014-r1';
+import {EVENTS} from './voyage-ev.mjs?v=xingtuv2-2-20261014-r1';
+import {XT2_CSS} from './xingtu-css.mjs?v=xingtuv2-2-20261014-r1';
+import {renderMap,renderShip,gate,ART} from './xingtu-views.mjs?v=xingtuv2-2-20261014-r1';
+import {ROUTES,ROUTE_BY_ID,OPEN_ROUTES,TOTAL_CARDS,ALIEN_DENOM,cardOf} from './album.mjs?v=xingtuv2-2-20261014-r1';
 const TABS=[['xingtuTabVoyage','出航','voyage'],['xingtuTabMap','星图','map'],['xingtuTabShip','飞船','ship'],['xingtuTabAlbum','册子','album']];
 export function installMoonOverlay({app,runtime,document:doc=globalThis.document,window:win=globalThis}){
  if(win.XingTu)throw Error('SPACE_HOST_ALREADY_INSTALLED');
@@ -19,7 +19,7 @@ export function installMoonOverlay({app,runtime,document:doc=globalThis.document
  const node=(tag,id,text)=>{const n=doc.createElement(tag);if(id)n.id=id;if(text!==undefined)n.textContent=text;return n;};
  const cardImage=(route,n,title,thumb=false)=>{
   if(!OPEN_ROUTES.includes(route)||!Number.isInteger(n)||!cardOf(route,n))return null;
-  const img=node('img');img.className='xingtu-cardart'+(thumb?' xingtu-cardart-thumb':'');img.src=new URL(`../art/spacecards/${route}_${n}.webp?v=xingtuv2-1-20261014-r1`,import.meta.url).href;img.alt=thumb?'':title;img.width=1024;img.height=768;img.loading=thumb?'lazy':'eager';img.decoding='async';img.onerror=()=>{img.hidden=true;};return img;
+  const img=node('img');img.className='xingtu-cardart'+(thumb?' xingtu-cardart-thumb':'');img.src=new URL(`../art/spacecards/${route}_${n}.webp?v=xingtuv2-2-20261014-r1`,import.meta.url).href;img.alt=thumb?'':title;img.width=1024;img.height=768;img.loading=thumb?'lazy':'eager';img.decoding='async';img.onerror=()=>{img.hidden=true;};return img;
  };
  const appendCardImage=(parent,route,n,title,thumb=false)=>{const img=cardImage(route,n,title,thumb);if(img)parent.append(img);};
  const fmt=ms=>{const s=Math.ceil(ms/1000);return `${Math.floor(s/60)}分${String(s%60).padStart(2,'0')}秒`;};
