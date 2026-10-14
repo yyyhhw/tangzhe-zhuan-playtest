@@ -6,8 +6,8 @@
  * sessionStorage is wholly denied after installation. Existing index version
  * clearing before this boundary must be separately audited; no exception here.
  */
-import {getRealPageQAConfig, validateRealPageQAGate} from './config.mjs?v=sfx117-20261014-r1';
-export {getRealPageQAConfig, validateRealPageQAGate} from './config.mjs?v=sfx117-20261014-r1';
+import {getRealPageQAConfig, validateRealPageQAGate} from './config.mjs?v=photofix-20261014-r1';
+export {getRealPageQAConfig, validateRealPageQAGate} from './config.mjs?v=photofix-20261014-r1';
 const installedGuards = new WeakMap();
 const frozen = value => Object.freeze(value);
 const fail = code => { throw new Error(code); };
