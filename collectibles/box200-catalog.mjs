@@ -1,8 +1,8 @@
 /** 盲盒200 目录注册：在 decor6（58件）之上追加已放行批次。只有 LIVE_BATCHES 里的批次进池；
  * 其余批次等熊大的图齐了再把批次名加进来（同时 art/collectibles/box200/<ID>.png 必须存在）。
  * 隐藏款（rarity=hidden）不进普通池；临时口径：每次成功开盒另有 1% 额外掉一件未拥有的已放行隐藏款。 */
-import {BOX200_ITEMS} from './box200-items.mjs?v=takeover-20261014-r1';
-import {BOX200_COPY} from './box200-copy.mjs?v=takeover-20261014-r1';
+import {BOX200_ITEMS} from './box200-items.mjs?v=home82-fix103-20261014-r1';
+import {BOX200_COPY} from './box200-copy.mjs?v=home82-fix103-20261014-r1';
 export const LIVE_BATCHES=Object.freeze(['盲盒-83']);
 export const HIDDEN_BONUS_P=0.01;
 export function liveItems(batches=LIVE_BATCHES){return BOX200_ITEMS.filter(x=>batches.includes(x.batch)).map(x=>{const c=BOX200_COPY[x.id];if(!c||!c.name)throw Error('BOX200_COPY_MISSING:'+x.id);

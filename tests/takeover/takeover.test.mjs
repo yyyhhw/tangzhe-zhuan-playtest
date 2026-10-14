@@ -13,7 +13,7 @@ const withTZ = (tz, fn) => { const old = process.env.TZ; process.env.TZ = tz; tr
 for (const [app, eco] of [['app.js', 'economy.js'], ['pet/game/app.js', 'pet/game/economy.js']]) {
   const E = req('../../' + eco);
   test(app + ': 盲盒-92 future-dated save shows notice and the real resume day, not 明天', () => withTZ('Asia/Tokyo', () => {
-    const t = Date.parse('2026-10-14T09:30:00+09:00'), st = { gachaDaily: { day: '2026-10-17', n: 2 } };
+    const t = Date.parse('2026-10-14T09:30:00+09:00'), st = { gachaDaily: { day: '2026-10-17', n: 5 } };
     const h = helpers(app, E, st);
     assert.equal(E.gachaDailyLeft(st, t), 0);
     assert.equal(h.gachaResumeText(t), '10月18日 06:00 恢复');
@@ -22,7 +22,18 @@ for (const [app, eco] of [['app.js', 'economy.js'], ['pet/game/app.js', 'pet/gam
     assert.equal(ok.gachaFutureNote(t), '');
     assert.equal(ok.gachaResumeText(t), '明天 06:00 恢复');
     const ny = helpers(app, E, { gachaDaily: { day: '2027-01-02', n: 1 } });
-    assert.equal(ny.gachaResumeText(Date.parse('2026-12-31T10:00:00+09:00')), '2027年1月3日 06:00 恢复');
+    assert.equal(ny.gachaResumeText(Date.parse('2026-12-31T10:00:00+09:00')), '2027年1月2日 06:00 恢复');
+  }));
+  test(app + ': 盲盒-103 future-dated save: n<5 recovers at 06:00 OF the saved day, n=5 the day after', () => withTZ('Asia/Tokyo', () => {
+    const t = Date.parse('2026-10-14T09:30:00+09:00');
+    const two = helpers(app, E, { gachaDaily: { day: '2026-10-17', n: 2 } }), five = helpers(app, E, { gachaDaily: { day: '2026-10-17', n: 5 } });
+    assert.equal(two.gachaResumeText(t), '10月17日 06:00 恢复'); assert.match(two.gachaFutureNote(t), /10月17日 06:00 恢复/);
+    assert.equal(five.gachaResumeText(t), '10月18日 06:00 恢复'); assert.match(five.gachaFutureNote(t), /10月18日 06:00 恢复/);
+    const pre = Date.parse('2026-10-17T05:59:50+09:00');
+    assert.equal(two.gachaResumeText(pre), '明天 06:00 恢复'.replace('明天', '今天'));
+    const st = { gachaDaily: { day: '2026-10-17', n: 2 } };
+    assert.equal(E.gachaDailyLeft(st, Date.parse('2026-10-17T06:00:00+09:00')), 3, 'counter agrees: 17日 06:00 already 3/5');
+    assert.equal(helpers(app, E, { gachaDaily: { day: '2026-10-22', n: 1 } }).gachaResumeText(t), '10月22日 06:00 恢复');
   }));
   test(app + ': 盲盒-92 crossing local midnight re-renders (明天 06:00 → 今天 06:00)', () => withTZ('Asia/Tokyo', () => {
     const h = helpers(app, E, null), a = Date.parse('2026-10-14T23:59:00+09:00'), b = Date.parse('2026-10-15T00:01:00+09:00');

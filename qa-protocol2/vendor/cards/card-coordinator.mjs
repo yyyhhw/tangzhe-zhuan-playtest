@@ -1,7 +1,7 @@
-import {planHiddenClaim,validHiddenTransition} from '../../../collectibles/decor6-grants.mjs?v=takeover-20261014-r1';
-import {moonView,planMoon} from '../../../space/moon.mjs?v=takeover-20261014-r1';
-import {migrateSpace,spaceTransition} from '../../../space/domain.mjs?v=takeover-20261014-r1';
-import {createCardTransitionGuard} from './card-transition.mjs?v=takeover-20261014-r1';
+import {planHiddenClaim,validHiddenTransition} from '../../../collectibles/decor6-grants.mjs?v=home82-fix103-20261014-r1';
+import {moonView,planMoon} from '../../../space/moon.mjs?v=home82-fix103-20261014-r1';
+import {migrateSpace,spaceTransition} from '../../../space/domain.mjs?v=home82-fix103-20261014-r1';
+import {createCardTransitionGuard} from './card-transition.mjs?v=home82-fix103-20261014-r1';
 export const CARD_ADAPTER_ENABLED=false;
 /** Synthetic-adapter coordinator candidate; no global storage or automatic launch. */
 const fail=code=>{throw Error(code);};

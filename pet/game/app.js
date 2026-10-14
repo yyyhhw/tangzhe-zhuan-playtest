@@ -7,7 +7,7 @@ const COLLECTION = window.FormalCollectionRuntime;
 if (!COLLECTION?.ownsLock()) {
   // Stale HTML can fetch a new script before bootstrap. No storage access here.
   const url=new URL(location.href);
-  if(url.searchParams.get('v')!=='formal-takeover-20261014-r1') {url.searchParams.set('v','formal-takeover-20261014-r1');location.replace(url.href);}
+  if(url.searchParams.get('v')!=='formal-home82-fix103-20261014-r1') {url.searchParams.set('v','formal-home82-fix103-20261014-r1');location.replace(url.href);}
   else {const notice=document.createElement('p');notice.textContent='页面资源尚未更新完整，存档未写入。请关闭此页后重新打开。';document.body.prepend(notice);}
   return;
 }
@@ -154,7 +154,7 @@ function fmtDur(sec) {
 }
 function fmtClockLocal(ts) { const d = new Date(ts); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
 // 盲盒-92：每日开盒次数恢复时间，按本机时区写「明天 HH:MM 恢复」（恢复点落在本机今天时写「今天」）
-function gachaResumeText(t) { const g = typeof state !== 'undefined' && state ? state.gachaDaily : null, fut = !!(g && typeof g.day === 'string' && g.day > E.dayKey(t)); let r = E.nextResetTs(t); for (let i = 0; fut && i < 4000 && E.dayKey(r) <= g.day; i++) r = E.nextResetTs(r); const a = new Date(t), b = new Date(r), d = Math.round((new Date(b.getFullYear(), b.getMonth(), b.getDate()) - new Date(a.getFullYear(), a.getMonth(), a.getDate())) / 86400000); return (d === 0 ? '今天 ' : d === 1 ? '明天 ' : (b.getFullYear() === a.getFullYear() ? '' : b.getFullYear() + '年') + (b.getMonth() + 1) + '月' + b.getDate() + '日 ') + fmtClockLocal(r) + ' 恢复'; }
+function gachaResumeText(t) { const g = typeof state !== 'undefined' && state ? state.gachaDaily : null, fut = !!(g && typeof g.day === 'string' && g.day > E.dayKey(t)); let r = E.nextResetTs(t); for (let i = 0; fut && i < 4000 && E.dayKey(r) < g.day; i++) r = E.nextResetTs(r); if (fut && g.n >= E.CFG.GACHA_DAILY_LIMIT) r = E.nextResetTs(r); const a = new Date(t), b = new Date(r), d = Math.round((new Date(b.getFullYear(), b.getMonth(), b.getDate()) - new Date(a.getFullYear(), a.getMonth(), a.getDate())) / 86400000); return (d === 0 ? '今天 ' : d === 1 ? '明天 ' : (b.getFullYear() === a.getFullYear() ? '' : b.getFullYear() + '年') + (b.getMonth() + 1) + '月' + b.getDate() + '日 ') + fmtClockLocal(r) + ' 恢复'; }
 // 盲盒-92 补：存档里的开盒日期比本机今天还晚（手机时间被往前调过又调回）——按已开满算，并写清要到哪天几点才恢复
 function gachaFutureNote(t) { const g = state && state.gachaDaily; if (!g || typeof g.day !== 'string' || !(g.day > E.dayKey(t))) return ''; return `<div class="desc" id="gachaFutureNote" style="margin-top:4px;color:var(--red)">存档里的开盒日期（${g.day}）比本机今天晚，可能调过手机时间；今天按已开满算，${gachaResumeText(t)}</div>`; }
 // 盲盒-92 补：除了游戏日，还记本机日历日——停在页上跨过午夜时「明天 06:00」要自己变成「今天 06:00」

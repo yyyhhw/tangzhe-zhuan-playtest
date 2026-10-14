@@ -6,7 +6,7 @@ const COLLECTION = window.FormalCollectionRuntime;
 if (!COLLECTION?.ownsLock()) {
   // Stale HTML can fetch a new script before bootstrap. No storage access here.
   const url=new URL(location.href);
-  if(url.searchParams.get('v')!=='formal-takeover-20261014-r1') {url.searchParams.set('v','formal-takeover-20261014-r1');location.replace(url.href);}
+  if(url.searchParams.get('v')!=='formal-home82-fix103-20261014-r1') {url.searchParams.set('v','formal-home82-fix103-20261014-r1');location.replace(url.href);}
   else {const notice=document.createElement('p');notice.textContent='页面资源尚未更新完整，存档未写入。请关闭此页后重新打开。';document.body.prepend(notice);}
   return;
 }
@@ -157,7 +157,7 @@ function fmtDur(sec) {
 }
 function fmtClockLocal(ts) { const d = new Date(ts); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
 // 盲盒-92：每日开盒次数恢复时间，按本机时区写「明天 HH:MM 恢复」（恢复点落在本机今天时写「今天」）
-function gachaResumeText(t) { const g = typeof state !== 'undefined' && state ? state.gachaDaily : null, fut = !!(g && typeof g.day === 'string' && g.day > E.dayKey(t)); let r = E.nextResetTs(t); for (let i = 0; fut && i < 4000 && E.dayKey(r) <= g.day; i++) r = E.nextResetTs(r); const a = new Date(t), b = new Date(r), d = Math.round((new Date(b.getFullYear(), b.getMonth(), b.getDate()) - new Date(a.getFullYear(), a.getMonth(), a.getDate())) / 86400000); return (d === 0 ? '今天 ' : d === 1 ? '明天 ' : (b.getFullYear() === a.getFullYear() ? '' : b.getFullYear() + '年') + (b.getMonth() + 1) + '月' + b.getDate() + '日 ') + fmtClockLocal(r) + ' 恢复'; }
+function gachaResumeText(t) { const g = typeof state !== 'undefined' && state ? state.gachaDaily : null, fut = !!(g && typeof g.day === 'string' && g.day > E.dayKey(t)); let r = E.nextResetTs(t); for (let i = 0; fut && i < 4000 && E.dayKey(r) < g.day; i++) r = E.nextResetTs(r); if (fut && g.n >= E.CFG.GACHA_DAILY_LIMIT) r = E.nextResetTs(r); const a = new Date(t), b = new Date(r), d = Math.round((new Date(b.getFullYear(), b.getMonth(), b.getDate()) - new Date(a.getFullYear(), a.getMonth(), a.getDate())) / 86400000); return (d === 0 ? '今天 ' : d === 1 ? '明天 ' : (b.getFullYear() === a.getFullYear() ? '' : b.getFullYear() + '年') + (b.getMonth() + 1) + '月' + b.getDate() + '日 ') + fmtClockLocal(r) + ' 恢复'; }
 // 盲盒-92 补：存档里的开盒日期比本机今天还晚（手机时间被往前调过又调回）——按已开满算，并写清要到哪天几点才恢复
 function gachaFutureNote(t) { const g = state && state.gachaDaily; if (!g || typeof g.day !== 'string' || !(g.day > E.dayKey(t))) return ''; return `<div class="desc" id="gachaFutureNote" style="margin-top:4px;color:var(--red)">存档里的开盒日期（${g.day}）比本机今天晚，可能调过手机时间；今天按已开满算，${gachaResumeText(t)}</div>`; }
 // 盲盒-92 补：除了游戏日，还记本机日历日——停在页上跨过午夜时「明天 06:00」要自己变成「今天 06:00」
@@ -1963,7 +1963,7 @@ const HOME_WINDOWS = {
   c77_3: [[55.2, 2.6, 20.6, 17.6, 'arch'], [79, 2.6, 17.6, 17.6, 'arch']],
   otaku_1: [[65.6, 10.6, 26.9, 14.4]],
   pearl_2: [[53.6, 6.4, 40.4, 15.6, 'arch']],
-  pearl_3: [[45.4, 0, 54.6, 20.3]],
+  pearl_3: [[45.4, 8.6, 54.6, 11.4]],   // 熊二 390 对照：整片花房含拱顶夜里太重，只盖下排竖窗
   rocket_1: [[78.7, 6.5, 14.9, 15.3, 'round']],
 };
 const homeWindowLayers = artKey => (HOME_WINDOWS[artKey] || []).map(([l, t, w, h, shape]) => { const st = `left:${l}%;top:${t}%;width:${w}%;height:${h}%`, cls = shape ? ` win-${shape}` : ''; return `<span class="room-sky${cls}" style="${st}" aria-hidden="true"></span><span class="room-wx${cls}" style="${st}" aria-hidden="true"></span>`; }).join('');
@@ -1991,7 +1991,7 @@ const HOME_ICON = ['home', 'apt', 'villa'].map(n => ic(n)); // 12c1：家宅升�
 let homeWho = 'c77', homeSub = 'room', homeMode = 'live', homeSel = null, homeDrag = null;
 // Home22: optional readonly status for the existing c77 Lv1 room only.
 let homeStatusContext = null, homeStatusAdapter = null;
-import('./home/home-status.mjs?v=takeover-20261014-r1').then(({createHomeStatusAdapter}) => {
+import('./home/home-status.mjs?v=home82-fix103-20261014-r1').then(({createHomeStatusAdapter}) => {
   homeStatusAdapter = createHomeStatusAdapter({document, window, now, gameDayAt:E.dayKey});
   homeStatusAdapter.sync(document.getElementById('homeAmbienceStatus'), homeStatusContext);
 }).catch(error => console.warn('家宅时间与游戏内天气状态未加载', error));
@@ -2957,7 +2957,7 @@ const tdController = window.TDHost.create({
 function openTD() {
   if (frozen || tdOpen || zbOpen || window.XingTu?.isOpen() || !state.shops[1].open) return;
   tdOpen = true; const f = $('#tdFrame'), generation = ++tdGeneration;
-  const target = new URL('td/index.html?embed=1&v=takeover-20261014-r1', location.href);
+  const target = new URL('td/index.html?embed=1&v=home82-fix103-20261014-r1', location.href);
   f.onload = () => {
     if (!tdOpen || generation !== tdGeneration) return;
     // Verify the actual loaded document, not merely an iframe src attribute.
