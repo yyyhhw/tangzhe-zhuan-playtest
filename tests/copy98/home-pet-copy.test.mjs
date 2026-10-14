@@ -19,5 +19,5 @@ test('petgame.js: no internal words in descs or player-facing why', () => {
   assert.equal((s.match(/只陪玩，不加产量。/g) || []).length, 7);
 });
 test('index.html + pet/game/index.html load the bumped tokens', () => {
-  for (const f of ['index.html', 'pet/game/index.html']) { const h = read(f); assert.match(h, /home-autonomy\.js\?v=box83-20261014-r1/); assert.match(h, /petgame\.js\?v=box83-20261014-r1/); }
+  for (const f of ['index.html', 'pet/game/index.html']) { const h = read(f); assert.match(h, /home-autonomy\.js\?v=takeover-20261014-r1/); assert.match(h, /petgame\.js\?v=takeover-20261014-r1/); }
 });

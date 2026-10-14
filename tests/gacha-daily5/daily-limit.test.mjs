@@ -10,7 +10,7 @@ for(const file of ['economy.js','pet/game/economy.js']){
     const s=rich();assert.equal(E.CFG.GACHA_DAILY_LIMIT,5);assert.equal(E.gachaDailyLeft(s,T0),5);
     for(let i=0;i<5;i++){const r=E.gachaDraw(s,0.5,undefined,T0+i);assert(r.ok,'draw '+i);assert.equal(E.gachaDailyLeft(s,T0),4-i);}
     const before=JSON.stringify(s),r=E.gachaDraw(s,0.5,undefined,T0+9);
-    assert.equal(r.ok,false);assert.equal(r.dailyLimit,true);assert.equal(r.why,'今天的 5 次已开完，明天再来');assert.equal(JSON.stringify(s),before,'blocked attempt changes nothing (coins, owned, pity, draws)');
+    assert.equal(r.ok,false);assert.equal(r.dailyLimit,true);assert.equal(r.why,'今天的 5 次已开完');assert.equal(JSON.stringify(s),before,'blocked attempt changes nothing (coins, owned, pity, draws)');
     assert.deepEqual(s.gachaDaily,{day:E.dayKey?E.dayKey(T0):s.gachaDaily.day,n:5});
   });
   test(file+': day rollover (game-day boundary, same as daily double) resets to 5',()=>{
@@ -41,7 +41,7 @@ for(const path of ['/','/pet/game/'])test(`formal ${path}: real doGacha + P2 coo
   h.context.__gachaRandom=()=>0.5;
   for(let i=0;i<5;i++){const n=h.context.__revealCalls||0;h.app.doGacha();await until(()=>(h.context.__revealCalls||0)>n,'reveal '+i+' '+JSON.stringify({fail:h.context.__failBuy,toasts:h.context.__modelToasts,coins:h.app.state.coins}));}
   const saved=JSON.parse(h.data.get(h.t.keys.main));assert.equal(saved.gachaDaily.n,5);const before=copy(h.app.state),writes=h.writes().length;
-  h.app.doGacha();assert.equal(h.app.state.coins,before.coins,'no coins deducted');assert.equal(h.writes().length,writes,'no write');assert.deepEqual(copy(h.app.state.gacha),before.gacha);assert.deepEqual(h.context.__failBuy?.at(-1),'今天的 5 次已开完，明天再来');
+  h.app.doGacha();assert.equal(h.app.state.coins,before.coins,'no coins deducted');assert.equal(h.writes().length,writes,'no write');assert.deepEqual(copy(h.app.state.gacha),before.gacha);assert.match(h.context.__failBuy?.at(-1),/^今天的 5 次已开完，(今天|明天) \d{2}:\d{2} 恢复$/);
   const keep=new Map(h.data);await h.close();const r=await assembly({scope:'formal',path,configure:f=>{f.data.clear();for(const [k,v] of keep)f.data.set(k,v);}});t.after(()=>r.close());await until(()=>r.app||r.settled,'reopen');
   assert.deepEqual(copy(r.app.state.gachaDaily),saved.gachaDaily);const w=r.writes().length;r.app.doGacha();assert.equal(r.writes().length,w,'still blocked after reload');
 });

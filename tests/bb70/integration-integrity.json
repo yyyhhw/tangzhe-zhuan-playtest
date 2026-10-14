@@ -33,7 +33,7 @@
   },
   {
     "path": "economy.js",
-    "sha256AfterReleaseNormalization": "c5a04023e6713b458724b095e68323f0ac0dca15bb5fbe8d61c9e2aaf6a7df28"
+    "sha256AfterReleaseNormalization": "ab43dcfea5965c942859b7706134cc3474da7c0350dab4aff9afe55bcce3a414"
   },
   {
     "path": "preview/economy.js",
@@ -41,6 +41,6 @@
   },
   {
     "path": "pet/game/economy.js",
-    "sha256AfterReleaseNormalization": "9d6b10ffebc00b8ba14113ef5080114a4319f834e938beb4f50a8568c2fc3a49"
+    "sha256AfterReleaseNormalization": "1bbd6113e3e6cef12a4d627006c0728346d6524b64be695dc044072bf2c5d9c7"
   }
 ]

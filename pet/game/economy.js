@@ -28,8 +28,8 @@
     OFFLINE_CAP: 8 * 3600,      // 离线最多 8 小时
     OFFLINE_CAP_BONUS_77TECH: 2 * 3600, // 跨行事件「麻辣服务器」：+2 小时
     OFFLINE_MIN: 60,            // 离开 ≥60 秒才弹「老板你回来啦」
-    TZ_OFFSET_MIN: 480,         // 每日双倍按马来西亚时间（UTC+8）计算，不跟手机时区走
-    DAY_RESET_HOUR: 5,          // 早上 5 点重置
+    TZ_OFFSET_MIN: 540,         // 经营-55（杨总 10/13 拍板）：每日双倍/盲盒每日 5 次统一按东京时间（UTC+9）切日，全玩家同一时刻，不跟手机时区走
+    DAY_RESET_HOUR: 6,          // 东京早上 6 点重置（与旧版 UTC+8 05:00 是同一时刻，dayKey 不变，旧档无需过渡）
     CLOCK_TOLERANCE: 120,       // 系统时间回拨容忍（秒）
     BOOST_MULT: 5,              // 团单额外倍率：一次性结算 = 产速 × (MULT-1) × SEC（对账=旧 ×5 多出来的部分）
     BOOST_SEC: 30,              // 团单默认服务时长（秒）；点大客户可加快
@@ -537,7 +537,7 @@
     { id:'k_8', type:'card', name:'一条街的灯',   text:'四家店同时亮灯那晚，77说：今天的龙门阵，摆一整条街。' },
     { id:'s_panda',    type:'super', shop:0, name:'熊猫食神',       desc:'抱着竹笋串营业：烧烤摊产量 +30%，手点三档暴击各 +5 个百分点（35% → 50%）' },
     { id:'s_fountain', type:'super', shop:1, name:'珍珠喷泉',       desc:'奶茶店产量 +30%；在线每 3 分钟连续爆单 20 秒：奶茶店产量 ×3、手点必暴击' },
-    { id:'s_portal',   type:'super', shop:2, name:'次元传送门',     desc:'漫画书店产量 +30%；在线每 4 分钟漫画角色客串，送书店 90 秒产量的大订单' },
+    { id:'s_portal',   type:'super', shop:2, name:'次元传送门',     desc:'漫画书店产量 +30%；在线每 4 分钟漫画角色客串，送漫画书店 90 秒产量的大订单' },
     { id:'s_sun',      type:'super', shop:3, name:'人造太阳反应堆', desc:'科技公司产量 +30%；在线每 5 分钟超频 30 秒：科技公司产量 ×3、三档暴击倍率翻倍' },
   ];
   const ITEM_BY_ID = {}; ITEMS.forEach(it => ITEM_BY_ID[it.id] = it);
@@ -571,11 +571,11 @@
   // now 传入时（玩家点「开一个」的真实路径）执行每日上限；不传 = 旧调用（模拟/测试）不限次。
   function gachaDraw(st, rnd, price, now) {
     price = price == null ? gachaPrice(st) : price;
-    if (!gachaUnlocked(st)) return { ok:false, why:'摸鱼科技公司雇到员工后开放' };
+    if (!gachaUnlocked(st)) return { ok:false, why:'科技公司雇到员工后开放' };
     const rem = gachaRemaining(st);
     if (!rem.length) return { ok:false, why:'已集齐', complete:true };
     const daily = now != null && isFinite(now);
-    if (daily && gachaDailyLeft(st, now) <= 0) return { ok:false, why:'今天的 ' + CFG.GACHA_DAILY_LIMIT + ' 次已开完，明天再来', dailyLimit:true };
+    if (daily && gachaDailyLeft(st, now) <= 0) return { ok:false, why:'今天的 ' + CFG.GACHA_DAILY_LIMIT + ' 次已开完', dailyLimit:true };
     if (!priceOk(price)) return { ok:false, why:'价格异常' };
     if (!canAfford(st, price)) return { ok:false, why:walletOk(st) ? '金币不够' : '金币数据异常' };
     const o = gachaOdds(st), isSuper = rnd < o.superP;
@@ -1493,7 +1493,7 @@
     if (S[1].emp <= 0) return { text:'给奶茶店雇员工小满', cur:c, need:SHOPS[1].hire };
     if (S[0].lv < 10) return { text:'烧烤摊冲 Lv10：收益×2', cur:S[0].lv, need:10, lv:true };
     if (!S[2].open) return { text:'攒钱开漫画书店（阿宅店长加入）', cur:c, need:SHOPS[2].open };
-    if (S[2].emp <= 0) return { text:'给书店雇员工阿页', cur:c, need:SHOPS[2].hire };
+    if (S[2].emp <= 0) return { text:'给漫画书店雇员工阿页', cur:c, need:SHOPS[2].hire };
     if (!S[3].open) return { text:'攒钱开摸鱼科技公司', cur:c, need:SHOPS[3].open };
     if (S[3].emp <= 0) return { text:'给科技公司雇员工小栈（盲盒开放）', cur:c, need:SHOPS[3].hire };
     if (S[3].lv < CFG.ROCKET_UNLOCK_LV) return { text:'科技公司冲 Lv25：' + ROCKET_NAME.name + '加入', cur:S[3].lv, need:CFG.ROCKET_UNLOCK_LV, lv:true };

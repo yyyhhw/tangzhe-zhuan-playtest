@@ -16,8 +16,8 @@ for (const file of ['app.js', 'pet/game/app.js']) {
     assert.match(s, /id="gachaDailyDone" disabled>\$\{E\.CFG\.GACHA_DAILY_LIMIT\} 次已开完</);
     assert.doesNotMatch(s, /gachaDailyDone" disabled>[^<]*明天再来/);
     assert.match(s, /今日剩余 \$\{dailyLeft\}\/\$\{E\.CFG\.GACHA_DAILY_LIMIT\}\$\{dailyLeft > 0 \? '' : ' · ' \+ gachaResumeText\(now\(\)\)\}</);   // 盲盒-96：恢复时间挪到「今日剩余」行，390 不折行
-    assert.match(s, /gachaShownDay = E\.dayKey\(now\(\)\);/);
-    assert.match(s, /if \(tab === 'gacha' && gachaShownDay && E\.dayKey\(t\) !== gachaShownDay\) \{ renderTab\(\); return; \}/);
+    assert.match(s, /gachaShownDay = gachaDayStamp\(now\(\)\);/);
+    assert.match(s, /if \(tab === 'gacha' && gachaShownDay && gachaDayStamp\(t\) !== gachaShownDay\) \{ renderTab\(\); return; \}/);
     assert.doesNotMatch(s.slice(s.indexOf('function gachaResumeText')).split('\n')[0], /gachaDaily\s*=/, 'helper never writes the counter');
   });
   test(file + ': resume text follows device timezone (今天/明天 + local HH:MM)', () => {

@@ -7,7 +7,7 @@ const COLLECTION = window.FormalCollectionRuntime;
 if (!COLLECTION?.ownsLock()) {
   // Stale HTML can fetch a new script before bootstrap. No storage access here.
   const url=new URL(location.href);
-  if(url.searchParams.get('v')!=='formal-box83-20261014-r1') {url.searchParams.set('v','formal-box83-20261014-r1');location.replace(url.href);}
+  if(url.searchParams.get('v')!=='formal-takeover-20261014-r1') {url.searchParams.set('v','formal-takeover-20261014-r1');location.replace(url.href);}
   else {const notice=document.createElement('p');notice.textContent='页面资源尚未更新完整，存档未写入。请关闭此页后重新打开。';document.body.prepend(notice);}
   return;
 }
@@ -154,7 +154,11 @@ function fmtDur(sec) {
 }
 function fmtClockLocal(ts) { const d = new Date(ts); return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
 // 盲盒-92：每日开盒次数恢复时间，按本机时区写「明天 HH:MM 恢复」（恢复点落在本机今天时写「今天」）
-function gachaResumeText(t) { const r = E.nextResetTs(t), a = new Date(t), b = new Date(r); const same = a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); return (same ? '今天 ' : '明天 ') + fmtClockLocal(r) + ' 恢复'; }
+function gachaResumeText(t) { const g = typeof state !== 'undefined' && state ? state.gachaDaily : null, fut = !!(g && typeof g.day === 'string' && g.day > E.dayKey(t)); let r = E.nextResetTs(t); for (let i = 0; fut && i < 4000 && E.dayKey(r) <= g.day; i++) r = E.nextResetTs(r); const a = new Date(t), b = new Date(r), d = Math.round((new Date(b.getFullYear(), b.getMonth(), b.getDate()) - new Date(a.getFullYear(), a.getMonth(), a.getDate())) / 86400000); return (d === 0 ? '今天 ' : d === 1 ? '明天 ' : (b.getFullYear() === a.getFullYear() ? '' : b.getFullYear() + '年') + (b.getMonth() + 1) + '月' + b.getDate() + '日 ') + fmtClockLocal(r) + ' 恢复'; }
+// 盲盒-92 补：存档里的开盒日期比本机今天还晚（手机时间被往前调过又调回）——按已开满算，并写清要到哪天几点才恢复
+function gachaFutureNote(t) { const g = state && state.gachaDaily; if (!g || typeof g.day !== 'string' || !(g.day > E.dayKey(t))) return ''; return `<div class="desc" id="gachaFutureNote" style="margin-top:4px;color:var(--red)">存档里的开盒日期（${g.day}）比本机今天晚，可能调过手机时间；今天按已开满算，${gachaResumeText(t)}</div>`; }
+// 盲盒-92 补：除了游戏日，还记本机日历日——停在页上跨过午夜时「明天 06:00」要自己变成「今天 06:00」
+function gachaDayStamp(t) { return E.dayKey(t) + '|' + new Date(t).toDateString(); }
 let gachaShownDay = '';   // 盲盒-92：盲盒页渲染时的游戏日；停在页上跨过切换点时自动重画
 
 /* ================= 声音（切后台/锁屏立即暂停） ================= */
@@ -1473,7 +1477,7 @@ function renderCeo() {
 }
 function renderGacha() {
   const owned = E.ITEMS.filter(x=>x.hidden!==true&&state.gacha.owned.includes(x.id)).length, total = E.REGULAR_ITEMS.length + E.SUPER_ITEMS.length, rem = total - owned, unlocked = E.gachaUnlocked(state), price = E.gachaPrice(state), o = E.gachaOdds(state), dailyLeft = E.gachaDailyLeft(state, now());
-  gachaShownDay = E.dayKey(now());
+  gachaShownDay = gachaDayStamp(now());
   const box = `<svg viewBox="0 0 84 84"><rect x="10" y="30" width="64" height="46" rx="4" fill="${unlocked ? '#ffd23f' : '#ccc'}" stroke="#141414" stroke-width="4"/><rect x="6" y="20" width="72" height="16" rx="3" fill="${unlocked ? '#e63946' : '#aaa'}" stroke="#141414" stroke-width="4"/><rect x="36" y="20" width="12" height="56" fill="#fff" stroke="#141414" stroke-width="3"/><path d="M42 20 C30 4 18 10 26 20 M42 20 C54 4 66 10 58 20" fill="none" stroke="#141414" stroke-width="4"/><text x="42" y="64" font-size="18" font-weight="900" text-anchor="middle" fill="#141414">${unlocked ? '?' : '🔒'}</text></svg>`;
   const P = x => (x * 100 >= 10 || x === 0 ? (x * 100).toFixed(0) : (x * 100).toFixed(1)) + '%';
   const ownS = E.SUPER_ITEMS.filter(it => state.gacha.owned.includes(it.id)).length, ownR = owned - ownS;
@@ -1484,7 +1488,7 @@ function renderGacha() {
     h += `<div class="box-hero"><div class="box-ico" id="boxIco">${box}</div><div class="info"><div class="name">已收集 ${owned}/${total}</div>
       <div class="desc">${rem ? `下一抽：<b>超级装饰 ${P(o.superP)}</b>${o.remSuper ? `（每件 ${P(o.perSuper)}）` : ''} · 普通收藏 ${P(o.regP)}${o.remReg ? `（每件 ${P(o.perReg)}）` : ''}<br>${o.remSuper ? (o.guaranteed ? '<b style="color:var(--red)">这一抽必出超级装饰！</b>' : `保底：再 <b>${o.pityLeft}</b> 抽内必出超级装饰`) : '超级装饰已集齐'}` : `${total} 件全收集！`}</div>
       <div style="margin-top:6px">${!rem ? '<button class="buy no" disabled>已集齐</button>' : dailyLeft > 0 ? btn('draw', '', '开一个', price, 'red') : `<button class="buy no" id="gachaDailyDone" disabled>${E.CFG.GACHA_DAILY_LIMIT} 次已开完</button>`}</div>
-      ${rem ? `<div class="desc" id="gachaDailyLeft" style="margin-top:4px">今日剩余 ${dailyLeft}/${E.CFG.GACHA_DAILY_LIMIT}${dailyLeft > 0 ? '' : ' · ' + gachaResumeText(now())}</div>` : ''}</div></div>`;
+      ${rem ? `<div class="desc" id="gachaDailyLeft" style="margin-top:4px">今日剩余 ${dailyLeft}/${E.CFG.GACHA_DAILY_LIMIT}${dailyLeft > 0 ? '' : ' · ' + gachaResumeText(now())}</div>` : ''}${rem ? gachaFutureNote(now()) : ''}</div></div>`;
   }
   h += `<div class="sec-title">超级装饰 ${ownS}/${E.SUPER_ITEMS.length}（每店一件，只能抽到）</div>`;
   h += E.SUPER_ITEMS.map(it => { const has = state.gacha.owned.includes(it.id);
@@ -1608,7 +1612,7 @@ function refreshDynamic(force) {
   tabBody.querySelectorAll('[data-cost]').forEach(b => b.classList.toggle('no', !E.canAfford(state, +b.dataset.cost)));
   refreshCrit();   // 暴击说明不受 900ms 限制：连击中 / 刚断连都马上对上店景 HUD
   if (!force && t - lastDyn < 900) return; lastDyn = t;
-  if (tab === 'gacha' && gachaShownDay && E.dayKey(t) !== gachaShownDay) { renderTab(); return; }   // 盲盒-92：跨过切换点，刷新「今日剩余」和按钮
+  if (tab === 'gacha' && gachaShownDay && gachaDayStamp(t) !== gachaShownDay) { renderTab(); return; }   // 盲盒-92：跨过切换点或本机午夜，刷新「今日剩余」、恢复时间和按钮
   // 下一步
   const gl = E.nextGoal(state); $('#goalTxt').textContent = gl.text + (gl.lv ? `（${gl.cur}/${gl.need}）` : gl.count ? `（${gl.cur}/${gl.need}）` : '');
   $('#goalBar').style.width = Math.min(100, gl.cur / gl.need * 100).toFixed(0) + '%';
@@ -1836,7 +1840,7 @@ function showGachaOpen() {
 let drawing = false;
 function doGacha(b) {
   if (drawing) return;
-  if (E.gachaDailyLeft(state, now()) <= 0) { renderTab(); return failBuy(b, '今天的 ' + E.CFG.GACHA_DAILY_LIMIT + ' 次已开完，明天再来'); }   // 杨总 16:12：每天 5 次，挡住时不扣币
+  if (E.gachaDailyLeft(state, now()) <= 0) { renderTab(); return failBuy(b, '今天的 ' + E.CFG.GACHA_DAILY_LIMIT + ' 次已开完，' + gachaResumeText(now())); }   // 杨总 16:12：每天 5 次，挡住时不扣币
   const r = atomic(() => E.gachaDraw(state, rand(), undefined, now()), '开盒没有生效，金币已退回');
   if (!r.ok && r.dailyLimit) { renderTab(); return failBuy(b, r.why); }
   if (!r.ok) { if (r.why === 'saveFailed') return; return failBuy(b, r.why); }
@@ -2213,7 +2217,7 @@ function renderRoom() {
   const next = H.lv < E.HOME_MAX ? E.HOME_TIERS[H.lv] : null, sel = homeSel && H.placed.find(p => p.uid === homeSel);
   let h = `<div class="card home-card"><div class="ava sq">${HOME_ICON[H.lv - 1]}</div><div class="info"><div class="name">${c.name} 的${T.name}<span class="lv">Lv.${H.lv}</span></div>
     <div class="desc">${T.cols}×${T.rows} 格 · 豪华度 <b class="lux" id="homeLux">${lux}</b></div>
-    <div class="gain">${next ? `升级成${next.name}：${next.cols}×${next.rows} 格，豪华度 +${next.bonus}` : '已经是最高档豪宅'}</div></div>
+    <div class="gain">${next ? `升级成${next.name}：${next.cols}×${next.rows} 格，房间自带豪华度 +${next.bonus}（现在 +${T.bonus}）` : '已经是最高档豪宅'}</div></div>
     ${next ? btn('homeUp', id, '升级', next.cost) : '<button class="buy no" disabled>顶级</button>'}</div>`;
   const isRug = p => E.FURN_BY_ID[p.fid].layer === 'rug' ? 0 : 1, footY = p => p.y + E.furnSize(p.fid, p.rot).h;
   const isWall = p => E.itemSurf(p) === 'wall';
@@ -2455,7 +2459,7 @@ function petPanelFocus(open) {
   const scroll=$(open?'#petPanelTitle':homeSub==='room'?'#room':'#petEntry');if(scroll)scroll.scrollIntoView({block:open?'nearest':'start'});
 }
 function petAfterResult(r) {
-  if (!r.ok) { if (!r.same) { sfx('no'); toast(r.stage === 'save' || r.stage === 'blocked' ? '保存失败：宠物位置与金币均未改变' : r.why || '没有完成'); } dirty = true; return; }
+  if (!r.ok) { if (!r.same) { sfx('no'); toast(r.uncertain || persist.pending || COLLECTION.coordinator.failed ? '保存结果还没确认：先别重复操作，重新打开后以存档为准' : r.stage === 'blocked' ? (saveBlocked || frozen ? '存档异常（只读模式）：这次没有生效，原存档保留' : (r.why || '这次没有生效')) : r.stage === 'save' ? '保存失败：这次没有生效，请稍后再试' : r.why || '没有完成'); } dirty = true; return; }
   for (const a of petActors.values()) a.rt.acknowledgePersist(state);
   petSyncActors(); sfx('tap');
   if (typeof r.room === 'string') {

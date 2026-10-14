@@ -1,8 +1,8 @@
 /** 盲盒200 显示：图一律从 art/collectibles/box200/<ID>.png 读（512×512 透明 PNG，见 /workspace/box200/style.md）。
  * 放图即生效：图鉴图标、CEO 身上的衣/帽、店铺装饰卡片都用同一张图。图没到时显示「图示暂不可用」，不报错。 */
-import {BOX200_ITEMS} from './box200-items.mjs?v=box83-20261014-r1';
+import {BOX200_ITEMS} from './box200-items.mjs?v=takeover-20261014-r1';
 const meta=Object.fromEntries(BOX200_ITEMS.map(x=>[x.id,x]));
-export const artURL=id=>new URL('../art/collectibles/box200/'+id+'.png?v=box83-20261014-r1',import.meta.url).href;
+export const artURL=id=>new URL('../art/collectibles/box200/'+id+'.png?v=takeover-20261014-r1',import.meta.url).href;
 const escape=v=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const images=new Map();
 function image(id){let i=images.get(id);if(!i&&typeof Image==='function'){i=new Image();i.src=artURL(id);images.set(id,i);}return i;}

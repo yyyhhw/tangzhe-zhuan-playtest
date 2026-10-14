@@ -129,11 +129,12 @@ export async function assembly({scope='formal',path,query='',projectRoot='/',ena
     assert.ok(persist&&txn&&hooks,'actual app hook extraction');
     const extract=name=>text.match(new RegExp(`function ${name}\\([^\\n]*\\) \\{[\\s\\S]*?\\n\\}`))?.[0];
     const atomic=extract('atomic'),doGacha=extract('doGacha'),saveFailNote=extract('saveFailNote');assert.ok(atomic&&doGacha&&saveFailNote);
+    const lineFn=name=>text.split('\n').find(l=>l.startsWith(`function ${name}(`))||'',clockFns=lineFn('fmtClockLocal')+'\n'+lineFn('gachaResumeText');   // 文案-94：doGacha 被挡提示用盲盒-92 的 gachaResumeText
 
     return `const E=window.Economy,COLLECTION=window.${scope==='formal'?'Formal':'Preview'}CollectionRuntime,TEST_MODE=false;
       let frozen=false,saveBlocked=false,state=COLLECTION.coordinator.current().state,lastGood=COLLECTION.coordinator.raw,dirty=false;
       const now=()=>Date.now(),toast=(message)=>globalThis.__modelToasts.push(message),showCollectionProtection=code=>globalThis.__modelErrors.push(code),restoreGood=()=>{};
-      ${persist}\n${txn}\n${saveFailNote}\n${atomic}\nlet drawing=false;const rand=()=>globalThis.__gachaRandom?globalThis.__gachaRandom():0,sfx=()=>{},failBuy=(b,why)=>(globalThis.__failBuy=globalThis.__failBuy||[]).push(why),renderTab=()=>{},showReveal=()=>{globalThis.__revealCalls=(globalThis.__revealCalls||0)+1;};\n${doGacha}
+      ${persist}\n${txn}\n${saveFailNote}\n${atomic}\nlet drawing=false;const rand=()=>globalThis.__gachaRandom?globalThis.__gachaRandom():0,sfx=()=>{},failBuy=(b,why)=>(globalThis.__failBuy=globalThis.__failBuy||[]).push(why),renderTab=()=>{},showReveal=()=>{globalThis.__revealCalls=(globalThis.__revealCalls||0)+1;};\n${clockFns}\n${doGacha}
       ${fullBoot?bootPreparation(text):'const petBeforePersist=()=>{};'}
       window.__tzz={${observeDirty?'get reviewDirty(){return dirty;},set reviewDirty(value){dirty=value;},':''}persist,txn,atomic,doGacha,get state(){return state;},set state(s){state=s;},get saveBlocked(){return saveBlocked;},get lastGood(){return lastGood;}};
       ${hooks}
@@ -149,7 +150,7 @@ export async function assembly({scope='formal',path,query='',projectRoot='/',ena
   function moduleFor(url){
     if(!modules.has(url)){
       moduleLoads.push(url);const u=new URL(url);
-      const app=u.pathname.endsWith('/app.js')&&[RELEASE,'box83-20261014-r1'].includes(u.searchParams.get('v'));
+      const app=u.pathname.endsWith('/app.js')&&[RELEASE,'takeover-20261014-r1'].includes(u.searchParams.get('v'));
       const code=app?actualAppHooks(url):getSource(url);if(app){const loaded=loadedSources.get(url);loaded.executedSha256=createHash('sha256').update(code).digest('hex');loaded.transform='EXTRACTED_ACTUAL_SAVE_HOOKS_AND_BOOT_PREFIX';}
       modules.set(url,new vm.SourceTextModule(code,{context,identifier:url,initializeImportMeta(meta){meta.url=url;},
         async importModuleDynamically(specifier,ref){const next=new URL(specifier,ref.identifier).href;dynamicImports.push(next);if(rejectModule&&next.includes(rejectModule))throw Error('MODEL_MODULE_404');return evaluate(next);}}));
