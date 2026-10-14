@@ -1,10 +1,10 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import {createHash} from 'node:crypto';import {createRequire} from 'node:module';
 import display from '../../qa-protocol2/wearables8-display.mjs';import {prepareEightWearableCatalog,EIGHT_WEARABLES} from '../../qa-protocol2/eight-catalog.mjs';import {assembly,until,source,RELEASE,ROOT} from './production-harness.mjs';
-const ENTRY_TOKEN='copy124-20261014-r1';
-const UI_TOKEN="copy124-20261014-r1";
+const ENTRY_TOKEN='xingtuv2-1-20261014-r1';
+const UI_TOKEN="xingtuv2-1-20261014-r1";
 const root=path.fileURLToPath?path.fileURLToPath(ROOT):decodeURIComponent(ROOT.pathname),require=createRequire(import.meta.url);const sha=b=>createHash('sha256').update(b).digest('hex');
 test('actual candidate production flag/token, root/preview/rootpet version chain and separate unchanged previewpet',()=>{
- assert(source('collectibles/release.mjs').includes('COLLECTIBLES_PRODUCTION_ENABLED = true'));assert.equal(RELEASE,'copy124-20261014-r1');
+ assert(source('collectibles/release.mjs').includes('COLLECTIBLES_PRODUCTION_ENABLED = true'));assert.equal(RELEASE,'xingtuv2-1-20261014-r1');
  for(const prefix of ['','preview/','pet/game/']){const kind=prefix==='preview/'?'preview':'formal',html=source(prefix+'index.html');assert.equal(JSON.parse(source(prefix+'version.json')).v,kind+'-'+RELEASE);assert(html.includes("var B='"+kind+'-'+RELEASE+"'"));assert(html.includes('collection/bootstrap.mjs?v='+RELEASE));for(const m of html.matchAll(/(?:src|href)="([^"?]+)\?v=([^"']+)"/g))assert(fs.existsSync(new URL(m[1],new URL(prefix,ROOT))),prefix+m[1]);}
  assert.equal(JSON.parse(source('preview/pet/game/version.json')).v,'preview-tea-td-cards-out-20261012-r1');assert(!source('preview/pet/game/app.js').includes('WEARABLES8'));
  for(const p of ['collection/bootstrap.mjs','preview/collection/bootstrap.mjs']){assert(source(p).includes('collectibles/release.mjs?v='+RELEASE));assert(source(p).includes('collectibles/entry.mjs?v='+ENTRY_TOKEN));assert(source(p).includes('cardEntryEnabled:false'));}
@@ -12,7 +12,8 @@ test('actual candidate production flag/token, root/preview/rootpet version chain
 test('all literal imports in new module closure resolve inside project and use the final token; derived pins match executed bytes',()=>{
  let count=0;const walk=p=>fs.readdirSync(p,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(path.join(p,e.name)):[path.join(p,e.name)]);
  for(const dir of ['collectibles','qa-protocol2','candidates/blindbox18','space'])for(const file of walk(path.join(root,dir)).filter(p=>p.endsWith('.mjs'))){const src=fs.readFileSync(file,'utf8');for(const m of src.matchAll(/(?:from\s*|import\s*\(\s*)['"]([^'"]+)['"]/g)){if(!m[1].startsWith('./')&&!m[1].startsWith('../'))continue;const u=new URL(m[1],'file://'+file);assert.equal(u.searchParams.get('v'),RELEASE,file+m[1]);assert(u.pathname.startsWith(root));assert(fs.existsSync(u));count++;}}
- assert.equal(count,75);// 星途-114：moon.mjs + overlay.mjs 各新增 album.mjs
+ assert.equal(count,78);// 星途v2-1：overlay.mjs 新增 xingtu-css/xingtu-views，xingtu-views 新增 xingtu-art
+// 星途-114：moon.mjs + overlay.mjs 各新增 album.mjs
 // 星途-113：moon.mjs + overlay.mjs 各新增 voyage-ev.mjs 字面量 import
 for(const pin of JSON.parse(source('qa-protocol2/dependency-pins.json'))){const bytes=fs.readFileSync(new URL(pin.path,ROOT));assert.equal(pin.sha256,sha(bytes));assert.equal(pin.bytes,bytes.length);}
 });
@@ -29,7 +30,7 @@ for(const scope of ['formal','preview'])test(scope+': actual no-query bootstrap 
 const homeEntries=['index.html','pet/game/index.html'];
 function assertHomeRenderer(html,entry){
  const scripts=[...html.matchAll(/<script\b[^>]*\bsrc="([^"]+)"/g)].map(m=>new URL(m[1],new URL(entry,'https://example.test/tangzhe-zhuan-playtest/'))).filter(u=>u.pathname==='/tangzhe-zhuan-playtest/home-interaction.js');
- assert.equal(scripts.length,1,entry+' must load the shared renderer exactly once');assert.equal(scripts[0].searchParams.get('v'),'copy124-20261014-r1',entry+' changed renderer must use the production combination token');
+ assert.equal(scripts.length,1,entry+' must load the shared renderer exactly once');assert.equal(scripts[0].searchParams.get('v'),'xingtuv2-1-20261014-r1',entry+' changed renderer must use the production combination token');
 }
 test('changed shared home renderer: every actual HTML entry uses the exact production token',()=>{
  for(const entry of homeEntries)assertHomeRenderer(source(entry),entry);
@@ -37,5 +38,5 @@ test('changed shared home renderer: every actual HTML entry uses the exact produ
  const references=walk(root).filter(p=>p.endsWith('.html')&&/<script\b[^>]*\bsrc="[^"]*home-interaction\.js(?:\?|")/.test(fs.readFileSync(p,'utf8'))).map(p=>path.relative(root,p).split(path.sep).join('/')).sort();assert.deepEqual(references,[...homeEntries].sort(),'complete actual HTML reference inventory');
 });
 test('negative control: old v=15c renderer URL is rejected for both root and formal pet',()=>{
- for(const entry of homeEntries){const html=source(entry),stale=html.replace('home-interaction.js?v=copy124-20261014-r1','home-interaction.js?v=15c');assert.notEqual(stale,html);assert.throws(()=>assertHomeRenderer(stale,entry),{code:'ERR_ASSERTION'});}
+ for(const entry of homeEntries){const html=source(entry),stale=html.replace('home-interaction.js?v=xingtuv2-1-20261014-r1','home-interaction.js?v=15c');assert.notEqual(stale,html);assert.throws(()=>assertHomeRenderer(stale,entry),{code:'ERR_ASSERTION'});}
 });

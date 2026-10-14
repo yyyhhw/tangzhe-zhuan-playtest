@@ -1,12 +1,15 @@
-import {createMoonHost} from './host.mjs?v=copy124-20261014-r1';
-import {moonArt} from './art.mjs?v=copy124-20261014-r1';
-import {MOON_CSS} from './styles.mjs?v=copy124-20261014-r1';
-import {EVENTS} from './voyage-ev.mjs?v=copy124-20261014-r1';
-import {ROUTES,ROUTE_BY_ID,OPEN_ROUTES,TOTAL_CARDS,ALIEN_DENOM,cardOf} from './album.mjs?v=copy124-20261014-r1';
+import {createMoonHost} from './host.mjs?v=xingtuv2-1-20261014-r1';
+import {moonArt} from './art.mjs?v=xingtuv2-1-20261014-r1';
+import {MOON_CSS} from './styles.mjs?v=xingtuv2-1-20261014-r1';
+import {EVENTS} from './voyage-ev.mjs?v=xingtuv2-1-20261014-r1';
+import {XT2_CSS} from './xingtu-css.mjs?v=xingtuv2-1-20261014-r1';
+import {renderMap,renderShip,gate,ART} from './xingtu-views.mjs?v=xingtuv2-1-20261014-r1';
+import {ROUTES,ROUTE_BY_ID,OPEN_ROUTES,TOTAL_CARDS,ALIEN_DENOM,cardOf} from './album.mjs?v=xingtuv2-1-20261014-r1';
+const TABS=[['xingtuTabVoyage','出航','voyage'],['xingtuTabMap','星图','map'],['xingtuTabShip','飞船','ship'],['xingtuTabAlbum','册子','album']];
 export function installMoonOverlay({app,runtime,document:doc=globalThis.document,window:win=globalThis}){
  if(win.XingTu)throw Error('SPACE_HOST_ALREADY_INSTALLED');
  let cover=null,body=null,content=null,timer=null,host,closeButton=null,origin=null,signature=null,revoked=false,renderFailed=false;
- let background=[],tab='voyage',albumPick=null;
+ let background=[],tab='voyage',albumPick=null,mapPick='moon',shipRoom='tech';
  const connected=n=>!!n&&(n.isConnected===undefined?!!n.parentNode:n.isConnected);
  const usable=n=>{if(!connected(n)||n.disabled)return false;for(let p=n;p;p=p.parentNode){if(p.nodeType!==undefined&&p.nodeType!==1)break;if(p.hidden||p.inert||p.getAttribute?.('aria-hidden')==='true')return false;const style=win.getComputedStyle?.(p);if(style&&(style.display==='none'||style.visibility==='hidden'||style.visibility==='collapse'))return false;}return true;};
  const focus=n=>{if(usable(n))n.focus?.();};
@@ -16,7 +19,7 @@ export function installMoonOverlay({app,runtime,document:doc=globalThis.document
  const node=(tag,id,text)=>{const n=doc.createElement(tag);if(id)n.id=id;if(text!==undefined)n.textContent=text;return n;};
  const cardImage=(route,n,title,thumb=false)=>{
   if(!OPEN_ROUTES.includes(route)||!Number.isInteger(n)||!cardOf(route,n))return null;
-  const img=node('img');img.className='xingtu-cardart'+(thumb?' xingtu-cardart-thumb':'');img.src=new URL(`../art/spacecards/${route}_${n}.webp?v=copy124-20261014-r1`,import.meta.url).href;img.alt=thumb?'':title;img.width=1024;img.height=768;img.loading=thumb?'lazy':'eager';img.decoding='async';img.onerror=()=>{img.hidden=true;};return img;
+  const img=node('img');img.className='xingtu-cardart'+(thumb?' xingtu-cardart-thumb':'');img.src=new URL(`../art/spacecards/${route}_${n}.webp?v=xingtuv2-1-20261014-r1`,import.meta.url).href;img.alt=thumb?'':title;img.width=1024;img.height=768;img.loading=thumb?'lazy':'eager';img.decoding='async';img.onerror=()=>{img.hidden=true;};return img;
  };
  const appendCardImage=(parent,route,n,title,thumb=false)=>{const img=cardImage(route,n,title,thumb);if(img)parent.append(img);};
  const fmt=ms=>{const s=Math.ceil(ms/1000);return `${Math.floor(s/60)}分${String(s%60).padStart(2,'0')}秒`;};
@@ -33,23 +36,30 @@ export function installMoonOverlay({app,runtime,document:doc=globalThis.document
   const head=node('div');head.className='xingtu-head';closeButton=button('xingtuClose','返回经营',()=>host.close());head.append(node('h2',null,'星途 · 月面基地'),closeButton);body.append(head);
   const warning=node('p','xingtuRuleset','每次 10 分钟 · 返航途中会遇到一件事，看完再领探索点');warning.className='xingtu-test';body.append(warning);
   // 星途-114：「出航」「册子」两个页签（星途-08 稿三）
-  const tabs=node('div','xingtuTabs');tabs.className='xingtu-tabs';tabs.setAttribute('role','tablist');tab='voyage';albumPick=null;
-  for(const [id,label,key] of [['xingtuTabVoyage','出航','voyage'],['xingtuTabAlbum','册子','album']]){const b=button(id,label,()=>{if(tab===key)return;tab=key;albumPick=null;signature=null;host.refresh();});b.setAttribute('role','tab');tabs.append(b);}
+  const tabs=node('div','xingtuTabs');tabs.className='xingtu-tabs';tabs.setAttribute('role','tablist');tab='voyage';albumPick=null;mapPick='moon';shipRoom='tech';
+  for(const [id,label,key] of TABS){const b=button(id,label,()=>{if(tab===key)return;tab=key;albumPick=null;signature=null;host.refresh();});b.setAttribute('role','tab');tabs.append(b);}
   body.append(tabs);
-  content=node('div','xingtuContent');body.append(content);doc.body.append(cover);isolate();return true;
+  content=node('div','xingtuContent');body.append(content);
+  // 星途 v2：demo 样式（限定在 .xt2 内）和 SVG 公共 defs，只装一次
+  if(!doc.getElementById('xingtuV2Css')){const st=node('style','xingtuV2Css');st.textContent=XT2_CSS;doc.head?.append?.(st);}
+  const defs=node('div','xingtuDefs');defs.setAttribute('aria-hidden','true');defs.style&&(defs.style.cssText='position:absolute;width:0;height:0;overflow:hidden');defs.innerHTML=ART.allDefs();cover.append(defs);doc.body.append(cover);isolate();return true;
  }
  const schedule=view=>{if(view.ok&&view.phase==='flying')timer=win.setTimeout(()=>{timer=null;if(host.isOpen()&&!doc.hidden)host.refresh();},1000);};
  function render(view){try{return renderView(view);}catch(error){renderFailed=true;try{host.close();}finally{renderFailed=false;}throw error;}}
  function renderView(view){
   if(!host?.isOpen())return;const created=ensure();clearTimer();
-  const next=JSON.stringify([view.ok,view.code,view.phase,view.voyage?.voyageId,view.receipt,view.space?.pts,view.space?.visits,view.event,view.award,tab,albumPick,host.token]);
+  const next=JSON.stringify([view.ok,view.code,view.phase,view.voyage?.voyageId,view.receipt,view.space?.pts,view.space?.visits,view.event,view.award,tab,albumPick,mapPick,shipRoom,view.space?.lv,view.space?.items,host.token]);
   if(signature===next){if(view.phase==='flying'&&tab==='voyage'&&doc.getElementById('xingtuRemaining')){doc.getElementById('xingtuRemaining').textContent=`剩余 ${fmt(view.remaining)}`;doc.getElementById('xingtuProgress').value=600000-view.remaining;const p=1-view.remaining/600000;doc.getElementById('xingtuStarMap').querySelector?.('use')?.setAttribute('transform',`translate(${72+p*160} ${84-Math.sin(p*Math.PI)*38}) rotate(65)`);}schedule(view);return;}
   signature=next;const previousFocus=doc.activeElement;while(content.firstChild)content.firstChild.remove();
   renderContent(view);if(created||!usable(previousFocus))focus(closeButton);schedule(view);
  }
  function renderContent(view){
-  for(const [id,key] of [['xingtuTabVoyage','voyage'],['xingtuTabAlbum','album']])doc.getElementById(id)?.setAttribute('aria-selected',String(tab===key));
+  for(const [id,,key] of TABS)doc.getElementById(id)?.setAttribute('aria-selected',String(tab===key));
   if(view.ok&&tab==='album'){renderAlbum(view);return;}
+  // 星途 v2 第一批：星图 / 飞船（只读）
+  if(view.ok&&(tab==='map'||tab==='ship')){const wrap=node('div','xingtuV2');wrap.className='xt2';content.append(wrap);
+   if(tab==='map')renderMap(wrap,{doc,space:view.space,pick:mapPick,onPick:id=>{mapPick=id;host.refresh();},goVoyage:()=>{tab='voyage';host.refresh();}});
+   else renderShip(wrap,{doc,space:view.space,room:shipRoom,onRoom:k=>{shipRoom=k;host.refresh();}});return;}
   if(!view.ok){const error=node('p','xingtuProtection',view.code.includes('COMPATIBILITY')?'这趟航程的记录读不懂，先原样留着：航程没清，探索点也没多发。点「返回经营」接着玩就好。':'星途现在存不了档，先不动它。看看手机时间对不对、别的页面是不是也开着游戏，处理好后点「返回经营」，再重新打开星图。');error.className='xingtu-error';content.append(error,detail(view.code));return;}
   const art=node('div','xingtuStarMap');art.className='xingtu-art';art.innerHTML=moonArt(view.phase==='flying'?1-view.remaining/600000:0);content.append(art);
   const status=node('div','xingtuStatus');status.className='xingtu-status';content.append(status);
@@ -82,7 +92,9 @@ export function installMoonOverlay({app,runtime,document:doc=globalThis.document
    status.append(node('p',null,'月面往返已完成，返航报告待确认。'),node('p','xingtuArrival',`已于${when(view.arrival)} 到达`));const box=node('div','xingtuEvent');box.className='xingtu-event';awardBlocks(box,view);if(box.firstChild)actions.append(box);actions.append(button('xingtuClaim','确认返航报告 · 领取8探索点',()=>act({type:'claim',voyageId:view.voyage.voyageId})));
   }else{
    status.append(node('p',null,`当前探索点：${view.space.pts} · 月面往返次数：${view.space.visits.moon??0}`));
-   actions.append(button('xingtuDepart','出航月面基地',()=>act({type:'depart',route:'moon'})));
+   // 杨总 10/14 22:26：出航需要四个岗位科研——月面也要过四岗检查
+   const g=gate(view.space,'moon'),dep=button('xingtuDepart',g.ok?'出航月面基地':'岗位科研不够，先去升级',()=>gate(view.space,'moon').ok?act({type:'depart',route:'moon'}):undefined);dep.disabled=!g.ok;actions.append(dep);
+   if(!g.ok){const l=node('p','xingtuLack',`还差：${g.lack}`);l.className='xingtu-error';actions.append(l);}
   }
    if(view.receipt){const evName=view.receipt.ev?EVENTS[view.receipt.ev]?.name:null;const got=view.receipt.card?cardOf(view.receipt.route,view.receipt.card):null,extra=got?` · 剧情卡「${got.title}」`:'';const report=node('div','xingtuReport',evName?`最近返航报告：${evName} · 已入账 ${view.receipt.points} 探索点${extra} · ${when(view.receipt.claimedAt)}`:`最近返航报告：月面基地 · 已入账 ${view.receipt.points} 探索点（一次）${extra} · ${when(view.receipt.claimedAt)}`);report.className='xingtu-receipt';content.append(report);}
 
