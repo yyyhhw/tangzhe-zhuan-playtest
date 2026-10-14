@@ -7,7 +7,7 @@ const COLLECTION = window.FormalCollectionRuntime;
 if (!COLLECTION?.ownsLock()) {
   // Stale HTML can fetch a new script before bootstrap. No storage access here.
   const url=new URL(location.href);
-  if(url.searchParams.get('v')!=='formal-sfx111-20261014-r1') {url.searchParams.set('v','formal-sfx111-20261014-r1');location.replace(url.href);}
+  if(url.searchParams.get('v')!=='formal-sfx112fix-20261014-r1') {url.searchParams.set('v','formal-sfx112fix-20261014-r1');location.replace(url.href);}
   else {const notice=document.createElement('p');notice.textContent='页面资源尚未更新完整，存档未写入。请关闭此页后重新打开。';document.body.prepend(notice);}
   return;
 }
@@ -177,7 +177,7 @@ function audioUnlock() { if(window.XingTu?.isOpen())return; // 只能在用户�
   if (!AU.started) { AU.started = true; startBgm(); }
 }
 function audioPause() { if (AU.ctx && AU.ctx.state === 'running') AU.ctx.suspend().catch(() => {}); stopBgm(); }
-function audioResume() { if (!AU.ctx || state.muted || document.hidden || frozen || window.XingTu?.isOpen()) return; AU.ctx.resume().catch(() => {}); if (AU.started) startBgm(); }
+function audioResume() { if (!AU.ctx || state.muted || document.hidden || frozen) return; AU.ctx.resume().catch(() => {}); if (AU.started) startBgm(); }   /* 音效-112 修：星途开着也恢复 AudioContext（音效要响），BGM 由 startBgm() 的星途检查挡住 */
 function tone(f, t, dur, type = 'sine', vol = 0.3, dest = AU.sfx, f2) {
   const c = AU.ctx, o = c.createOscillator(), g = c.createGain();
   o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);

@@ -147,7 +147,7 @@ function audioUnlock() { if (tdOpen || zbOpen || window.XingTu?.isOpen()) return
   if (!AU.started) { AU.started = true; startBgm(); } else AU.recorded?.retry();
 }
 function audioPause() { if (AU.ctx && AU.ctx.state === 'running') AU.ctx.suspend().catch(() => {}); stopBgm(); }
-function audioResume() { if (!AU.ctx || state.muted || document.hidden || frozen || tdOpen || zbOpen || window.XingTu?.isOpen()) return; AU.ctx.resume().catch(() => {}); if (AU.started) startBgm(); }
+function audioResume() { if (!AU.ctx || state.muted || document.hidden || frozen || tdOpen || zbOpen) return; AU.ctx.resume().catch(() => {}); if (AU.started) startBgm(); }   /* 音效-112 修：星途开着也恢复 AudioContext（音效要响），BGM 由 startBgm() 的星途检查挡住 */
 function tone(f, t, dur, type = 'sine', vol = 0.3, dest = AU.sfx, f2) {
   const c = AU.ctx, o = c.createOscillator(), g = c.createGain();
   o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + dur);
@@ -2577,7 +2577,7 @@ const tdController = window.TDHost.create({
 function openTD() {
   if (frozen || tdOpen || zbOpen || window.XingTu?.isOpen() || !state.shops[1].open) return;
   tdOpen = true; const f = $('#tdFrame'), generation = ++tdGeneration;
-  const target = new URL('td/index.html?embed=1&v=sfx111-20261014-r1', location.href);
+  const target = new URL('td/index.html?embed=1&v=sfx112fix-20261014-r1', location.href);
   f.onload = () => {
     if (!tdOpen || generation !== tdGeneration) return;
     // Verify the actual loaded document, not merely an iframe src attribute.

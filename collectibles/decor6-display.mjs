@@ -1,9 +1,9 @@
 /** Owned shop presentation; loading is bounded to six images once per page. */
-import {DECOR6,HIDDEN_DECOR6} from './decor6-catalog.mjs?v=sfx111-20261014-r1';
-import {hiddenEligibility} from './decor6-grants.mjs?v=sfx111-20261014-r1';
+import {DECOR6,HIDDEN_DECOR6} from './decor6-catalog.mjs?v=sfx112fix-20261014-r1';
+import {hiddenEligibility} from './decor6-grants.mjs?v=sfx112fix-20261014-r1';
 const byId=Object.fromEntries(DECOR6.map(x=>[x.id,x]));
 const descriptions={d_borrow_register:'摊开的绿皮登记本，钢笔放在书页中央。',d_rocket_piggy:'小火箭上部一道投币口，把零钱存进下一次发射。',d_opening_photo:'四家店一起开张，合影留下这一刻。',d_ward_charm:'红绳系着护身符，记下通关第10关的勇气。',d_charcoal_chime:'炭篓下挂着长短不同的铜管，风来时轻轻作响。',d_spice_turntable:'铜边调料转盘，盘上斜放一把小勺。'};
-const paths=Object.fromEntries(DECOR6.map(x=>[x.id,new URL('../art/collectibles/'+x.id+(['d_charcoal_chime','d_spice_turntable'].includes(x.id)?'.png':'_catalog_v1.webp')+'?v=sfx111-20261014-r1',import.meta.url).href]));
+const paths=Object.fromEntries(DECOR6.map(x=>[x.id,new URL('../art/collectibles/'+x.id+(['d_charcoal_chime','d_spice_turntable'].includes(x.id)?'.png':'_catalog_v1.webp')+'?v=sfx112fix-20261014-r1',import.meta.url).href]));
 const images=new Map();
 const has=id=>Object.hasOwn(byId,id);
 function iconHTML(id){return `<span class="item-art"><img data-item-art="${id}" src="${paths[id]}" alt="${descriptions[id]}"><span class="item-art-status" hidden>图示暂不可用</span></span>`;}
