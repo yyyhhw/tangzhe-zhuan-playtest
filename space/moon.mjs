@@ -1,5 +1,5 @@
 /** Candidate-only moon rules. Pure host planner; no Storage, timers, UI results or wallet changes. */
-import {readSpace} from './domain.mjs?v=box200-w2345-20261014-r1';
+import {readSpace} from './domain.mjs?v=sfx111-20261014-r1';
 // 杨总 2026-10-14 01:32「星途所有店铺35级就可以了」：全部店铺 Lv35+ 解锁。正式航程 10 分钟、每次 8 探索点。
 export const MOON_RULES=Object.freeze({id:'xingtu-moon-10min-8pts-v1',route:'moon',duration:600000,points:8,minShopLevel:35});
 export const spaceUnlocked=state=>Array.isArray(state?.shops)&&state.shops.length>0&&state.shops.every(s=>s?.open===true&&Number.isSafeInteger(s.lv)&&s.lv>=MOON_RULES.minShopLevel);

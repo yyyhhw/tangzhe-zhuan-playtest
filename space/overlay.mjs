@@ -1,6 +1,6 @@
-import {createMoonHost} from './host.mjs?v=box200-w2345-20261014-r1';
-import {moonArt} from './art.mjs?v=box200-w2345-20261014-r1';
-import {MOON_CSS} from './styles.mjs?v=box200-w2345-20261014-r1';
+import {createMoonHost} from './host.mjs?v=sfx111-20261014-r1';
+import {moonArt} from './art.mjs?v=sfx111-20261014-r1';
+import {MOON_CSS} from './styles.mjs?v=sfx111-20261014-r1';
 export function installMoonOverlay({app,runtime,document:doc=globalThis.document,window:win=globalThis}){
  if(win.XingTu)throw Error('SPACE_HOST_ALREADY_INSTALLED');
  let cover=null,body=null,content=null,timer=null,host,closeButton=null,origin=null,signature=null,revoked=false,renderFailed=false;
