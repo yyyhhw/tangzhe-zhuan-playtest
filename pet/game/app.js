@@ -200,6 +200,9 @@ function sfx(name) {
     case 'reveal': [784, 988, 1175, 1568].forEach((f, i) => tone(f, t + i * 0.07, 0.3, 'sine', 0.2)); break;
     case 'big': tone(392, t, 0.12, 'square', 0.15); tone(523, t + 0.1, 0.12, 'square', 0.15); tone(784, t + 0.2, 0.3, 'square', 0.15); break;
     case 'coin': tone(1760, t, 0.06, 'square', 0.08); tone(2349, t + 0.05, 0.12, 'sine', 0.1); break;
+    case 'coins': [1568, 1760, 2093, 2349, 2637].forEach((f, i) => { tone(f, t + i * 0.06, 0.06, 'square', 0.07); tone(f * 1.5, t + i * 0.06 + 0.03, 0.1, 'sine', 0.08); }); break;   // 音效-111：每日双倍领取，一串金币
+    case 'place': tone(196, t, 0.12, 'triangle', 0.28, AU.sfx, 120); tone(392, t + 0.015, 0.05, 'sine', 0.1); break;   // 音效-111：家具放下的「咚」
+    case 'dress': tone(500, t, 0.14, 'triangle', 0.07, AU.sfx, 1400); tone(1568, t + 0.1, 0.12, 'sine', 0.1); break;   // 音效-111：换衣帽，比 swoosh 轻
   }
 }
 const N = s => 440 * Math.pow(2, (s - 69) / 12);
@@ -1263,7 +1266,7 @@ function act(a, arg, btn) {
     case 'amt': buyAmt = arg === 'max' ? 'max' : +arg; dirty = true; break;
     case 'comic': return showComic(arg, false);
     case 'draw': return doGacha(btn);
-    case 'equip': { const [who, slot, id] = arg.split(':'); const r = atomic(() => { if (!state.wear[who]) state.wear[who] = { clothes:null, hat:null }; state.wear[who][slot] = id === 'none' ? null : id; return { ok:true }; }, '换装没有生效'); dirty = true; avaCacheClear(); if (r.ok) sfx('buy'); break; }
+    case 'equip': { const [who, slot, id] = arg.split(':'); const r = atomic(() => { if (!state.wear[who]) state.wear[who] = { clothes:null, hat:null }; state.wear[who][slot] = id === 'none' ? null : id; return { ok:true }; }, '换装没有生效'); dirty = true; avaCacheClear(); if (r.ok) sfx('dress'); break; }
     case 'wearWho': wardrobeWho = arg; dirty = true; break;
     case 'jobView': { const [who, k] = arg.split(':'); jobView[who] = { i:+k, at:state.ceos[who].at }; dirty = true; sfx('tap'); break; }
     case 'jobBig': { const [who, k] = arg.split(':'); return showJobArt(who, +k); }
@@ -1714,7 +1717,7 @@ function showOffline() {
     if (claimTried) return null; claimTried = true;
     return atomic(() => E.claimOffline(state, now(), dbl), '离线收益没有到账，下次再领');
   };
-  const cheer = r => { sfx('reveal'); popWord(r.doubled ? '翻倍！' : '到账！'); bumpCoins(); burstCoins(W / 2, H * 0.5, 18); toast((r.doubled ? '双倍到账 +' : '到账 +') + fmt(r.amount) + (r.capped ? '（金币已到上限，多出的没进账）' : '')); dirty = true; };
+  const cheer = r => { sfx(r.doubled ? 'coins' : 'reveal'); popWord(r.doubled ? '翻倍！' : '到账！'); bumpCoins(); burstCoins(W / 2, H * 0.5, 18); toast((r.doubled ? '双倍到账 +' : '到账 +') + fmt(r.amount) + (r.capped ? '（金币已到上限，多出的没进账）' : '')); dirty = true; };
   const go = dbl => {
     const r = claim(dbl); if (!r) return;
     closeModal();
@@ -2560,14 +2563,14 @@ const petsHooks = {
   debug() { return [...petActors].map(([uid,a])=>({uid,species:petRoster().pets[uid]?.species,state:a.rt.debug()})); }
 };
 const petHooks = { PG, get M() { return petM; }, get rt() { return petActors.values().next().value?.rt || null; }, get w() { return this.rt && this.rt.w; }, get view() { return petActors.values().next().value?.view || null; }, get waiting() { return !!(this.rt && this.rt.waiting); }, manual:petsHooks.manual, advance(sec) { const uid=petActors.keys().next().value; const w=petsHooks.step(uid,sec); return w ? window.PetEngine.snapshot(w) : null; }, snapshot() { return this.w ? window.PetEngine.snapshot(this.w) : null; }, resume(ms) { petHiddenAt=now()-(ms||60000); petResume(); }, persist() { return persist(); } };
-function homeCommit(r, msg) {
+function homeCommit(r, msg, snd = 'tap') {
   if (!r.ok) { if (r.why === 'saveFailed') { dirty = true; return false; } sfx('no'); if (!r.same) toast(r.why); return false; }
   if (r.undo) pushUndo(r.undo);
-  sfx('tap'); if (msg) toast(msg); dirty = true; return true;
+  sfx(snd); if (msg) toast(msg); dirty = true; return true;
 }
 function homeAutoPlace(fid) {
   for (const rot of E.FURN_BY_ID[fid].wall ? [0] : [0, 1]) { const at = E.findFree(state, homeWho, fid, rot);   // 挂画自动挂不横转（不会侧着挂）；禁区和手动拖动同一份 canPlace
-    if (at) { const r = atomic(() => E.placeItem(state, homeWho, fid, at.x, at.y, rot, at.surf), HOME_FAIL); if (homeCommit(r)) homeSel = r.uid; return; } }
+    if (at) { const r = atomic(() => E.placeItem(state, homeWho, fid, at.x, at.y, rot, at.surf), HOME_FAIL); if (homeCommit(r, null, 'place')) homeSel = r.uid; return; } }
   sfx('no'); toast(E.FURN_BY_ID[fid].wall ? '墙面挂满了：先收一幅，或者换个位置' : '房间放不下了：先收回点东西，或者升级房子');
 }
 function homeAct(a, arg, b) {
@@ -2717,8 +2720,8 @@ function homeUp(e) {
   } else if (!d.cell) { sfx('no'); const nm = E.FURN_BY_ID[d.fid].name;
     toast(d.surf === 'wall' ? nm + '只能放墙面' + (d.src === 'room' ? '，放回原位' : '') : d.src === 'inv' ? '拖到房间的格子里才能放' : '拖出房间了，放回原位'); }
   else if (!d.valid || !d.valid.ok) { sfx('no'); toast((d.valid && d.valid.why) || '放不下'); }
-  else if (d.src === 'inv') { const r = atomic(() => E.placeItem(state, homeWho, d.fid, d.cell.x, d.cell.y, d.rot, d.cell.surf), HOME_FAIL); if (homeCommit(r)) homeSel = r.uid; }
-  else { homeCommit(atomic(() => E.moveItem(state, homeWho, d.uid, d.cell.x, d.cell.y), HOME_FAIL)); homeSel = d.uid; }
+  else if (d.src === 'inv') { const r = atomic(() => E.placeItem(state, homeWho, d.fid, d.cell.x, d.cell.y, d.rot, d.cell.surf), HOME_FAIL); if (homeCommit(r, null, 'place')) homeSel = r.uid; }
+  else { homeCommit(atomic(() => E.moveItem(state, homeWho, d.uid, d.cell.x, d.cell.y), HOME_FAIL), null, 'place'); homeSel = d.uid; }
   dirty = true; renderTab();
 }
 function homeCancel(e) { const d = homeDrag; if (!d || e.pointerId !== d.id) return; homeEnd(); dirty = true; renderTab(); }
@@ -2858,7 +2861,7 @@ if (PG) { const migration=PG.migrateRoster(state,E,{save:petSave,blocked:saveBlo
 petInit();
 
 // 测试/调试钩子（不影响玩家）
-window.__tzz = { toast, xingtuContext:()=>({blocked:frozen||saveBlocked||!!persist.pending||!!state.pending||E.isBlocked(state)||!E.walletOk(state)||!!(typeof loadInfo!=='undefined'&&loadInfo&&(loadInfo.unsafe||loadInfo.blocked))||document.hidden||!COLLECTION.ownsLock(),otherGame:false,offlinePending:!!state.pending,muted:!!state.muted}), xingtuAudioPause:()=>stopBgm(), xingtuAudioResume:()=>audioResume(), xingtuSfx:n=>{if(!document.hidden&&!frozen)sfx(n);}, collectionReplaceState:s=>{state=s;lastGood=COLLECTION.coordinator.raw;if(COLLECTION.qaProtocol2&&!COLLECTION.coordinator.failed&&COLLECTION.ownsLock())saveBlocked=false;dirty=true;},collectionReadOnly:()=>{saveBlocked=true;}, upgradeGate, TEST_MODE, TEST_LV, SAVE_KEY, BAK_KEY, get saveBlocked() { return saveBlocked; }, get loadInfo() { return loadInfo; }, restoreGood, earn, doUpgradeShop, goPage, txn, atomic, showOffline, showNewBlindboxNotice, BB70_LAUNCH_KEY, BB70_VISIT_KEY, homeAutoPlace, showReveal, shopUpgradeCount, get buyAmt() { return buyAmt; }, E, FURN_SIDE, furnInner, get combo() { return combo; }, get critFx() { return critFx; }, critLine, refreshCrit, showComic, showCrossBig, queueModal, CROSS_ART, crossURL, showCeoJoin, get state() { return state; }, set state(v) { state = v; }, persist, onReturn, tapShop, act, setTab, switchShop, renderTab,
+window.__tzz = { toast, sfx, xingtuContext:()=>({blocked:frozen||saveBlocked||!!persist.pending||!!state.pending||E.isBlocked(state)||!E.walletOk(state)||!!(typeof loadInfo!=='undefined'&&loadInfo&&(loadInfo.unsafe||loadInfo.blocked))||document.hidden||!COLLECTION.ownsLock(),otherGame:false,offlinePending:!!state.pending,muted:!!state.muted}), xingtuAudioPause:()=>stopBgm(), xingtuAudioResume:()=>audioResume(), xingtuSfx:n=>{if(!document.hidden&&!frozen)sfx(n);}, collectionReplaceState:s=>{state=s;lastGood=COLLECTION.coordinator.raw;if(COLLECTION.qaProtocol2&&!COLLECTION.coordinator.failed&&COLLECTION.ownsLock())saveBlocked=false;dirty=true;},collectionReadOnly:()=>{saveBlocked=true;}, upgradeGate, TEST_MODE, TEST_LV, SAVE_KEY, BAK_KEY, get saveBlocked() { return saveBlocked; }, get loadInfo() { return loadInfo; }, restoreGood, earn, doUpgradeShop, goPage, txn, atomic, showOffline, showNewBlindboxNotice, BB70_LAUNCH_KEY, BB70_VISIT_KEY, homeAutoPlace, showReveal, shopUpgradeCount, get buyAmt() { return buyAmt; }, E, FURN_SIDE, furnInner, get combo() { return combo; }, get critFx() { return critFx; }, critLine, refreshCrit, showComic, showCrossBig, queueModal, CROSS_ART, crossURL, showCeoJoin, get state() { return state; }, set state(v) { state = v; }, persist, onReturn, tapShop, act, setTab, switchShop, renderTab,
   forceBig() { nextBigAt = 0; if (order) order = null; }, clearVisitors() { order = null; special = null; nextBigAt = clock + 9999; nextSpecialAt = clock + 9999; }, forceSpecial() { nextSpecialAt = 0; special = null; },
   forceSupers() { for (const k in superNext) superNext[k] = 0; updateSupers(); renderTab(); },
   get big() { return order; }, get order() { return order; }, get special() { return special; }, get guests() { return guests; },
