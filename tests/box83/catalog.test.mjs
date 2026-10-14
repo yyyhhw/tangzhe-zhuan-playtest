@@ -50,7 +50,7 @@ test('display: owned 83 items render box200 PNG icon, unowned ❓, equip survive
   const E=fresh();prepareBox200Catalog(E).setActive(true);const W=wrapWearables(second),D=wrapDecor(decor6),s=full(E);
   assert.equal(W.version,second.version);for(const id of B83){assert(W.has(id));assert(W.iconHTML(E,s,id).includes('❓'));}
   s.gacha.owned.push('h_garlic_bulb','c_beer_foam_overall');s.wear.c77={hat:'h_garlic_bulb',clothes:'c_beer_foam_overall'};
-  assert(W.iconHTML(E,s,'h_garlic_bulb').includes('art/collectibles/box200/h_garlic_bulb.png?v=box109-20261014-r1'));
+  assert(W.iconHTML(E,s,'h_garlic_bulb').includes('art/collectibles/box200/h_garlic_bulb.png?v=box109-fix-20261014-r1'));
   assert.deepEqual(W.equipment(E,s,'c77'),{...W.equipment(E,s,'c77'),hat:'h_garlic_bulb',clothes:'c_beer_foam_overall'});
   s.wear.pearl={hat:'h_tofu_block'};assert.equal(W.equipment(E,s,'pearl').hat,null);
   assert(D.has('d_charcoal_chime'));assert(!D.has('h_garlic_bulb'));assert(W.has('c_skewer_loop_tunic'));

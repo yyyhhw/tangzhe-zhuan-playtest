@@ -56,3 +56,27 @@ test('collection: unearned box200 hidden show "{unlock} 就送"; earned show nam
   s.gacha.owned.push('h_pearl_halo');const html=W.catalogHTML(E,s,'h_pearl_halo');assert(html.includes('珍珠光环'));assert(html.includes('图示暂不可用'));
   assert(!W.catalogHTML(E,s,'h_chili_cap').includes('就送'));
 });
+test('fix: blind-box collection has a 隐藏款 section — unearned show ❓ + "{unlock} 就送" (incl. the 3 wearables), earned show name',()=>{
+  const E=fresh(),W=wrapWearables(second),s=st(E);let h=W.box200HiddenHTML(E,s);
+  assert(h.includes('隐藏款 0/6'));for(const id of H6){assert(h.includes(`data-hidden-item="${id}"`),id);assert(h.includes(BOX200_COPY[id].unlock+' 就送'),id);}
+  s.gacha.owned.push('c_moon_night_robe');h=W.box200HiddenHTML(E,s);assert(h.includes('隐藏款 1/6'));assert(h.includes('月夜摊主袍'));assert(!h.includes('四家店都升到 Lv35 就送'));
+  for(const f of ['app.js','pet/game/app.js'])assert(require('node:fs').readFileSync(new URL('../../'+f,import.meta.url),'utf8').includes('WEARABLES8.box200HiddenHTML(E, state)'),f);
+});
+test('fix: grant toasts queue one per item in order; wait while another toast shows; re-show if overridden (offline toast)',()=>{
+  const E=fresh(),s=st(E);s.shops.forEach(x=>x.lv=50);
+  let now=0;const timers=[];const later=(f,ms=0)=>timers.push({at:now+ms,f});
+  const tick=ms=>{const end=now+ms;for(;;){timers.sort((a,b)=>a.at-b.at);const t=timers[0];if(!t||t.at>end)break;timers.shift();now=t.at;t.f();}now=end;};
+  const el={textContent:'',classList:{h:true,contains:()=>el.classList.h}};const doc={hidden:false,getElementById:()=>el};
+  const shown=[];let gen=0;const show=(m,ms)=>{const g=++gen;el.textContent=m;el.classList.h=false;later(()=>{if(g===gen)el.classList.h=true;},ms);};
+  show('离线收益 +1万',1900);
+  const app=fakeApp(E,s);app.toast=(m,ms)=>{shown.push(m);show(m,ms);};
+  const h=installHiddenGoals(app,{setInterval:null,setTimeout:later,doc});
+  assert.equal(h.granted.length,4);assert.deepEqual(shown,[],'waits for the offline toast');
+  tick(2000);assert.equal(shown.length,1);
+  show('离线收益 +2万',1900);tick(400);// overrides ours at the 300ms check → back to queue head
+  assert.equal(h.pending[0],BOX200_COPY.c_moon_night_robe.toast);
+  tick(60000);
+  const want=h.granted.map(id=>BOX200_COPY[id].toast);assert.deepEqual([...new Set(shown)],want);
+  assert.equal(shown.filter(m=>m===want[0]).length,2);for(const m of want.slice(1))assert.equal(shown.filter(x=>x===m).length,1);
+  assert.deepEqual(h.pending,[]);
+});

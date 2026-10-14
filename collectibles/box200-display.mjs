@@ -1,8 +1,8 @@
 /** 盲盒200 显示：图一律从 art/collectibles/box200/<ID>.png 读（512×512 透明 PNG，见 /workspace/box200/style.md）。
  * 放图即生效：图鉴图标、CEO 身上的衣/帽、店铺装饰卡片都用同一张图。图没到时显示「图示暂不可用」，不报错。 */
-import {BOX200_ITEMS} from './box200-items.mjs?v=box109-20261014-r1';
+import {BOX200_ITEMS} from './box200-items.mjs?v=box109-fix-20261014-r1';
 const meta=Object.fromEntries(BOX200_ITEMS.map(x=>[x.id,x]));
-export const artURL=id=>new URL('../art/collectibles/box200/'+id+'.png?v=box109-20261014-r1',import.meta.url).href;
+export const artURL=id=>new URL('../art/collectibles/box200/'+id+'.png?v=box109-fix-20261014-r1',import.meta.url).href;
 const escape=v=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const images=new Map();
 function image(id){let i=images.get(id);if(!i&&typeof Image==='function'){i=new Image();i.src=artURL(id);images.set(id,i);}return i;}
@@ -31,7 +31,12 @@ export function wrapWearables(first){
     return `<div class="item ${yes?'':'no'}" data-wearable-item="${id}"><span class="t">${it.type==='hat'?'帽子':'衣服'}</span>${iconHTML(E,s,id)}${yes?escape(it.name)+descriptionHTML(E,s,id):'？？？<small class="preview-note" style="display:block;font-size:11px;line-height:1.5">'+escape(it.hidden===true&&it.box200?it.unlock+' 就送':it.hint)+'</small>'}</div>`;}
   const revealFlavorHTML=(E,s,id)=>{if(!isWear(id))return first.revealFlavorHTML(E,s,id);const f=ownedBy(E,s,id)&&E.ITEM_BY_ID[id].flavor;return typeof f==='string'&&f.trim()?escape(f)+'<br>':'';};
   const IDS=Object.freeze({clothes:Object.freeze([...first.IDS.clothes,...BOX200_ITEMS.filter(x=>x.type==='clothes').map(x=>x.id)]),hat:Object.freeze([...first.IDS.hat,...BOX200_ITEMS.filter(x=>x.type==='hat').map(x=>x.id)])});
-  return Object.freeze({...first,IDS,has:id=>isWear(id)||first.has(id),owned,equipment,hasEquipment,look,drawClothes,drawHat,iconHTML,descriptionHTML,catalogHTML,revealFlavorHTML,
+  // 盲盒-109 fix：盲盒页图鉴补一段「隐藏款」，未得的显示剪影 ❓ +「{unlock} 就送」，已得的显示图与名字（衣/帽/装饰都在这里）。
+  function box200HiddenHTML(E,s){const rows=BOX200_ITEMS.filter(x=>x.rarity==='hidden'&&registered(E,x.id));if(!rows.length)return '';
+    const got=rows.filter(x=>ownedBy(E,s,x.id)).length,label={clothes:'衣服',hat:'帽子',decor:'装饰'};
+    return `<div class="sec-title">隐藏款 ${got}/${rows.length}</div><div class="item-grid" data-box200-hidden>${rows.map(x=>{const it=E.ITEM_BY_ID[x.id],yes=ownedBy(E,s,x.id);
+      return `<div class="item ${yes?'':'no'}" data-hidden-item="${x.id}"><span class="t">隐藏 · ${label[x.type]}</span>${yes?icon(E,x.id):'<span class="ii">❓</span>'}${yes?escape(it.name):'？？？<small class="preview-note" style="display:block;font-size:11px;line-height:1.5">'+escape(it.unlock+' 就送')+'</small>'}</div>`;}).join('')}</div>`;}
+  return Object.freeze({...first,IDS,box200HiddenHTML,has:id=>isWear(id)||first.has(id),owned,equipment,hasEquipment,look,drawClothes,drawHat,iconHTML,descriptionHTML,catalogHTML,revealFlavorHTML,
     remainingPreviewHTML:rows=>first.remainingPreviewHTML(rows.filter(r=>!has(r.id)))});
 }
 export function wrapDecor(decor){
