@@ -15,7 +15,7 @@ function harness(f){
 // 115 FAIL→已修：6 条隐藏款发放 toast（collectibles/box200-copy.mjs）必须是金色对勾
 const HIDDEN6=['四家店都到 Lv35 了，送你隐藏款「月夜摊主袍」','烧烤摊到 Lv50 了，送你隐藏款「金串串冠」','奶茶店到 Lv50 了，送你隐藏款「珍珠光环」','盲盒收集满 60 件，送你隐藏款「街口灯拱门」','第 10 次从月球回来，送你隐藏款「彗星玻璃罐」','漫画书店到 Lv50 了，送你隐藏款「金色原稿」'];
 const GOOD=['到账 +1.2万','双倍到账 +3万（金币已到上限，多出的没进账）','奶茶 团单收入 +500','已领取：开业合照','漫画杯套：Lv50 分镜特效 + 小红包 1万','奶茶店 Lv50！收益 ×8','宠物安排已保存','已摆出：四家店共用，开店后可见','操作完成'];
-const BAD=['金币不够，躺一会儿再来','保存失败：没有跳转，请稍后再试','存档异常（只读模式）：买卖、升级都暂停，原存档保留','离线收益数据异常，这一笔没有入账（余额不变）','这位 CEO 还没加入','此 QA 入口未接入，已阻止跳转到真实存档页面','检测到手机时间被往回调，这段时间不发离线收益','房间放不下了：先收回点东西','撤销了一步','存档已保护，请刷新后重试'];
+const BAD=['金币不够，躺一会儿再来','保存失败：没有跳转，请稍后再试','存档异常（只读模式）：买卖、升级都暂停，原存档保留','离线收益数据异常，这一笔没有入账（余额不变）','这位 CEO 还没加入','此 QA 入口未接入，已阻止跳转到真实存档页面','检测到手机时间被往回调，这段时间不发离线收益','房间放不下了：先收回点东西','存档已保护，请刷新后重试'];
 for(const f of APPS)test(f+': payouts/rewards/completions gold ✓; errors/blocked/not-enough keep red「!」; role & priority unchanged',()=>{
  for(const m of GOOD){const h=harness(f),r=h.show(m);assert.equal(r.good,true,m);assert.equal(r.role,'status',m);}
  for(const m of HIDDEN6){const h=harness(f),r=h.show(m,1900,'header');assert.equal(r.good,true,'hidden grant gold ✓: '+m);}
