@@ -119,8 +119,8 @@
     "sourcePackage": "space01b04-author-increment",
     "sourceCommit": "472349b5f31df4446e79694b6be5bd6f66bd6db4",
     "derivation": "Reviewed01a domain unchanged; new authored candidate moon intent/overlay increment; artwork selectively from pinned a1bc784b demo",
-    "bytes": 8258,
-    "sha256": "260650dbd7ecaec1a6fce5c62d35a312a17dd3ca036654aac2fe87c58845e8ce"
+    "bytes": 8844,
+    "sha256": "da1beadf04adfee2ae745cecbf4d481b62603096fb162c714d822087833d8ce6"
   },
   {
     "path": "space/art.mjs",
