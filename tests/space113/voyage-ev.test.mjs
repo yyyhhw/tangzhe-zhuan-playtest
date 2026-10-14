@@ -11,9 +11,9 @@ test('old saves default safely: no space / voyage null / moon ev:null → no eve
     const m=migrateVoyageEv(s);assert(m.ok&&!m.changed);assert.equal(JSON.stringify(m.state),before);assert.equal(JSON.stringify(s),before,'input untouched');}
   assert(readSpaceEv(base()).missing);
 });
-test('existing space semantics unchanged: moonView/planMoon on old moon saves behave exactly as before (ev stays null)',()=>{
+test('113: new departures use ev-v2 and carry an explicit event; old v1 moon saves (ev:null) still read fine',()=>{
   const s=withSpace(null);const p=planMoon(s,{type:'depart',route:'moon'},{scope:'formal',now:5000,makeId:()=>'12345678-1234-1234-1234-123456789abc'});
-  assert(p.ok&&!p.noop);assert.equal(p.state.space.voyage.ev,null);assert(!('evState' in p.state.space.voyage));assert.equal(readSpaceEv(p.state).event,null);
+  assert(p.ok&&!p.noop);assert.equal(p.state.space.voyage.ruleset,'xingtu-moon-10min-ev-v2');assert(EVENT_IDS.includes(p.state.space.voyage.ev));assert.equal(p.state.space.voyage.evState.choice,null);assert.equal(readSpaceEv(p.state).event.id,p.state.space.voyage.ev);
   assert(moonView(withSpace(moonVoyage),{scope:'formal',now:2000}).ok);
 });
 test('event-bearing voyage: ev string + evState validates under existing domain schema 1 and round-trips',()=>{
@@ -43,7 +43,7 @@ test('malformed / future data is refused read-only, never cleaned',()=>{
   for(const [voy,code] of cases){assert.equal(readVoyageEv(voy).code,code);const s=base();s.space={...defaultSpace(),voyage:voy};const before=JSON.stringify(s);assert(!migrateVoyageEv(s).ok);assert.equal(JSON.stringify(s),before);}
   assert.equal(attachEvent(v,'ev_pirates').code,'SPACE_EV_ALREADY_SET');assert.equal(attachEvent({...moonVoyage},'nope').code,'SPACE_EV_UNKNOWN');
 });
-test('pickEvent is deterministic (no RNG) and covers the 6 ids',()=>{
+test('pickEvent is deterministic (no RNG) and covers the 5-event pool (外星商队 excluded until frequency decided)',()=>{
   assert.equal(EVENT_IDS.length,6);assert.equal(pickEvent('x'),pickEvent('x'));assert.equal(pickEvent(''),null);
-  const seen=new Set();for(let i=1;i<200;i++)seen.add(pickEvent(`moon:formal:${i}:12345678-1234-1234-1234-123456789abc`));assert.equal(seen.size,6);
+  const seen=new Set();for(let i=1;i<200;i++)seen.add(pickEvent(`moon:formal:${i}:12345678-1234-1234-1234-123456789abc`));assert.equal(seen.size,5);assert(!seen.has('ev_alien_caravan'));assert.equal(pickEvent('x',EVENT_IDS),pickEvent('x',EVENT_IDS));
 });

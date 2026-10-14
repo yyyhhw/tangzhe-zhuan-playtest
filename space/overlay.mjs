@@ -1,6 +1,7 @@
-import {createMoonHost} from './host.mjs?v=sfx112fix-20261014-r1';
-import {moonArt} from './art.mjs?v=sfx112fix-20261014-r1';
-import {MOON_CSS} from './styles.mjs?v=sfx112fix-20261014-r1';
+import {createMoonHost} from './host.mjs?v=xingtu113-20261014-r1';
+import {moonArt} from './art.mjs?v=xingtu113-20261014-r1';
+import {MOON_CSS} from './styles.mjs?v=xingtu113-20261014-r1';
+import {EVENTS} from './voyage-ev.mjs?v=xingtu113-20261014-r1';
 export function installMoonOverlay({app,runtime,document:doc=globalThis.document,window:win=globalThis}){
  if(win.XingTu)throw Error('SPACE_HOST_ALREADY_INSTALLED');
  let cover=null,body=null,content=null,timer=null,host,closeButton=null,origin=null,signature=null,revoked=false,renderFailed=false;
@@ -24,14 +25,14 @@ export function installMoonOverlay({app,runtime,document:doc=globalThis.document
  const button=(id,label,fn)=>{const b=node('button',id,label);b.type='button';b.onclick=fn;return b;};
  function ensure(){if(cover)return false;origin=doc.activeElement;cover=node('section','xingtuOverlay');cover.className='xingtu-overlay';cover.setAttribute('role','dialog');cover.setAttribute('aria-modal','true');cover.setAttribute('aria-label','星途月面基地');body=node('div','xingtuPanel');body.className='xingtu-panel';cover.append(body);
   const head=node('div');head.className='xingtu-head';closeButton=button('xingtuClose','返回经营',()=>host.close());head.append(node('h2',null,'星途 · 月面基地'),closeButton);body.append(head);
-  const warning=node('p','xingtuRuleset','每次 10 分钟 · 返航得 8 探索点');warning.className='xingtu-test';body.append(warning);
+  const warning=node('p','xingtuRuleset','每次 10 分钟 · 返航途中会遇到一件事，看完再领探索点');warning.className='xingtu-test';body.append(warning);
   content=node('div','xingtuContent');body.append(content);doc.body.append(cover);isolate();return true;
  }
  const schedule=view=>{if(view.ok&&view.phase==='flying')timer=win.setTimeout(()=>{timer=null;if(host.isOpen()&&!doc.hidden)host.refresh();},1000);};
  function render(view){try{return renderView(view);}catch(error){renderFailed=true;try{host.close();}finally{renderFailed=false;}throw error;}}
  function renderView(view){
   if(!host?.isOpen())return;const created=ensure();clearTimer();
-  const next=JSON.stringify([view.ok,view.code,view.phase,view.voyage?.voyageId,view.receipt,view.space?.pts,view.space?.visits,host.token]);
+  const next=JSON.stringify([view.ok,view.code,view.phase,view.voyage?.voyageId,view.receipt,view.space?.pts,view.space?.visits,view.event,host.token]);
   if(signature===next){if(view.phase==='flying'){doc.getElementById('xingtuRemaining').textContent=`剩余 ${fmt(view.remaining)}`;doc.getElementById('xingtuProgress').value=600000-view.remaining;const p=1-view.remaining/600000;doc.getElementById('xingtuStarMap').querySelector?.('use')?.setAttribute('transform',`translate(${72+p*160} ${84-Math.sin(p*Math.PI)*38}) rotate(65)`);}schedule(view);return;}
   signature=next;const previousFocus=doc.activeElement;while(content.firstChild)content.firstChild.remove();
   renderContent(view);if(created||!usable(previousFocus))focus(closeButton);schedule(view);
@@ -47,13 +48,29 @@ export function installMoonOverlay({app,runtime,document:doc=globalThis.document
   if(view.phase==='flying'){
    status.append(node('p',null,'航线：地球 → 月面基地 → 地球'),node('p','xingtuRemaining',`剩余 ${fmt(view.remaining)}`),node('p','xingtuArrival',`${when(view.arrival)} 到达`));
    const progress=node('progress','xingtuProgress');progress.max=600000;progress.value=600000-view.remaining;status.append(progress);
+  }else if(view.phase==='arrived'&&view.event&&EVENTS[view.event.id]){
+   // 星途-113（星途-07 稿）：同一张卡——先「返航途中」事件，选完翻成「返航报告」。选择和成败先存再显示；关掉再开还是这张卡。
+   const e=EVENTS[view.event.id],id=view.voyage.voyageId,card=node('div','xingtuEvent');card.className='xingtu-event';
+   art.className='xingtu-art xingtu-ev-art';art.innerHTML=moonArt(1);
+   if(view.needsChoice){
+    status.append(node('p','xingtuEvStatus','已经回到地球。路上遇到了点事，看完再领探索点。'));
+    card.append(node('p','xingtuEvKicker',`返航途中 · 第 ${view.voyage.sequence} 次月面往返`),node('h3','xingtuEvTitle',e.name),node('p','xingtuEvText',e.situation));
+    for(const k of ['a','b']){const b=button(k==='a'?'xingtuChoiceA':'xingtuChoiceB',e[k].label,()=>act({type:'choose',voyageId:id,choice:k}));b.className=k==='a'?'xingtu-choice':'xingtu-choice xingtu-choice-b';const hint=node('small',null,e[k].hint);hint.className='xingtu-hint';card.append(b,hint);}
+   }else{
+    const fail=view.event.outcome==='fail';art.classList?.add?.(fail?'xingtu-ev-fail':'xingtu-ev-ok');
+    status.append(node('p','xingtuArrival',`已于${when(view.arrival)} 到达`));
+    card.append(node('p','xingtuEvKicker','返航报告 · 月面基地'),node('h3','xingtuEvTitle',fail?'有点狼狈地回来了':'平安返航'),node('p','xingtuEvText',view.event.choice==='b'?e.bText:fail?e.fail:e.success));
+    const reward=node('div','xingtuReward',`+${view.event.reward.pts} 探索点`);reward.className='xingtu-reward';card.append(reward);
+    const take=button('xingtuClaim','收下',()=>act({type:'claim',voyageId:id}));take.className='xingtu-choice';card.append(take);
+   }
+   actions.append(card);
   }else if(view.phase==='arrived'){
    status.append(node('p',null,'月面往返已完成，返航报告待确认。'),node('p','xingtuArrival',`已于${when(view.arrival)} 到达`));actions.append(button('xingtuClaim','确认返航报告 · 领取8探索点',()=>act({type:'claim',voyageId:view.voyage.voyageId})));
   }else{
    status.append(node('p',null,`当前探索点：${view.space.pts} · 月面往返次数：${view.space.visits.moon??0}`));
    actions.append(button('xingtuDepart','出航月面基地',()=>act({type:'depart',route:'moon'})));
   }
-   if(view.receipt){const report=node('div','xingtuReport',`最近返航报告：月面基地 · 已入账 ${view.receipt.points} 探索点（一次） · ${when(view.receipt.claimedAt)}`);report.className='xingtu-receipt';content.append(report);}
+   if(view.receipt){const evName=view.receipt.ev?EVENTS[view.receipt.ev]?.name:null;const report=node('div','xingtuReport',evName?`最近返航报告：${evName} · 已入账 ${view.receipt.points} 探索点 · ${when(view.receipt.claimedAt)}`:`最近返航报告：月面基地 · 已入账 ${view.receipt.points} 探索点（一次） · ${when(view.receipt.claimedAt)}`);report.className='xingtu-receipt';content.append(report);}
 
  }
  const c=runtime.coordinator;

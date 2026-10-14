@@ -1,4 +1,4 @@
-import {readSpace,migrateSpace,spaceTransition} from '../../space/domain.mjs?v=sfx112fix-20261014-r1';
+import {readSpace,migrateSpace,spaceTransition} from '../../space/domain.mjs?v=xingtu113-20261014-r1';
 /** PREVIEW-only save protocol. No global storage, no automatic import, no rollback writes. */
 import { canonical } from './domain/json.mjs';
 export const KEYS = Object.freeze({ main:'tangzhe-preview-collection-v1-save', backup:'tangzhe-preview-collection-v1-save-bak', tab:'tangzhe-preview-collection-v1-tab-lock', source:'tangzhe-preview-save', sourceBackup:'tangzhe-preview-save-bak' });
