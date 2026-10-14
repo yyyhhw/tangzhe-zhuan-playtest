@@ -1,8 +1,8 @@
-import {createMoonHost} from './host.mjs?v=copy122-20261014-r1';
-import {moonArt} from './art.mjs?v=copy122-20261014-r1';
-import {MOON_CSS} from './styles.mjs?v=copy122-20261014-r1';
-import {EVENTS} from './voyage-ev.mjs?v=copy122-20261014-r1';
-import {ROUTES,ROUTE_BY_ID,OPEN_ROUTES,TOTAL_CARDS,ALIEN_DENOM,cardOf} from './album.mjs?v=copy122-20261014-r1';
+import {createMoonHost} from './host.mjs?v=albumfix-20261014-r1';
+import {moonArt} from './art.mjs?v=albumfix-20261014-r1';
+import {MOON_CSS} from './styles.mjs?v=albumfix-20261014-r1';
+import {EVENTS} from './voyage-ev.mjs?v=albumfix-20261014-r1';
+import {ROUTES,ROUTE_BY_ID,OPEN_ROUTES,TOTAL_CARDS,ALIEN_DENOM,cardOf} from './album.mjs?v=albumfix-20261014-r1';
 export function installMoonOverlay({app,runtime,document:doc=globalThis.document,window:win=globalThis}){
  if(win.XingTu)throw Error('SPACE_HOST_ALREADY_INSTALLED');
  let cover=null,body=null,content=null,timer=null,host,closeButton=null,origin=null,signature=null,revoked=false,renderFailed=false;
@@ -16,7 +16,7 @@ export function installMoonOverlay({app,runtime,document:doc=globalThis.document
  const node=(tag,id,text)=>{const n=doc.createElement(tag);if(id)n.id=id;if(text!==undefined)n.textContent=text;return n;};
  const cardImage=(route,n,title,thumb=false)=>{
   if(!OPEN_ROUTES.includes(route)||!Number.isInteger(n)||!cardOf(route,n))return null;
-  const img=node('img');img.className='xingtu-cardart'+(thumb?' xingtu-cardart-thumb':'');img.src=new URL(`../art/spacecards/${route}_${n}.webp?v=copy122-20261014-r1`,import.meta.url).href;img.alt=thumb?'':title;img.width=1024;img.height=768;img.loading=thumb?'lazy':'eager';img.decoding='async';img.onerror=()=>{img.hidden=true;};return img;
+  const img=node('img');img.className='xingtu-cardart'+(thumb?' xingtu-cardart-thumb':'');img.src=new URL(`../art/spacecards/${route}_${n}.webp?v=albumfix-20261014-r1`,import.meta.url).href;img.alt=thumb?'':title;img.width=1024;img.height=768;img.loading=thumb?'lazy':'eager';img.decoding='async';img.onerror=()=>{img.hidden=true;};return img;
  };
  const appendCardImage=(parent,route,n,title,thumb=false)=>{const img=cardImage(route,n,title,thumb);if(img)parent.append(img);};
  const fmt=ms=>{const s=Math.ceil(ms/1000);return `${Math.floor(s/60)}分${String(s%60).padStart(2,'0')}秒`;};
@@ -43,7 +43,7 @@ export function installMoonOverlay({app,runtime,document:doc=globalThis.document
  function renderView(view){
   if(!host?.isOpen())return;const created=ensure();clearTimer();
   const next=JSON.stringify([view.ok,view.code,view.phase,view.voyage?.voyageId,view.receipt,view.space?.pts,view.space?.visits,view.event,view.award,tab,albumPick,host.token]);
-  if(signature===next){if(view.phase==='flying'){doc.getElementById('xingtuRemaining').textContent=`剩余 ${fmt(view.remaining)}`;doc.getElementById('xingtuProgress').value=600000-view.remaining;const p=1-view.remaining/600000;doc.getElementById('xingtuStarMap').querySelector?.('use')?.setAttribute('transform',`translate(${72+p*160} ${84-Math.sin(p*Math.PI)*38}) rotate(65)`);}schedule(view);return;}
+  if(signature===next){if(view.phase==='flying'&&tab==='voyage'&&doc.getElementById('xingtuRemaining')){doc.getElementById('xingtuRemaining').textContent=`剩余 ${fmt(view.remaining)}`;doc.getElementById('xingtuProgress').value=600000-view.remaining;const p=1-view.remaining/600000;doc.getElementById('xingtuStarMap').querySelector?.('use')?.setAttribute('transform',`translate(${72+p*160} ${84-Math.sin(p*Math.PI)*38}) rotate(65)`);}schedule(view);return;}
   signature=next;const previousFocus=doc.activeElement;while(content.firstChild)content.firstChild.remove();
   renderContent(view);if(created||!usable(previousFocus))focus(closeButton);schedule(view);
  }
