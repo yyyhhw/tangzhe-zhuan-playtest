@@ -771,7 +771,7 @@ let toastTimer = 0, toastGeneration = 0, toastActive = null, toastQueue = [], to
 // Expiry uses both clocks so suspension or a wall-clock adjustment cannot replay old events.
 const TOAST_ERROR = /保存失败|存档异常|数据异常|没有生效/;
 // 文案-115：图标按情绪分。到账/获得/完成 → 金色对勾（toast-good）；错误、被挡、金币不够等其余一律保留红「!」。只改样式，不动优先级/队列。
-const TOAST_GOOD = /到账 ?\+|收入 \+|小红包|已入账|已领取：|已摆出|安排已保存|！收益 ×|完成/;
+const TOAST_GOOD = /送你隐藏款|到账 ?\+|收入 \+|小红包|已入账|已领取：|已摆出|安排已保存|！收益 ×|完成/;
 const TOAST_BAD = /不够|失败|异常|没有生效|阻止|保护|不能|还没|不发/;
 function toastMood(item) { return item.priority < 2 && TOAST_GOOD.test(item.msg) && !TOAST_BAD.test(item.msg) ? 'good' : 'alert'; }
 function toastExpired(item) { return performance.now() >= item.until || Date.now() >= item.wallUntil; }
@@ -1641,6 +1641,7 @@ function showMusicCredits() {
 function showOffline() {
   const p = state.pending; if (!p) return;
   if (modalOpen()) { if (!mq.includes(showOffline)) mq.unshift(showOffline); return; }
+  if (globalThis.XingTu?.isOpen()) globalThis.XingTu.close();   /* 体验-116：页面没切后台、时钟跳过一大段（睡眠/冻结恢复）时离线弹窗会压在星途浮层下面点不到；先关星途再弹（不动存档/领取） */
   const can = E.canDouble(state, now()), capH = p.cap / 3600;
   const capped = p.gap > p.sec + 1;
   openModal(`<div class="mbubble">老板！你不在的时候……</div>
@@ -2582,7 +2583,7 @@ const tdController = window.TDHost.create({
 function openTD() {
   if (frozen || tdOpen || zbOpen || window.XingTu?.isOpen() || !state.shops[1].open) return;
   tdOpen = true; const f = $('#tdFrame'), generation = ++tdGeneration;
-  const target = new URL('td/index.html?embed=1&v=copy115-20261014-r1', location.href);
+  const target = new URL('td/index.html?embed=1&v=ux116-20261014-r1', location.href);
   f.onload = () => {
     if (!tdOpen || generation !== tdGeneration) return;
     // Verify the actual loaded document, not merely an iframe src attribute.
