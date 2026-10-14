@@ -1,6 +1,7 @@
 /** Candidate-only moon rules. Pure host planner; no Storage, timers, UI results or wallet changes. */
-import {readSpace} from './domain.mjs?v=ux116-20261014-r1';
-import {EVENT_IDS,readVoyageEv,pickEvent,defaultEvState,resolveEvent,outcomeFor,rewardPoints} from './voyage-ev.mjs?v=ux116-20261014-r1';
+import {readSpace} from './domain.mjs?v=xingtu114-20261014-r1';
+import {ROUTE_BY_ID,albumOk,awardFor,applyAward} from './album.mjs?v=xingtu114-20261014-r1';
+import {EVENT_IDS,readVoyageEv,pickEvent,defaultEvState,resolveEvent,outcomeFor,rewardPoints} from './voyage-ev.mjs?v=xingtu114-20261014-r1';
 // 杨总 2026-10-14 01:32「星途所有店铺35级就可以了」：全部店铺 Lv35+ 解锁。正式航程 10 分钟、每次 8 探索点。
 export const MOON_RULES=Object.freeze({id:'xingtu-moon-10min-8pts-v1',route:'moon',duration:600000,points:8,minShopLevel:35});
 // 星途-113：新规则版本，新出航一律挂一件返航事件（星途-07）。旧 v1 航程/回执照旧可读可领（8 点、ev:null）。
@@ -16,10 +17,17 @@ export function parseVoyageId(id,scope){
  return m&&m[1]===scope&&int(Number(m[2]),1)?{seq:Number(m[2])}:null;
 }
 const R1=['voyageId','sequence','route','ruleset','start','arrival','claimedAt','points'],R2=[...R1,'ev','choice','outcome'];
-function receiptOk(r,ledger,scope){
+// 星途-114：114 起每次领取都在回执里记本趟发的剧情卡（第几张 | null）和隐藏物（航线 id | null）。113 及更早的回执没有这两项，照旧有效。
+const AW=['card','hidden'];
+function awardOk(r,space){
+ if(!own(r,'card'))return !own(r,'hidden');
+ const total=ROUTE_BY_ID[r.route]?.cards.length??0,got=space.cards?.[r.route]??0;
+ return (r.card===null||(int(r.card,1)&&r.card<=total&&r.card<=got))&&(r.hidden===null||(r.hidden===r.route&&space.hidden?.[r.route]===true));
+}
+function receiptOk(r,ledger,scope,space){
  if(!r||typeof r!=='object'||!RULESETS.includes(r.ruleset))return false;
- const v2=r.ruleset===MOON_EV_RULES.id;
- if(!keys(r,v2?[...R2]:[...R1])||r.sequence!==ledger.claimed||parseVoyageId(r.voyageId,scope)?.seq!==r.sequence||r.route!=='moon'||!int(r.start)||!int(r.arrival)||r.arrival!==r.start+MOON_RULES.duration||!int(r.claimedAt)||r.claimedAt<r.arrival||r.claimedAt>MAX_TIME)return false;
+ const v2=r.ruleset===MOON_EV_RULES.id,base=v2?[...R2]:[...R1];
+ if(!(keys(r,[...base])||keys(r,[...base,...AW]))||!awardOk(r,space)||r.sequence!==ledger.claimed||parseVoyageId(r.voyageId,scope)?.seq!==r.sequence||r.route!=='moon'||!int(r.start)||!int(r.arrival)||r.arrival!==r.start+MOON_RULES.duration||!int(r.claimedAt)||r.claimedAt<r.arrival||r.claimedAt>MAX_TIME)return false;
  if(!v2)return r.points===MOON_RULES.points;
  return EVENT_IDS.includes(r.ev)&&r.outcome===outcomeFor(r.voyageId,r.ev,r.choice)&&r.points===rewardPoints(r.ev,r.choice,r.outcome);
 }
@@ -39,7 +47,7 @@ export function moonView(state,{scope,now}){
  if(own(space,'moonLoop')){
   if(!ledger||ledger.schemaVersion!==1||!int(ledger.sequence)||!int(ledger.claimed)||ledger.claimed>ledger.sequence||!own(ledger,'lastReceipt'))return bad('SPACE_LEDGER_COMPATIBILITY');
   const r=ledger.lastReceipt;
-  if(ledger.claimed===0?r!==null:!receiptOk(r,ledger,scope))return bad('SPACE_RECEIPT_COMPATIBILITY');
+  if(ledger.claimed===0?r!==null:!receiptOk(r,ledger,scope,space))return bad('SPACE_RECEIPT_COMPATIBILITY');
  }
  if(v!==null){
   if(!ledger||!int(v.sequence,1)||v.sequence!==ledger.sequence||parseVoyageId(v.voyageId,scope)?.seq!==v.sequence||v.route!=='moon'||!RULESETS.includes(v.ruleset)||v.dur!==MOON_RULES.duration||!voyageEvOk(v,v.start+v.dur)||typeof v.completed!=='boolean'||!int(v.start)||v.start+v.dur>MAX_TIME)return bad('SPACE_VOYAGE_COMPATIBILITY');
@@ -47,11 +55,13 @@ export function moonView(state,{scope,now}){
   if(now<v.start)return bad('SPACE_TIME_BACKWARDS');
  }else if(ledger&&ledger.sequence!==0)return bad('SPACE_LEDGER_COMPATIBILITY');
  if(ledger?.lastReceipt&&now<ledger.lastReceipt.claimedAt)return bad('SPACE_TIME_BACKWARDS');
+ if(!albumOk(space))return bad('SPACE_ALBUM_COMPATIBILITY');
  const unlocked=spaceUnlocked(state),ev=v?voyageEvOk(v,v.start+v.dur).event:null;
  if(ev&&ev.resolvedAt!==null&&now<ev.resolvedAt)return bad('SPACE_TIME_BACKWARDS');
- return {ok:true,event:ev?copy(ev):null,needsChoice:!!(ev&&ev.choice===null&&v&&!v.completed),unlocked,missing:read.missing,space:copy(space),ledger:copy(ledger),voyage:copy(v),receipt:copy(ledger?.lastReceipt??null),phase:v===null?'ready':v.completed?'report':now>=v.start+v.dur?'arrived':'flying',remaining:v&&!v.completed?Math.max(0,v.start+v.dur-now):0,arrival:v?v.start+v.dur:null,ruleset:v?v.ruleset:MOON_EV_RULES.id};
+ const award=v&&!v.completed?awardFor(space,'moon'):null;
+ return {ok:true,award,event:ev?copy(ev):null,needsChoice:!!(ev&&ev.choice===null&&v&&!v.completed),unlocked,missing:read.missing,space:copy(space),ledger:copy(ledger),voyage:copy(v),receipt:copy(ledger?.lastReceipt??null),phase:v===null?'ready':v.completed?'report':now>=v.start+v.dur?'arrived':'flying',remaining:v&&!v.completed?Math.max(0,v.start+v.dur-now):0,arrival:v?v.start+v.dur:null,ruleset:v?v.ruleset:MOON_EV_RULES.id};
 }
-export function planMoon(state,intent,{scope,now,makeId}){
+export function planMoon(state,intent,{scope,now,makeId,hiddenRules}){
  const input=readSpace({intent});if(!input.ok)return bad('SPACE_INTENT_INVALID');
  const view=moonView(state,{scope,now});if(!view.ok)return view;
  if(!view.unlocked)return bad('SPACE_TECH_LEVEL_REQUIRED');
@@ -91,9 +101,12 @@ export function planMoon(state,intent,{scope,now,makeId}){
   const v2=view.voyage.ruleset===MOON_EV_RULES.id,points=v2?view.event.reward.pts:MOON_RULES.points;
   const visits=space.visits.moon??0;
   if(!int(visits)||space.pts>Number.MAX_SAFE_INTEGER-points||visits===Number.MAX_SAFE_INTEGER)return bad('SPACE_OVERFLOW');
+  // 星途-114：剧情卡/隐藏物和探索点、回执在同一笔私有写里落盘；按已发张数推进，同一张卡/同一件隐藏物不可能发两次。
+  const award=awardFor(space,'moon',hiddenRules),awarded=applyAward(space,'moon',award);if(!awarded)return bad('SPACE_OVERFLOW');
+  for(const k of ['cards','hidden','alienCards'])space[k]=awarded[k];
   space.pts+=points;space.visits.moon=visits+1;space.voyage.completed=true;
   ledger.claimed=view.voyage.sequence;
-  ledger.lastReceipt={voyageId:intent.voyageId,sequence:view.voyage.sequence,route:'moon',ruleset:view.voyage.ruleset,start:view.voyage.start,arrival:view.arrival,claimedAt:now,points,...(v2?{ev:view.event.id,choice:view.event.choice,outcome:view.event.outcome}:{})};space.moonLoop=ledger;
+  ledger.lastReceipt={voyageId:intent.voyageId,sequence:view.voyage.sequence,route:'moon',ruleset:view.voyage.ruleset,start:view.voyage.start,arrival:view.arrival,claimedAt:now,points,...(v2?{ev:view.event.id,choice:view.event.choice,outcome:view.event.outcome}:{}),card:award.card,hidden:award.hidden};space.moonLoop=ledger;
  }
  const next=copy(state);next.space=space;
  const checked=moonView(next,{scope,now});if(!checked.ok)return checked;

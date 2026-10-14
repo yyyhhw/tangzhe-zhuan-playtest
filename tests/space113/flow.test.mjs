@@ -13,7 +13,7 @@ test('old v1 save in flight: no event, claim pays exactly 8 with v1 receipt; nex
  s.space.voyage={route:'moon',start:1000,dur:600000,ev:null,voyageId:id,sequence:1,ruleset:MOON_RULES.id,completed:false};s.space.moonLoop={schemaVersion:1,sequence:1,claimed:0,lastReceipt:null};
  const raw=JSON.stringify(s),v=moonView(s,{scope:'formal',now:601000});assert(v.ok);assert.equal(v.event,null);assert.equal(v.needsChoice,false);assert.equal(JSON.stringify(s),raw,'read never writes');
  assert.equal(planMoon(s,{type:'choose',voyageId:id,choice:'a'},opt(601000)).code,'SPACE_EV_NONE');
- const c=go(s,{type:'claim',voyageId:id},601000);assert.equal(c.state.space.pts,8);assert.deepEqual(Object.keys(c.state.space.moonLoop.lastReceipt).sort(),['arrival','claimedAt','points','route','ruleset','sequence','start','voyageId']);
+ const c=go(s,{type:'claim',voyageId:id},601000);assert.equal(c.state.space.pts,8);assert.deepEqual(Object.keys(c.state.space.moonLoop.lastReceipt).sort(),['arrival','card','claimedAt','hidden','points','route','ruleset','sequence','start','voyageId']);
  const n=go(c.state,{type:'depart',route:'moon'},602000);assert.equal(n.state.space.voyage.ruleset,MOON_EV_RULES.id);assert(EVENT_POOL.includes(n.state.space.voyage.ev));assert(moonView(n.state,{scope:'formal',now:602000}).ok,'v1 receipt + v2 voyage coexist');
  for(const old of [{...fresh(),space:undefined}]){delete old.space;assert(moonView(old,{scope:'formal',now:5}).ok);}
 });

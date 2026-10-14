@@ -15,7 +15,7 @@ for(const scope of ['formal','preview'])for(const choice of ['a','b'])test(`${sc
  const st=n2.app.state.space.voyage.evState,fail=st.outcome==='fail';assert.equal(n2.app.state.space.pts,0);assert.equal(txt(n2,'xingtuEvKicker'),'返航报告 · 月面基地');assert.equal(txt(n2,'xingtuEvTitle'),fail?'有点狼狈地回来了':'平安返航');assert.equal(txt(n2,'xingtuEvText'),choice==='b'?e.bText:fail?e.fail:e.success);assert.equal(txt(n2,'xingtuReward'),`+${st.reward.pts} 探索点`);
  const w=n2.writes().length;const late=other();assert.equal(n2.writes().length,w,'stale other-choice callback zero writes');assert.equal(n2.app.state.space.voyage.evState.choice,choice);
  const claim=n2.node('xingtuClaim');assert.equal(claim.textContent,'收下');assert(claim.onclick().ok);assert.equal(n2.app.state.space.pts,st.reward.pts);assert.equal(n2.app.state.space.visits.moon,1);
- assert.match(txt(n2,'xingtuReport'),new RegExp(`^最近返航报告：${e.name} · 已入账 ${st.reward.pts} 探索点 · (今天|昨天|明天) \\d{2}:\\d{2}$`));
+ assert.match(txt(n2,'xingtuReport'),new RegExp(`^最近返航报告：${e.name} · 已入账 ${st.reward.pts} 探索点 · 剧情卡「月面第一串」 · (今天|昨天|明天) \\d{2}:\\d{2}$`));
  const w2=n2.writes().length;claim.onclick();assert.equal(n2.writes().length,w2);assert.equal(n2.app.state.space.pts,st.reward.pts,'no double reward');
 });
 for(const scope of ['formal','preview'])test(`${scope} save-lock contention: pending ordinary save / dirty memory / hidden / stolen lock → choice zero writes, nothing re-rolled`,opts,async t=>{

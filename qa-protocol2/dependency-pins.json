@@ -3,8 +3,8 @@
     "path": "qa-protocol2/vendor/planner/migration.mjs",
     "sourcePackage": "collectible-compat-candidate-v2",
     "sourcePath": "module/migration.mjs",
-    "bytes": 12596,
-    "sha256": "b5a36de84ce3d7a315a6a9e2e705ba07ea0e66be08a35aed22ca875f02880132",
+    "bytes": 12604,
+    "sha256": "25b1c9c5a812df270c673447e72813835a7cc429ac2f30253d382dd46dcab867",
     "reviewedInputSha256": "5bc0536dacecbaca2f910def14ac7410a7b8c19495625604688156cb89848c49",
     "reviewedInputBytes": 12549,
     "integrationChange": "only final cache import URLs; business logic unchanged"
@@ -27,8 +27,8 @@
     "path": "qa-protocol2/vendor/codec/snapshot-codec.mjs",
     "sourcePackage": "collectible-snapshot-codec-v1",
     "sourcePath": "module/snapshot-codec.mjs",
-    "bytes": 4339,
-    "sha256": "f69df7e4cd82504aa97b6d01fbd64abe73951a3724392a11e4173c00e7f60f64",
+    "bytes": 4347,
+    "sha256": "bbbd817864c3e781b8dcd8d13bbff940f846d5f123b382b2d540cf2c628e80bc",
     "reviewedInputSha256": "420e687372a697b79e65da6776088234b9a0e6fbd39154b2582bdbe42b4b156b",
     "reviewedInputBytes": 4299,
     "integrationChange": "only final cache import URLs; business logic unchanged"
@@ -51,8 +51,8 @@
     "path": "qa-protocol2/vendor/runtime/validator.mjs",
     "sourcePackage": "collectible-protocol2-runtime-v1",
     "sourcePath": "module/validator.mjs",
-    "bytes": 13531,
-    "sha256": "395c7e69e872d7d4f01ae99976c65fc4668e6f253369ae251f35add83e9370c1",
+    "bytes": 13539,
+    "sha256": "b43f3bc082ca3c91a7f0ede326d848b6453dd92fe4cc038e57ecac892d53a32b",
     "sourceSha256": "b710aa9da4c979036e980ffdbdf2f8ed46259d13c5d7ac90bf07ea42a806511a",
     "sourceBytes": 8201,
     "derivation": "Revision 2 exact boot migration markers, formal leaderboard mirror, optional source-bound pet roster transition guard; original reviewed archive unchanged. Revision 3: instance-local, single-entry cache of fully verified immutable snapshot/original raw pairs; current validation and write protections unchanged. Revision 4 (杨总 16:12): optional mutable gachaDaily {day,n} for the 5-per-day blind box limit; absent = 0 today."
@@ -61,8 +61,8 @@
     "path": "qa-protocol2/vendor/cards/card-coordinator.mjs",
     "sourcePackage": "collectible-card-adapter-v1",
     "sourcePath": "module/card-coordinator.mjs",
-    "bytes": 12077,
-    "sha256": "711f733fe71cc3595c9d93bfdc7a035e03c810c65762ca66967823e72faf535d",
+    "bytes": 12093,
+    "sha256": "2f3f0afbb066171683eecd0b7b5315a099639bbf7edace7a4dfff18e83b41202",
     "reviewedInputSha256": "c39527224902c835f2cc611527a5fcec2a23293adebd3b78bbb8684d2b41a034",
     "reviewedInputBytes": 8203,
     "integrationChange": "only final cache import URLs; business logic unchanged"
@@ -103,8 +103,8 @@
     "sourcePackage": "space01b04-author-increment",
     "sourceCommit": "472349b5f31df4446e79694b6be5bd6f66bd6db4",
     "derivation": "Reviewed01a domain unchanged; new authored candidate moon intent/overlay increment; artwork selectively from pinned a1bc784b demo",
-    "bytes": 9299,
-    "sha256": "0c8fa492e8ae2aa45e4cbdb467cac4e1db1a6a5565ac0f4fe02a4fa45151bf8e"
+    "bytes": 10529,
+    "sha256": "98af3541f6b41c4c9151ddc397fac944be1c7aae237c78d50a022083f0caaffa"
   },
   {
     "path": "space/host.mjs",
@@ -119,8 +119,8 @@
     "sourcePackage": "space01b04-author-increment",
     "sourceCommit": "472349b5f31df4446e79694b6be5bd6f66bd6db4",
     "derivation": "Reviewed01a domain unchanged; new authored candidate moon intent/overlay increment; artwork selectively from pinned a1bc784b demo",
-    "bytes": 11403,
-    "sha256": "df370eede52b3bfe7cfcbd9c6b4ec4d833a2e4c9b1892dd44f8d0645e3d16ecf"
+    "bytes": 16275,
+    "sha256": "6ef6bb71ae0414e5945dc78eb48a995d1a715b5a487cc88245cc7dbfb02a3463"
   },
   {
     "path": "space/art.mjs",
@@ -135,7 +135,7 @@
     "sourcePackage": "space01b04-author-increment",
     "sourceCommit": "472349b5f31df4446e79694b6be5bd6f66bd6db4",
     "derivation": "Reviewed01a domain unchanged; new authored candidate moon intent/overlay increment; artwork selectively from pinned a1bc784b demo",
-    "bytes": 2213,
-    "sha256": "0625962766e6cd1627bec8b280d76b5a67d7f204f63a46ecd001a0867e970349"
+    "bytes": 4007,
+    "sha256": "8811ea74d4e07d288105e60f4d21f0e224ac1788aaae0d81f898720c60554c97"
   }
 ]
