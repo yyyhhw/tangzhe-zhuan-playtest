@@ -1,6 +1,6 @@
 /** Read-only display adapter. Registration, awards and persistence belong to the host. */
-import * as first from './wearables8/first-eight.mjs?v=copy106-20261014-r1';
-import * as bbq from './wearables8/bbq-six.mjs?v=copy106-20261014-r1';
+import * as first from './wearables8/first-eight.mjs?v=copy108-20261014-r1';
+import * as bbq from './wearables8/bbq-six.mjs?v=copy108-20261014-r1';
 
 export const VERSION = 'qa-owned-wearables8-display-1';
 export const IDS = Object.freeze({
@@ -9,7 +9,7 @@ export const IDS = Object.freeze({
 });
 const types = Object.freeze(Object.fromEntries(Object.entries(IDS).flatMap(([type, ids]) => ids.map(id => [id, type]))));
 const art = Object.freeze(Object.fromEntries(Object.keys(types).map(id => [id, new URL(
-  './wearables8/art/' + id + (['c_charcoal_vest', 'c_matcha_knit', 'h_guokui', 'h_antenna_clip'].includes(id) ? '_catalog_v1.webp' : '.png') + '?v=copy106-20261014-r1',
+  './wearables8/art/' + id + (['c_charcoal_vest', 'c_matcha_knit', 'h_guokui', 'h_antenna_clip'].includes(id) ? '_catalog_v1.webp' : '.png') + '?v=copy108-20261014-r1',
   import.meta.url,
 ).href])));
 export const has = id => Object.hasOwn(types, id);

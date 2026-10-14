@@ -7,7 +7,7 @@ const COLLECTION = window.FormalCollectionRuntime;
 if (!COLLECTION?.ownsLock()) {
   // Stale HTML can fetch a new script before bootstrap. No storage access here.
   const url=new URL(location.href);
-  if(url.searchParams.get('v')!=='formal-copy106-20261014-r1') {url.searchParams.set('v','formal-copy106-20261014-r1');location.replace(url.href);}
+  if(url.searchParams.get('v')!=='formal-copy108-20261014-r1') {url.searchParams.set('v','formal-copy108-20261014-r1');location.replace(url.href);}
   else {const notice=document.createElement('p');notice.textContent='页面资源尚未更新完整，存档未写入。请关闭此页后重新打开。';document.body.prepend(notice);}
   return;
 }
