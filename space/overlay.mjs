@@ -37,11 +37,11 @@ export function installMoonOverlay({app,runtime,document:doc=globalThis.document
   renderContent(view);if(created||!usable(previousFocus))focus(closeButton);schedule(view);
  }
  function renderContent(view){
-  if(!view.ok){const error=node('p','xingtuProtection',view.code.includes('COMPATIBILITY')?'旧航次兼容保护：没有清除航程，也没有猜测奖励。':'星途暂不可写，请先核对存档或恢复正确时间。');error.className='xingtu-error';content.append(error,detail(view.code));return;}
+  if(!view.ok){const error=node('p','xingtuProtection',view.code.includes('COMPATIBILITY')?'这趟航程的记录读不懂，先原样留着：航程没清，探索点也没多发。点「返回经营」接着玩就好。':'星途现在存不了档，先不动它。看看手机时间对不对、别的页面是不是也开着游戏，处理好后点「返回经营」，再重新打开星图。');error.className='xingtu-error';content.append(error,detail(view.code));return;}
   const art=node('div','xingtuStarMap');art.className='xingtu-art';art.innerHTML=moonArt(view.phase==='flying'?1-view.remaining/600000:0);content.append(art);
   const status=node('div','xingtuStatus');status.className='xingtu-status';content.append(status);
   const token=host.token,actions=node('div','xingtuActions');actions.className='xingtu-actions';content.append(actions);
-  const act=(intent)=>{const r=host.perform(intent,token);if(!r.ok&&content){const message=node('p','xingtuSaveResult',r.status==='unknown'?'保存结果尚未确认：已停止写入，请使用只读核对。':'未确认成功，没有显示起飞或重复发奖。');message.className='xingtu-error';content.append(message,detail(r.code));}return r;};
+  const act=(intent)=>{const r=host.perform(intent,token);if(!r.ok&&content){const message=node('p','xingtuSaveResult',r.status==='unknown'?'这一步还没确认存上，星途先停一下。刷新页面，看看实际存下的结果。':'这一步没存上，航程和探索点都还是原样，稍后再点一次就行。');message.className='xingtu-error';content.append(message,detail(r.code));}return r;};
   if(view.phase==='flying'){
    status.append(node('p',null,'航线：地球 → 月面基地 → 地球'),node('p','xingtuRemaining',`剩余 ${fmt(view.remaining)}`),node('p','xingtuArrival',`${when(view.arrival)} 到达`));
    const progress=node('progress','xingtuProgress');progress.max=600000;progress.value=600000-view.remaining;status.append(progress);
