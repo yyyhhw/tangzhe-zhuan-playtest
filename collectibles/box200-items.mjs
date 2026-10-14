@@ -62,189 +62,189 @@ export const BOX200_ITEMS=Object.freeze([
 "type": "clothes",
 "shop": "烧烤摊",
 "rarity": "common",
-"batch": "box200"
+"batch": "box200-w1"
 },
 {
 "id": "c_boba_jacket",
 "type": "clothes",
 "shop": "奶茶店",
 "rarity": "common",
-"batch": "box200"
+"batch": "box200-w1"
 },
 {
 "id": "c_inkpen_overall",
 "type": "clothes",
 "shop": "漫画书店",
 "rarity": "common",
-"batch": "box200"
+"batch": "box200-w1"
 },
 {
 "id": "c_rocket_raincoat",
 "type": "clothes",
 "shop": "科技公司",
 "rarity": "common",
-"batch": "box200"
+"batch": "box200-w1"
 },
 {
 "id": "c_skewer_jacket",
 "type": "clothes",
 "shop": "烧烤摊",
 "rarity": "common",
-"batch": "box200"
+"batch": "box200-w1"
 },
 {
 "id": "c_taro_overall",
 "type": "clothes",
 "shop": "奶茶店",
 "rarity": "common",
-"batch": "box200"
+"batch": "box200-w1"
 },
 {
 "id": "c_bubble_raincoat",
 "type": "clothes",
 "shop": "漫画书店",
 "rarity": "common",
-"batch": "box200"
+"batch": "box200-w1"
 },
 {
 "id": "c_circuit_apron",
 "type": "clothes",
 "shop": "科技公司",
 "rarity": "common",
-"batch": "box200"
+"batch": "box200-w1"
 },
 {
 "id": "c_ember_overall",
 "type": "clothes",
 "shop": "烧烤摊",
 "rarity": "common",
-"batch": "box200"
+"batch": "box200-w1"
 },
 {
 "id": "c_mango_raincoat",
 "type": "clothes",
 "shop": "奶茶店",
 "rarity": "common",
-"batch": "box200"
+"batch": "box200-w1"
 },
 {
 "id": "c_panel_apron",
 "type": "clothes",
 "shop": "漫画书店",
 "rarity": "common",
-"batch": "box200"
+"batch": "box200-w1"
 },
 {
 "id": "c_pixel_cape",
 "type": "clothes",
 "shop": "科技公司",
 "rarity": "common",
-"batch": "box200"
+"batch": "box200-w1"
 },
 {
 "id": "c_garlic_raincoat",
 "type": "clothes",
 "shop": "烧烤摊",
 "rarity": "common",
-"batch": "box200"
+"batch": "box200-w1"
 },
 {
 "id": "c_peach_apron",
 "type": "clothes",
 "shop": "奶茶店",
 "rarity": "common",
-"batch": "box200"
+"batch": "box200-w1"
 },
 {
 "id": "c_bookmark_cape",
 "type": "clothes",
 "shop": "漫画书店",
 "rarity": "common",
-"batch": "box200"
+"batch": "box200-w1"
 },
 {
 "id": "c_orbit_coat",
 "type": "clothes",
 "shop": "科技公司",
 "rarity": "common",
-"batch": "box200"
+"batch": "box200-w1"
 },
 {
 "id": "c_lotus_apron",
 "type": "clothes",
 "shop": "烧烤摊",
 "rarity": "common",
-"batch": "box200"
+"batch": "box200-w1"
 },
 {
 "id": "c_jelly_cape",
 "type": "clothes",
 "shop": "奶茶店",
 "rarity": "common",
-"batch": "box200"
+"batch": "box200-w1"
 },
 {
 "id": "c_tone_coat",
 "type": "clothes",
 "shop": "漫画书店",
 "rarity": "common",
-"batch": "box200"
+"batch": "box200-w1"
 },
 {
 "id": "c_robot_hoodie",
 "type": "clothes",
 "shop": "科技公司",
 "rarity": "common",
-"batch": "box200"
+"batch": "box200-w1"
 },
 {
 "id": "c_tofu_cape",
 "type": "clothes",
 "shop": "烧烤摊",
 "rarity": "common",
-"batch": "box200"
+"batch": "box200-w1"
 },
 {
 "id": "c_foam_coat",
 "type": "clothes",
 "shop": "奶茶店",
 "rarity": "common",
-"batch": "box200"
+"batch": "box200-w1"
 },
 {
 "id": "c_hero_hoodie",
 "type": "clothes",
 "shop": "漫画书店",
 "rarity": "common",
-"batch": "box200"
+"batch": "box200-w1"
 },
 {
 "id": "c_keycap_tee",
 "type": "clothes",
 "shop": "科技公司",
 "rarity": "common",
-"batch": "box200"
+"batch": "box200-w1"
 },
 {
 "id": "c_cumin_coat",
 "type": "clothes",
 "shop": "烧烤摊",
 "rarity": "common",
-"batch": "box200"
+"batch": "box200-w1"
 },
 {
 "id": "c_oolong_hoodie",
 "type": "clothes",
 "shop": "奶茶店",
 "rarity": "common",
-"batch": "box200"
+"batch": "box200-w1"
 },
 {
 "id": "c_ninja_tee",
 "type": "clothes",
 "shop": "漫画书店",
 "rarity": "common",
-"batch": "box200"
+"batch": "box200-w1"
 },
 {
 "id": "c_signal_sweater",
