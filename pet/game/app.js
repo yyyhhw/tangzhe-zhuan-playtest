@@ -2471,7 +2471,7 @@ function petPanelFocus(open) {
   const scroll=$(open?'#petPanelTitle':homeSub==='room'?'#room':'#petEntry');if(scroll)scroll.scrollIntoView({block:open?'nearest':'start'});
 }
 function petAfterResult(r) {
-  if (!r.ok) { if (!r.same) { sfx('no'); toast(r.uncertain || persist.pending || COLLECTION.coordinator.failed ? '保存结果还没确认：先别重复操作，重新打开后以存档为准' : r.stage === 'blocked' ? (saveBlocked || frozen ? '存档异常（只读模式）：这次没有生效，原存档保留' : (r.why || '这次没有生效')) : r.stage === 'save' ? '保存失败：这次没有生效，请稍后再试' : r.why || '没有完成'); } dirty = true; return; }
+  if (!r.ok) { if (!r.same) { sfx('no'); toast(r.uncertain || persist.pending || COLLECTION.coordinator.failed ? '保存结果还没确认：先别重复操作，重新打开后以存档为准' : r.stage === 'blocked' ? (saveBlocked || frozen ? '存档异常（只读模式）：这次没有生效，原存档保留' : (r.why || '这次没有生效')) : r.stage === 'save' ? '保存失败：这次没有生效，请稍后再试' : r.why || '这次没办成，宠物和金币都没变，稍后再试'); } dirty = true; return; }
   for (const a of petActors.values()) a.rt.acknowledgePersist(state);
   petSyncActors(); sfx('tap');
   if (typeof r.room === 'string') {

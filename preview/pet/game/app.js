@@ -2111,7 +2111,7 @@ function petPanelFocus(open) {
   const scroll=$(open?'#petPanelTitle':homeSub==='room'?'#room':'#petEntry');if(scroll)scroll.scrollIntoView({block:open?'nearest':'start'});
 }
 function petAfterResult(r) {
-  if (!r.ok) { if (!r.same) { sfx('no'); toast(r.stage === 'save' || r.stage === 'blocked' ? '保存失败：宠物位置与金币均未改变' : r.why || '没有完成'); } dirty = true; return; }
+  if (!r.ok) { if (!r.same) { sfx('no'); toast(r.stage === 'save' || r.stage === 'blocked' ? '保存失败：宠物位置与金币均未改变' : r.why || '这次没办成，宠物和金币都没变，稍后再试'); } dirty = true; return; }
   for (const a of petActors.values()) a.rt.acknowledgePersist(state);
   petSyncActors(); sfx('tap');
   if (typeof r.room === 'string') {
