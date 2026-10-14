@@ -27,7 +27,7 @@ export function installHiddenGoals(app,{setInterval:si=globalThis.setInterval,se
   function show(){
     if(showing||!queue.length)return;
     if(doc?.hidden||busy()){st(show,500);return;}
-    showing=true;const item=queue[0];app.toast?.(item.msg,2500);
+    showing=true;const item=queue[0];app.toast?.(item.msg,2500);if(!item.tries)try{app.sfx?.('mile');}catch{} // 音效-111：第一次弹出时响一声，重弹不再响
     const verify=(k)=>{if(!shownIs(item.msg)){item.tries++;showing=false;if(item.tries>6)queue.shift();st(show,500);return;}
       if(k<3){st(()=>verify(k+1),[300,1200,900][k]);return;} // 300ms / 1.5s / 2.4s 三次核对：期间被顶掉就重弹
       queue.shift();st(()=>{showing=false;show();},Math.max(0,gap-2400));};
