@@ -6,7 +6,7 @@ const COLLECTION = window.FormalCollectionRuntime;
 if (!COLLECTION?.ownsLock()) {
   // Stale HTML can fetch a new script before bootstrap. No storage access here.
   const url=new URL(location.href);
-  if(url.searchParams.get('v')!=='formal-copy27-20261014-r1') {url.searchParams.set('v','formal-copy27-20261014-r1');location.replace(url.href);}
+  if(url.searchParams.get('v')!=='formal-xingtu-entry-20261014-r1') {url.searchParams.set('v','formal-xingtu-entry-20261014-r1');location.replace(url.href);}
   else {const notice=document.createElement('p');notice.textContent='页面资源尚未更新完整，存档未写入。请关闭此页后重新打开。';document.body.prepend(notice);}
   return;
 }
@@ -1252,7 +1252,7 @@ function act(a, arg, btn) {
   if (persist.pending) return false;
   const i = state.cur;
   switch (a) {
-    case 'xingtu': window.XingTu?.open(); return;
+    case 'xingtu': { const lk = xingtuLockText(); if (lk) { toast(lk, 3200); return; } window.XingTu?.open(); return; }
     case 'td': openTD(); return;
     case 'zombie': if (!zbCeo()) return openAssignTo(ZB_SHOP); openZombie(); return;   // 12e 打僵尸入口（板砖 b640f25）；13a：烧烤摊没 CEO → 打开派 CEO 选单
     case 'zbAssign': return openAssignTo(ZB_SHOP);   // 13a「先派 CEO」
@@ -1406,7 +1406,7 @@ function renderShop() {
       <div class="card hl"><div class="ava sq">${SHOP_ICON[i]}</div><div class="info"><div class="name">${S.name}</div>
       <div class="desc">开张后可雇员工 <b>${S.emp.name}</b>${joins && joins.id !== 'rocket' ? `，CEO <b>${joins.name}</b>（${E.TYPES[joins.type]}）加入` : ''}${i === 3 ? `；雇到员工后开放<b>盲盒</b>，Lv${CFG.ROCKET_UNLOCK_LV} 后 <b>${E.ROCKET_NAME.name}</b> 加入` : ''}</div>
       <div class="gain">${prevOk ? '' : '先开 ' + E.SHOPS[i - 1].name}</div></div>
-      ${prevOk ? btn('open', i, '开张', S.open) : '<button class="buy no" disabled>未解锁</button>'}</div>`;
+      ${prevOk ? btn('open', i, '开张', S.open) : '<button class="buy no" disabled>未解锁</button>'}</div>` + xingtuCard(i);   // 星途入口：未开张的店页也常显，并说明还差什么
   }
   const info = E.ceoInfo(state, i), sr = E.shopRate(state, i), sign = E.signOf(state, i);
   const nm = E.nextMilestone(s.lv), prevM = [0, 10, 25, 50].filter(m => m <= s.lv).pop() || 0;
@@ -1448,12 +1448,20 @@ function renderShop() {
 // 13h：每家店自己的小游戏入口（只在店铺页最底部）；烧烤摊 = 打僵尸，其余三家以后各有自己的游戏，加在这里
 function shopGameCard(i) {
   const card = i === ZB_SHOP ? zbCard() : i === 1 ? tdCard() : i === 3 ? xingtuCard(i) : '';
-  return card ? `<div class="sec-title shop-game-title">小游戏</div>${card}` : '';
+  const xt = i === 3 ? '' : xingtuCard(i);   // 星途入口常显：每家店页底部都有（科技公司页已在 card 里）
+  return card || xt ? `<div class="sec-title shop-game-title">小游戏</div>${card}${xt}` : '';
 }
+function xingtuMissing(shops) {   // 杨总 2026-10-14 09:12「需要出现星途入口 但是表明还差什么所以进不去」：只说明缺什么，解锁规则不变
+  const out = [];
+  shops.forEach((s, i) => { const nm = E.SHOPS[i].short;
+    if (!s || !s.open) out.push(nm + ' 未开店');
+    else if (!(s.lv >= 35)) out.push(nm + ' Lv' + (s.lv | 0) + '→35（差' + (35 - (s.lv | 0)) + '级）'); });
+  return out;
+}
+function xingtuLockText() { const m = xingtuMissing(state.shops); return m.length ? '星途未解锁：还需 ' + m.join('、') : ''; }
 function xingtuCard(i) {
-  if(i!==3)return '';
-  const ready=state.shops.every(s=>!!s.open&&s.lv>=35);
-  return `<div class="card"><div class="ava">${SHOP_ICON[3]}</div><div class="info"><div class="name">星途 · 发射台</div><div class="desc">月面基地往返 · 每次10分钟，返航得8探索点</div><div class="desc">全部店铺Lv35解锁</div></div><button class="buy" data-act="xingtu" ${ready?'':'disabled'}>打开星图</button></div>`;
+  const ready=state.shops.every(s=>!!s.open&&s.lv>=35), lock=ready?'':xingtuLockText();
+  return `<div class="card xingtu-entry${ready?'':' locked'}"><div class="ava">${SHOP_ICON[3]}</div><div class="info"><div class="name">星途 · 发射台</div><div class="desc">月面基地往返 · 每次10分钟，返航得8探索点</div>${ready?'<div class="desc">全部店铺Lv35解锁</div>':`<div class="desc xingtu-missing" style="color:#c0392b">${lock}</div>`}</div><button class="buy${ready?'':' no'}" data-act="xingtu" data-locked="${ready?0:1}">${ready?'打开星图':'未解锁'}</button></div>`;
 }
 function ceoPost(id) { const s = state.ceos[id]; return s.at >= 0 ? E.signOf(state, s.at).name : '休息中（空着）'; }
 function jobGallery(id) {
@@ -1967,7 +1975,7 @@ const HOME_ICON = ['home', 'apt', 'villa'].map(n => ic(n)); // 12c1：家宅升�
 let homeWho = 'c77', homeSub = 'room', homeMode = 'live', homeSel = null, homeDrag = null;
 // Home22: optional readonly status for the existing c77 Lv1 room only.
 let homeStatusContext = null, homeStatusAdapter = null;
-import('./home/home-status.mjs?v=copy27-20261014-r1').then(({createHomeStatusAdapter}) => {
+import('./home/home-status.mjs?v=xingtu-entry-20261014-r1').then(({createHomeStatusAdapter}) => {
   homeStatusAdapter = createHomeStatusAdapter({document, window, now, gameDayAt:E.dayKey});
   homeStatusAdapter.sync(document.getElementById('homeAmbienceStatus'), homeStatusContext);
 }).catch(error => console.warn('家宅时间与游戏内天气状态未加载', error));
@@ -2933,7 +2941,7 @@ const tdController = window.TDHost.create({
 function openTD() {
   if (frozen || tdOpen || zbOpen || window.XingTu?.isOpen() || !state.shops[1].open) return;
   tdOpen = true; const f = $('#tdFrame'), generation = ++tdGeneration;
-  const target = new URL('td/index.html?embed=1&v=copy27-20261014-r1', location.href);
+  const target = new URL('td/index.html?embed=1&v=xingtu-entry-20261014-r1', location.href);
   f.onload = () => {
     if (!tdOpen || generation !== tdGeneration) return;
     // Verify the actual loaded document, not merely an iframe src attribute.

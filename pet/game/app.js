@@ -7,7 +7,7 @@ const COLLECTION = window.FormalCollectionRuntime;
 if (!COLLECTION?.ownsLock()) {
   // Stale HTML can fetch a new script before bootstrap. No storage access here.
   const url=new URL(location.href);
-  if(url.searchParams.get('v')!=='formal-copy27-20261014-r1') {url.searchParams.set('v','formal-copy27-20261014-r1');location.replace(url.href);}
+  if(url.searchParams.get('v')!=='formal-xingtu-entry-20261014-r1') {url.searchParams.set('v','formal-xingtu-entry-20261014-r1');location.replace(url.href);}
   else {const notice=document.createElement('p');notice.textContent='页面资源尚未更新完整，存档未写入。请关闭此页后重新打开。';document.body.prepend(notice);}
   return;
 }
@@ -1248,7 +1248,7 @@ function act(a, arg, btn) {
   if (persist.pending) return false;
   const i = state.cur;
   switch (a) {
-    case 'xingtu': window.XingTu?.open(); return;
+    case 'xingtu': { const lk = xingtuLockText(); if (lk) { toast(lk, 3200); return; } window.XingTu?.open(); return; }
     case 'open': { const r = atomic(() => E.openShop(state, +arg), '开张没有生效，金币已退回'); if (!buyOk(r, btn)) return; afterBuy(btn, E.SHOPS[+arg].name + ' 开张啦！'); signAnim = { shop:+arg, from:'招租中', t0:clock }; handleUnlocks(r.unlocked); break; }
     case 'up': return doUpgradeShop(+arg, btn);
     case 'hire': { const r = atomic(() => E.hireEmp(state, +arg), '雇人没有生效，金币已退回'); if (!buyOk(r, btn)) return; afterBuy(btn, '雇到 ' + E.SHOPS[+arg].emp.name + '！开始自动赚钱'); sayLine('e', E.SHOPS[+arg].emp.line, 3); if (+arg === 3) queueModal(showGachaOpen); break; }
@@ -1388,7 +1388,7 @@ function renderShop() {
       <div class="card hl"><div class="ava sq">${SHOP_ICON[i]}</div><div class="info"><div class="name">${S.name}</div>
       <div class="desc">开张后可雇员工 <b>${S.emp.name}</b>${joins && joins.id !== 'rocket' ? `，CEO <b>${joins.name}</b>（${E.TYPES[joins.type]}）加入` : ''}${i === 3 ? `；雇到员工后开放<b>盲盒</b>，Lv${CFG.ROCKET_UNLOCK_LV} 后 <b>${E.ROCKET_NAME.name}</b> 加入` : ''}</div>
       <div class="gain">${prevOk ? '' : '先开 ' + E.SHOPS[i - 1].name}</div></div>
-      ${prevOk ? btn('open', i, '开张', S.open) : '<button class="buy no" disabled>未解锁</button>'}</div>`;
+      ${prevOk ? btn('open', i, '开张', S.open) : '<button class="buy no" disabled>未解锁</button>'}</div>` + xingtuCard(i);   // 星途入口：未开张的店页也常显，并说明还差什么
   }
   const info = E.ceoInfo(state, i), sr = E.shopRate(state, i), sign = E.signOf(state, i);
   const nm = E.nextMilestone(s.lv), prevM = [0, 10, 25, 50].filter(m => m <= s.lv).pop() || 0;
@@ -1427,10 +1427,17 @@ function renderShop() {
   h += xingtuCard(i);
   return h;
 }
+function xingtuMissing(shops) {   // 杨总 2026-10-14 09:12「需要出现星途入口 但是表明还差什么所以进不去」：只说明缺什么，解锁规则不变
+  const out = [];
+  shops.forEach((s, i) => { const nm = E.SHOPS[i].short;
+    if (!s || !s.open) out.push(nm + ' 未开店');
+    else if (!(s.lv >= 35)) out.push(nm + ' Lv' + (s.lv | 0) + '→35（差' + (35 - (s.lv | 0)) + '级）'); });
+  return out;
+}
+function xingtuLockText() { const m = xingtuMissing(state.shops); return m.length ? '星途未解锁：还需 ' + m.join('、') : ''; }
 function xingtuCard(i) {
-  if(i!==3)return '';
-  const ready=state.shops.every(s=>!!s.open&&s.lv>=35);
-  return `<div class="card"><div class="ava">${SHOP_ICON[3]}</div><div class="info"><div class="name">星途 · 发射台</div><div class="desc">月面基地往返 · 每次10分钟，返航得8探索点</div><div class="desc">全部店铺Lv35解锁</div></div><button class="buy" data-act="xingtu" ${ready?'':'disabled'}>打开星图</button></div>`;
+  const ready=state.shops.every(s=>!!s.open&&s.lv>=35), lock=ready?'':xingtuLockText();
+  return `<div class="card xingtu-entry${ready?'':' locked'}"><div class="ava">${SHOP_ICON[3]}</div><div class="info"><div class="name">星途 · 发射台</div><div class="desc">月面基地往返 · 每次10分钟，返航得8探索点</div>${ready?'<div class="desc">全部店铺Lv35解锁</div>':`<div class="desc xingtu-missing" style="color:#c0392b">${lock}</div>`}</div><button class="buy${ready?'':' no'}" data-act="xingtu" data-locked="${ready?0:1}">${ready?'打开星图':'未解锁'}</button></div>`;
 }
 function ceoPost(id) { const s = state.ceos[id]; return s.at >= 0 ? E.signOf(state, s.at).name : '休息中（空着）'; }
 function jobGallery(id) {
