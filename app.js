@@ -6,7 +6,7 @@ const COLLECTION = window.FormalCollectionRuntime;
 if (!COLLECTION?.ownsLock()) {
   // Stale HTML can fetch a new script before bootstrap. No storage access here.
   const url=new URL(location.href);
-  if(url.searchParams.get('v')!=='formal-photofix-20261014-r1') {url.searchParams.set('v','formal-photofix-20261014-r1');location.replace(url.href);}
+  if(url.searchParams.get('v')!=='formal-ux120-20261014-r1') {url.searchParams.set('v','formal-ux120-20261014-r1');location.replace(url.href);}
   else {const notice=document.createElement('p');notice.textContent='页面资源尚未更新完整，存档未写入。请关闭此页后重新打开。';document.body.prepend(notice);}
   return;
 }
@@ -1749,6 +1749,8 @@ function showNewBlindboxNotice() {
 function showOffline() {
   const p = state.pending; if (!p) return;
   if (modalOpen()) { if (!mq.includes(showOffline)) mq.unshift(showOffline); return; }
+  // 体验-120：离线收益显示为 0 时不弹「今日双倍领取 +0」，直接按普通领取静默结掉（dbl=false，不占当天双倍；走同一个 claimOffline / atomic 存档）
+  if (fmt(p.amount * 2) === '0') { atomic(() => E.claimOffline(state, now(), false), '离线收益没有到账，下次再领'); dirty = true; return; }
   if (globalThis.XingTu?.isOpen()) globalThis.XingTu.close();   /* 体验-116：页面没切后台、时钟跳过一大段（睡眠/冻结恢复）时离线弹窗会压在星途浮层下面点不到；先关星途再弹（不动存档/领取） */
   const can = E.canDouble(state, now()), capH = p.cap / 3600;
   const capped = p.gap > p.sec + 1;
@@ -2001,7 +2003,7 @@ const HOME_ICON = ['home', 'apt', 'villa'].map(n => ic(n)); // 12c1：家宅升�
 let homeWho = 'c77', homeSub = 'room', homeMode = 'live', homeSel = null, homeDrag = null;
 // Home22: optional readonly status for the existing c77 Lv1 room only.
 let homeStatusContext = null, homeStatusAdapter = null;
-import('./home/home-status.mjs?v=photofix-20261014-r1').then(({createHomeStatusAdapter}) => {
+import('./home/home-status.mjs?v=ux120-20261014-r1').then(({createHomeStatusAdapter}) => {
   homeStatusAdapter = createHomeStatusAdapter({document, window, now, gameDayAt:E.dayKey});
   homeStatusAdapter.sync(document.getElementById('homeAmbienceStatus'), homeStatusContext);
 }).catch(error => console.warn('家宅时间与游戏内天气状态未加载', error));
@@ -2967,7 +2969,7 @@ const tdController = window.TDHost.create({
 function openTD() {
   if (frozen || tdOpen || zbOpen || window.XingTu?.isOpen() || !state.shops[1].open) return;
   tdOpen = true; const f = $('#tdFrame'), generation = ++tdGeneration;
-  const target = new URL('td/index.html?embed=1&v=photofix-20261014-r1', location.href);
+  const target = new URL('td/index.html?embed=1&v=ux120-20261014-r1', location.href);
   f.onload = () => {
     if (!tdOpen || generation !== tdGeneration) return;
     // Verify the actual loaded document, not merely an iframe src attribute.

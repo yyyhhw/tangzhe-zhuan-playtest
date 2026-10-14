@@ -1,8 +1,8 @@
-import {createMoonHost} from './host.mjs?v=photofix-20261014-r1';
-import {moonArt} from './art.mjs?v=photofix-20261014-r1';
-import {MOON_CSS} from './styles.mjs?v=photofix-20261014-r1';
-import {EVENTS} from './voyage-ev.mjs?v=photofix-20261014-r1';
-import {ROUTES,ROUTE_BY_ID,OPEN_ROUTES,TOTAL_CARDS,ALIEN_DENOM,cardOf} from './album.mjs?v=photofix-20261014-r1';
+import {createMoonHost} from './host.mjs?v=ux120-20261014-r1';
+import {moonArt} from './art.mjs?v=ux120-20261014-r1';
+import {MOON_CSS} from './styles.mjs?v=ux120-20261014-r1';
+import {EVENTS} from './voyage-ev.mjs?v=ux120-20261014-r1';
+import {ROUTES,ROUTE_BY_ID,OPEN_ROUTES,TOTAL_CARDS,ALIEN_DENOM,cardOf} from './album.mjs?v=ux120-20261014-r1';
 export function installMoonOverlay({app,runtime,document:doc=globalThis.document,window:win=globalThis}){
  if(win.XingTu)throw Error('SPACE_HOST_ALREADY_INSTALLED');
  let cover=null,body=null,content=null,timer=null,host,closeButton=null,origin=null,signature=null,revoked=false,renderFailed=false;

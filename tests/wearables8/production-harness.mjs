@@ -150,7 +150,7 @@ export async function assembly({scope='formal',path,query='',projectRoot='/',ena
   function moduleFor(url){
     if(!modules.has(url)){
       moduleLoads.push(url);const u=new URL(url);
-      const app=u.pathname.endsWith('/app.js')&&[RELEASE,'photofix-20261014-r1'].includes(u.searchParams.get('v'));
+      const app=u.pathname.endsWith('/app.js')&&[RELEASE,'ux120-20261014-r1'].includes(u.searchParams.get('v'));
       const code=app?actualAppHooks(url):getSource(url);if(app){const loaded=loadedSources.get(url);loaded.executedSha256=createHash('sha256').update(code).digest('hex');loaded.transform='EXTRACTED_ACTUAL_SAVE_HOOKS_AND_BOOT_PREFIX';}
       modules.set(url,new vm.SourceTextModule(code,{context,identifier:url,initializeImportMeta(meta){meta.url=url;},
         async importModuleDynamically(specifier,ref){const next=new URL(specifier,ref.identifier).href;dynamicImports.push(next);if(rejectModule&&next.includes(rejectModule))throw Error('MODEL_MODULE_404');return evaluate(next);}}));

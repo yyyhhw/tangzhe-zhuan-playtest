@@ -1644,6 +1644,8 @@ function showMusicCredits() {
 function showOffline() {
   const p = state.pending; if (!p) return;
   if (modalOpen()) { if (!mq.includes(showOffline)) mq.unshift(showOffline); return; }
+  // 体验-120：离线收益显示为 0 时不弹「今日双倍领取 +0」，直接按普通领取静默结掉（dbl=false，不占当天双倍；走同一个 claimOffline / atomic 存档）
+  if (fmt(p.amount * 2) === '0') { atomic(() => E.claimOffline(state, now(), false), '离线收益没有到账，下次再领'); dirty = true; return; }
   if (globalThis.XingTu?.isOpen()) globalThis.XingTu.close();   /* 体验-116：页面没切后台、时钟跳过一大段（睡眠/冻结恢复）时离线弹窗会压在星途浮层下面点不到；先关星途再弹（不动存档/领取） */
   const can = E.canDouble(state, now()), capH = p.cap / 3600;
   const capped = p.gap > p.sec + 1;
@@ -2586,7 +2588,7 @@ const tdController = window.TDHost.create({
 function openTD() {
   if (frozen || tdOpen || zbOpen || window.XingTu?.isOpen() || !state.shops[1].open) return;
   tdOpen = true; const f = $('#tdFrame'), generation = ++tdGeneration;
-  const target = new URL('td/index.html?embed=1&v=photofix-20261014-r1', location.href);
+  const target = new URL('td/index.html?embed=1&v=ux120-20261014-r1', location.href);
   f.onload = () => {
     if (!tdOpen || generation !== tdGeneration) return;
     // Verify the actual loaded document, not merely an iframe src attribute.
