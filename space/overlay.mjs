@@ -1,6 +1,6 @@
-import {createMoonHost} from './host.mjs?v=xingtu101-20261014-r1';
-import {moonArt} from './art.mjs?v=xingtu101-20261014-r1';
-import {MOON_CSS} from './styles.mjs?v=xingtu101-20261014-r1';
+import {createMoonHost} from './host.mjs?v=box200-copy104-20261014-r1';
+import {moonArt} from './art.mjs?v=box200-copy104-20261014-r1';
+import {MOON_CSS} from './styles.mjs?v=box200-copy104-20261014-r1';
 export function installMoonOverlay({app,runtime,document:doc=globalThis.document,window:win=globalThis}){
  if(win.XingTu)throw Error('SPACE_HOST_ALREADY_INSTALLED');
  let cover=null,body=null,content=null,timer=null,host,closeButton=null,origin=null,signature=null,revoked=false,renderFailed=false;
@@ -14,7 +14,7 @@ export function installMoonOverlay({app,runtime,document:doc=globalThis.document
  const node=(tag,id,text)=>{const n=doc.createElement(tag);if(id)n.id=id;if(text!==undefined)n.textContent=text;return n;};
  const fmt=ms=>{const s=Math.ceil(ms/1000);return `${Math.floor(s/60)}分${String(s%60).padStart(2,'0')}秒`;};
  // 文案-102: phone-local wall time — 今天/明天/昨天 HH:MM, else M月D日 (other year: YYYY年M月D日).
- const when=t=>{const a=new Date(t),b=new Date(),dd=Math.round((new Date(a.getFullYear(),a.getMonth(),a.getDate())-new Date(b.getFullYear(),b.getMonth(),b.getDate()))/864e5),hm=`${String(a.getHours()).padStart(2,'0')}:${String(a.getMinutes()).padStart(2,'0')}`;return `${dd===0?'今天':dd===1?'明天':dd===-1?'昨天':a.getFullYear()===b.getFullYear()?`${a.getMonth()+1}月${a.getDate()}日`:`${a.getFullYear()}年${a.getMonth()+1}月${a.getDate()}日`} ${hm}`;};
+ const when=t=>{const a=new Date(t),b=new Date(Date.now()),dd=Math.round((new Date(a.getFullYear(),a.getMonth(),a.getDate())-new Date(b.getFullYear(),b.getMonth(),b.getDate()))/864e5),hm=`${String(a.getHours()).padStart(2,'0')}:${String(a.getMinutes()).padStart(2,'0')}`;return `${dd===0?'今天':dd===1?'明天':dd===-1?'昨天':a.getFullYear()===b.getFullYear()?`${a.getMonth()+1}月${a.getDate()}日`:`${a.getFullYear()}年${a.getMonth()+1}月${a.getDate()}日`} ${hm}`;};
  const detail=code=>{const d=node('details');d.className='xingtu-detail';d.append(node('summary',null,'详情'),node('small',null,code));return d;};
  const clearTimer=()=>{if(timer!==null){win.clearTimeout(timer);timer=null;}};
  const closeView=()=>{clearTimer();cover?.remove();restoreBackground();cover=null;body=null;content=null;signature=null;closeButton=null;const saved=origin;origin=null;
