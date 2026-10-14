@@ -1,19 +1,19 @@
-import {prepareDecor6Catalog} from './decor6-catalog.mjs?v=copy126-20261014-r1';
-import {prepareSecondEightCatalog} from './wearables18-catalog.mjs?v=copy126-20261014-r1';
-import {prepareBox200Catalog} from './box200-catalog.mjs?v=copy126-20261014-r1';
+import {prepareDecor6Catalog} from './decor6-catalog.mjs?v=lockfix-20261014-r1';
+import {prepareSecondEightCatalog} from './wearables18-catalog.mjs?v=lockfix-20261014-r1';
+import {prepareBox200Catalog} from './box200-catalog.mjs?v=lockfix-20261014-r1';
 /** Production composition candidate; activation remains gated by release.mjs.
  * Synthetic review only until the independent browser/activation gate passes. */
-import {createCollectibleStorage} from './storage.mjs?v=copy126-20261014-r1';
-import {ensureLegacyReady} from './legacy-entry.mjs?v=copy126-20261014-r1';
-import {COLLECTIBLES_PRODUCTION_ENABLED,COLLECTIBLES_RELEASE} from './release.mjs?v=copy126-20261014-r1';
-import {createRealPageQAFacade} from '../qa-protocol2/real-page-facade.mjs?v=copy126-20261014-r1';
-import {createMigrationPlanner} from '../qa-protocol2/vendor/planner/migration.mjs?v=copy126-20261014-r1';
-import * as codec from '../qa-protocol2/vendor/codec/snapshot-codec.mjs?v=copy126-20261014-r1';
-import {createPetDomain} from '../qa-protocol2/vendor/runtime/pet-domain.mjs?v=copy126-20261014-r1';
-import {createProtocol2Validator} from '../qa-protocol2/vendor/runtime/validator.mjs?v=copy126-20261014-r1';
-import {createCardAwareSession} from '../qa-protocol2/vendor/cards/card-coordinator.mjs?v=copy126-20261014-r1';
-import {createHostModel} from '../qa-protocol2/vendor/host/host-model.mjs?v=copy126-20261014-r1';
-import {prepareEightWearableCatalog} from '../qa-protocol2/eight-catalog.mjs?v=copy126-20261014-r1';
+import {createCollectibleStorage} from './storage.mjs?v=lockfix-20261014-r1';
+import {ensureLegacyReady} from './legacy-entry.mjs?v=lockfix-20261014-r1';
+import {COLLECTIBLES_PRODUCTION_ENABLED,COLLECTIBLES_RELEASE} from './release.mjs?v=lockfix-20261014-r1';
+import {createRealPageQAFacade} from '../qa-protocol2/real-page-facade.mjs?v=lockfix-20261014-r1';
+import {createMigrationPlanner} from '../qa-protocol2/vendor/planner/migration.mjs?v=lockfix-20261014-r1';
+import * as codec from '../qa-protocol2/vendor/codec/snapshot-codec.mjs?v=lockfix-20261014-r1';
+import {createPetDomain} from '../qa-protocol2/vendor/runtime/pet-domain.mjs?v=lockfix-20261014-r1';
+import {createProtocol2Validator} from '../qa-protocol2/vendor/runtime/validator.mjs?v=lockfix-20261014-r1';
+import {createCardAwareSession} from '../qa-protocol2/vendor/cards/card-coordinator.mjs?v=lockfix-20261014-r1';
+import {createHostModel} from '../qa-protocol2/vendor/host/host-model.mjs?v=lockfix-20261014-r1';
+import {prepareEightWearableCatalog} from '../qa-protocol2/eight-catalog.mjs?v=lockfix-20261014-r1';
 
 const clone=x=>JSON.parse(JSON.stringify(x));
 async function loadClassic(url){await new Promise((resolve,reject)=>{const s=document.createElement('script');s.src=url.href;s.onload=resolve;s.onerror=()=>reject(Error('QA_LEGACY_ECONOMY_LOAD_FAILED'));document.head.append(s);});}
@@ -47,10 +47,29 @@ export async function launchProductionCollectibles(options){
   document.addEventListener('visibilitychange',()=>{if(document.hidden&&(!facade||!facade.view().canPlay)){facade?.hidden();revoke('CONFIRMATION_REVOKED_ON_HIDE');}});
   if(document.hidden){revoke('WAIT_CANCELLED_ON_HIDE');throw Error('QA_PAGE_NOT_VISIBLE');}
   makePanel('正在打开存档','同一作用域只能一个页面经营。若另一页仍在运行，请先关闭或刷新它。当前未读取或写入存档。');
+  // 锁修复 20261014：iOS Safari 冻结的后台标签仍持有 Web Lock 且不触发 pagehide，新页永远排队。
+  // 现在：等待超时后用 BroadcastChannel 询问持有者；只有可见且在经营的页面回应才拦（并给「在本页继续」）；
+  // 无回应即视为陈旧锁，steal 接管。被 steal 的旧页：原生 steal 令其锁请求 reject → cleanup 撤销写权；另经 BroadcastChannel「taken」与既有 storage 事件双重撤销，不双写。
+  const myEpoch=crypto.randomUUID();
+  const channel=typeof BroadcastChannel==='function'?new BroadcastChannel(`tangzhe:${scope}:writer-presence`):null;
+  const WAIT_MS=Number(options.lockWaitMs??2500),PING_MS=Number(options.lockPingMs??1200);
   const digest=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(canonical(config))))).map(x=>x.toString(16).padStart(2,'0')).join('');
   if(digest!==expectedConfigHash)throw Error('QA_TRIAL_CONFIG_HASH_MISMATCH');
-  try{await navigator.locks.request(expectedLock,{mode:'exclusive',signal:abort.signal},async()=>{
-    if(!current)throw Error('QA_STALE_LOCK_CALLBACK');owns=true;
+  if(channel)channel.onmessage=event=>{const m=event.data||{};
+    if(m.type==='ping'&&lease.owns()&&!document.hidden)channel.postMessage({type:'alive',to:m.from});
+    else if(m.type==='taken'&&m.from!==myEpoch)onTaken();};
+    const waitAbort=new AbortController();abort.signal.addEventListener('abort',()=>waitAbort.abort(),{once:true});
+  function onTaken(){if(!acquired||takenOver)return;takenOver=true;revoke('WRITER_TAKEN_OVER');const show=()=>{const box=makePanel('已在另一页继续','本页已停止写入，存档由新页面经营，进度没有丢。要回到这里请刷新。');button(box,'collectibleReload','刷新回到本页',()=>location.reload());};show();setTimeout(show,400);}
+  let takenOver=false,acquired=false,stealing=false,resolveSteal;const stolen=new Promise(r=>{resolveSteal=r;});
+  const ask=()=>new Promise(resolve=>{if(!channel)return resolve(false);let alive=false;const h=e=>{if(e.data?.type==='alive'&&e.data.to===myEpoch)alive=true;};channel.addEventListener('message',h);channel.postMessage({type:'ping',from:myEpoch});setTimeout(()=>{channel.removeEventListener('message',h);resolve(alive);},PING_MS);});
+  const steal=()=>{if(stealing||acquired||!current)return;stealing=true;waitAbort.abort();resolveSteal();};
+  setTimeout(async()=>{if(acquired||!current)return;const alive=await ask();if(acquired||!current||stealing)return;
+    if(!alive)return steal();
+    const box=makePanel('另一个页面正在经营','检测到另一页仍在运行。可以先关闭它；或在本页继续（另一页会立即停止写入，存档不会双写）。');
+    button(box,'collectibleTakeOver','在本页继续',steal);},WAIT_MS);
+  const body=async()=>{
+    if(!current)throw Error('QA_STALE_LOCK_CALLBACK');acquired=true;owns=true;channel?.postMessage({type:'taken',from:myEpoch});
+    if(document.getElementById('collectibleTakeOver'))makePanel('正在打开存档','当前未读取或写入存档。');
     const lifetime=new Promise(resolve=>{release=resolve;});
     try{
       const model=createApprovedTrialModel(config,{schemaVersion:1,approvedConfigCanonical:canonical(config),evidenceRefs:approvalEvidence,walletBridgeApproved:false});
@@ -103,7 +122,7 @@ export async function launchProductionCollectibles(options){
           decorCatalog.setActive(qaWearables8);
           secondEight.setActive(qaWearables8);
           wearableCatalog?.setActive(qaWearables8);
-          if(qaWearables8){const display=await import('../candidates/blindbox18/display.mjs?v=copy126-20261014-r1');if(!lease.owns())throw Error('QA_DISPLAY_LOADED_AFTER_REVOKE');const decor=await import('./decor6-display.mjs?v=copy126-20261014-r1');if(!lease.owns())throw Error('DECOR_DISPLAY_LOADED_AFTER_REVOKE');const b200=await import('./box200-display.mjs?v=copy126-20261014-r1');if(!lease.owns())throw Error('BOX200_DISPLAY_LOADED_AFTER_REVOKE');globalThis.QAWearables8Display=b200.wrapWearables(display.default);globalThis.Decor6Display=b200.wrapDecor(decor.default);}
+          if(qaWearables8){const display=await import('../candidates/blindbox18/display.mjs?v=lockfix-20261014-r1');if(!lease.owns())throw Error('QA_DISPLAY_LOADED_AFTER_REVOKE');const decor=await import('./decor6-display.mjs?v=lockfix-20261014-r1');if(!lease.owns())throw Error('DECOR_DISPLAY_LOADED_AFTER_REVOKE');const b200=await import('./box200-display.mjs?v=lockfix-20261014-r1');if(!lease.owns())throw Error('BOX200_DISPLAY_LOADED_AFTER_REVOKE');globalThis.QAWearables8Display=b200.wrapWearables(display.default);globalThis.Decor6Display=b200.wrapDecor(decor.default);}
           const runtime={keys,storage,model,qaWearables8,decor6:qaWearables8,claimHidden:id=>facade.claimHidden(id),qa:false,qaScope:scope,qaProtocol2:true,entryEnabled:cardEntryEnabled===true,ownsLock:lease.owns,coordinator:facade.coordinator,
             registerPageHide:handler=>{if(typeof handler!=='function'||pageHideSave)throw Error('PAGE_HIDE_HANDLER_INVALID');pageHideSave=handler;},
             logicalStorageKey:storage.logicalKey,handle:message=>facade.card(message),snapshot:()=>facade.snapshot(),reconcile:()=>{const result=facade.reconcile();if(result.ok)globalThis.XingTu?.resume();return result;}};
@@ -113,10 +132,10 @@ export async function launchProductionCollectibles(options){
           if(!lease.owns())throw Error('QA_APP_LOADED_AFTER_REVOKE');
           const attached=facade.attachApp(globalThis.__tzz,{enabled:walletBridgeApproved===true,randomInt:n=>secureRandomInt(crypto,n),makeId:()=>`tx:${crypto.randomUUID()}`});
           if(!attached.ok)throw Error(attached.code);
-          const {installMoonOverlay}=await import('../space/overlay.mjs?v=copy126-20261014-r1');
+          const {installMoonOverlay}=await import('../space/overlay.mjs?v=lockfix-20261014-r1');
           if(!lease.owns())throw Error('SPACE_LOADED_AFTER_REVOKE');
           installMoonOverlay({app:globalThis.__tzz,runtime});
-          if(qaWearables8){const {installHiddenGoals}=await import('./box200-hidden.mjs?v=copy126-20261014-r1');if(!lease.owns())throw Error('BOX200_HIDDEN_LOADED_AFTER_REVOKE');installHiddenGoals(globalThis.__tzz);} // 盲盒-109：隐藏款达成目标直接获得
+          if(qaWearables8){const {installHiddenGoals}=await import('./box200-hidden.mjs?v=lockfix-20261014-r1');if(!lease.owns())throw Error('BOX200_HIDDEN_LOADED_AFTER_REVOKE');installHiddenGoals(globalThis.__tzz);} // 盲盒-109：隐藏款达成目标直接获得
           appStarted=true;
           if(facade.view().canPlay)document.getElementById('collectionStartup')?.remove();render(facade.view());
         }catch(error){revoke(error.message||'QA_GAMEPLAY_IMPORT_FAILED');throw error;}
@@ -152,5 +171,11 @@ export async function launchProductionCollectibles(options){
       if(result.ok&&facade.view().canPlay)await startApp();
       await lifetime;
     }finally{cleanup('QA_LOCK_LIFETIME_ENDED');}
-  });}finally{cleanup('QA_LOCK_LIFETIME_ENDED');}
+  };
+  try{
+    const normal=navigator.locks.request(expectedLock,{mode:'exclusive',signal:waitAbort.signal},body).then(()=>'done',e=>{if(stealing&&!acquired)return 'stolen';throw e;});
+    const r=await Promise.race([normal,stolen.then(()=>'stolen')]);
+    if(r==='stolen'&&!acquired&&current)await navigator.locks.request(expectedLock,{mode:'exclusive',steal:true},body);
+    else await normal;
+  }catch(error){if(acquired&&!takenOver&&error?.name==='AbortError')onTaken();if(takenOver)return;throw error;}finally{cleanup('QA_LOCK_LIFETIME_ENDED');try{channel?.close();}catch{}}
 }

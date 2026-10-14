@@ -4,7 +4,7 @@
     "sourcePackage": "collectible-compat-candidate-v2",
     "sourcePath": "module/migration.mjs",
     "bytes": 12600,
-    "sha256": "6926ee3e03b8064f874e2542536af32daab1792105ef62a75c425f1794595f2c",
+    "sha256": "bbf1cb27538fc7a6398e5a9a388ef069852cef76153947de3cdc2b9b6aa20ef6",
     "reviewedInputSha256": "5bc0536dacecbaca2f910def14ac7410a7b8c19495625604688156cb89848c49",
     "reviewedInputBytes": 12549,
     "integrationChange": "only final cache import URLs; business logic unchanged"
@@ -28,7 +28,7 @@
     "sourcePackage": "collectible-snapshot-codec-v1",
     "sourcePath": "module/snapshot-codec.mjs",
     "bytes": 4343,
-    "sha256": "744ff6bfcb39f3b015371a6dac9ff4e891a89c681f812f0d90bf0e4692c65866",
+    "sha256": "9088fd0a90ad18f926646984639a423df07dfc67374f3de89fb265296968512c",
     "reviewedInputSha256": "420e687372a697b79e65da6776088234b9a0e6fbd39154b2582bdbe42b4b156b",
     "reviewedInputBytes": 4299,
     "integrationChange": "only final cache import URLs; business logic unchanged"
@@ -52,7 +52,7 @@
     "sourcePackage": "collectible-protocol2-runtime-v1",
     "sourcePath": "module/validator.mjs",
     "bytes": 13535,
-    "sha256": "f88cb9fc3f0d832f9a56b897283014d0891bdf0e73ad2f7a07fea481ea0fed75",
+    "sha256": "2d060fcf63f3b99be73d312ca2fb0584cf657a585994c68b0ca45694e9d33c47",
     "sourceSha256": "b710aa9da4c979036e980ffdbdf2f8ed46259d13c5d7ac90bf07ea42a806511a",
     "sourceBytes": 8201,
     "derivation": "Revision 2 exact boot migration markers, formal leaderboard mirror, optional source-bound pet roster transition guard; original reviewed archive unchanged. Revision 3: instance-local, single-entry cache of fully verified immutable snapshot/original raw pairs; current validation and write protections unchanged. Revision 4 (杨总 16:12): optional mutable gachaDaily {day,n} for the 5-per-day blind box limit; absent = 0 today."
@@ -62,7 +62,7 @@
     "sourcePackage": "collectible-card-adapter-v1",
     "sourcePath": "module/card-coordinator.mjs",
     "bytes": 12085,
-    "sha256": "0af518833c13c8a659006b04264b59bf067e8f33ab6eb1efc650697bc7dad096",
+    "sha256": "8063124d350a29bc8425d8a13e95726f3602b24d43aa838b0d32a70c33be748e",
     "reviewedInputSha256": "c39527224902c835f2cc611527a5fcec2a23293adebd3b78bbb8684d2b41a034",
     "reviewedInputBytes": 8203,
     "integrationChange": "only final cache import URLs; business logic unchanged"
@@ -104,7 +104,7 @@
     "sourceCommit": "472349b5f31df4446e79694b6be5bd6f66bd6db4",
     "derivation": "Reviewed01a domain unchanged; new authored candidate moon intent/overlay increment; artwork selectively from pinned a1bc784b demo",
     "bytes": 10523,
-    "sha256": "2cd8669dc1a1d2e56d4ae581242f5c2f58d299c5128d6b4a09aab33a889cd662"
+    "sha256": "bcf1312c6966b828a028189a5c82e402b52731f87c2f44262a8ae2b43f21d450"
   },
   {
     "path": "space/host.mjs",
@@ -120,7 +120,7 @@
     "sourceCommit": "472349b5f31df4446e79694b6be5bd6f66bd6db4",
     "derivation": "Reviewed01a domain unchanged; new authored candidate moon intent/overlay increment; artwork selectively from pinned a1bc784b demo",
     "bytes": 18640,
-    "sha256": "bb9c9dd4cd92740a42acea81d3365ebf543c494ff97f2b1af1cc33f9704bbd7e"
+    "sha256": "02ad9a8f90c39654533fa153ddd24e4d0f482d33c704d5e5d0f67980b4f825cb"
   },
   {
     "path": "space/art.mjs",
