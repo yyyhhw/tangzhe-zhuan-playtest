@@ -18,5 +18,6 @@ v12 → v13 的根目录做法同 350eab7：`preview/` 的 app.js / index.html /
 - 存档 v3；同一时间只能一个标签页玩
 
 开发（仓库根目录起静态服务）：
+- 一键全量：`node scripts/run-all-tests.mjs [--out 目录] [--compare 旧summary.json]`（自动起停 8931/8781–8784 静态服务、带 NODE_OPTIONS=--experimental-vm-modules，串行跑 node --test + 根目录 test_*.js/mjs + pet/game/test_petgame.js，出汇总表和 summary.json；不跑 .py 和 WebKit）
 - Node：`node test_root_keys.js`、`node test_economy.js`、`node test_coin_safety.js`、`node pet/test_engine.js`、`node pet/game/test_petgame.js`
 - WebKit/iPhone：`test_coin_e2e.py URL`、`test_playtest.py URL`、`pet/test_pet_e2e.py URL/pet/index.html`、`pet/game/test_petgame_e2e.py URL/`、`zombie/test_zombie_embed.py URL`、`zombie/test_zombie_e2e.py URL/zombie/`、`test_joint_12e.py URL`、`test_v12_save_e2e.py URL [v12 URL]`（v12 URL = `git archive 350eab7` 起的服务）
