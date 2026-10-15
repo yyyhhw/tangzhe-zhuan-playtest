@@ -6,7 +6,7 @@ const require=createRequire(import.meta.url);
 for(const scope of ['formal','preview']){
  test(scope+': one ordered admission produces 52 catalog / 52 random / 48 ordinary; exact rollback',()=>{
   const path=new URL('../../'+(scope==='formal'?'':'preview/')+'economy.js',import.meta.url).pathname;delete require.cache[require.resolve(path)];const E=require(path),a=prepareEightWearableCatalog(E);a.setActive(true);const previous=E.ITEMS.slice(),c=prepareSecondEightCatalog(E);c.setActive(true);assert.equal(E.ITEMS.length,52);assert.equal(E.REGULAR_ITEMS.length,48);const s=E.newState(1);s.shops.forEach(x=>{x.open=true;x.lv=5;x.emp=1;});s.coins=5000000;s.totalEarned=5000000;s.gacha.owned=previous.map(x=>x.id);s.gacha.draws=44;
-  assert.equal(E.gachaOdds(E.newState(1)).perReg,.9/48);assert.equal(E.gachaRemaining(s).length,8);
+  assert.equal(E.gachaOdds(E.newState(1)).perReg,.9/(48-(E.STORY_COND_IDS||[]).length));assert.equal(E.gachaRemaining(s).length,8);
   for(const item of SECOND_EIGHT_WEARABLES){const r=E.gachaDraw(s,0);assert(r.ok);assert.equal(r.item.id,item.id);assert.equal(r.cost,200000);s.wear.c77[item.type]=item.id;assert.equal(E.migrate(s,1).st.wear.c77[item.type],item.id);}
   assert.equal(s.coins,3400000);assert.equal(s.gacha.draws,52);assert(E.gachaComplete(s));c.setActive(false);assert.deepEqual(E.ITEMS,previous);a.setActive(false);assert.equal(E.ITEMS.length,36);
  });

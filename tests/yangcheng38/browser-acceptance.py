@@ -1,0 +1,71 @@
+import sys,json,datetime
+from playwright.sync_api import sync_playwright
+base=sys.argv[1];save=json.load(open('/tmp/moon500.json'))
+NIGHT=datetime.datetime(2026,10,14,21,0,tzinfo=datetime.timezone(datetime.timedelta(hours=9)))
+res=[]
+def ok(c,m):
+  res.append((bool(c),m));print(('PASS ' if c else 'FAIL ')+m)
+with sync_playwright() as p:
+  for name in ['chromium','webkit']:
+    b=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--no-sandbox']) if name=='chromium' else p.webkit.launch()
+    for path in ['','pet/game/']:
+      tag=f'{name}/{path or "root"}'
+      ctx=b.new_context(viewport={'width':390,'height':844},timezone_id='Asia/Tokyo')
+      ctx.add_init_script("(()=>{if(sessionStorage.getItem('_i'))return;sessionStorage.setItem('_i','1');const d=%s;for(const k in d)localStorage.setItem(k,d[k]);})()"%json.dumps(save))
+      pg=ctx.new_page();errs=[];pg.on('pageerror',lambda e:errs.append(str(e)))
+      pg.clock.install(time=NIGHT)
+      pg.goto(base+path,wait_until='networkidle');pg.wait_for_timeout(2500)
+      J=lambda s:pg.evaluate(s)
+      def clear():
+        for _ in range(6):
+          if pg.locator('#claim').count() and pg.locator('#claim').is_visible(): pg.click('#claim');pg.wait_for_timeout(400);continue
+          if pg.locator('#mOk').count() and pg.locator('#mOk').is_visible(): pg.click('#mOk');pg.wait_for_timeout(400);continue
+          break
+      clear()
+      r=J("()=>{const T=__tzz;return T.atomic(()=>{T.state.gacha.owned=T.state.gacha.owned.filter(x=>!['k_3','k_4','k_8'].includes(x));return {ok:true};},'x')}")
+      pool=J("()=>__tzz.E.gachaRemaining(__tzz.state).map(x=>x.id)")
+      ok(r.get('ok') and not any(k in pool for k in ['k_3','k_4','k_8']),tag+' 条件卡不在盲盒池')
+      J("()=>__tzz.setTab('col')");pg.wait_for_timeout(400)
+      hints=J("()=>[...document.querySelectorAll('.story.no.cond p')].map(e=>e.textContent)")
+      ok(len(hints)==3 and all(h.startswith('提示：') for h in hints),tag+' 图鉴 3 条提示 '+str(hints))
+      pg.screenshot(path=f'/workspace/rel/yc38/{name}-{path.replace("/","_")}col.png',full_page=False)
+      J("()=>__tzz.setTab('gacha')");pg.wait_for_timeout(300)
+      ok(J("()=>!!document.getElementById('storyCondNote')"),tag+' 盲盒页说明条件卡')
+      J("()=>__tzz.setTab('shop')");pg.wait_for_timeout(300)
+      c0=J("()=>[__tzz.state.coins,__tzz.state.gacha.draws,__tzz.state.gacha.pity]")
+      J("()=>__tzz.setTab('home')");pg.wait_for_timeout(600)
+      own=J("()=>__tzz.state.gacha.owned")
+      toastT=J("()=>document.body.innerText.match(/新故事卡「[^」]+」，去图鉴看看。/g)")
+      ok('k_4' in own and 'k_8' in own and 'k_3' not in own,tag+' 夜里进家 → 收摊月亮 + 一条街的灯 (老档已满足四店) toast='+str(toastT))
+      c1=J("()=>[__tzz.state.coins,__tzz.state.gacha.draws,__tzz.state.gacha.pity]")
+      ok(c1[1:]==c0[1:] and c1[0]>=c0[0],tag+' 不扣币/不计抽数/不动保底')
+      J("()=>{const b=document.querySelector('[data-act=homeWho][data-arg=c77]');b&&b.click()}");pg.wait_for_timeout(500)
+      ok(J("()=>!!document.querySelector('.story-moon')"),tag+' 夜里有大月亮')
+      J("()=>__tzz.showSpecialComic(__tzz.E.SPECIAL_GUESTS[0],0,0)");pg.wait_for_timeout(300);pg.click('#mOk');pg.wait_for_timeout(500)
+      ok('k_3' in J("()=>__tzz.state.gacha.owned"),tag+' 收下夜游食神 → 熊猫监工')
+      pg.wait_for_timeout(1200)
+      ok(J("()=>!!document.querySelector('.story-panda')"),tag+' 77 家里熊猫在走')
+      pg.screenshot(path=f'/workspace/rel/yc38/{name}-{path.replace("/","_")}home77.png')
+      pg.reload(wait_until='networkidle');pg.wait_for_timeout(2500);clear()
+      own=J("()=>__tzz.state.gacha.owned")
+      ok(all(k in own for k in ['k_3','k_4','k_8']) and len(own)==len(set(own)),tag+' 重载后保留，不重复')
+      J("()=>__tzz.setTab('home')");pg.wait_for_timeout(500)
+      J("()=>{const b=document.querySelector('[data-act=homeWho][data-arg=rocket]');b&&b.click()}");pg.wait_for_timeout(600)
+      l1=J("()=>document.querySelector('#homeActor .ha-line')?.textContent||''");bal=J("()=>!!document.querySelector('.story-balloons')")
+      pg.screenshot(path=f'/workspace/rel/yc38/{name}-{path.replace("/","_")}rocket.png')
+      pg.wait_for_timeout(3800);l2=J("()=>document.querySelector('#homeActor .ha-line')?.textContent||''")
+      ok(J("()=>__tzz.E.homeOpen(__tzz.state,'rocket')") or ('三、二、一' not in l1 and not bal),tag+' 火箭老板未加入时不触发倒计时')
+      J("()=>__tzz.atomic(()=>{__tzz.state.ceos.rocket.unlocked=true;return {ok:true}},'x')");pg.wait_for_timeout(300)
+      pg.reload(wait_until='networkidle');pg.wait_for_timeout(2500);clear()
+      J("()=>__tzz.setTab('home')");pg.wait_for_timeout(500);clear()
+      J("()=>{const b=document.querySelector('[data-act=homeWho][data-arg=rocket]');b&&b.click()}");pg.wait_for_timeout(1500)
+      l1=J("()=>document.querySelector('#homeActor .ha-line')?.textContent||''");bal=J("()=>!!document.querySelector('.story-balloons')")
+      pg.screenshot(path=f'/workspace/rel/yc38/{name}-{path.replace("/","_")}rocket.png')
+      pg.wait_for_timeout(2600);l2=J("()=>document.querySelector('#homeActor .ha-line')?.textContent||''")
+      ok(J("()=>__tzz.E.homeOpen(__tzz.state,'rocket')") and '三、二、一' in l1 and bal and '今天先放气球' in l2,tag+f' 发射倒计时 {l1!r}→{l2!r} balloons={bal}')
+      J("()=>__tzz.setTab('shop')");pg.wait_for_timeout(300);J("()=>__tzz.setTab('home')");pg.wait_for_timeout(800)
+      ok('三、二、一' not in J("()=>document.querySelector('#homeActor .ha-line')?.textContent||''"),tag+' 倒计时本页只一次')
+      ok(not errs,tag+' 无页面错误 '+str(errs[:3]))
+      ctx.close()
+    b.close()
+print('TOTAL',sum(1 for c,_ in res if c),'/',len(res))

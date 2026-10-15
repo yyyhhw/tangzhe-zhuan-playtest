@@ -538,12 +538,12 @@
     { id:'d_plant',  type:'decor', name:'摸鱼绿萝' },
     { id:'k_1', type:'card', name:'第一把炭',     text:'招牌还没挂稳，香味已经拐过街角，替77招呼客人。' },
     { id:'k_2', type:'card', name:'微辣是哪个微', text:'客人说只要一点辣。77认真点头，先把凉茶放得稳稳当当。' },
-    { id:'k_3', type:'card', name:'熊猫监工',     text:'熊猫只盯着竹笋串。77宣布：今天的质检老师，专门负责素菜。' },
-    { id:'k_4', type:'card', name:'收摊月亮',     text:'大家围着最后几串摆龙门阵，月亮也像迟到的客人。' },
+    { id:'k_3', type:'card', name:'熊猫监工',     text:'熊猫只盯着竹笋串。77宣布：今天的质检老师，专门负责素菜。', cond:'guest', hint:'听说烧烤摊来过一位圆滚滚的夜宵客，它身后好像还跟着谁。' },
+    { id:'k_4', type:'card', name:'收摊月亮',     text:'大家围着最后几串摆龙门阵，月亮也像迟到的客人。', cond:'night', hint:'有些故事要等天黑了才来。晚上回家看看。' },
     { id:'k_5', type:'card', name:'一颗都不能少', text:'珍珠姐数珍珠比数钱还认真，多出来的一颗，也要追出门还给客人。' },
     { id:'k_6', type:'card', name:'名场面',       text:'阿宅店长把收银台画成漫画格，客人排队像在等下一话更新。' },
     { id:'k_7', type:'card', name:'发射倒计时',   text:'火箭老板喊完三、二、一，起飞的只有门口那串气球。' },
-    { id:'k_8', type:'card', name:'一条街的灯',   text:'四家店同时亮灯那晚，77说：今天的龙门阵，摆一整条街。' },
+    { id:'k_8', type:'card', name:'一条街的灯',   text:'四家店同时亮灯那晚，77说：今天的龙门阵，摆一整条街。', cond:'street', hint:'等四家店都亮起灯的那天，再回家看看。' },
     { id:'s_panda',    type:'super', shop:0, name:'熊猫食神',       desc:'抱着竹笋串营业：烧烤摊产量 +30%，手点三档暴击各 +5 个百分点（35% → 50%）' },
     { id:'s_fountain', type:'super', shop:1, name:'珍珠喷泉',       desc:'奶茶店产量 +30%；在线每 3 分钟连续爆单 20 秒：奶茶店产量 ×3、手点必暴击' },
     { id:'s_portal',   type:'super', shop:2, name:'次元传送门',     desc:'漫画书店产量 +30%；在线每 4 分钟漫画角色客串，送漫画书店 90 秒产量的大订单' },
@@ -554,7 +554,27 @@
   const CARD_COUNT = ITEMS.filter(it => it.type === 'card').length;
   const SET_REWARD = { id:'gold', name:'金牌摊主', clothes:'c_gold', hat:'h_gold', desc:'集齐 ' + CARD_COUNT + ' 张故事卡解锁：金马甲 + 金厨师帽' };
   function gachaUnlocked(st) { return !!(st.shops[3] && st.shops[3].open && st.shops[3].emp > 0); }
-  function gachaRemaining(st) { const own = new Set(st.gacha.owned); return ITEMS.filter(it => it.hidden !== true && !own.has(it.id)); }
+  // 养成-38：k_3/k_4/k_8 改为特殊条件获得（带提示），不再进盲盒池；价格/概率/保底规则不变，旧档已抽到的照旧保留
+  function gachaRemaining(st) { const own = new Set(st.gacha.owned); return ITEMS.filter(it => it.hidden !== true && !it.cond && !own.has(it.id)); }
+  const STORY_COND_IDS = ITEMS.filter(it => it.type === 'card' && it.cond).map(it => it.id);
+  function streetLit(st) { return Array.isArray(st.shops) && st.shops.length >= 4 && st.shops.slice(0, 4).every(s => s && s.open && s.emp > 0); }
+  // ev: {kind:'guest', shop} 夜游食神在烧烤摊被收下 / {kind:'home', period} 进家 / {kind:'hire'} 雇人后
+  function storyCardsDue(st, ev) {
+    const own = new Set(st.gacha.owned), out = [];
+    if (!ev) return out;
+    if (ev.kind === 'guest' && ev.shop === 0) out.push('k_3');
+    if (ev.kind === 'home' && ev.period === 'night') out.push('k_4');
+    if ((ev.kind === 'home' || ev.kind === 'hire') && streetLit(st)) out.push('k_8');
+    return out.filter(id => !own.has(id));
+  }
+  // 直接入库：不扣币、不计 draws、不动保底和每日次数
+  function grantStoryCard(st, id) {
+    const it = ITEM_BY_ID[id];
+    if (!it || it.type !== 'card' || !it.cond) return { ok:false, why:'不是条件故事卡' };
+    if (st.gacha.owned.includes(id)) return { ok:false, why:'已拥有' };
+    st.gacha.owned.push(id);
+    return { ok:true, item:it, setDone:cardsComplete(st) };
+  }
   function gachaComplete(st) { return gachaRemaining(st).length === 0; }
   // 当前这一抽的概率：普通 / 超级分开算，带保底
   function gachaOdds(st) {
@@ -1511,7 +1531,7 @@
     return { text:'躺着也能赚，老板你赢麻了！', cur:1, need:1 };
   }
 
-  return { CFG, ROCKET_NAME, TYPES, SHOPS, CEOS, CEO_BY_ID, SIGNS, CROSS, ITEMS, ITEM_BY_ID, REGULAR_ITEMS, SUPER_ITEMS, CARD_COUNT, SET_REWARD, MILESTONES,
+  return { CFG, ROCKET_NAME, TYPES, SHOPS, CEOS, CEO_BY_ID, SIGNS, CROSS, ITEMS, ITEM_BY_ID, REGULAR_ITEMS, STORY_COND_IDS, storyCardsDue, grantStoryCard, streetLit, SUPER_ITEMS, CARD_COUNT, SET_REWARD, MILESTONES,
     SUPER_OF_SHOP, hasSuper, superMult, alienCount, alienMult, rushActive, rushMult, startRush, critChance, critMult, portalReward, gachaComplete,
     COIN_CAP:CFG.COIN_CAP, SAFE_COINS:SAFE, normEarned, walletOk, normWallet, balance, overCap, addCoins, spendCoins, canAfford, priceOk, pendingOk,
     installFormalCollectionProtocol, shopMaxLv, empMaxLv, ceoMaxLv, shopMaxed, empMaxed, ceoMaxed, shopBuyCount, checkSave, validState, loadSave, transact, commitSave, isBlocked, markBlocked,
