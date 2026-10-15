@@ -276,10 +276,12 @@ for (const [nm, mv] of [['缺失（null）', null], ['空字符串', ''], ['JSON
 t('12d3 ② 主档缺失 + 没有备份 → 才是新游戏', () => { const r = E.loadSave('', null, T0); return r.source === 'new' && !r.blocked && r.st.coins === 0; });
 t('12d3 ② 主档缺失 + 坏备份 → 只读状态写不出去（commitSave 拒绝，备份原文不动）', () => { if (!has12d3) return false; const b = raw3(); b.shops[0] = null; const B = JSON.stringify(b); const ls = mem({ [KB]:B }); const L = E.loadSave(null, B, T0); const r = E.commitSave(ls, K, KB, L.st); return L.blocked && !r.ok && ls.getItem(K) === null && ls.getItem(KB) === B; });
 // ④ 备份写失败 → 整次保存放弃，主档不动
-t('12d3 ④ commitSave：备份 setItem 抛异常 → 返回失败，主档 / 备份逐字节不变，rev 不变', () => { if (!has12d3) return false; const P = JSON.stringify(raw3()); const ls = mem({ [K]:P, [KB]:'old-bak' }, { [KB]:true }); const st = G3(); st.coins -= 100; const rev = st.rev; const r = E.commitSave(ls, K, KB, st); return !r.ok && r.stage === 'bak' && ls.getItem(K) === P && ls.getItem(KB) === 'old-bak' && st.rev === rev; });
-t('12d3 ④ commitSave：主档 setItem 抛异常 → 返回失败，主档不变、rev 不变（备份 = 原主档）', () => { if (!has12d3) return false; const P = JSON.stringify(raw3()); const ls = mem({ [K]:P }, { [K]:true }); const st = G3(); const rev = st.rev; const r = E.commitSave(ls, K, KB, st); return !r.ok && r.stage === 'main' && ls.getItem(K) === P && st.rev === rev && (ls.getItem(KB) === null || ls.getItem(KB) === P); });
-t('12d3 ④ commitSave 成功：先把原主档整份放进 -bak，rev + 1，写出的档通过 checkSave', () => { if (!has12d3) return false; const P = JSON.stringify(raw3()); const ls = mem({ [K]:P }); const st = G3(); st.coins = 451999000; const r = E.commitSave(ls, K, KB, st); const w = JSON.parse(ls.getItem(K)); return r.ok && r.rev === 21 && st.rev === 21 && w.rev === 21 && w.coins === 451999000 && ls.getItem(KB) === P && E.checkSave(w).length === 0; });
-t('12d3 ④ commitSave：存储里 rev 更新（别的页面写过）→ 拒绝、不覆盖', () => { if (!has12d3) return false; const p = raw3(); p.rev = 50; const P = JSON.stringify(p); const ls = mem({ [K]:P }); const st = G3(); const r = E.commitSave(ls, K, KB, st); return !r.ok && r.stage === 'conflict' && ls.getItem(K) === P && ls.getItem(KB) === null; });
+// 测试-133 ③：v15 起 E.commitSave 只认正式存档协议（tangzhe-formal-collection-v1-save / -bak + 已安装的 coordinator），备份 / rev / 冲突改由 coordinator 负责（tests/formal/protocol.mjs 覆盖）。
+// 下面 4 条改成：旧键（未装协议）一律拒写（stage blocked），存储逐字节不动、rev 不变；转交 coordinator 的口径见文件末尾「测试-133 ③」段。
+t('12d3 ④ commitSave：旧键 + 备份 setItem 会抛异常 → 拒写（blocked），主档 / 备份逐字节不变，rev 不变', () => { if (!has12d3) return false; const P = JSON.stringify(raw3()); const ls = mem({ [K]:P, [KB]:'old-bak' }, { [KB]:true }); const st = G3(); st.coins -= 100; const rev = st.rev; const r = E.commitSave(ls, K, KB, st); return !r.ok && r.stage === 'blocked' && ls.getItem(K) === P && ls.getItem(KB) === 'old-bak' && st.rev === rev; });
+t('12d3 ④ commitSave：旧键 + 主档 setItem 会抛异常 → 拒写（blocked），主档不变、备份不生成、rev 不变', () => { if (!has12d3) return false; const P = JSON.stringify(raw3()); const ls = mem({ [K]:P }, { [K]:true }); const st = G3(); const rev = st.rev; const r = E.commitSave(ls, K, KB, st); return !r.ok && r.stage === 'blocked' && ls.getItem(K) === P && st.rev === rev && ls.getItem(KB) === null; });
+t('12d3 ④ commitSave：旧键即使存储正常也拒写（blocked）——不写主档、不生成 -bak、rev 不涨（不会绕过正式协议落盘）', () => { if (!has12d3) return false; const P = JSON.stringify(raw3()); const ls = mem({ [K]:P }); const st = G3(); st.coins = 451999000; const r = E.commitSave(ls, K, KB, st); return !r.ok && r.stage === 'blocked' && st.rev === 20 && ls.getItem(K) === P && ls.getItem(KB) === null && Object.keys(ls.d).length === 1; });
+t('12d3 ④ commitSave：旧键 + 存储里 rev 更新（别的页面写过）→ 同样拒写（blocked）、不覆盖', () => { if (!has12d3) return false; const p = raw3(); p.rev = 50; const P = JSON.stringify(p); const ls = mem({ [K]:P }); const st = G3(); const r = E.commitSave(ls, K, KB, st); return !r.ok && r.stage === 'blocked' && ls.getItem(K) === P && ls.getItem(KB) === null; });
 t('12d3 ④ commitSave：余额 1e20 读出的只读状态 → 拒绝（原文不动）', () => { if (!has12d3) return false; const u = raw3(); u.coins = 1e20; const U = JSON.stringify(u); const ls = mem({ [K]:U }); const L = E.loadSave(U, null, T0); const r = E.commitSave(ls, K, KB, L.st); return !r.ok && ls.getItem(K) === U; });
 // ⑤ 统一交易入口 E.transact
 t('12d3 ⑤ E.transact / E.commitSave / E.isBlocked 存在', () => has12d3 && typeof E.isBlocked === 'function');
@@ -300,14 +302,14 @@ t('12d3 ⑤ 经营购买也能走：transact(apply = upgradeShop) 存不上 → 
 // ⑤ 跨页完整链路（打僵尸训练 / 宠物买狗的写法）：读档 → transact（save = commitSave）→ 失败全回滚
 const zombieTrain = (ls, price) => { const L = E.loadSave(ls.getItem(K), ls.getItem(KB), T0); if (L.blocked) return { ok:false, stage:'blocked', L };
   const r = E.transact(L.st, { price, apply:s => { const z = s.zombie || (s.zombie = { lv:0 }); z.lv++; return { ok:true, lv:z.lv }; }, save:s => E.commitSave(ls, K, KB, s) }); r.L = L; return r; };
-t('12d3 ⑤ 打僵尸训练（跨页）成功：主档余额 −价格、zombie.lv +1、rev +1，-bak = 原主档', () => { if (!has12d3) return false; const P = JSON.stringify(raw3()); const ls = mem({ [K]:P }); const r = zombieTrain(ls, 5000); const w = JSON.parse(ls.getItem(K)); return r.ok && w.coins === 452000000 - 5000 && w.zombie.lv === 1 && w.rev === 21 && ls.getItem(KB) === P && r.L.st.zombie.lv === 1; });
+t('12d3 ⑤ 打僵尸训练（跨页，旧键）：commitSave 拒写 → transact 失败（stage save），主档不动、内存的钱 / 训练等级 / rev 全回滚', () => { if (!has12d3) return false; const P = JSON.stringify(raw3()); const ls = mem({ [K]:P }); const r = zombieTrain(ls, 5000); return !r.ok && r.stage === 'save' && ls.getItem(K) === P && ls.getItem(KB) === null && r.L.st.coins === 452000000 && !r.L.st.zombie && r.L.st.rev === 20; });
 t('12d3 ⑤ 打僵尸训练：备份写失败 → 主档 / 备份逐字节不变，内存里的钱和训练等级都回滚', () => { if (!has12d3) return false; const P = JSON.stringify(raw3()); const ls = mem({ [K]:P, [KB]:'B0' }, { [KB]:true }); const r = zombieTrain(ls, 5000); return !r.ok && r.stage === 'save' && ls.getItem(K) === P && ls.getItem(KB) === 'B0' && r.L.st.coins === 452000000 && !r.L.st.zombie && r.L.st.rev === 20; });
 t('12d3 ⑤ 打僵尸训练：主档写失败 → 主档不变，内存回滚（没有「扣了钱存不上」）', () => { if (!has12d3) return false; const P = JSON.stringify(raw3()); const ls = mem({ [K]:P }, { [K]:true }); const r = zombieTrain(ls, 5000); return !r.ok && ls.getItem(K) === P && r.L.st.coins === 452000000 && !r.L.st.zombie; });
 t('12d3 ⑤ 打僵尸训练：存档余额 1e20 → 整局禁止训练扣款，原文不动', () => { if (!has12d3) return false; const u = raw3(); u.coins = 1e20; const U = JSON.stringify(u); const ls = mem({ [K]:U }); const r = zombieTrain(ls, 5000); return !r.ok && r.stage === 'blocked' && ls.getItem(K) === U; });
-t('12d3 ⑤ 宠物买狗（跨页）：存不上 → pet 字段不出现、钱不扣；能存上 → pet 写进同一份主档', () => { if (!has12d3) return false; const P = JSON.stringify(raw3());
+t('12d3 ⑤ 宠物买狗（跨页，旧键）：存不上 / 旧键拒写 → pet 字段不出现、钱不扣、主档不动', () => { if (!has12d3) return false; const P = JSON.stringify(raw3());
   const buy = ls => { const L = E.loadSave(ls.getItem(K), ls.getItem(KB), T0); const r = E.transact(L.st, { price:8000, apply:s => { if (s.pet) return { ok:false, why:'已经有狗了' }; s.pet = { id:'puppy', t:T0 }; return { ok:true }; }, save:s => E.commitSave(ls, K, KB, s) }); return { r, st:L.st }; };
   const a = buy(mem({ [K]:P }, { [K]:true })), ls2 = mem({ [K]:P }), b = buy(ls2);
-  return !a.r.ok && !a.st.pet && a.st.coins === 452000000 && b.r.ok && JSON.parse(ls2.getItem(K)).pet.id === 'puppy' && JSON.parse(ls2.getItem(K)).coins === 452000000 - 8000; });
+  return !a.r.ok && !a.st.pet && a.st.coins === 452000000 && !b.r.ok && b.r.stage === 'save' && !b.st.pet && b.st.coins === 452000000 && ls2.getItem(K) === P; });
 // ⑥ 已确认的取舍保持不变
 t('12d3 ⑥ 取舍不变：1e15 < 余额 ≤ MAX_SAFE 的旧档照常读、能花不涨；totalEarned 超安全整数的旧值读档不裁', () => { const r0 = raw3(); r0.coins = 5e15 + 1; r0.totalEarned = 1e17; const L = E.loadSave(JSON.stringify(r0), null, T0); const c = L.st.coins; E.addCoins(L.st, 100); const u = E.upgradeShop(L.st, 0); return L.source === 'main' && c === 5e15 + 1 && u.ok && L.st.coins === c - u.cost && L.st.totalEarned === 1e17; });
 t('12d3 ⑥ 取舍不变：余额 1e20 仍是异常模式（不自动拿备份顶）', () => { const u = raw3(); u.coins = 1e20; const r = E.loadSave(JSON.stringify(u), JSON.stringify(raw3()), T0); return r.unsafe === true && r.blocked === true && r.source === 'unsafe'; });
@@ -340,6 +342,26 @@ t('12d3 ⑥ 取舍不变：余额 1e20 仍是异常模式（不自动拿备份�
     const r1 = claimTx(L.st), c1 = L.st.coins; L.st.pending = { id: 'p1', amount: 200, sec: 3600, gap: 3600 }; const r2 = claimTx(L.st);
     return ok1 && r1.ok && c1 === 1200 && !r2.ok && L.st.coins === 1200;
   });
+}
+
+/* ===== 测试-133 ③：正式存档协议下 commitSave 转交 coordinator（放在文件末尾：装上 coordinator 是全局一次性的，不影响前面各段） ===== */
+// 打僵尸 / 宠物买狗的「能存上」路径：正式键 + 已装 coordinator → 交给 coordinator.commit；ok 原样返回，REVISION_CONFLICT → stage conflict，其余失败 → stage save；只读档不调 coordinator。
+if (has12d3 && typeof E.installFormalCollectionProtocol === 'function') {
+  const FK = 'tangzhe-formal-collection-v1-save', FKB = 'tangzhe-formal-collection-v1-save-bak';
+  const co = { mode:'ok', calls:0, seen:null, store:null, validateCollection:() => [],
+    commit(st) { this.calls++; this.seen = JSON.parse(JSON.stringify(st)); if (this.mode === 'ok') { if (this.store) this.store.setItem(FK, JSON.stringify(st)); return { ok:true, rev:(st.rev || 0) + 1 }; } return { ok:false, code:this.mode }; } };
+  E.installFormalCollectionProtocol(co);
+  const reset = (mode, store) => { co.mode = mode; co.calls = 0; co.seen = null; co.store = store || null; };
+  t('测试-133 ③ commitSave 正式键 + coordinator 成功：调 coordinator 1 次、看到的是改好的整档，ok 原样返回', () => { reset('ok'); const st = G3(); st.coins = 451999000; const r = E.commitSave(mem({}), FK, FKB, st); return r.ok && r.rev === 21 && co.calls === 1 && co.seen.coins === 451999000; });
+  t('测试-133 ③ commitSave：coordinator 报 REVISION_CONFLICT → stage conflict（版本冲突，调用方冻结）', () => { reset('REVISION_CONFLICT'); const r = E.commitSave(mem({}), FK, FKB, G3()); return !r.ok && r.stage === 'conflict' && r.why === 'REVISION_CONFLICT' && co.calls === 1; });
+  t('测试-133 ③ commitSave：coordinator 报 WRITE_FAILED → stage save', () => { reset('WRITE_FAILED'); const r = E.commitSave(mem({}), FK, FKB, G3()); return !r.ok && r.stage === 'save' && r.why === 'WRITE_FAILED' && co.calls === 1; });
+  t('测试-133 ③ commitSave：键名只对一半（主档正式、备份旧键）→ blocked，不调 coordinator', () => { reset('ok'); const r = E.commitSave(mem({}), FK, KB, G3()); return !r.ok && r.stage === 'blocked' && co.calls === 0; });
+  t('测试-133 ③ commitSave：余额 1e20 读出的只读状态 → blocked，不调 coordinator', () => { reset('ok'); const u = raw3(); u.coins = 1e20; const L = E.loadSave(JSON.stringify(u), null, T0); const r = E.commitSave(mem({}), FK, FKB, L.st); return L.blocked && !r.ok && r.stage === 'blocked' && co.calls === 0; });
+  t('测试-133 ③ 打僵尸训练（跨页，正式协议）成功：扣 5000、zombie.lv 1，coordinator 收到的整档已扣款', () => { const P = JSON.stringify(raw3()); const ls = mem({ [FK]:P }); reset('ok', ls); const L = E.loadSave(ls.getItem(FK), ls.getItem(FKB), T0); const r = E.transact(L.st, { price:5000, apply:s => { const z = s.zombie || (s.zombie = { lv:0 }); z.lv++; return { ok:true }; }, save:s => E.commitSave(ls, FK, FKB, s) }); const w = JSON.parse(ls.getItem(FK)); return r.ok && co.calls === 1 && L.st.coins === 452000000 - 5000 && L.st.zombie.lv === 1 && w.coins === 452000000 - 5000 && w.zombie.lv === 1; });
+  t('测试-133 ③ 宠物买狗（跨页，正式协议）：coordinator 写失败 → 钱 / pet 回滚；写成功 → pet 和扣款进同一份档', () => { const P = JSON.stringify(raw3()); const ls = mem({ [FK]:P });
+    const buy = () => { const L = E.loadSave(ls.getItem(FK), null, T0); const r = E.transact(L.st, { price:8000, apply:s => { if (s.pet) return { ok:false, why:'已经有狗了' }; s.pet = { id:'puppy', t:T0 }; return { ok:true }; }, save:s => E.commitSave(ls, FK, FKB, s) }); return { r, st:L.st }; };
+    reset('WRITE_FAILED', ls); const a = buy(); reset('ok', ls); const b = buy(); const w = JSON.parse(ls.getItem(FK));
+    return !a.r.ok && a.r.stage === 'save' && !a.st.pet && a.st.coins === 452000000 && b.r.ok && w.pet.id === 'puppy' && w.coins === 452000000 - 8000; });
 }
 
 console.log(`coin safety tests: ${pass} passed, ${fail} failed`);
