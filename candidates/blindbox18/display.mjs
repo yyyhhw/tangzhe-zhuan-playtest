@@ -1,11 +1,11 @@
 /** Approved second-eight adapter. Production composition owns catalog admission.
  * Host must register approved items before creating the validator, under its unified policy.
  */
-import first from '../../qa-protocol2/wearables8-display.mjs?v=xtcopyfix-20261015-r1';
-import * as render from './render.mjs?v=xtcopyfix-20261015-r1';
+import first from '../../qa-protocol2/wearables8-display.mjs?v=xtentry-20261015-r1';
+import * as render from './render.mjs?v=xtentry-20261015-r1';
 export const IDS=Object.freeze({clothes:Object.freeze([...first.IDS.clothes,...render.IDS.clothes]),hat:Object.freeze([...first.IDS.hat,...render.IDS.hat])});
 const types=Object.freeze(Object.fromEntries(Object.entries(render.IDS).flatMap(([type,ids])=>ids.map(id=>[id,type]))));
-export const ART=Object.freeze(Object.fromEntries(Object.keys(types).map(id=>[id,new URL('./art/'+id+'.png?v=xtcopyfix-20261015-r1',import.meta.url).href])));
+export const ART=Object.freeze(Object.fromEntries(Object.keys(types).map(id=>[id,new URL('./art/'+id+'.png?v=xtentry-20261015-r1',import.meta.url).href])));
 const escape=value=>String(value??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const registered=(E,id)=>render.has(id)&&E.ITEM_BY_ID?.[id]?.id===id&&E.ITEM_BY_ID[id].type===types[id];
 export const owned=(E,s,id)=>render.has(id)?registered(E,id)&&Array.isArray(s?.gacha?.owned)&&s.gacha.owned.includes(id):first.owned(E,s,id);
