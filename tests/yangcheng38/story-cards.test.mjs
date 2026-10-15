@@ -72,3 +72,18 @@ for(const p of ['app.js','pet/game/app.js'])test(p+': 接线——收下夜游�
   const s=fs.readFileSync(new URL('../../'+p,import.meta.url),'utf8');
   for(const x of ["storyGrant({ kind:'guest', shop })","storyGrant({ kind:'home', period:storyPeriod() })","storyGrant({ kind:'hire' })","'新故事卡「' + E.ITEM_BY_ID[id].name + '」，去图鉴看看。'","'提示：' + c.hint","${storySceneHTML(id)}","${storyTeaHTML(id)}","storyCountdown(arg)","HS.pick(pool, HS.linesFor(storyCtx(id, kind))"])assert.ok(s.includes(x),x);
 });
+// 熊大 r2 复验 6 项（fcb91c1）：k5 无桌坐着必说手心句；k6 沙发躺；pick 强制
+test('r2: k5 无桌坐着说「没桌子，就在手心里数。」且必说；k6 沙发当床',()=>{
+  const owned=new Set(['k_5','k_6']);
+  for(const kind of [null,'sit','rug']){const l=HS.linesFor({owned,who:'pearl',kind,hasTable:false});assert.deepEqual([...l],['没桌子，就在手心里数。']);assert.equal(HS.pick(['普通'],l,()=>.99),l);}
+  assert.equal(HS.linesFor({owned,who:'pearl',kind:'sit',hasTable:true}).includes('没桌子，就在手心里数。'),false);
+  assert.equal(HS.lieOn({owned,who:'otaku'},'furn_sofa'),true);assert.equal(HS.lieOn({owned,who:'otaku'},'furn_otaku_modular_couch'),true);
+  assert.equal(HS.lieOn({owned,who:'otaku'},'furn_otaku_gaming_chair'),false);assert.equal(HS.lieOn({owned:new Set(),who:'otaku'},'furn_sofa'),false);assert.equal(HS.lieOn({owned,who:'pearl'},'furn_sofa'),false);
+  assert.ok(HS.linesFor({owned,who:'otaku',kind:'lie'}).includes('这一格，名场面。'));
+});
+test('r2: app 源码——k7 不缩短停留、气球按主人、decor 不说、熊猫读竹家具坐标（root+pet 同步）',async()=>{
+  const fs=await import('node:fs');
+  for(const f of ['app.js','pet/game/app.js']){const s=fs.readFileSync(new URL('../../'+f,import.meta.url),'utf8');
+    for(const x of ['Math.max(ac.autoHold || 0, clock + 7)','storyBalloonWho === id',"homeMode !== 'live' || tab !== 'home'",'storyPandaFloorHTML(id)','function storyBambooSpot(id)','HS.lieOn'])assert.ok(s.includes(x),f+' '+x);
+    assert.ok(!s.includes('ac.autoHold = clock + 7;'),f);}
+});

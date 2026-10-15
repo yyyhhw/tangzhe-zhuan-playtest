@@ -24,18 +24,21 @@
   if(own(c,'k_2')&&who==='c77'&&k==='sit')out.push(...L.k2);
   if(own(c,'k_3')&&who==='c77'&&!k){out.push(L.k3);if((c.placed||[]).some(f=>BAMBOO.includes(f)))out.push(L.k3bamboo);}
   if(own(c,'k_4')&&per==='night'&&L.k4sit[who]){if(SIT.includes(k))out.push(L.k4sit[who]);else if(!k&&!c.hasSeat)out.push(L.k4stand[who]);}
-  if(own(c,'k_5')&&who==='pearl'){if(k==='eat')out.push(...L.k5);else if(!k&&!c.hasTable)out.push(L.k5hand);}
+  if(own(c,'k_5')&&who==='pearl'){if(k==='eat')out.push(...L.k5);else if(!c.hasTable&&(!k||SIT.includes(k))){out.length=0;out.push(L.k5hand);Object.defineProperty(out,'force',{value:true});return out;}}   // 熊大 r2：没桌子坐着也数手心，且必说
   if(own(c,'k_6')&&who==='otaku'){if(k==='lie')out.push(...L.k6);else if(k==='sit'||k==='rug')out.push(L.k6sit);}
   if(own(c,'k_8')&&per==='dusk'&&L.k8[who])out.push(L.k8[who]);
   return out;
  }
  // 一半机会说故事句；同一张卡的两句由 HomeAutonomy.chooseLine 轮流（10 分钟不重复）
- function pick(base,story,rng){return story&&story.length&&(rng||Math.random)()<.5?story:base;}
+ function pick(base,story,rng){return story&&story.length&&(story.force||(rng||Math.random)()<.5)?story:base;}
  function scene(c){
   return {panda:own(c,'k_3')&&c.who==='c77', moon:own(c,'k_4')&&c.period==='night', street:own(c,'k_8')&&c.period==='dusk',
    tea:own(c,'k_2')&&c.who==='c77'&&c.kind==='sit'&&!!c.posed};
  }
+ // 熊大 r2：阿宅有 k6，沙发（sit 类里的沙发/长沙发）当床躺着看；床本来就是 lie
+ const SOFA=/sofa|couch|sectional|lounge/;
+ function lieOn(c,fid){return own(c,'k_6')&&c.who==='otaku'&&SOFA.test(fid||'');}
  // 发射倒计时：火箭老板已加入、拥有卡、本页第一次进他的家
  function countdownDue(c){return own(c,'k_7')&&c.who==='rocket'&&!!c.joined&&!c.done;}
- return Object.freeze({LINES:L,BAMBOO,STYLE_LIVE,linesFor,pick,scene,countdownDue});
+ return Object.freeze({LINES:L,BAMBOO,STYLE_LIVE,linesFor,pick,scene,countdownDue,lieOn});
 });

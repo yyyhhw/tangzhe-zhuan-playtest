@@ -2098,7 +2098,7 @@ function homeDrawActor(){homeDrawActorPos();homeFitLine();}
 function homeDrawActorPos(){
   if(tab!=='home'||homeSub!=='room')return;const el=$('#homeActor'),floor=$('#roomFloor');if(!el||!floor)return;
   el.classList.toggle('ha-fade',(homeActor[homeWho]?.fadeUntil||0)>clock);
-  const ac=homeActorOf(homeWho),T=E.homeTier(E.homeOf(state,homeWho).lv),p=ac.pose&&E.homeOf(state,homeWho).placed.find(p=>p.uid===ac.pose.uid),profile=p&&HomeInteraction.profile(p.fid);
+  const ac=homeActorOf(homeWho),T=E.homeTier(E.homeOf(state,homeWho).lv),p=ac.pose&&E.homeOf(state,homeWho).placed.find(p=>p.uid===ac.pose.uid),profile=(r=>r&&ac.pose.kind==='lie'&&r.pose!=='lie'?{...r,pose:'lie',v:.6,angle:-1.38}:r)(p&&HomeInteraction.profile(p.fid));
   const stand=()=>{el.classList.remove('posed');const q=profile?(homeFreePoint(homeWho,ac.x,ac.y)||ac):ac;ac.visualFallback=profile?{x:q.x,y:q.y}:null;el.style.cssText=`left:${(q.x+.5)/T.cols*100}%;top:${(q.y+.5)/T.rows*100}%`;};
   if(!profile){stand();return;}
   const f=[...floor.querySelectorAll('.furn')].find(e=>e.dataset.uid===p.uid),img=f?.querySelector('img');
@@ -2108,14 +2108,14 @@ function homeDrawActorPos(){
   const beside=profile.location==='beside',ground=beside||profile.ground,x=ground?(ac.x+.5)/T.cols*fr.width:ir.left-fr.left+ir.width*profile.u,y=(ground?(ac.y+.5)/T.rows*fr.height:ir.top-fr.top+ir.height*profile.v)-(profile.pose==='sit'?size*.064:0);
   el.style.cssText=`left:${x}px;top:${y}px;--pose-width:${size}px;--pose-height:${size}px;--pose-z:${beside||profile.ground?6:11+(p.y+z.h)*10}`;
   if (!WEARABLES8) {
-  const cv=el.querySelector('canvas'),key=JSON.stringify([p.fid,p.rot,lookOf(homeWho)]);if(cv.dataset.pose!==key){HomeInteraction.drawPose(cv.getContext('2d'),drawPerson,lookOf(homeWho),profile.pose,profile.pose==='lie'?(side?-.22:profile.angle)*(p.rot===2||p.rot===3?-1:1):0);cv.dataset.pose=key;}
+  const cv=el.querySelector('canvas'),key=JSON.stringify([p.fid,p.rot,lookOf(homeWho),profile.pose]);if(cv.dataset.pose!==key){HomeInteraction.drawPose(cv.getContext('2d'),drawPerson,lookOf(homeWho),profile.pose,profile.pose==='lie'?(side?-.22:profile.angle)*(p.rot===2||p.rot===3?-1:1):0);cv.dataset.pose=key;}
   } else {
   const cv=el.querySelector('canvas'),ownedPose=!!WEARABLES8?.hasEquipment(E,state,homeWho),displayLook=lookOf(homeWho);
   const poseSize=ownedPose?352:240;
   if(cv.width!==poseSize||cv.height!==poseSize){cv.width=cv.height=poseSize;delete cv.dataset.pose;}
   // Same 240px logical anchor as the reviewed candidate; only transparent headroom grows.
   cv.style.cssText=ownedPose?'position:absolute;left:-23.3333333333%;top:-23.3333333333%;width:146.6666666667%;height:146.6666666667%;max-width:none;transform:none;pointer-events:none':'';
-  const key=JSON.stringify([p.fid,p.rot,displayLook,ownedPose]);
+  const key=JSON.stringify([p.fid,p.rot,displayLook,ownedPose,profile.pose]);
   if(cv.dataset.pose!==key){HomeInteraction.drawPose(cv.getContext('2d'),drawPerson,displayLook,profile.pose,profile.pose==='lie'?(side?-.22:profile.angle)*(p.rot===2||p.rot===3?-1:1):0,ownedPose?{candidateVisual:true}:undefined);cv.dataset.pose=key;}
   }
   ac.visualFallback=null;el.classList.add('posed');
@@ -2132,14 +2132,14 @@ function storyCtx(id, kind) {
   return { owned:new Set(state.gacha.owned), who:id, kind:kind || null, period:storyPeriod(), placed:H.placed.map(p => p.fid),
     hasSeat:H.placed.some(p => !!HomeInteraction.capability(p.fid)), hasTable:H.placed.some(p => eat.includes(p.fid)), posed:!!homeActorOf(id).pose };
 }
-let storyBalloonAt = -1e9; const storyCountdownDone = new Set();
+let storyBalloonAt = -1e9, storyBalloonWho = null; const storyCountdownDone = new Set();
 function storyCountdown(id) {   // 发射倒计时：本页第一次进火箭老板的家（他已加入）
   if (!HS || tab !== 'home' || homeSub !== 'room' || homeMode !== 'live') return;
   if (!HS.countdownDue({ owned:state.gacha.owned, who:id, joined:E.homeOpen(state, id), done:storyCountdownDone.has(id) })) return;
   storyCountdownDone.add(id);
   const ac = homeActorOf(id), t0 = clock;
-  ac.autoHold = clock + 7; ac.line = HS.LINES.k7[0]; ac.until = clock + 2.4; storyBalloonAt = clock; dirty = true;
-  setTimeout(() => { if (homeWho !== id) return; ac.line = HS.LINES.k7[1]; ac.until = clock + 3.2; dirty = true; }, 3600);
+  ac.autoHold = Math.max(ac.autoHold || 0, clock + 7); ac.line = HS.LINES.k7[0]; ac.until = clock + 2.4; storyBalloonAt = clock; storyBalloonWho = id; dirty = true;   // 熊大 r2：不缩短已有的更长停留
+  setTimeout(() => { if (homeWho !== id || homeMode !== 'live' || tab !== 'home' || homeSub !== 'room') return; ac.line = HS.LINES.k7[1]; ac.until = clock + 3.2; dirty = true; }, 3600);
 }
 function storySceneHTML(id) {
   if (!HS || homeMode !== 'live') return '';
@@ -2147,10 +2147,20 @@ function storySceneHTML(id) {
   let h = '';
   if (sc.moon) h += `<i class="story-moon" data-story="moon"></i>`;
   if (sc.street) h += `<span class="story-street" data-story="street">${'<i></i>'.repeat(4)}</span>`;
-  if (sc.panda) h += `<span class="story-panda${red ? ' still' : ''}" data-story="panda" style="animation-delay:${d}s">${storyPandaSVG(0)}${storyPandaSVG(1)}</span>`;
+  if (sc.panda && !storyBambooSpot(id)) h += `<span class="story-panda${red ? ' still' : ''}" data-story="panda" style="animation-delay:${d}s">${storyPandaSVG(0)}${storyPandaSVG(1)}</span>`;
   const b = clock - storyBalloonAt;
-  if (b >= 0 && b < 6.2) h += `<span class="story-balloons" data-story="balloons" style="animation-delay:${(1.2 - b).toFixed(2)}s"><i></i><i></i><i></i></span>`;
+  if (storyBalloonWho === id && b >= 0 && b < 6.2) h += `<span class="story-balloons" data-story="balloons" style="animation-delay:${(1.2 - b).toFixed(2)}s"><i></i><i></i><i></i></span>`;
   return h ? `<div class="story-scene" aria-hidden="true">${h}</div>` : '';
+}
+function storyBambooSpot(id) {   // 熊大 r2：屋里有竹家具，熊猫就停在第一件竹家具旁边（读家具坐标）
+  const p = E.homeOf(state, id).placed.find(q => HS.BAMBOO.includes(q.fid)); if (!p) return null;
+  const T = E.homeTier(E.homeOf(state, id).lv), z = E.furnSize(p.fid, p.rot);
+  return { left:Math.min(92, (p.x + z.w) / T.cols * 100), top:(p.y + z.h) / T.rows * 100, uid:p.uid };
+}
+function storyPandaFloorHTML(id) {
+  if (!HS || homeMode !== 'live' || !HS.scene(storyCtx(id, null)).panda) return '';
+  const q = storyBambooSpot(id); if (!q) return '';
+  return `<span class="story-panda at-bamboo still" data-story="panda" data-near="${q.uid}" aria-hidden="true" style="left:${q.left.toFixed(2)}%;top:${q.top.toFixed(2)}%">${storyPandaSVG(0)}${storyPandaSVG(1)}</span>`;
 }
 function storyTeaHTML(id) {
   return HS && homeMode === 'live' && HS.scene(storyCtx(id, homeActorOf(id).pose ? 'sit' : null)).tea && HomeInteraction.capability(E.homeOf(state, id).placed.find(p => p.uid === homeActorOf(id).pose?.uid)?.fid || '') === 'sit'
@@ -2240,7 +2250,7 @@ function homeAutoMove(id, ac, x, y, pace) {
 }
 function homeAutoStart(id, ac, list) {
   const H = E.homeOf(state, id), T = E.homeTier(H.lv);
-  const c = HA.pick(list, { last:ac.autoLast || null, ceo:id, period:homeAutoPeriod(), rng:Math.random });
+  let c = HA.pick(list, { last:ac.autoLast || null, ceo:id, period:homeAutoPeriod(), rng:Math.random });
   if (ac.pose && !homeFreePoint(id, ac.x, ac.y)) return null;   // 起不了身（四周没空地）就继续待着，不弹提示
   if (c.pace) {
     homeLeavePose(id); ac.act = null; ac.pendingPose = null;
@@ -2268,8 +2278,10 @@ function homeAutoStart(id, ac, list) {
   if (c.kind === 'rug') { point = HomeInteraction.rugPoint(E, H, p, ac); if (!point) { ac.autoLast = c.uid; return null; } }   // 地毯上没空位就不去
   homeLeavePose(id); ac.pendingPose = null;
   if (!homeAutoMove(id, ac, point.x, point.y)) return null;
+  const storyLie = cap === 'sit' && HS && HS.lieOn && HS.lieOn({ owned:state.gacha.owned, who:id }, p.fid);   // 养成-38 k6：阿宅有沙发就躺着看
+  if (storyLie) c = { ...c, kind:'lie' };
   ac.act = c.kind === 'lie' ? 'rest' : c.kind === 'read' || c.kind === 'dress' ? c.kind : 'sit';
-  if (cap) ac.pendingPose = { uid:p.uid, kind:cap };
+  if (cap) ac.pendingPose = { uid:p.uid, kind:storyLie ? 'lie' : cap };
   return { phase:'moving', uid:c.uid, kind:c.kind, since:clock };
 }
 function homeAutoSay(id, ac, kind, emptyRoom) {
@@ -2372,7 +2384,7 @@ function renderRoom() {
   h += `<div class="room tier-${T.id}${hasArt ? ' has-art' : ''}${dockHost ? ' pet-host-docked' : ''}" id="room" data-tier="${T.id}" style="--cols:${T.cols};--rows:${T.rows};--wall:${T.wall};--floor:${T.floor};--trim:${T.trim}">
     ${hasArt ? `<img class="room-art" src="art/home_${artKey}.webp?v=${ART_V}" data-homefb="1" alt="" onerror="this.closest('.room')&&this.closest('.room').classList.remove('has-art')">` : ''}${homeStatusContext ? homeWindowLayers(artKey) : ''}${storySceneHTML(id)}
     <div class="room-wall" id="roomWall"><span class="rw-deco">${T.id === 'hut' ? ic('window') : T.id === 'apt' ? ic('window') + ic('window') : ic('spark') + ic('candle') + ic('spark')}</span><span class="rw-name">${c.name} 的${T.name}${homeStatusContext ? '<span class="rw-status" id="homeAmbienceStatus" hidden></span>' : ''}</span><div class="wall-grid" id="wallGrid">${wallBlocks}${wallItems}<div class="room-hl hidden" id="wallHl"></div></div></div>
-    <div class="room-floor" id="roomFloor">${floorItems}<div class="home-actor" id="homeActor" style="left:${(homeActorOf(id).x + 0.5) / T.cols * 100}%;top:${(homeActorOf(id).y + 0.5) / T.rows * 100}%"><canvas class="ha-pose" width="240" height="240" aria-label="${c.name}"></canvas><span class="ha-ava">${ava(id)}</span>${storyTeaHTML(id)}${(() => { const ac = homeActorOf(id); return ac.line && ac.until > clock ? `<b class="ha-line">${ac.line}</b>` : ''; })()}<i class="ha-act">${(() => { const ac = homeActorOf(id); return ac.act === 'rest' ? ic('zz') : ac.act === 'read' ? ic('book') : ac.act === 'dress' ? ic('shirt') : ac.actIcon ? ic(ac.actIcon) : ''; })()}</i></div><div class="room-hl hidden" id="roomHl"></div></div></div>`;
+    <div class="room-floor" id="roomFloor">${floorItems}${storyPandaFloorHTML(id)}<div class="home-actor" id="homeActor" style="left:${(homeActorOf(id).x + 0.5) / T.cols * 100}%;top:${(homeActorOf(id).y + 0.5) / T.rows * 100}%"><canvas class="ha-pose" width="240" height="240" aria-label="${c.name}"></canvas><span class="ha-ava">${ava(id)}</span>${storyTeaHTML(id)}${(() => { const ac = homeActorOf(id); return ac.line && ac.until > clock ? `<b class="ha-line">${ac.line}</b>` : ''; })()}<i class="ha-act">${(() => { const ac = homeActorOf(id); return ac.act === 'rest' ? ic('zz') : ac.act === 'read' ? ic('book') : ac.act === 'dress' ? ic('shirt') : ac.actIcon ? ic(ac.actIcon) : ''; })()}</i></div><div class="room-hl hidden" id="roomHl"></div></div></div>`;
   h += petInteractionBar();
   if(homeActorOf(id).pose)h += `<button class="buy alt" data-act="homeGetUp">起身</button>`;
   const st = undoStack(id);
@@ -2781,7 +2793,7 @@ function homeLiveTap(e) {
     if (E.itemSurf(p) === 'wall') return;   // 非 57 墙饰保持原来的无动作行为
     const cap=HomeInteraction.capability(p.fid),act=E.furnLiveAct(p.fid);
     if(cap){let point={x:cx,y:cy};if(HomeInteraction.profile(p.fid).ground){const r=floor.getBoundingClientRect();point=HomeInteraction.rugPoint(E,E.homeOf(state,id),p,{x:(e.clientX-r.left)/r.width*T.cols-.5,y:(e.clientY-r.top)/r.height*T.rows-.5});if(!point){toast('地毯上挤满了，挪开一件家具再坐');return;}}
-      if(go(point.x,point.y,cap==='lie'?'rest':'sit'))ac.pendingPose={uid:p.uid,kind:cap};return;}
+      const pk=cap==='sit'&&HS&&HS.lieOn&&HS.lieOn({owned:state.gacha.owned,who:id},p.fid)?'lie':cap;if(go(point.x,point.y,pk==='lie'?'rest':'sit'))ac.pendingPose={uid:p.uid,kind:pk};return;}
     if(act==='read'||act==='dress')return go(cx,cy,act);
     go(cx,cy,'walk');toast('这件只能看看，坐不上去');return;
   }
