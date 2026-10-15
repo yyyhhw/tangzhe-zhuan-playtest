@@ -1,5 +1,6 @@
+import {recordTransition} from '../../../milestones/domain.mjs?v=home128-xingtu129-20261015-r1';
 import {planHiddenClaim,validHiddenTransition} from '../../../collectibles/decor6-grants.mjs?v=home128-xingtu129-20261015-r1';
-import {moonView,planMoon,researchSpend} from '../../../space/moon.mjs?v=home128-xingtu129-20261015-r1';
+import {moonView,planMoon,researchSpend,MOON_RULES} from '../../../space/moon.mjs?v=home128-xingtu129-20261015-r1';
 import {migrateSpace,spaceTransition} from '../../../space/domain.mjs?v=home128-xingtu129-20261015-r1';
 import {createCardTransitionGuard} from './card-transition.mjs?v=home128-xingtu129-20261015-r1';
 export const CARD_ADAPTER_ENABLED=false;
@@ -84,7 +85,10 @@ export function createCardAwareSession({scope,storage,lease,validator,canonical,
     if(!validator.opaqueUnchanged(previous.state,opaqueAfter))return {ok:false,code:'OPAQUE_EXTENSION_CHANGE_UNSUPPORTED'};
     const oldReceipts=previous.state.tdUpgradeReceipts;
     if(oldReceipts){const n=state.tdUpgradeReceipts;if(!n||n.schemaVersion!==oldReceipts.schemaVersion||n.scope!==oldReceipts.scope||n.ruleset!==oldReceipts.ruleset||!Array.isArray(n.receipts)||n.receipts.length<oldReceipts.receipts.length||oldReceipts.receipts.some((r,i)=>canonical(r)!==canonical(n.receipts[i])))return {ok:false,code:'TD_UPGRADE_RECEIPTS_IMMUTABLE'};}
-    const next=copy(state);next.rev=previous.state.rev+1;
+    const next=copy(state);
+    // Generate only after every business/opaque guard; callers cannot edit the ledger.
+    if(!initializing)next.milestones=recordTransition(previous.state,next,spaceClock(),MOON_RULES);
+    next.rev=previous.state.rev+1;
     if(!Number.isSafeInteger(next.rev))return {ok:false,code:'REVISION_EXHAUSTED'};
     const raw=JSON.stringify(next);validated(raw,evidence);
     guard(g);verifyEvidence();if(read(keys.main)!==expected)fail('FOREIGN_WRITE_READ_ONLY');

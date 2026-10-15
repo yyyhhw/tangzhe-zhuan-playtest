@@ -11,8 +11,9 @@ test('actual candidate production flag/token, root/preview/rootpet version chain
 });
 test('all literal imports in new module closure resolve inside project and use the final token; derived pins match executed bytes',()=>{
  let count=0;const walk=p=>fs.readdirSync(p,{withFileTypes:true}).flatMap(e=>e.isDirectory()?walk(path.join(p,e.name)):[path.join(p,e.name)]);
- for(const dir of ['collectibles','qa-protocol2','candidates/blindbox18','space'])for(const file of walk(path.join(root,dir)).filter(p=>p.endsWith('.mjs'))){const src=fs.readFileSync(file,'utf8');for(const m of src.matchAll(/(?:from\s*|import\s*\(\s*)['"]([^'"]+)['"]/g)){if(!m[1].startsWith('./')&&!m[1].startsWith('../'))continue;const u=new URL(m[1],'file://'+file);assert.equal(u.searchParams.get('v'),RELEASE,file+m[1]);assert(u.pathname.startsWith(root));assert(fs.existsSync(u));count++;}}
- assert.equal(count,81);// 星途v2-B：overlay.mjs 新增 moon.mjs（TIER_PRICE）
+ for(const dir of ['collectibles','qa-protocol2','candidates/blindbox18','space','milestones'])for(const file of walk(path.join(root,dir)).filter(p=>p.endsWith('.mjs'))){const src=fs.readFileSync(file,'utf8');for(const m of src.matchAll(/(?:from\s*|import\s*\(\s*)['"]([^'"]+)['"]/g)){if(!m[1].startsWith('./')&&!m[1].startsWith('../'))continue;const u=new URL(m[1],'file://'+file);assert.equal(u.searchParams.get('v'),RELEASE,file+m[1]);assert(u.pathname.startsWith(root));assert(fs.existsSync(u));count++;}}
+ assert.equal(count,84);// 星途02：coordinator/validator/recap import independent milestones module
+// 星途v2-B：overlay.mjs 新增 moon.mjs（TIER_PRICE）
 // 星途v2-A：moon.mjs 新增 xingtu-views（四岗出航检查）
 // 星途-04：xingtu-views 新增 voyage-ev（探索点范围）
 // 星途v2-1：overlay.mjs 新增 xingtu-css/xingtu-views，xingtu-views 新增 xingtu-art

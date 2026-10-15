@@ -1,0 +1,39 @@
+{
+  "root": {
+    "candidate_summary": "root key guard: 6 passed, 8 failed",
+    "baseline_summary": "root key guard: 6 passed, 8 failed",
+    "identical_failures": true,
+    "failures": [
+      "✗ 根 app.js 存档键 = tangzhe-save / tangzhe-save-bak / tangzhe-tab-lock",
+      "✗ 根 app.js 只出现这三个存档键字面量：",
+      "✗ 只有 app.js（正式档）/ pet/main.js（原型键）/ zombie/zombie.js（原型键）写 localStorage：app.js,pet/game/app.js,pet/main.js,td/td.js,zombie/zombie.js",
+      "✗ 正式站不带宠物 12d3 快照页（旧代码不能写正式档）",
+      "✗ version.json = 14（formal-home128-xingtu129-20261015-r1）",
+      "✗ index.html 10 个资源缓存号都是 formal-home128-xingtu129-20261015-r1（home128-xingtu129-20261015-r1,15c,tower39-copy34-clean01-20261012-r1,15e-td-campaign-exp1-20261008,formal-cards-candidate-7,tea-td-cards-out-20261012-r1,formal-cards-audio-candidate-8-r3）",
+      "✗ ART_V / 打僵尸 iframe 缓存号 = formal-home128-xingtu129-20261015-r1",
+      "✗ 打僵尸父页面 / iframe 子页面引用同一个缓存号 formal-home128-xingtu129-20261015-r1（子页面：15c,15c,formal-cards-audio-candidate-8,formal-cards-audio-candidate-8,formal-cards-audio-candidate-8）"
+    ]
+  },
+  "economy": {
+    "candidate_summary": "economy tests: 538 passed, 2 failed",
+    "baseline_summary": "economy tests: 538 passed, 2 failed",
+    "identical_failures": true,
+    "failures": [
+      "✗ v14 正式站：整体缓存号 ART_V = 14（预览 12d2 / 13i 换过的图在正式站都是新 URL），单图缓存号清空（12b2）",
+      "✗ 13i 落地灯同名换图走单图缓存号（家具正面图 URL 用 artV）"
+    ]
+  },
+  "coins": {
+    "candidate_summary": "coin safety tests: 516 passed, 6 failed",
+    "baseline_summary": "coin safety tests: 516 passed, 6 failed",
+    "identical_failures": true,
+    "failures": [
+      "✗ 12d3 ④ commitSave：备份 setItem 抛异常 → 返回失败，主档 / 备份逐字节不变，rev 不变",
+      "✗ 12d3 ④ commitSave：主档 setItem 抛异常 → 返回失败，主档不变、rev 不变（备份 = 原主档）",
+      "✗ 12d3 ④ commitSave 成功：先把原主档整份放进 -bak，rev + 1，写出的档通过 checkSave",
+      "✗ 12d3 ④ commitSave：存储里 rev 更新（别的页面写过）→ 拒绝、不覆盖",
+      "✗ 12d3 ⑤ 打僵尸训练（跨页）成功：主档余额 −价格、zombie.lv +1、rev +1，-bak = 原主档",
+      "✗ 12d3 ⑤ 宠物买狗（跨页）：存不上 → pet 字段不出现、钱不扣；能存上 → pet 写进同一份主档"
+    ]
+  }
+}

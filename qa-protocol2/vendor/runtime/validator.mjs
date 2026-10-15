@@ -1,3 +1,4 @@
+import {validMilestones} from '../../../milestones/domain.mjs?v=home128-xingtu129-20261015-r1';
 import {validateHiddenLedger} from '../../../collectibles/decor6-grants.mjs?v=home128-xingtu129-20261015-r1';
 /** Pure protocol2 validation: admitted catalog, immutable migration identity and
  * bounded hidden receipts. No normalization, award side effects or storage. */
@@ -131,6 +132,7 @@ export function createProtocol2Validator({scope,economy:E,model,planner,codec,ca
   function validate(raw,{snapshotRaw=null,originalRaw=null}={}){
     try{
       const s=parse(raw);
+      if(!validMilestones(s))error('MILESTONES_INVALID');
       const space=readSpace(s);if(!space.ok)error(space.code);
       if(!validFormalMirror(s))error('INVALID_FORMAL_ZOMBIE_MIRROR');
       if(!validFootprintMarkers(s))error('INVALID_FOOTPRINT_MIGRATION_MARKER');

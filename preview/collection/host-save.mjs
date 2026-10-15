@@ -1,3 +1,4 @@
+import {validMilestones,newGameMilestones} from '../../milestones/domain.mjs?v=home128-xingtu129-20261015-r1';
 import {readSpace,migrateSpace,spaceTransition} from '../../space/domain.mjs?v=home128-xingtu129-20261015-r1';
 /** PREVIEW-only save protocol. No global storage, no automatic import, no rollback writes. */
 import { canonical } from './domain/json.mjs';
@@ -43,6 +44,7 @@ export function createSaveCoordinator({storage, economy:E, model, ownsLock, onFa
     let value; try { value = JSON.parse(text); } catch { return bad('INVALID_JSON_READ_ONLY'); }
     if (!value || typeof value !== 'object' || Array.isArray(value)) return bad('INVALID_SAVE_READ_ONLY');
     if (!Number.isSafeInteger(value.v) || value.v !== E.CFG.SAVE_VERSION || !Number.isSafeInteger(value.rev) || value.rev < 0) return bad('UNSUPPORTED_SAVE_READ_ONLY');
+    if(!validMilestones(value))return bad('MILESTONES_INVALID');
     const spaceCheck=readSpace(value);if(!spaceCheck.ok)return spaceCheck;
     // Never accept a partially present envelope as an old source to import.
     if (source && (Object.hasOwn(value,'collection') || Object.hasOwn(value,'collectionHost') || Object.hasOwn(value,'_collectionProtocol'))) return bad('SOURCE_COLLECTION_REQUIRES_REVIEW');
@@ -89,7 +91,7 @@ export function createSaveCoordinator({storage, economy:E, model, ownsLock, onFa
     if (source.raw === null && approvedEmpty !== true) return bad('EXPLICIT_CONSENT_REQUIRED');
     if (source.raw === null) { const backup=readKey(KEYS.sourceBackup); if(!backup.ok)return backup; if(backup.raw!==null)return bad('SOURCE_BACKUP_REQUIRES_REVIEW'); }
     let state;
-    if (source.raw === null) state=E.newState(now);
+    if (source.raw === null) { state=E.newState(now); state.milestones=newGameMilestones(now); }
     else { const p=parse(source.raw,{source:true}); if (!p.ok) return p; state=copy(p.state); }
     state._collectionProtocol=WRITE_PROTOCOL;
     state.collection=model.createState({holdings:{},dust:0,preferences:{suppressOverflowWarning:false}});
@@ -116,6 +118,7 @@ export function createSaveCoordinator({storage, economy:E, model, ownsLock, onFa
   }
   function commit(state, {allowCollectionChange = false, spaceToken = null} = {}) {
     const previous=current(); if (!previous.ok) return previous;
+    if(canonical(state.milestones??null)!==canonical(previous.state.milestones??null))return bad('MILESTONES_IMMUTABLE');
     const initializing=spaceToken===spaceCapability;
     const transition=spaceTransition(previous.state,state,{initialize:initializing});if(!transition.ok)return transition;
     if (initializing && allowCollectionChange)return bad('SPACE_INITIALIZATION_ONLY');
