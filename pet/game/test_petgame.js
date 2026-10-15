@@ -41,7 +41,7 @@ section('1. 购买');
 section('2. 旧档兼容（没有 pet 字段）');
 {
   const st = fresh(); st.coins = 12345; st.taps = 77; place(st, 'c77', 'furn_sofa', 0, 0); st.coins = 12345;
-  const raw = clone(st); delete D(raw);
+  const raw = clone(st); delete raw.pet; delete raw.pets;   // 测试-137：真删宠物字段（v1 pet / v15 pets），之前 delete D(raw) 什么都没删
   const a = E.migrate(clone(raw), T0).st, b = reload(raw);
   ok(!(has(b)), '读完不多出 pet 字段');
   ok(JSON.stringify(a) === JSON.stringify(b), '其余字段和不接小狗时完全一样');
