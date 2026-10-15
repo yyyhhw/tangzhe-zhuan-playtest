@@ -6,7 +6,7 @@
 
 ## 发布资源维护范围
 
-统一 token `copy127-20261015-r1`；root/pet版本 `formal-copy127-20261015-r1`，preview/previewpet版本 `preview-copy127-20261015-r1`。
+统一 token `xtearth-20261015-r3`；root/pet版本 `formal-xtearth-20261015-r3`，preview/previewpet版本 `preview-xtearth-20261015-r3`。
 
 `maintenance.json` 完整列出55个原统一资源链文件、额外2个legacy previewpet资源文件、3个额外当前版本预期位置、6个dependency pin及5处当前文件指纹旧/新值。全部测试断言保留，仅当前版本常量同步；历史报告和不在清单内的所有保护基线保持原字节。没有修改游戏逻辑、UID、存档字段、交易或奖励。
 
@@ -14,7 +14,7 @@
 
 1. `tests/autosave15/baseline-integrity.json` 的 preview/pet/game/app.js：原始文件字节 SHA256。
 2. `tests/moon/protected-blobs.json` 同 app 条目：同一原始SHA256。
-3. `tests/bb70/integration-integrity.json` 的 preview/app.js：把当前 `copy127-20261015-r1` 全部替换为测试要求的 `decor6-preserve-order-20261013-r1` 后，再计算SHA256，绝非原始hash。
+3. `tests/bb70/integration-integrity.json` 的 preview/app.js：把当前 `xtearth-20261015-r3` 全部替换为测试要求的 `decor6-preserve-order-20261013-r1` 后，再计算SHA256，绝非原始hash。
 
 额外的必要缓存维护：preview/pet/game/index.html 原 app URL仍为 `home35-td46-home22-copy52-20261012-r1`，只刷新前三处pin不能保证这个第四入口获取127新代码。本候选同步它的app URL、页面B版本及version.json；因此 moon保护清单中该HTML和version.json的两个当前文件指纹也按最终字节同步。此两项超出初始“三处app指纹”统计，明确提交独立审查，不隐瞒扩大范围。其余资源URL保持原样，不让legacy previewpet接入新版collection/星途运行时。
 
