@@ -1,5 +1,6 @@
+import {recordTransition} from '../../../milestones/domain.mjs?v=yangcheng38-20261015-r1';
 import {planHiddenClaim,validHiddenTransition} from '../../../collectibles/decor6-grants.mjs?v=yangcheng38-20261015-r1';
-import {moonView,planMoon,researchSpend} from '../../../space/moon.mjs?v=yangcheng38-20261015-r1';
+import {moonView,planMoon,researchSpend,MOON_RULES} from '../../../space/moon.mjs?v=yangcheng38-20261015-r1';
 import {migrateSpace,spaceTransition} from '../../../space/domain.mjs?v=yangcheng38-20261015-r1';
 import {createCardTransitionGuard} from './card-transition.mjs?v=yangcheng38-20261015-r1';
 export const CARD_ADAPTER_ENABLED=false;
@@ -12,6 +13,7 @@ export function createCardAwareSession({scope,storage,lease,validator,canonical,
   const cardCapability=Symbol('private-card-host-commit'),hiddenCapability=Symbol('private-hidden-claim');
   const spaceCapability=Symbol('owned-space-initialization');
   const moonCapability=Symbol('owned-moon-intent');
+  const zombieStartCapability=Symbol('confirmed-zombie-start');
   const checkCardTransition=createCardTransitionGuard({model,economy:E,canonical});
   let hostBound=false;
   const keys=Object.freeze({main:`tangzhe-${scope}-collection-v1-save`,backup:`tangzhe-${scope}-collection-v1-save-bak`,snapshot:`tangzhe-${scope}-collectibles-v2-original`,original:scope==='formal'?'tangzhe-formal-collection-v1-original':null});
@@ -55,10 +57,12 @@ export function createCardAwareSession({scope,storage,lease,validator,canonical,
     const plan=planHiddenClaim(currentResult.state,rewardId);if(!plan.ok)return plan;
     return commit(plan.state,{hiddenClaim:true,capability:hiddenCapability});
   }
-  function commit(state,{allowCollectionChange=false,capability=null,hiddenClaim=false,spaceToken=null,moonToken=null}={}){return run(g=>{
+  function commit(state,{allowCollectionChange=false,capability=null,hiddenClaim=false,spaceToken=null,moonToken=null,zombieToken=null}={}){return run(g=>{
     const previous=getCurrent();
     canonical(state); // reject accessors/toJSON/cycles before inspecting caller data
     const initializing=spaceToken===spaceCapability,moon=moonToken===moonCapability;
+    const zombieStarted=zombieToken===zombieStartCapability;
+    if(zombieStarted&&(initializing||moon||allowCollectionChange||hiddenClaim||canonical(state)!==canonical(previous.state)))return {ok:false,code:'ZOMBIE_START_ONLY'};
     if(moon){
       const projected=copy(state);if(Object.hasOwn(previous.state,'space'))projected.space=copy(previous.state.space);else delete projected.space;
       // 星途 v2-B：唯一允许和 space 一起变的是 coins——必须正好等于这笔新买的科研成果的金币价（researchSpend），其它一律 SPACE_INTENT_ONLY。
@@ -84,7 +88,10 @@ export function createCardAwareSession({scope,storage,lease,validator,canonical,
     if(!validator.opaqueUnchanged(previous.state,opaqueAfter))return {ok:false,code:'OPAQUE_EXTENSION_CHANGE_UNSUPPORTED'};
     const oldReceipts=previous.state.tdUpgradeReceipts;
     if(oldReceipts){const n=state.tdUpgradeReceipts;if(!n||n.schemaVersion!==oldReceipts.schemaVersion||n.scope!==oldReceipts.scope||n.ruleset!==oldReceipts.ruleset||!Array.isArray(n.receipts)||n.receipts.length<oldReceipts.receipts.length||oldReceipts.receipts.some((r,i)=>canonical(r)!==canonical(n.receipts[i])))return {ok:false,code:'TD_UPGRADE_RECEIPTS_IMMUTABLE'};}
-    const next=copy(state);next.rev=previous.state.rev+1;
+    const next=copy(state);
+    // Generate only after every business/opaque guard; callers cannot edit the ledger.
+    if(!initializing)next.milestones=recordTransition(previous.state,next,spaceClock(),MOON_RULES,{zombieStarted});
+    next.rev=previous.state.rev+1;
     if(!Number.isSafeInteger(next.rev))return {ok:false,code:'REVISION_EXHAUSTED'};
     const raw=JSON.stringify(next);validated(raw,evidence);
     guard(g);verifyEvidence();if(read(keys.main)!==expected)fail('FOREIGN_WRITE_READ_ONLY');
@@ -100,6 +107,12 @@ export function createCardAwareSession({scope,storage,lease,validator,canonical,
     if(actual===expected){uncertain=null;return {ok:false,code:'WRITE_FAILED'};}
     fail('COMMIT_UNCERTAIN');
   });}
+  function recordZombieStarted(...args){
+    if(args.length)return {ok:false,code:'ZOMBIE_START_ARGUMENTS_REFUSED'};
+    const previous=current();if(!previous.ok)return previous;
+    if(Object.hasOwn(previous.state.milestones?.events??{},'firstZombie'))return {ok:true,noop:true};
+    return commit(previous.state,{zombieToken:zombieStartCapability});
+  }
   function initializeSpace(...args){
     if(args.length)return {ok:false,code:'SPACE_INITIALIZATION_ARGUMENTS_REFUSED'};
     const previous=current();if(!previous.ok)return previous;
@@ -130,7 +143,7 @@ export function createCardAwareSession({scope,storage,lease,validator,canonical,
     return adopted(raw,e); // caller MUST replace its in-memory state with this result
   });}
   function invalidate(reason='SESSION_INVALIDATED'){generation++;invalidated=true;active=false;fault=reason;return {ok:false,code:reason,readOnly:true};}
-  const coordinator=Object.freeze({keys,adopt,adoptMigration,current,commit,claimHidden,initializeSpace,spaceView,spacePreview,spaceIntent,reconcile,invalidate,validateCollection:validator.validateCollection,get raw(){return expected;},get failed(){return fault;},get uncertain(){return uncertain!==null;},get readOnly(){return !active||!!fault;}});
+  const coordinator=Object.freeze({keys,adopt,adoptMigration,current,commit,claimHidden,recordZombieStarted,initializeSpace,spaceView,spacePreview,spaceIntent,reconcile,invalidate,validateCollection:validator.validateCollection,get raw(){return expected;},get failed(){return fault;},get uncertain(){return uncertain!==null;},get readOnly(){return !active||!!fault;}});
   const cardView=Object.freeze({current,reconcile,
     commit:(draft,options={})=>commit(draft,{allowCollectionChange:options.allowCollectionChange===true,capability:cardCapability}),
     // The pinned host reconciles only this documented sentinel on snapshot/resume.

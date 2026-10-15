@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "/workspace/tangzhe-zhuan-playtest/tests/milestones/zombie-lifecycle-browser.py", line 47, in <module>
+    check(scope+' '+action+' old confirmation rejected',q.evaluate('!Object.hasOwn(__tzz.state.milestones?.events??{},"firstZombie")'))
+  File "/workspace/tangzhe-zhuan-playtest/tests/milestones/zombie-lifecycle-browser.py", line 9, in check
+    assert condition,name
+           ^^^^^^^^^
+AssertionError: formal timeout old confirmation rejected

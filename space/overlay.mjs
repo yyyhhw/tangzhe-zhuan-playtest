@@ -2,7 +2,7 @@ import {createMoonHost} from './host.mjs?v=yangcheng38-20261015-r1';
 import {moonArt} from './art.mjs?v=yangcheng38-20261015-r1';
 import {MOON_CSS} from './styles.mjs?v=yangcheng38-20261015-r1';
 import {EVENTS} from './voyage-ev.mjs?v=yangcheng38-20261015-r1';
-import {TIER_PRICE} from './moon.mjs?v=yangcheng38-20261015-r1';
+import {TIER_PRICE,MOON_RULES} from './moon.mjs?v=yangcheng38-20261015-r1';
 import {XT2_CSS} from './xingtu-css.mjs?v=yangcheng38-20261015-r1';
 import {renderMap,renderShip,gate,ART,ROUTE_TIME,renderEnding,renderCredits,renderEarth,renderRecap} from './xingtu-views.mjs?v=yangcheng38-20261015-r1';
 import {ROUTES,ROUTE_BY_ID,OPEN_ROUTES,TOTAL_CARDS,ALIEN_DENOM,cardOf} from './album.mjs?v=yangcheng38-20261015-r1';
@@ -15,7 +15,7 @@ export function installMoonOverlay({app,runtime,document:doc=globalThis.document
  const connected=n=>!!n&&(n.isConnected===undefined?!!n.parentNode:n.isConnected);
  const usable=n=>{if(!connected(n)||n.disabled)return false;for(let p=n;p;p=p.parentNode){if(p.nodeType!==undefined&&p.nodeType!==1)break;if(p.hidden||p.inert||p.getAttribute?.('aria-hidden')==='true')return false;const style=win.getComputedStyle?.(p);if(style&&(style.display==='none'||style.visibility==='hidden'||style.visibility==='collapse'))return false;}return true;};
  const focus=n=>{if(usable(n))n.focus?.();};
- const controls=()=>[...(cover?.querySelectorAll?.('button, a[href], input, select, textarea, [tabindex]')??[])].filter(n=>usable(n)&&n.tabIndex!==-1);
+ const controls=()=>[...(cover?.querySelectorAll?.('button, summary, a[href], input, select, textarea, [tabindex]')??[])].filter(n=>usable(n)&&n.tabIndex!==-1);
  const isolate=()=>{background=[...(doc.body.children??[])].filter(n=>n!==cover).map(n=>({n,inert:n.inert,attribute:n.getAttribute?.('inert')}));for(const {n} of background)n.inert=true;};
  const restoreBackground=()=>{for(const {n,inert,attribute}of background){n.inert=inert;if(attribute!==undefined){if(attribute===null)n.removeAttribute?.('inert');else n.setAttribute('inert',attribute);}}background=[];};
  const node=(tag,id,text)=>{const n=doc.createElement(tag);if(id)n.id=id;if(text!==undefined)n.textContent=text;return n;};
@@ -65,7 +65,7 @@ export function installMoonOverlay({app,runtime,document:doc=globalThis.document
   if(view.ok&&['ending','credits','recap'].includes(tab)){const wrap=node('div','xingtuV2');wrap.className='xt2';content.append(wrap);
    if(tab==='ending')renderEnding(wrap,{doc,next:()=>{tab='credits';host.refresh();}});
    else if(tab==='credits')renderCredits(wrap,{doc,next:()=>{tab='voyage';host.refresh();}});
-   else renderRecap(wrap,{doc,space:view.space,next:()=>{tab='voyage';host.refresh();}});return;}
+   else renderRecap(wrap,{doc,space:view.space,state:app.state,rules:MOON_RULES,next:()=>{tab='voyage';host.refresh();}});return;}
   if(view.ok&&(tab==='map'||tab==='ship')){const wrap=node('div','xingtuV2');wrap.className='xt2';content.append(wrap);
    if(tab==='map')renderMap(wrap,{doc,space:view.space,pick:mapPick,flying:!!(view.voyage&&!view.voyage.completed),onPick:id=>{mapPick=id;host.refresh();},goVoyage:()=>{tab='voyage';host.refresh();},launch:id=>{const r=host.perform({type:'depart',route:id},host.token);if(r.ok){try{app.xingtuSfx?.('swoosh');}catch{}tab='voyage';}host.refresh();return r;}});
    else renderShip(wrap,{doc,space:view.space,room:shipRoom,onRoom:k=>{shipRoom=k;host.refresh();},artUrl:rel=>new URL(`${rel}?v=yangcheng38-20261015-r1`,import.meta.url).href,upgrade:k=>{const r=host.perform({type:'upgrade',sys:k},host.token);host.refresh();return r;},coins:Number.isFinite(app.state?.coins)?app.state.coins:null,prices:TIER_PRICE,research:(k,t)=>{const r=host.perform({type:'research',sys:k,tier:t},host.token);if(r.ok)try{app.render?.();}catch{}host.refresh();return r;}});return;}

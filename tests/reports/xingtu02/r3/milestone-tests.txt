@@ -1,0 +1,45 @@
+✔ 17 precise events, milliseconds, first wins and existing dates/null never overwritten (8.953846ms)
+✔ legacy migration derives only proven history, no dates from counters/lastSeen; repeat idempotent (0.973293ms)
+✔ all business and space success predicates; Lv34/35 boundary uses current rule (1.255592ms)
+✔ unstarted/abandoned battles and empty collections do not invent participation (0.548204ms)
+✔ optional schema rejects malformed/unknown extensions; clock reversal never fabricates a date (2.563821ms)
+✔ recap unknown history grey label; elapsed day/hour and earliest-record total, missing Earth date never uses now (2.487473ms)
+✔ confirmed battle participation records before victory; legacy loss proves participation without a date (0.471463ms)
+✔ zombie/zombie.js: live start predicate requires current unexpired active combat (7.607549ms)
+✔ preview/zombie/zombie.js: live start predicate requires current unexpired active combat (9.433092ms)
+✔ r3 exact delta does not admit deleted live-state or one-shot guard (154.717326ms)
+(node:17926) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ formal actual hire success records once, no-op/failed hire cannot overwrite; exact ledger survives refresh/rootpet (1941.94838ms)
+✔ formal hire backup keeps business and time atomic, reconcile never replays (661.471466ms)
+✔ formal hire main keeps business and time atomic, reconcile never replays (524.498868ms)
+✔ formal hire unknown keeps business and time atomic, reconcile never replays (610.284917ms)
+✔ formal counterfeit ledger add/edit/delete is refused, old timestamps immutable (734.430338ms)
+✔ formal private departure/claim timestamps survive duplicate, cancellation/hidden page zero writes (1634.964355ms)
+✔ formal foreign writer freezes stale page without ledger overwrite (411.558935ms)
+✔ preview actual hire success records once, no-op/failed hire cannot overwrite; exact ledger survives refresh/rootpet (999.291343ms)
+✔ preview hire backup keeps business and time atomic, reconcile never replays (331.930311ms)
+✔ preview hire main keeps business and time atomic, reconcile never replays (235.799567ms)
+✔ preview hire unknown keeps business and time atomic, reconcile never replays (356.927477ms)
+✔ preview counterfeit ledger add/edit/delete is refused, old timestamps immutable (251.929367ms)
+✔ preview private departure/claim timestamps survive duplicate, cancellation/hidden page zero writes (2033.360677ms)
+✔ preview foreign writer freezes stale page without ledger overwrite (422.699652ms)
+✔ formal research, alien/hidden, reply and Earth use successful private intents only (2161.198145ms)
+✔ preview research, alien/hidden, reply and Earth use successful private intents only (2696.55985ms)
+✔ formal malformed/future ledger stays byte-exact and read-only (270.781281ms)
+✔ formal malformed/future ledger stays byte-exact and read-only (237.460122ms)
+✔ formal malformed/future ledger stays byte-exact and read-only (178.450072ms)
+✔ formal malformed/future ledger stays byte-exact and read-only (131.735975ms)
+✔ preview malformed/future ledger stays byte-exact and read-only (93.68398ms)
+✔ preview malformed/future ledger stays byte-exact and read-only (84.089866ms)
+✔ preview malformed/future ledger stays byte-exact and read-only (112.829679ms)
+✔ preview malformed/future ledger stays byte-exact and read-only (227.500205ms)
+✔ protection baseline admits only exact candidate delta; changed guard still changes hash (1.545081ms)
+ℹ tests 35
+ℹ suites 0
+ℹ pass 35
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 20243.843105

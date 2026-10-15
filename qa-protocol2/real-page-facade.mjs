@@ -64,6 +64,20 @@ export function createRealPageQAFacade({enabled = REAL_PAGE_QA_ENABLED, scope, f
     if (!result.ok) return protect(result, {recoverCurrent: !owner.readOnly && !owner.failed});
     return result;
   }
+  function recordZombieStarted(...args) {
+    if(args.length)return fail('ZOMBIE_START_ARGUMENTS_REFUSED');
+    if(!writable())return gate();
+    if(!app||app.persist.pending||app.zombieStartReady?.()!==true)return fail('ZOMBIE_START_NOT_CONFIRMED');
+    const saved=invoke('current');if(!saved.ok)return protect(saved);
+    if(Object.hasOwn(saved.state.milestones?.events??{},'firstZombie'))return {ok:true,noop:true};
+    if(app.persist()!==true)return protect(fail('PARENT_SAVE_FAILED'),{recoverCurrent:!owner.readOnly&&!owner.failed});
+    if(!writable()||app.zombieStartReady?.()!==true)return fail('ZOMBIE_START_NOT_CONFIRMED');
+    const synced=invoke('current');if(!synced.ok)return protect(synced);
+    if(canonical(app.state)!==canonical(synced.state))return fail('ZOMBIE_APP_SAVE_REQUIRED');
+    const result=invoke('recordZombieStarted');
+    if(!result.ok)return protect(result,{recoverCurrent:!owner.readOnly&&!owner.failed});
+    return result.noop?result:play(result);
+  }
   function initializeSpace(...args) {
     if (!writable()) return gate();
     if (args.length) return fail('SPACE_INITIALIZATION_ARGUMENTS_REFUSED');
@@ -94,7 +108,7 @@ export function createRealPageQAFacade({enabled = REAL_PAGE_QA_ENABLED, scope, f
     if(!result.ok){if(owner.failed||owner.readOnly||writeFailures.has(result.code))return protect(result,{recoverCurrent:!owner.readOnly&&!owner.failed});return result;}
     return result.noop?result:play(result);
   }
-  const coordinator = Object.freeze({keys, current, commit, initializeSpace, spaceView, spacePreview, spaceIntent,
+  const coordinator = Object.freeze({keys, current, commit, recordZombieStarted, initializeSpace, spaceView, spacePreview, spaceIntent,
     validateCollection: owner.validateCollection,
     get raw() { return owner.raw; },
     get failed() {

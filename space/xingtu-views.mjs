@@ -1,3 +1,4 @@
+import {recap} from '../milestones/domain.mjs?v=yangcheng38-20261015-r1';
 // 星途 v2 第一批：星图（5 圈 9 航线 + 出航需要四个岗位科研）与飞船（四个舱室）——只读，不写存档。
 // 画面与数值直接搬自王大妈 demo（wangdama/xingtu-demo、xingtu-4post-mock fd614ae）。
 import * as A from './xingtu-art.mjs?v=yangcheng38-20261015-r1';
@@ -120,13 +121,26 @@ export function renderEarth(parent,{doc,space,coins,buy,recap}){
  box.innerHTML=`<span class="hudline">最后一站 · 买下地球</span><h3>目标：买下地球</h3><div class="pd-desc">要 10 万亿金币。现在 ${coins===null?'—':earthMoney(coins)}。</div>`;
  const b=btn(doc,'xingtuBuyEarth','买下地球 · 10 万亿金币',buy);b.disabled=!(coins>=EARTH_PRICE)||!buy;box.append(b);parent.append(box);
 }
-export function renderRecap(parent,{doc,space,next}){
+export function renderRecap(parent,{doc,space,state,rules,next}){
  const cards=Object.values(space?.cards??{}).reduce((a,b)=>a+(Number.isInteger(b)?b:0),0),hidden=Object.values(space?.hidden??{}).filter(x=>x===true).length;
  const items=Object.keys(space?.items??{}).length,trips=Object.values(space?.visits??{}).reduce((a,b)=>a+(Number.isInteger(b)?b:0),0);
+ const history=recap(state??{space},rules);
  const box=doc.createElement('div');box.className='credits';box.id='xingtuRecapView';
  box.innerHTML=`<span class="kick">你的创业史</span><h2>从一个烧烤摊，到整个地球</h2>
- <div class="hero-yang"><svg viewBox="-4 -6 108 126" aria-hidden="true"><use href="#c-yang"/></svg><div class="bub static">恭喜！你买下了整个地球。</div></div>
+ <div class="hero-yang"><svg viewBox="-4 -6 108 126" aria-hidden="true"><use href="#c-yang"/></svg><div class="bub static">${history.total}</div></div>
  <div class="figs"><div><b>${trips}</b><span>次星途出航</span></div><div><b>${cards}</b><span>张星途剧情卡</span></div><div><b>${hidden}</b><span>件隐藏物</span></div><div><b>${items}</b><span>件科研成果</span></div></div>
- <div class="strip">${A.PRE.map(([n,sub,,ic],i)=>`<div class="cell" style="--tilt:${i%2?0.8:-0.8}deg"><div class="ic" style="background:#fff4d6">${A.icon(ic)}</div><b>${n}</b>${sub?`<span class="sub">${sub}</span>`:''}</div>`).join('')}${[['第一次出航','rocket'],['收到回信','mail'],['买下地球','earth']].map(([n,ic])=>`<div class="cell${n==='买下地球'?' last':''}"><div class="ic" style="background:#e6f0ff">${A.icon(ic)}</div><b>${n}</b></div>`).join('')}</div>`;
+ `;
+ const strip=doc.createElement('div');strip.className='strip';
+ for(const row of history.rows){
+  const cell=doc.createElement('details');cell.className='cell'+(row.id==='earth'?' last':'');cell.id='milestone-'+row.id;
+  const summary=doc.createElement('summary'),when=doc.createElement('span'),title=doc.createElement('b'),description=doc.createElement('span');
+  summary.style.cssText='display:flex;flex-direction:column;gap:4px;cursor:pointer';
+  when.className='when';when.textContent=row.when;if(row.at===null)when.style.color='#767676';
+  title.textContent=row.title;description.className='sub';description.textContent=row.description;
+  const icon=doc.createElement('div');icon.className='ic';icon.style.cssText='width:52px;height:40px';icon.innerHTML=A.icon(row.icon);icon.setAttribute('aria-hidden','true');
+  summary.append(when,icon,title,description);cell.append(summary);
+  const date=doc.createElement('p');date.textContent=row.at===null?'记录开始之前（日期未知）':new Date(row.at).toLocaleString('zh-CN',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit',hour12:false});cell.append(date);strip.append(cell);
+ }
+ box.append(strip);
  box.append(btn(doc,'xingtuRecapDone','继续经营 →',next));parent.append(box);
 }

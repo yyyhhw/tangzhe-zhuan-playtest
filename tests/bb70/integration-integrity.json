@@ -1,7 +1,7 @@
 [
   {
     "path": "preview/app.js",
-    "sha256AfterReleaseNormalization": "e446eccaca1eae51e66171e16fcac3620118c9f6f223c946bacdcb555942e7ff"
+    "sha256AfterReleaseNormalization": "1675ab1dc2ba0c803e4aa0fd2640bbd2ccb8ccf01d400c685c2f7f8c090fc9a5"
   },
   {
     "path": "collectibles/decor6-catalog.mjs",
@@ -21,15 +21,15 @@
   },
   {
     "path": "qa-protocol2/real-page-facade.mjs",
-    "sha256AfterReleaseNormalization": "7fd610519f1613a445b0df96e4848d0af294080808cee721187db435f7e82353"
+    "sha256AfterReleaseNormalization": "5c42e537fc71a52f6cfdc17752d9e5e75e57f045262d2d4767f905c5c8c539e3"
   },
   {
     "path": "qa-protocol2/vendor/runtime/validator.mjs",
-    "sha256AfterReleaseNormalization": "2ac4d243dfebc43902c5dfa3d14b7836eee1f5a444f06ce74f4173531959f5ba"
+    "sha256AfterReleaseNormalization": "c1b4015a9001edd8f0dbbae5d7a01859a78554c8a6ae02bf9f487442b606c6c0"
   },
   {
     "path": "qa-protocol2/vendor/cards/card-coordinator.mjs",
-    "sha256AfterReleaseNormalization": "196446a3846c67b5605204093c3e4d08a8266562d03ca3d621e4fb363280b5fd"
+    "sha256AfterReleaseNormalization": "a2a1414dbcd9f834307a1ade56c8ba6d203e2c16d66cf6a2de3ac872a8068761"
   },
   {
     "path": "economy.js",

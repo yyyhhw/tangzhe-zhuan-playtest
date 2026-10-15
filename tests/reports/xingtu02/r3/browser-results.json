@@ -1,0 +1,24 @@
+{
+  "browser": "installed /usr/bin/chromium",
+  "checks": [
+    "new game records real opening time",
+    "real hire click records successful event",
+    "refresh preserves exact first times",
+    "root to pet preserves ledger and formal save namespace",
+    "second live tab cannot own writer",
+    "second live tab does not initialize gameplay",
+    "second tab leaves milestone bytes unchanged",
+    "legacy space opens under existing guard",
+    "Earth purchase and timestamp commit together",
+    "legacy first shop has no fabricated date",
+    "unknown unproven zombie event omitted",
+    "legacy confirmed event has grey prior-record label",
+    "total uses from-recorded wording",
+    "cell opens browser local date",
+    "390 viewport has no horizontal overflow",
+    "Earth timestamp survives refresh exactly",
+    "no page JavaScript errors"
+  ],
+  "count": 17,
+  "errors": []
+}
