@@ -27,6 +27,13 @@ for(const [scope,path] of [['formal','/'],['formal','/pet/game/'],['preview','/p
   assert.equal(h.node('xingtuNextRoute').textContent,'下次出航：月面基地 · 其他目的地请到星图选择');
   assert.ok(h.node('xingtuStatus').children[0].textContent.includes(`月面基地累计往返次数：${route==='moon'?1:0}`));
   assert.equal(h.node('xingtuDepart').textContent,'出航月面基地');
+  // The completed voyage stays completed on every tab, especially Ship (129 independent QA).
+  const completedHeading=h.node('xingtuRuleset').textContent;
+  for(const tab of ['xingtuTabShip','xingtuTabMap','xingtuTabAlbum','xingtuTabVoyage']){
+   await h.click(tab);
+   assert.equal(h.node('xingtuRuleset').textContent,completedHeading,tab);
+   assert.doesNotMatch(h.node('xingtuRuleset').textContent,/这趟|看完再领探索点/);
+  }
   host.refresh();host.close();host.open();
   assert.equal(JSON.stringify(h.app.state),before);assert.equal(h.writes().length,writes);
   // Existing button still departs for moon; earlier route's receipt, visits and rewards stay intact.

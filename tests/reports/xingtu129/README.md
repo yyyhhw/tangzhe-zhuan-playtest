@@ -57,3 +57,9 @@ git diff --check
 原始输出保存在本执行环境 `/tmp/research-display-evidence/`，包含 baseline/candidate/final-related、targeted-baseline/targeted、route-before/route-after、safety-baseline/safety-candidate/safety-final、core-baseline/core-final 的 .tap 文件（Node 默认文本 reporter，扩展名仅为文件名）。
 
 未覆盖：Chromium/WebKit 实际布局、真机冻结恢复、线上缓存/部署验证、全仓库测试。没有下载或重试 WebKit，没有访问账号设置。候选尚待独立复核。
+
+## 独立复核后的页签补修
+
+独立复核对 `402d8a6` 结论为整体 FAIL、金额部分 PASS：已领取后切到飞船，标题仍错误提示“这趟…看完再领探索点”。本次删除标题条件中仅限 voyage 页签的限制；completed 状态在出航、飞船、星图、册子均显示“上趟…返航报告已收下”，不改变状态或意图。
+
+扩充原三入口 × 三航线的9项真实 VM 装配回归，逐项切换四个页签、检查标题一致并验证无额外写入。补修前 9/9 失败，补修后相关组 73/73 通过。单跑 overlay-dom + resources 31项：29通过、2项原有 pin 失败；没有改 pin/token 或削弱校验。新增原始日志：`tabs-before.tap`、`tabs-related.tap`、`tabs-pins.tap`。本次未重跑 Chromium，未重跑全部301项安全组；上一轮记录仍对应其当时提交。补修候选仍待独立复核，不能记整体 PASS。

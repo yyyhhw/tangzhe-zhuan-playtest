@@ -54,7 +54,7 @@ export function installMoonOverlay({app,runtime,document:doc=globalThis.document
   if(signature===next){if(view.phase==='flying'&&tab==='voyage'&&doc.getElementById('xingtuRemaining')){doc.getElementById('xingtuRemaining').textContent=`剩余 ${fmt(view.remaining)}`;doc.getElementById('xingtuProgress').value=DUR(view)-view.remaining;const p=1-view.remaining/DUR(view);doc.getElementById('xingtuStarMap').querySelector?.('use')?.setAttribute('transform',`translate(${72+p*160} ${84-Math.sin(p*Math.PI)*38}) rotate(65)`);}schedule(view);return;}
   signature=next;const previousFocus=doc.activeElement;while(content.firstChild)content.firstChild.remove();
   // 星途-04 第7条：副标题跟当前航线（出航中=这趟航线，否则=星图选中）
-  {const rid=view.voyage?.route??mapPick??'moon',rs=doc.getElementById('xingtuRuleset');if(rs)rs.textContent=view.voyage?.completed&&tab==='voyage'?`上趟：${RN(view)} · ${ROUTE_TIME[RID(view)]??'10 分钟'} · 返航报告已收下`:`这趟：${ROUTE_BY_ID[rid]?.name??'月面基地'} · ${ROUTE_TIME[rid]??'10 分钟'} · 返航途中会遇到一件事，看完再领探索点`;}
+  {const rid=view.voyage?.route??mapPick??'moon',rs=doc.getElementById('xingtuRuleset');if(rs)rs.textContent=view.voyage?.completed?`上趟：${RN(view)} · ${ROUTE_TIME[RID(view)]??'10 分钟'} · 返航报告已收下`:`这趟：${ROUTE_BY_ID[rid]?.name??'月面基地'} · ${ROUTE_TIME[rid]??'10 分钟'} · 返航途中会遇到一件事，看完再领探索点`;}
   renderContent(view);if(created||!usable(previousFocus))focus(closeButton);schedule(view);
  }
  function renderContent(view){
