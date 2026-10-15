@@ -55,7 +55,20 @@ export const CABIN_FILE=Object.freeze({tech:'bridge',war:'gun',med:'medical',lif
 export const CABIN_LEVELS=Object.freeze({tech:[1,2,3,4,5],war:[1,2,3,4,5],med:[1,2,3,4,5],life:[1,2,3,4,5]});
 export const cabinArtPath=(k,lv)=>CABIN_LEVELS[k]?.includes(lv)?`../art/xingtu-cabins/${CABIN_FILE[k]}-${lv}.webp`:null;
 
-export const money=n=>n>=1e12?`${+(n/1e12).toFixed(2)} 万亿`:n>=1e8?`${+(n/1e8).toFixed(2)} 亿`:n>=1e4?`${+(n/1e4).toFixed(2)} 万`:String(n);
+// 研究台按文案-05/27：余额向下、价格向上，最多一位小数；进位后换单位。
+// 主游戏 fmtRound 的历史分档精度不同，不能直接用于研究台。
+const MONEY_TIERS=[[1e4,1,''],[1e8,1e4,'万'],[1e12,1e8,'亿'],[Infinity,1e12,'万亿']];
+export function money(n,up=false){
+ for(const [limit,unit,label] of MONEY_TIERS){
+  if(n>=limit)continue;
+  // 先除以整数步长，避免 (n / unit) * 10 在整除边界产生浮点偏差。
+  const step=label?unit/10:1,ticks=up?Math.ceil(n/step):Math.floor(n/step);
+  if(ticks*step>=limit){n=ticks*step;continue;}
+  return label?`${ticks/10} ${label}`:String(ticks);
+ }
+}
+// 地球页不在本次研究台修复范围内，保留原来的显示口径。
+const earthMoney=n=>n>=1e12?`${+(n/1e12).toFixed(2)} 万亿`:n>=1e8?`${+(n/1e8).toFixed(2)} 亿`:n>=1e4?`${+(n/1e4).toFixed(2)} 万`:String(n);
 export function renderShip(parent,{doc,space,room,onRoom,upgrade,artUrl,research,coins=null,prices=null}){
  const S=demoState(space,'moon');A.use(S);const k=room,lv=S.lv[k],st=A.STAGES[k][lv-1],sy=A.SYSK[k];
  const box=doc.createElement('div');box.className='box shipbox';box.id='xingtuShip';box.innerHTML=quiet(A.shipSvg(k));parent.append(box);
@@ -76,10 +89,10 @@ export function renderShip(parent,{doc,space,room,onRoom,upgrade,artUrl,research
  const have2=doc.createElement('div');have2.className='muted';have2.id='xingtuPts';have2.textContent=`现有探索点 ${pts}`;c.append(have2);
  // 星途 v2-B：科研成果用金币买（一件一买；第 t 件要科研 t 级）
  if(research&&prices){const lab=doc.createElement('div');lab.className='lab2';lab.id='xingtuLab';
-  const h=doc.createElement('div');h.className='hudline';h.textContent=`${sy.ceo} 的研究台 · 金币 ${coins===null?'—':money(coins)}`;lab.append(h);
+  const h=doc.createElement('div');h.className='hudline';h.textContent=`${sy.ceo}的研究台 · 金币 ${coins===null?'—':money(coins)}`;lab.append(h);
   A.ITEMS[k].forEach((n,i)=>{const t=i+1,own=!!S.items[k+':'+t],price=prices[i],b=doc.createElement('button');b.type='button';b.id=`xingtuBuy-${k}-${t}`;b.className='btn small'+(own?' ghost':'');
-   b.textContent=own?`✓ ${n}`:t>lv?`${t} 级 · 科研 ${t} 级可买`:`${t} 级 · ${n} · ${money(price)} 金币`;b.disabled=own||t>lv||!(coins>=price);if(!b.disabled)b.onclick=()=>research(k,t);lab.append(b);});
-  const sumv=doc.createElement('div');sumv.className='muted';sumv.textContent=`这一岗 5 件全买合计 ${money(prices.reduce((a,b)=>a+b,0))} 金币`;lab.append(sumv);c.append(lab);}parent.append(c);
+   b.textContent=own?`✓ ${n}`:t>lv?`${t} 级 · 科研 ${t} 级可买`:`${t} 级 · ${n} · ${money(price,true)} 金币`;b.disabled=own||t>lv||!(coins>=price);if(!b.disabled)b.onclick=()=>research(k,t);lab.append(b);});
+  const sumv=doc.createElement('div');sumv.className='muted';sumv.textContent=`这一岗 5 件全买合计 ${money(prices.reduce((a,b)=>a+b,0),true)} 金币`;lab.append(sumv);c.append(lab);}parent.append(c);
  const sl=doc.createElement('div');sl.className='box sumline';sl.innerHTML=`<span>四岗科研合计</span><span class="num">${LVK.reduce((a,x)=>a+S.lv[x],0)} / 20</span>`;parent.append(sl);
 }
 export {A as ART};
@@ -104,7 +117,7 @@ export const EARTH_PRICE=1e15;
 export function renderEarth(parent,{doc,space,coins,buy,recap}){
  const box=doc.createElement('div');box.className='box pdetail';box.id='xingtuEarth';
  if(space?.earth){box.innerHTML=`<span class="hudline">地球 · 已买下</span><h3>宇宙级摸鱼大王</h3>`;box.append(btn(doc,'xingtuRecap','看看我的创业史 →',recap));parent.append(box);return;}
- box.innerHTML=`<span class="hudline">最后一站 · 买下地球</span><h3>目标：买下地球</h3><div class="pd-desc">要 1000 万亿金币（金币上限）。现在 ${coins===null?'—':money(coins)}。</div>`;
+ box.innerHTML=`<span class="hudline">最后一站 · 买下地球</span><h3>目标：买下地球</h3><div class="pd-desc">要 1000 万亿金币（金币上限）。现在 ${coins===null?'—':earthMoney(coins)}。</div>`;
  const b=btn(doc,'xingtuBuyEarth','买下地球 · 1000 万亿金币',buy);b.disabled=!(coins>=EARTH_PRICE)||!buy;box.append(b);parent.append(box);
 }
 export function renderRecap(parent,{doc,space,next}){
