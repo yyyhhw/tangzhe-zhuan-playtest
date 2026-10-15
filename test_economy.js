@@ -99,15 +99,19 @@ ok(E.ITEMS.length === 36 && E.REGULAR_ITEMS.length === 32 && E.SUPER_ITEMS.lengt
 ok(['clothes', 'hat', 'decor', 'card'].every(t => E.ITEMS.filter(i => i.type === t).length === 8), '衣服/帽子/装饰/故事卡各 8');
 ok(new Set(E.ITEMS.map(i => i.id)).size === 36, '物品 id 不重复');
 ok(E.SUPER_ITEMS.map(i => i.shop).join() === '0,1,2,3' && E.SUPER_ITEMS.map(i => i.name).join() === '熊猫食神,珍珠喷泉,次元传送门,人造太阳反应堆', '每店一件超级装饰');
-const o0 = E.gachaOdds(s5); near(o0.superP, 0.1, '超级装饰 10%'); near(o0.perSuper, 0.025, '每件超级 2.5%'); near(o0.perReg, 0.9 / 32, '每件普通 0.9/32'); ok(o0.pityLeft === 15, '保底剩 15 抽');
+// 养成-38：3 张条件故事卡（k_3/k_4/k_8）离开普通盲盒池，按实际可抽数计算
+const DRAW_ALL = E.gachaRemaining(s5).length, DRAW_REG = DRAW_ALL - E.SUPER_ITEMS.length;
+ok(DRAW_ALL === 36 - E.STORY_COND_IDS.length && DRAW_REG === 29, '可抽 ' + DRAW_ALL + ' 件（普通 ' + DRAW_REG + '）');
+const o0 = E.gachaOdds(s5); near(o0.superP, 0.1, '超级装饰 10%'); near(o0.perSuper, 0.025, '每件超级 2.5%'); near(o0.perReg, 0.9 / DRAW_REG, '每件普通 0.9/' + DRAW_REG); ok(o0.pityLeft === 15, '保底剩 15 抽');
 const seen = new Set(); let maxGap = 0, gap = 0, supersAt = [];
-for (let k = 0; k < 36; k++) { const g = E.gachaDraw(s5, Math.random()); ok(g.ok && !seen.has(g.item.id), '第' + (k + 1) + '抽是新物品'); seen.add(g.item.id);
+for (let k = 0; k < DRAW_ALL; k++) { const g = E.gachaDraw(s5, Math.random()); ok(g.ok && !seen.has(g.item.id), '第' + (k + 1) + '抽是新物品'); seen.add(g.item.id);
   if (g.super) { supersAt.push(k + 1); gap = 0; } else { gap++; if (E.gachaOdds(s5).remSuper) maxGap = Math.max(maxGap, gap); } }
 ok(maxGap <= 14, '保底：连续不出超级 ≤ 14 抽 (' + maxGap + ')');
 ok(supersAt.length === 4, '4 件超级装饰都抽到');
 const cAfter = s5.coins; const g37 = E.gachaDraw(s5, 0.5);
 ok(!g37.ok && g37.complete && s5.coins === cAfter, '集齐后不能再买、不扣金币');
-ok(E.cardsComplete(s5), '8 张故事卡集齐');
+ok(!E.cardsComplete(s5), '盲盒只给 5 张故事卡，条件卡还差 ' + E.STORY_COND_IDS.length);
+E.STORY_COND_IDS.forEach(id => E.grantStoryCard(s5, id)); ok(E.cardsComplete(s5) && s5.coins === cAfter, '条件卡入库后 8 张集齐、不扣金币');
 // 保底精确：rnd 一直很大（=不出超级）时第 15 抽必出
 { let sp = E.newState(T0); sp.coins = 1e12; E.hireEmp(sp, 0); [1, 2, 3].forEach(i => { E.openShop(sp, i); E.hireEmp(sp, i); });
   const kinds = []; for (let k = 0; k < 15; k++) kinds.push(E.gachaDraw(sp, 0.999).super);
