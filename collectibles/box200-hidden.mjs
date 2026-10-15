@@ -1,7 +1,7 @@
 /** 盲盒-109：盲盒200 的 6 件隐藏款达成特殊目标直接获得（杨总口径）。
  * 不走开盒、不占每天 5 次、不动 gacha.draws/pity/每日计数；只往 gacha.owned 追加，经 app.atomic → persist → coordinator.commit 落盘。
  * 幂等：已拥有的不再发；同一刻达成多件一次存档、toast 每件一条依次弹。 */
-import {BOX200_COPY} from './box200-copy.mjs?v=xtearth-20261015-r1';
+import {BOX200_COPY} from './box200-copy.mjs?v=yangcheng38-20261015-r1';
 const lv=(s,i)=>Number(s?.shops?.[i]?.lv)||0;
 export const HIDDEN_GOALS=Object.freeze({
   c_moon_night_robe:s=>[0,1,2,3].every(i=>lv(s,i)>=35),
