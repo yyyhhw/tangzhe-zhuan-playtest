@@ -36,12 +36,12 @@ test('rules kept with all live items: 5 per game day, 06:00 JST reset, no duplic
   assert(!E.gachaDraw(s,.5,undefined,Date.UTC(2026,9,14,20,59)).ok,'05:59 JST next day still same game day');
   assert(E.gachaDraw(s,.5,undefined,Date.UTC(2026,9,14,21,0)).ok,'06:00 JST resets');
   const t=E.newState(1);t.shops.forEach(x=>{x.open=true;x.emp=1;});t.coins=1e15;const seen=new Set();while(E.gachaRemaining(t).length){const q=E.gachaDraw(t,Math.random());assert(q.ok&&!seen.has(q.item.id));seen.add(q.item.id);}
-  assert.equal(seen.size,58-2+LIVE_REG.length);for(const x of LIVE_REG)if(!seen.has(x.id))assert.fail(x.id);for(const id of B83)assert(seen.has(id));
+  assert.equal(seen.size,58-2-(E.STORY_COND_IDS||[]).length+LIVE_REG.length);for(const x of LIVE_REG)if(!seen.has(x.id))assert.fail(x.id);for(const id of B83)assert(seen.has(id));
 });
 test('盲盒-109: no hidden bonus drop — box opens never yield hidden items, gachaDraw untouched, even with every batch live',()=>{
   const E=fresh(),orig=E.gachaDraw;prepareBox200Catalog(E).setActive(true);assert.equal(E.gachaDraw,orig);
   const all=[...new Set(BOX200_ITEMS.map(x=>x.batch))],H=fresh(),o2=H.gachaDraw;const reg=prepareBox200Catalog(H,{batches:all});reg.setActive(true);assert.equal(H.gachaDraw,o2);
-  assert.equal(H.ITEMS.length,200);assert.equal(H.REGULAR_ITEMS.length,52+136);assert.equal(H.gachaRemaining(full(H)).length,200-2-6,'hidden never in normal pool');
+  assert.equal(H.ITEMS.length,200);assert.equal(H.REGULAR_ITEMS.length,52+136);assert.equal(H.gachaRemaining(full(H)).length,200-2-6-(H.STORY_COND_IDS||[]).length,'hidden never in normal pool');
   const s=full(H);for(let i=0;i<150;i++){const r=H.gachaDraw(s,(i*0.6180339887)%1);assert(r.ok);assert(!r.bonus);}
   const own=s.gacha.owned;assert.equal(new Set(own).size,own.length);assert.equal(own.filter(id=>H.ITEM_BY_ID[id]?.hidden).length,0);
   reg.setActive(false);assert.equal(H.ITEMS.length,58);

@@ -15,7 +15,7 @@ for(const scope of ['formal','preview']){
   register.setActive(true);assert.equal(E.ITEMS.length,44);register.setActive(false);assert.deepEqual(E.ITEMS,old);assert.deepEqual(E.REGULAR_ITEMS,regular);for(const item of EIGHT_WEARABLES)assert.equal(Object.hasOwn(E.ITEM_BY_ID,item.id),false);
  });
  test(`${scope}: exact ordinary probability dilution with original super probability, price and pity`,()=>{
-  const E=economy(scope),state=opened(E),reg=prepareEightWearableCatalog(E);const prior=E.gachaOdds(state);assert.equal(prior.perReg,0.9/32);reg.setActive(true);let odds=E.gachaOdds(state);assert.equal(odds.superP,.1);assert.equal(odds.perSuper,.1/4);assert.equal(odds.perReg,.9/40);assert.equal(odds.remReg,40);assert.equal(E.gachaPrice(state),200000);
+  const E=economy(scope),state=opened(E),reg=prepareEightWearableCatalog(E);const prior=E.gachaOdds(state);assert.equal(prior.perReg,0.9/(32-(E.STORY_COND_IDS||[]).length));reg.setActive(true);let odds=E.gachaOdds(state);assert.equal(odds.superP,.1);assert.equal(odds.perSuper,.1/4);assert.equal(odds.perReg,.9/(40-(E.STORY_COND_IDS||[]).length));assert.equal(odds.remReg,40-(E.STORY_COND_IDS||[]).length);assert.equal(E.gachaPrice(state),200000);
   state.gacha.pity=14;odds=E.gachaOdds(state);assert.equal(odds.superP,1);assert.equal(odds.pityLeft,1);const pick=E.gachaDraw(state,0);assert.equal(pick.super,true);assert.equal(state.gacha.pity,0);assert.equal(state.coins,49800000);
  });
  test(`${scope}: old complete save gets eight nonduplicate ordinary draws using unchanged algorithm`,()=>{
@@ -29,6 +29,6 @@ for(const scope of ['formal','preview']){
  });
  test(`${scope}: collisions, altered baseline and duplicate installer fail before activation`,()=>{
   const E=economy(scope);E.ITEMS.pop();assert.throws(()=>prepareEightWearableCatalog(E),/BASELINE/);assert.equal(E.ITEMS.length,35);
-  const E2=economy(scope);const reg=prepareEightWearableCatalog(E2);assert.throws(()=>prepareEightWearableCatalog(E2),/BASELINE/);assert.throws(()=>reg.setActive(1),/BOOLEAN/);assert.equal(E2.ITEMS.length,36);assert.equal(E2.gachaOdds(opened(E2)).perReg,.9/32);
+  const E2=economy(scope);const reg=prepareEightWearableCatalog(E2);assert.throws(()=>prepareEightWearableCatalog(E2),/BASELINE/);assert.throws(()=>reg.setActive(1),/BOOLEAN/);assert.equal(E2.ITEMS.length,36);assert.equal(E2.gachaOdds(opened(E2)).perReg,.9/(32-(E2.STORY_COND_IDS||[]).length));
  });
 }

@@ -1183,14 +1183,14 @@ function hitBig(x, y) {
       const sp = special; special = null;
       let paid = 0;
       const tr = atomic(() => { paid = E.settleSpecial(state, sp.shop); return { ok:true }; }, '特殊客人奖励没有入账');   // 12d3
-      if (tr.ok) showSpecialComic(sp.meta, paid);
+      if (tr.ok) showSpecialComic(sp.meta, paid, sp.shop);
       return true;
     }
   }
   return false;
 }
 
-function showSpecialComic(meta, paid) {
+function showSpecialComic(meta, paid, shop) {
   sfx('mile'); focusT = 0.4;
   openModal(`<div class="mbubble">特殊客人！</div><div class="mtitle">${meta.emoji} ${meta.name}</div>
     <div class="comic two">${meta.panels.map((p, n) => `<div class="panel4"><span class="pn">${n + 1}</span><div class="pchar"><div class="pimg">${faceImg(p[0])}</div><span class="pe">${p[1]}</span></div><div class="pt">${p[2]}</div></div>`).join('')}</div>
@@ -1198,7 +1198,7 @@ function showSpecialComic(meta, paid) {
     <div class="mnote">小奖励：本店 ${CFG.SPECIAL_REWARD_SEC} 秒产量</div>
     <button class="buy big" id="mOk">收下</button>`);
   burstCoins(W / 2, H * 0.5, 10); bumpCoins(); dirty = true;
-  $('#mOk').addEventListener('click', closeModal, { once:true });
+  $('#mOk').addEventListener('click', () => { closeModal(); storyGrant({ kind:'guest', shop }); }, { once:true });   // 养成-38：收下夜游食神 → 熊猫监工
 }
 
 /* ---------- 超级装饰的在线效果（只在页面开着时触发，不影响离线） ---------- */
@@ -1263,7 +1263,7 @@ function act(a, arg, btn) {
     case 'xingtu': { const lk = xingtuLockText(); if (lk) { toast(lk, 3200); return; } window.XingTu?.open(); return; }
     case 'open': { const r = atomic(() => E.openShop(state, +arg), '开张没有生效，金币已退回'); if (!buyOk(r, btn)) return; afterBuy(btn, E.SHOPS[+arg].name + ' 开张啦！'); signAnim = { shop:+arg, from:'招租中', t0:clock }; handleUnlocks(r.unlocked); break; }
     case 'up': return doUpgradeShop(+arg, btn);
-    case 'hire': { const r = atomic(() => E.hireEmp(state, +arg), '雇人没有生效，金币已退回'); if (!buyOk(r, btn)) return; afterBuy(btn, '雇到 ' + E.SHOPS[+arg].emp.name + '！开始自动赚钱'); sayLine('e', E.SHOPS[+arg].emp.line, 3); if (+arg === 3) queueModal(showGachaOpen); break; }
+    case 'hire': { const r = atomic(() => E.hireEmp(state, +arg), '雇人没有生效，金币已退回'); if (!buyOk(r, btn)) return; afterBuy(btn, '雇到 ' + E.SHOPS[+arg].emp.name + '！开始自动赚钱'); sayLine('e', E.SHOPS[+arg].emp.line, 3); if (+arg === 3) queueModal(showGachaOpen); storyGrant({ kind:'hire' }); break; }
     case 'emp': { const r = atomic(() => E.upgradeEmp(state, +arg), '员工升级没有生效，金币已退回'); if (!buyOk(r, btn)) return; afterBuy(btn); break; }
     case 'ceoUp': { const r = atomic(() => E.upgradeCeo(state, arg), 'CEO 升级没有生效，金币已退回'); if (!buyOk(r, btn)) return; afterBuy(btn); sayLine('c', E.CEO_BY_ID[arg].line); break; }
     case 'assign': return openAssign(arg);
@@ -1486,7 +1486,7 @@ function renderCeo() {
   return h;
 }
 function renderGacha() {
-  const owned = E.ITEMS.filter(x=>x.hidden!==true&&state.gacha.owned.includes(x.id)).length, total = E.REGULAR_ITEMS.length + E.SUPER_ITEMS.length, rem = total - owned, unlocked = E.gachaUnlocked(state), price = E.gachaPrice(state), o = E.gachaOdds(state), dailyLeft = E.gachaDailyLeft(state, now());
+  const owned = E.ITEMS.filter(x=>x.hidden!==true&&state.gacha.owned.includes(x.id)).length, total = E.REGULAR_ITEMS.length + E.SUPER_ITEMS.length, rem = E.gachaRemaining(state).length, condLeft = E.ITEMS.filter(it => it.cond && !state.gacha.owned.includes(it.id)).length, unlocked = E.gachaUnlocked(state), price = E.gachaPrice(state), o = E.gachaOdds(state), dailyLeft = E.gachaDailyLeft(state, now());
   gachaShownDay = gachaDayStamp(now());
   const box = `<svg viewBox="0 0 84 84"><rect x="10" y="30" width="64" height="46" rx="4" fill="${unlocked ? '#ffd23f' : '#ccc'}" stroke="#141414" stroke-width="4"/><rect x="6" y="20" width="72" height="16" rx="3" fill="${unlocked ? '#e63946' : '#aaa'}" stroke="#141414" stroke-width="4"/><rect x="36" y="20" width="12" height="56" fill="#fff" stroke="#141414" stroke-width="3"/><path d="M42 20 C30 4 18 10 26 20 M42 20 C54 4 66 10 58 20" fill="none" stroke="#141414" stroke-width="4"/><text x="42" y="64" font-size="18" font-weight="900" text-anchor="middle" fill="#141414">${unlocked ? '?' : '🔒'}</text></svg>`;
   const P = x => (x * 100 >= 10 || x === 0 ? (x * 100).toFixed(0) : (x * 100).toFixed(1)) + '%';
@@ -1496,7 +1496,7 @@ function renderGacha() {
     h += `<div class="box-hero"><div class="box-ico">${box}</div><div class="info"><div class="name">还没开放</div><div class="desc">科技公司雇到员工后开放。<br>只花游戏金币，不卖真钱。</div></div></div>`;
   } else {
     h += `<div class="box-hero"><div class="box-ico" id="boxIco">${box}</div><div class="info"><div class="name">已收集 ${owned}/${total}</div>
-      <div class="desc">${rem ? `下一抽：<b>超级装饰 ${P(o.superP)}</b>${o.remSuper ? `（每件 ${P(o.perSuper)}）` : ''} · 普通收藏 ${P(o.regP)}${o.remReg ? `（每件 ${P(o.perReg)}）` : ''}<br>${o.remSuper ? (o.guaranteed ? '<b style="color:var(--red)">这一抽必出超级装饰！</b>' : `保底：再 <b>${o.pityLeft}</b> 抽内必出超级装饰`) : '超级装饰已集齐'}` : `${total} 件全收集！`}</div>
+      <div class="desc">${rem ? `下一抽：<b>超级装饰 ${P(o.superP)}</b>${o.remSuper ? `（每件 ${P(o.perSuper)}）` : ''} · 普通收藏 ${P(o.regP)}${o.remReg ? `（每件 ${P(o.perReg)}）` : ''}<br>${o.remSuper ? (o.guaranteed ? '<b style="color:var(--red)">这一抽必出超级装饰！</b>' : `保底：再 <b>${o.pityLeft}</b> 抽内必出超级装饰`) : '超级装饰已集齐'}` : (condLeft ? `盒里的都收齐了！还有 ${condLeft} 张故事卡靠特殊条件获得，去图鉴看提示` : `${total} 件全收集！`)}</div>
       <div style="margin-top:6px">${!rem ? '<button class="buy no" disabled>已集齐</button>' : dailyLeft > 0 ? btn('draw', '', '开一个', price, 'red') : `<button class="buy no" id="gachaDailyDone" disabled>${E.CFG.GACHA_DAILY_LIMIT} 次已开完</button>`}</div>
       ${rem ? `<div class="desc" id="gachaDailyLeft" style="margin-top:4px">今日剩余 ${dailyLeft}/${E.CFG.GACHA_DAILY_LIMIT}${dailyLeft > 0 ? '' : ' · ' + gachaResumeText(now())}</div>` : ''}${rem ? gachaFutureNote(now()) : ''}</div></div>`;
   }
@@ -1507,8 +1507,10 @@ function renderGacha() {
   h += `<div class="item-grid">${E.REGULAR_ITEMS.map(it => { const has = state.gacha.owned.includes(it.id);
     if (WEARABLES8?.has(it.id)) return WEARABLES8.catalogHTML(E, state, it.id);
     if (has && it.type === 'card') return `<button type="button" class="item story-open" data-act="card" data-arg="${it.id}" aria-label="重看故事卡：${it.name}"><span class="t">故事卡</span>${storyArt(it.id)}<span>${it.name}</span><span class="story-replay-hint">点击重看 ›</span></button>`;
-    return `<div class="item ${has ? '' : 'no'}"><span class="t">${TYPE_LABEL[it.type]}</span>${itemIcon(it.id)}${has ? it.name : '？？？'}</div>`; }).join('')}</div>`;
+    return `<div class="item ${has ? '' : 'no'}"${!has && it.cond ? ' data-cond="1"' : ''}><span class="t">${TYPE_LABEL[it.type]}</span>${itemIcon(it.id)}${has ? it.name : '？？？'}${!has && it.cond ? '<small class="cond-tag">不在盒里</small>' : ''}</div>`; }).join('')}</div>`;
   if (WEARABLES8?.box200HiddenHTML) h += WEARABLES8.box200HiddenHTML(E, state);   // 盲盒-109 fix：未得隐藏款「{unlock} 就送」
+  const condCards = E.ITEMS.filter(it => it.type === 'card' && it.cond);
+  if (condCards.length) h += `<div class="note" id="storyCondNote">故事卡里的${condCards.map(c => '「' + c.name + '」').join('')}不在盒里，要靠特殊条件获得（提示见收藏页图鉴）；已经抽到的照旧保留。</div>`;
   h += `<div class="note">规则：不重复收藏盒，共 ${total} 件：普通收藏 ${E.REGULAR_ITEMS.length} 件（衣服 ${E.ITEMS.filter(it => it.type === 'clothes').length} / 帽子 ${E.ITEMS.filter(it => it.type === 'hat').length} / 装饰 ${E.ITEMS.filter(it => it.type === 'decor').length} / 故事卡 ${E.ITEMS.filter(it => it.type === 'card').length}）+ 超级装饰 ${E.SUPER_ITEMS.length} 件。每抽先定类别：<b>超级装饰 ${P(CFG.SUPER_P)}</b>、普通收藏 ${P(1 - CFG.SUPER_P)}，再从该类<b>还没收集的</b>里等概率抽；连续 ${CFG.SUPER_PITY - 1} 抽没出超级装饰，第 ${CFG.SUPER_PITY} 抽必出。某一类抽完了，就只出另一类。每抽必得新物品，最多 ${total} 抽集齐，集齐后不能再买、不扣金币。普通收藏只是好看，<b>不加产速</b>；超级装饰加本店产量和专属效果，但不抽也能正常开齐店铺。单价 ${fmtPrice(CFG.GACHA_PRICE)}。</div>`;
   if(DECOR6)h+=DECOR6.hiddenHTML(state);
   return h;
@@ -1546,7 +1548,7 @@ function renderCol() {
   const cards = E.ITEMS.filter(i => i.type === 'card');
   h += `<div class="sec-title">故事卡图鉴 ${cards.filter(c => own.has(c.id)).length}/${cards.length}</div>`;
   h += cards.map((c, k) => own.has(c.id)
-    ? `<button type="button" class="story story-open" data-act="card" data-arg="${c.id}" aria-label="重看故事卡：${c.name}"><b>${k + 1}. ${c.name}</b>${storyArt(c.id)}<span class="story-text">${c.text}</span><span class="story-replay-hint">已收集 · 点击重看 ›</span></button>` : `<div class="story no" aria-label="第 ${k + 1} 张故事卡，未收集"><b>${k + 1}. ？？？</b><p>还没收集</p></div>`).join('');
+    ? `<button type="button" class="story story-open" data-act="card" data-arg="${c.id}" aria-label="重看故事卡：${c.name}"><b>${k + 1}. ${c.name}</b>${storyArt(c.id)}<span class="story-text">${c.text}</span><span class="story-replay-hint">已收集 · 点击重看 ›</span></button>` : `<div class="story no${c.cond ? ' cond' : ''}" aria-label="第 ${k + 1} 张故事卡，未收集"><b>${k + 1}. ？？？</b><p>${c.cond ? '提示：' + c.hint : '还没收集 · 盲盒里抽'}</p></div>`).join('');
   h += `<div class="note">${setDone ? `✅ 已集齐 ${cards.length} 张故事卡：解锁专属外观「金牌摊主」（金马甲 + 金厨师帽），在衣橱里给任意 CEO 换上。` : `集齐 ${cards.length} 张故事卡，解锁专属外观「金牌摊主」（金马甲 + 金厨师帽）。`}</div>`;
   h += `<div class="sec-title">设置</div><div class="card"><div class="info"><div class="name">存档</div><div class="desc">版本 v${state.v} · 自动保存在本机浏览器 · 每日双倍下次重置：本机时间 ${fmtClockLocal(E.nextResetTs(now()))}</div></div>
     <button class="buy ghost" disabled title="新版存档暂时不能重开">重新开始（暂不可用）</button><div class="note">新版存档暂时不能重开，你的店和收藏都会好好留着。</div></div><div class="note">试玩版 · 只花游戏金币，没有任何真钱购买。</div>`;
@@ -1572,7 +1574,7 @@ function setTab(t) {
   const prev = tab;
   if (prev === 'home' && homeDrag) homeEnd();
   tab = t;
-  if (t === 'home' && prev !== 'home') { homeSub = 'room'; homeSel = null; }
+  if (t === 'home' && prev !== 'home') { homeSub = 'room'; homeSel = null; storyGrant({ kind:'home', period:storyPeriod() }); }
   if (prev !== t && (t === 'home' || prev === 'home')) pageFlip(t === 'home' ? 'next' : 'prev'); // 像翻书：经营 ⇄ 家宅
   document.querySelectorAll('#bottomNav button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   document.getElementById('app').dataset.tab = t;
@@ -1580,6 +1582,7 @@ function setTab(t) {
   updateCompactHead();
   renderTab();
   resize();
+  if (t === 'home' && prev !== 'home') storyCountdown(homeWho);
   if (t === 'gacha' && bb70P2Active()) bb70Set(BB70_VISIT_KEY);   // 盲盒-70：P2 新目录生效时去过一次盲盒页，结算上新条才收起（P1 旧盲盒页不写，r3）
 }
 function updateCompactHead() {
@@ -2061,6 +2064,55 @@ function homeDrawActorPos(){
 // ---- 家宅-56：CEO 没人点时在已摆家具之间自主活动（只用现有动作；状态只在内存，不存档、不影响收益） ----
 // 决策在 home/home-autonomy.js；这里只负责落脚点、走路、摆姿势、说话。脚本没加载到（旧缓存页）就整段不跑。
 const HA = window.HomeAutonomy || null;
+// ---- 养成-38：故事卡的家里变化（只氛围，不加收益、不存档）。决策在 home/story-home.js；脚本没加载到就整段不跑 ----
+const HS = window.HomeStory || null;
+const storyPeriod = () => homeAutoPeriod() || (h => h >= 19 || h < 5 ? 'night' : h >= 17 ? 'dusk' : h < 10 ? 'morning' : 'day')(new Date(now()).getHours());
+function storyCtx(id, kind) {
+  const H = E.homeOf(state, id), eat = (HA && HA.IDS && HA.IDS.eat) || [];
+  return { owned:new Set(state.gacha.owned), who:id, kind:kind || null, period:storyPeriod(), placed:H.placed.map(p => p.fid),
+    hasSeat:H.placed.some(p => !!HomeInteraction.capability(p.fid)), hasTable:H.placed.some(p => eat.includes(p.fid)), posed:!!homeActorOf(id).pose };
+}
+let storyBalloonAt = -1e9; const storyCountdownDone = new Set();
+function storyCountdown(id) {   // 发射倒计时：本页第一次进火箭老板的家（他已加入）
+  if (!HS || tab !== 'home' || homeSub !== 'room' || homeMode !== 'live') return;
+  if (!HS.countdownDue({ owned:state.gacha.owned, who:id, joined:E.homeOpen(state, id), done:storyCountdownDone.has(id) })) return;
+  storyCountdownDone.add(id);
+  const ac = homeActorOf(id), t0 = clock;
+  ac.autoHold = clock + 7; ac.line = HS.LINES.k7[0]; ac.until = clock + 2.4; storyBalloonAt = clock; dirty = true;
+  setTimeout(() => { if (homeWho !== id) return; ac.line = HS.LINES.k7[1]; ac.until = clock + 3.2; dirty = true; }, 3600);
+}
+function storySceneHTML(id) {
+  if (!HS || homeMode !== 'live') return '';
+  const sc = HS.scene(storyCtx(id, null)), red = homeAutoReduced(), d = -(clock % 24).toFixed(2);
+  let h = '';
+  if (sc.moon) h += `<i class="story-moon" data-story="moon"></i>`;
+  if (sc.street) h += `<span class="story-street" data-story="street">${'<i></i>'.repeat(4)}</span>`;
+  if (sc.panda) h += `<span class="story-panda${red ? ' still' : ''}" data-story="panda" style="animation-delay:${d}s">${storyPandaSVG(0)}${storyPandaSVG(1)}</span>`;
+  const b = clock - storyBalloonAt;
+  if (b >= 0 && b < 6.2) h += `<span class="story-balloons" data-story="balloons" style="animation-delay:${(1.2 - b).toFixed(2)}s"><i></i><i></i><i></i></span>`;
+  return h ? `<div class="story-scene" aria-hidden="true">${h}</div>` : '';
+}
+function storyTeaHTML(id) {
+  return HS && homeMode === 'live' && HS.scene(storyCtx(id, homeActorOf(id).pose ? 'sit' : null)).tea && HomeInteraction.capability(E.homeOf(state, id).placed.find(p => p.uid === homeActorOf(id).pose?.uid)?.fid || '') === 'sit'
+    ? `<i class="story-tea" data-story="tea" aria-hidden="true"><svg viewBox="0 0 24 20"><path d="M4 6h13v6a6 6 0 0 1-6 6h-1a6 6 0 0 1-6-6z" fill="#fffaf0" stroke="#141414" stroke-width="2"/><path d="M17 8h2a3 3 0 0 1 0 6h-2" fill="none" stroke="#141414" stroke-width="2"/><path d="M7 8h7v3H7z" fill="#9bc47a"/></svg></i>` : '';
+}
+function storyPandaSVG(f) {
+  const l = f ? 'M9 26l-2 5M21 26l3 5' : 'M10 26l1 5M20 26l-1 5';
+  return `<svg class="pf pf${f}" viewBox="0 0 32 32"><path d="${l}" stroke="#141414" stroke-width="4" stroke-linecap="round"/><ellipse cx="16" cy="19" rx="10" ry="8" fill="#fff" stroke="#141414" stroke-width="2"/><circle cx="16" cy="10" r="7" fill="#fff" stroke="#141414" stroke-width="2"/><circle cx="10" cy="4.5" r="2.6" fill="#141414"/><circle cx="22" cy="4.5" r="2.6" fill="#141414"/><ellipse cx="13" cy="10" rx="1.8" ry="2.3" fill="#141414"/><ellipse cx="19" cy="10" rx="1.8" ry="2.3" fill="#141414"/><path d="M15 13h2" stroke="#141414" stroke-width="1.6"/></svg>`;
+}
+// 条件故事卡入库：每张一次原子保存；不扣币、不动保底；提示文案 王大妈 养成-29
+function storyGrant(ev) {
+  if (!E.storyCardsDue) return [];
+  const got = [];
+  for (const id of E.storyCardsDue(state, ev)) {
+    const r = atomic(() => E.grantStoryCard(state, id), '故事卡没有入账');
+    if (!r || !r.ok) continue;
+    got.push(id); toast('新故事卡「' + E.ITEM_BY_ID[id].name + '」，去图鉴看看。', 2600);
+    if (r.setDone) toast('集齐 ' + E.CARD_COUNT + ' 张故事卡：解锁专属外观「金牌摊主」！', 2600);
+  }
+  if (got.length) dirty = true;
+  return got;
+}
 const homeAutoPeriod = () => null;   // 宠物页没有家宅-22 时段，时段系数一律 ×1
 const homeAutoReduced = () => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; } };
 // r2：只取消「自主」那段路——自主走动中被打断（切模式/切后台/切 CEO/玩家点）时，清掉它的目标、待摆姿势和自主动作，
@@ -2161,7 +2213,7 @@ function homeAutoStart(id, ac, list) {
 function homeAutoSay(id, ac, kind, emptyRoom) {
   const pack = LIVE_LINES[id] || LIVE_LINES.c77, key = kind ? HA.KINDS[kind].lines : 'walk';
   const pool = (kind && HA.linesFor && HA.linesFor(kind, id)) || (key === 'sit' ? ['坐一会儿，歇歇脚。'] : pack[key] || pack.walk);   // 家宅-57：坐 / 坐地毯 / 新动作用专属句，其余沿用 LIVE_LINES
-  const line = HA.chooseLine(pool, ac.autoSaid || (ac.autoSaid = {}), { now:clock, rng:Math.random, emptyRoom });
+  const line = HA.chooseLine(HS ? HS.pick(pool, HS.linesFor(storyCtx(id, kind)), Math.random) : pool, ac.autoSaid || (ac.autoSaid = {}), { now:clock, rng:Math.random, emptyRoom });
   if (line) { ac.line = line; ac.until = clock + HA.LINE_SEC; dirty = true; }
 }
 function homeAutoTick(id, ac) {
@@ -2248,9 +2300,9 @@ function renderRoom() {
   // 墙面禁区（和 E.canPlace / E.findFree 同一份 E.wallBlockedCells）：平时隐藏，拖挂画时斜纹标红
   const wallBlocks = E.wallBlockedCells(state, id).map(([x, y]) => `<i class="wall-block" style="left:${x / T.cols * 100}%;top:${y / E.WALL_ROWS * 100}%;width:${100 / T.cols}%;height:${100 / E.WALL_ROWS}%"></i>`).join('');
   h += `<div class="room tier-${T.id}${hasArt ? ' has-art' : ''}${dockHost ? ' pet-host-docked' : ''}" id="room" data-tier="${T.id}" style="--cols:${T.cols};--rows:${T.rows};--wall:${T.wall};--floor:${T.floor};--trim:${T.trim}">
-    ${hasArt ? `<img class="room-art" src="../../art/home_${artKey}.webp?v=${ART_V}" data-homefb="1" alt="" onerror="this.closest('.room')&&this.closest('.room').classList.remove('has-art')">` : ''}
+    ${hasArt ? `<img class="room-art" src="../../art/home_${artKey}.webp?v=${ART_V}" data-homefb="1" alt="" onerror="this.closest('.room')&&this.closest('.room').classList.remove('has-art')">` : ''}${storySceneHTML(id)}
     <div class="room-wall" id="roomWall"><span class="rw-deco">${T.id === 'hut' ? ic('window') : T.id === 'apt' ? ic('window') + ic('window') : ic('spark') + ic('candle') + ic('spark')}</span><span class="rw-name">${c.name} 的${T.name}</span><div class="wall-grid" id="wallGrid">${wallBlocks}${wallItems}<div class="room-hl hidden" id="wallHl"></div></div></div>
-    <div class="room-floor" id="roomFloor">${floorItems}<div class="home-actor" id="homeActor" style="left:${(homeActorOf(id).x + 0.5) / T.cols * 100}%;top:${(homeActorOf(id).y + 0.5) / T.rows * 100}%"><canvas class="ha-pose" width="240" height="240" aria-label="${c.name}"></canvas><span class="ha-ava">${ava(id)}</span>${(() => { const ac = homeActorOf(id); return ac.line && ac.until > clock ? `<b class="ha-line">${ac.line}</b>` : ''; })()}<i class="ha-act">${(() => { const ac = homeActorOf(id); return ac.act === 'rest' ? ic('zz') : ac.act === 'read' ? ic('book') : ac.act === 'dress' ? ic('shirt') : ac.actIcon ? ic(ac.actIcon) : ''; })()}</i></div><div class="room-hl hidden" id="roomHl"></div></div></div>`;
+    <div class="room-floor" id="roomFloor">${floorItems}<div class="home-actor" id="homeActor" style="left:${(homeActorOf(id).x + 0.5) / T.cols * 100}%;top:${(homeActorOf(id).y + 0.5) / T.rows * 100}%"><canvas class="ha-pose" width="240" height="240" aria-label="${c.name}"></canvas><span class="ha-ava">${ava(id)}</span>${storyTeaHTML(id)}${(() => { const ac = homeActorOf(id); return ac.line && ac.until > clock ? `<b class="ha-line">${ac.line}</b>` : ''; })()}<i class="ha-act">${(() => { const ac = homeActorOf(id); return ac.act === 'rest' ? ic('zz') : ac.act === 'read' ? ic('book') : ac.act === 'dress' ? ic('shirt') : ac.actIcon ? ic(ac.actIcon) : ''; })()}</i></div><div class="room-hl hidden" id="roomHl"></div></div></div>`;
   h += petInteractionBar();
   if(homeActorOf(id).pose)h += `<button class="buy alt" data-act="homeGetUp">起身</button>`;
   const st = undoStack(id);
@@ -2595,7 +2647,7 @@ function homeAct(a, arg, b) {
     case 'homeGo': petPanelOpen=false;return setTab(arg);
     case 'homeMode': homeMode = arg === 'decor' ? 'decor' : 'live'; homeSel = null; homeAutoHold(homeWho); if (homeDrag) homeEnd(); sfx('tap'); dirty = true; return;
     case 'homeSub': petPanelOpen=false;if (homeSub !== arg) { homeSub = arg; homeSel = null; pageFlip(arg === 'mall' ? 'next' : 'prev'); $('#panel').scrollTop = 0; sfx('swoosh'); } dirty = true; return;
-    case 'homeWho': if (homeWho !== arg) { homeWho = arg; homeSel = null; homeAutoReset(arg); sfx('tap'); } if (!E.homeOpen(state, arg)) toast('这位 CEO 还没加入'); dirty = true; return;
+    case 'homeWho': if (homeWho !== arg) { homeWho = arg; homeSel = null; homeAutoReset(arg); sfx('tap'); storyCountdown(arg); } if (!E.homeOpen(state, arg)) toast('这位 CEO 还没加入'); dirty = true; return;
     case 'homeUp': return confirmHomeUp(arg);
     case 'petActivate': { const r=PG.activateDuplicate(state,E,arg,{save:petSave,blocked:saveBlocked||frozen,prepare:petPrepare}); return petAfterResult(r); }
     case 'homePetBuy': { const [room,species] = (arg || homeWho).split('|'); petSelection=species||'dog';return confirmPetBuy(room,petSelection); }
@@ -2878,6 +2930,7 @@ window.__tzz = { toast, sfx, xingtuContext:()=>({blocked:frozen||saveBlocked||!!
   hitBig, modalOpen, closeModal, get frozen() { return frozen; },
   audioState() { return AU.ctx ? AU.ctx.state : 'none'; }, showPreview, openAssign, JOB_ART, jobShown, jobURL, showJobArt,
   HOME_ART, FURN_ART, FURN_UP, homeAct, homeAdvanceActor, homeDrawActor, homeOwner, get homeWho() { return homeWho; }, get homeSub() { return homeSub; }, get homeMode() { return homeMode; }, set homeMode(v) { homeMode = v === 'decor' ? 'decor' : 'live'; }, get homeSel() { return homeSel; }, get homeDrag() { return homeDrag; }, homeActor, LIVE_LINES, homeUndo, resize, get canvasSize() { return { W, H }; }, pet: petHooks, pets: petsHooks, lookOf, drawPerson, drawHead, LOOKS, get bubble() { return bubble; } };
+window.__tzz.storyGrant = storyGrant; window.__tzz.showSpecialComic = showSpecialComic;   // 养成-38 验收钩子
 // 家宅-56 只读测试钩子：读 CEO 自主活动状态（不改任何东西）
 Object.defineProperties(window.__tzz, { homeAutoState:{ value:id => { const a = homeActor[id]; return a ? { x:a.x, y:a.y, tx:a.tx, pose:a.pose && { ...a.pose }, act:a.act, line:a.line, auto:a.auto && { ...a.auto }, hold:a.autoHold || 0, lastMove:a.autoLastMove || null, speed:a.autoPace ? a.autoPace.speed : null, paceEl:a.autoPace ? a.autoPace.el : null, ty:a.ty, pendingPose:a.pendingPose && { ...a.pendingPose }, clock } : null; } } });
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&petPanelOpen&&!modalOpen()){e.preventDefault();homeAct('petClose');}});
