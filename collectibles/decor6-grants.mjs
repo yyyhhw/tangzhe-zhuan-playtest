@@ -1,8 +1,8 @@
 /** Pure claim proposals. Only the exclusive host coordinator may commit them.
  * No clocks, RNG, wallet mutation, normalization, storage or startup awards. */
-import {canonical,clone} from '../collection/domain/json.mjs?v=home128-xingtu129-20261015-r1';
-import {deriveGrantId,inspectHiddenEvidence} from '../qa-protocol2/vendor/planner/migration.mjs?v=home128-xingtu129-20261015-r1';
-import {HIDDEN_DECOR6} from './decor6-catalog.mjs?v=home128-xingtu129-20261015-r1';
+import {canonical,clone} from '../collection/domain/json.mjs?v=xtearth-20261015-r2';
+import {deriveGrantId,inspectHiddenEvidence} from '../qa-protocol2/vendor/planner/migration.mjs?v=xtearth-20261015-r2';
+import {HIDDEN_DECOR6} from './decor6-catalog.mjs?v=xtearth-20261015-r2';
 const ids=new Set(HIDDEN_DECOR6.map(x=>x.id));
 const object=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
 export function hiddenEligibility(state,id){

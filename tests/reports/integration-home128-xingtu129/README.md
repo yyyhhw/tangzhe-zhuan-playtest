@@ -1,6 +1,6 @@
 # 128 + 129 统一集成候选（尚未合 main / 部署）
 
-基线为开始集成时远端 main `aea60f7f373c4045f33b90fdbf42f2cb8cefb7d5`。分支 `integration/home128-xingtu129-20261015`；正式及rootpet版本 `formal-home128-xingtu129-20261015-r1`，preview版本 `preview-home128-xingtu129-20261015-r1`。资源共用 token `home128-xingtu129-20261015-r1`。
+基线为开始集成时远端 main `aea60f7f373c4045f33b90fdbf42f2cb8cefb7d5`。分支 `integration/home128-xingtu129-20261015`；正式及rootpet版本 `formal-xtearth-20261015-r2`，preview版本 `preview-xtearth-20261015-r2`。资源共用 token `xtearth-20261015-r2`。
 
 输入仅含家宅128 `a507a703a6e88e215bd0bf86ffe91fa6d0501758`、`12aa45f467e7a866de8efc7e28bf541316d3f9dd`，星途129 `0cf526acbfe1792b98bf3f10e596dd5e409952da`、`402d8a68a8c8b3300b770a73048891788b28df5d`、`c1000e5b7d065267ecafbecf44b01c5b9054e8d2`、`eca6f11c21e76679d49da8a0b24c717f6fa509ad`，按顺序 cherry-pick，全程无冲突。127、养成38未引入。保留候选原测试与历史报告，其旧版数值不代表本集成结果。
 
