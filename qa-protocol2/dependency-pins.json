@@ -3,8 +3,8 @@
     "path": "qa-protocol2/vendor/planner/migration.mjs",
     "sourcePackage": "collectible-compat-candidate-v2",
     "sourcePath": "module/migration.mjs",
-    "bytes": 12608,
-    "sha256": "c9bd50c30b8b0ddf8524963fba6fcdd5e4008362a8582b7d06c7b6b78ce39784",
+    "bytes": 12602,
+    "sha256": "1ed6ac1b6fa631983dd14e6037dd2ff3af98a53705cf037c3f108f32bdbcc74e",
     "reviewedInputSha256": "5bc0536dacecbaca2f910def14ac7410a7b8c19495625604688156cb89848c49",
     "reviewedInputBytes": 12549,
     "integrationChange": "only final cache import URLs; business logic unchanged"
@@ -27,8 +27,8 @@
     "path": "qa-protocol2/vendor/codec/snapshot-codec.mjs",
     "sourcePackage": "collectible-snapshot-codec-v1",
     "sourcePath": "module/snapshot-codec.mjs",
-    "bytes": 4351,
-    "sha256": "a4d1fa4d03e8409f755fe8f15e048dcea03ed31ae1f2942b2f180f19e7ab24b1",
+    "bytes": 4345,
+    "sha256": "a75a8e3f3abd76dee047b78aed301f9bc3d6bfe83ec9c5e324710121abbe54af",
     "reviewedInputSha256": "420e687372a697b79e65da6776088234b9a0e6fbd39154b2582bdbe42b4b156b",
     "reviewedInputBytes": 4299,
     "integrationChange": "only final cache import URLs; business logic unchanged"
@@ -51,8 +51,8 @@
     "path": "qa-protocol2/vendor/runtime/validator.mjs",
     "sourcePackage": "collectible-protocol2-runtime-v1",
     "sourcePath": "module/validator.mjs",
-    "bytes": 13691,
-    "sha256": "2acae77d9b542a6d9f96bd8458a8dffad84d3708024c07184d798fb12ba948a4",
+    "bytes": 13682,
+    "sha256": "a41d1982df3c5592551f45e5b64b970a6f3d3ddf7eb15d9529e1736fee7da61b",
     "sourceSha256": "b710aa9da4c979036e980ffdbdf2f8ed46259d13c5d7ac90bf07ea42a806511a",
     "sourceBytes": 8201,
     "derivation": "Revision 2 exact boot migration markers, formal leaderboard mirror, optional source-bound pet roster transition guard; original reviewed archive unchanged. Revision 3: instance-local, single-entry cache of fully verified immutable snapshot/original raw pairs; current validation and write protections unchanged. Revision 4 (杨总 16:12): optional mutable gachaDaily {day,n} for the 5-per-day blind box limit; absent = 0 today.",
@@ -62,8 +62,8 @@
     "path": "qa-protocol2/vendor/cards/card-coordinator.mjs",
     "sourcePackage": "collectible-card-adapter-v1",
     "sourcePath": "module/card-coordinator.mjs",
-    "bytes": 13680,
-    "sha256": "e5988b413a181eef564a285c7e8165f1a7aabbbd9b34e0528ae99dd2c37bc6e0",
+    "bytes": 13665,
+    "sha256": "16493e76aa2bbfba9b32a353f8a77fecdba827a88a9e2fb19d59ff6aae84318d",
     "reviewedInputSha256": "c39527224902c835f2cc611527a5fcec2a23293adebd3b78bbb8684d2b41a034",
     "reviewedInputBytes": 8203,
     "integrationChange": "xingtu02 r2 candidate on 0b7218d: first-event ledger, confirmed zombie participation and recap; pending independent review"
@@ -104,8 +104,8 @@
     "sourcePackage": "space01b04-author-increment",
     "sourceCommit": "472349b5f31df4446e79694b6be5bd6f66bd6db4",
     "derivation": "Reviewed01a domain unchanged; new authored candidate moon intent/overlay increment; artwork selectively from pinned a1bc784b demo",
-    "bytes": 15095,
-    "sha256": "2dbfe6cb3d60e91c029ae4cb8f717b1f656ae4151a6de1950f96571487608760"
+    "bytes": 15083,
+    "sha256": "7923317e7c2c495082ab3975ab6a3dd1a2cd32085cdb08604d1aee6a131773f0"
   },
   {
     "path": "space/host.mjs",
@@ -120,8 +120,8 @@
     "sourcePackage": "space01b04-author-increment",
     "sourceCommit": "472349b5f31df4446e79694b6be5bd6f66bd6db4",
     "derivation": "Reviewed01a domain unchanged; new authored candidate moon intent/overlay increment; artwork selectively from pinned a1bc784b demo",
-    "bytes": 21373,
-    "sha256": "40d8e56120e984f577e743de4ff45809be6d73e8573e50fa5945ad45d73ab76c",
+    "bytes": 21343,
+    "sha256": "f2a5000dc27a44901a8871cf1b453b73bc78ee959843b413aa0c7f76a1a7925f",
     "integrationChange": "xingtu02 r2 candidate on 0b7218d: first-event ledger, confirmed zombie participation and recap; pending independent review"
   },
   {
@@ -151,8 +151,8 @@
     "path": "space/xingtu-views.mjs",
     "sourcePackage": "xingtu02-candidate",
     "sourcePath": "space/xingtu-views.mjs",
-    "bytes": 16050,
-    "sha256": "5ef1e3de9a5781efa15396ca331ec0915ea6d553e07ab2028ef05f5df3796281",
+    "bytes": 16041,
+    "sha256": "c5cadc01c79f9b0c47bf9d95816550b9bcb3f18218ca87efbd1bc1073ca4be86",
     "integrationChange": "xingtu02 r2 candidate on 0b7218d: first-event ledger, confirmed zombie participation and recap; pending independent review"
   }
 ]

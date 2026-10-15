@@ -2,7 +2,7 @@
  * Production code must retain its original storage/key/locks path unless the
  * explicit localhost QA gate succeeds. No automatic reads, writes or locks.
  */
-import {getRealPageQAConfig, validateRealPageQAGate} from './config.mjs?v=yangcheng38-20261015-r1';
+import {getRealPageQAConfig, validateRealPageQAGate} from './config.mjs?v=xingtu02-20261015-r1';
 const fail = code => { throw new Error(code); };
 export function createQADeckStorageScope({scope, location, storage, locks} = {}) {
   const gate = validateRealPageQAGate(location, {scope, realm: 'cards'});
