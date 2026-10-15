@@ -1,3 +1,8 @@
+// 【已归档 · 测试-133 ②】不在全量测试里跑（scripts/run-all-tests.mjs 只扫根目录 test_*）。
+// 原场景：旧版父页（git f597999，收藏层之前、直接读写 tangzhe-save）被缓存住，存档时丢掉 zombie.endTop，新版再从 zombieEndTopV1 影子恢复。
+// 现行主档已搬到收藏层（tangzhe-formal-collection-v1-save），f597999 那一代页面读写的 tangzhe-save 新版根本不读，这个混版本场景已经不会发生；
+// 而且收藏层之后没有「不认识 endTop」的旧父页可拿来重放。endTop 影子本身的保护仍由 test_zbtop_commit_failure.mjs（写失败不丢榜）和 test_zbtop_integration.mjs（根/pet 来回保留）覆盖。
+// 留档备查；以后若要复活，需要换成收藏层时代的旧父页提交号。
 import assert from 'node:assert/strict';import fs from 'node:fs';import {execFileSync} from 'node:child_process';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');const repo=process.env.INTEGRATION_REPO,base=process.env.INTEGRATION_BASE||'http://127.0.0.1:8783',fixed=process.env.EXPECT_PROTECTED==='1',out=process.env.ZB_OLD_OUT||'/tmp/old-parent.json';const browser=await chromium.launch(),rows=[];
 try{for(const mode of ['version-fetch-fails','reload-flag-already-set']){
