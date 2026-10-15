@@ -3036,8 +3036,10 @@ function openZombie() {
   if (frozen || zbOpen || tdOpen || window.XingTu?.isOpen() || !ZB) return;
   zbOpen = true; const f = $('#zbFrame');
   f.onload = () => {
-    if (!zbOpen || zbPort || !/\/zombie\//.test(f.src)) return;
-    const ch = new MessageChannel(); zbPort = ch.port1; zbPort.onmessage = e => zbMsg(e.data);
+    zbRun = null; if (zbPort) { zbPort.close(); zbPort = null; }
+    if (!zbOpen || !/\/zombie\//.test(f.src)) return;
+    const ch = new MessageChannel(), childDocument = f.contentDocument; zbPort = ch.port1;
+    zbPort.onmessage = e => { if (zbPort === ch.port1 && f.contentDocument === childDocument) zbMsg(e.data); };
     f.contentWindow.postMessage({ zb:'port' }, location.origin, [ch.port2]); zbReply();
   };
   f.src = 'zombie/?embed=1&v=15c'; $('#zbOverlay').classList.remove('hidden'); audioPause();
@@ -3050,6 +3052,10 @@ function zbMsg(d) {
   if (!zbOpen || !d || typeof d !== 'object') return;
   if (d.zb === 'close') return closeZombie();
   if (d.zb === 'hello') return zbReply();
+  if (d.zb === 'startInvalidated') {
+    if (zbRun && d.runId === zbRun.runId && !zbRun.started) zbRun = null;
+    return;
+  }
   // 13c：真正开局——确认烧烤摊现任 CEO，生成本局记录（内存）；菜单打开后再调岗，下一次开局会走这里重新确认
   if (d.zb === 'start') {
     const ack = { ack:'start' }, ceo = zbCeo();
@@ -3061,12 +3067,16 @@ function zbMsg(d) {
     if (zbBlocked()) { zbRun = null; return zbReply(frozen ? '游戏已在别的页面打开，没法开局' : '存档异常（只读模式），没法开局', Object.assign(ack, { ok:false, runId: askId })); }
     let runId = askId || rid(); while (zbUsedRuns.has(runId)) runId = rid();
     zbUsedRuns.add(runId);
-    zbRun = { runId, ceoId: ceo, startedAt: now(), settled: false };   // 权威是父页此刻的在任，不看小游戏自报的 ceo
+    zbRun = { runId, ceoId: ceo, startedAt: now(), startDeadline: performance.now() + 4000, settled: false };   // 权威是父页此刻的在任，不看小游戏自报的 ceo
     return zbReply('', Object.assign(ack, { ok:true, runId: zbRun.runId, ceo: zbRun.ceoId }));
   }
   // Actual battle acknowledgement, after the child has accepted this start receipt.
   if (d.zb === 'started') {
-    if (!zbRun || zbRun.settled || d.runId !== zbRun.runId || d.ceo !== zbRun.ceoId || zbBlocked() || document.hidden || !COLLECTION.ownsLock()) return;
+    if (!zbRun || zbRun.started || zbRun.settled || d.runId !== zbRun.runId || d.ceo !== zbRun.ceoId || zbBlocked() || document.hidden || !COLLECTION.ownsLock()) return;
+    // A matching receipt is insufficient: the current child must still be in this live start.
+    let live = false;
+    try { live = performance.now() <= zbRun.startDeadline && $('#zbFrame').contentWindow.__zbStartIsLive?.(d.runId, d.ceo) === true; } catch {}
+    if (!live) { zbRun = null; return; }
     zbRun.started = true;
     COLLECTION.coordinator.recordZombieStarted?.();
     return;

@@ -67,3 +67,15 @@ r2 基线：最新 main `0b7218d`（原候选基于 `e48be1a`）。候选分支�
 7. 后续集成 38/131 时独立处理共享文件冲突、资源 token 和真实 pins；价格/门槛以各自获准版本为准。本候选不预先合并它们。
 
 证据：`tests/reports/xingtu02/`。复现命令和本轮汇总见该目录 `README.md`。
+
+## r3：开局失效生命周期修复（仍待非作者独验）
+
+r2 的父页登记仅匹配 runId/CEO，未查询子页是否已经超时清空 G。受信子页沿原 MessagePort 重放 started 可误记参与；这是已复现的消息故障注入，不能推断为已证实的跨源攻击。
+
+r3 仅修改 formal/preview 父子握手。子页用不可重新定义的只读 `__zbStartIsLive` 查询当前 G、pending/over、runId/CEO、document-active 和原有 4 秒开局期限；父页同时检查本地单调时钟期限和当前子文档，确认后立即标记 consumed（started），不重复调用存档入口。确认超期保守拒绝，不以子页自报时间补写。
+
+超时/取消/新局替换/pagehide 发送 startInvalidated；即使通知丢失，父页仍从当前 G 和期限拒绝旧确认。iframe 导航重新建立端口并清空未完成登记，旧端口处理器须同时匹配当前端口和子文档；关闭沿用关闭端口/清空登记。已有真实参与记录不会因之后取消、败局或关闭被撤销。pagehide 后的旧文档不能复活开局确认，须重新打开小游戏。
+
+r3 未改 facade、owner、validator、save parser、白名单、存档格式、backup/readback/reconcile 或持久化日期来源。保存失败仍进入原保护流程；不确定写入仍仅通过原只读回读确认，不重放记录。经济价格、门槛、38/131 及 127/128/129 均未改。
+
+新增 `zombie-lifecycle-browser.py` 覆盖 formal/preview 超时、丢失失效通知的超时、取消、导航、关闭重开、pagehide、确认超期；每种同时验证内存/磁盘无日期及后续新真实开局只记一次。新测试在精确 r2 的 formal/preview 均复现原阻断。源码级测试验证 live 谓词和新增 guard 的负控；原测试断言不删除、不降低。详见 `tests/reports/xingtu02/r3/`。

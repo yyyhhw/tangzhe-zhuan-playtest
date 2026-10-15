@@ -1,0 +1,122 @@
+[
+  {
+    "entry": "/",
+    "duplicate": false,
+    "quarantine": "1 条记录暂时用不了\n\n第 1 条 · 已经帮你留着，暂时用不了",
+    "replaceLabels": [
+      "🐶 暖棕白小狗 → 待命",
+      "🐱 猫 → 待命"
+    ],
+    "rawPetsUnchanged": true,
+    "internalIds": [
+      "qa-dog-original",
+      "qa-cat-original"
+    ],
+    "result": "PASS"
+  },
+  {
+    "entry": "/",
+    "duplicate": true,
+    "quarantine": "1 条记录暂时用不了\n\n第 1 条 · 已经帮你留着，暂时用不了",
+    "replaceLabels": [
+      "🐶 暖棕白小狗 · 第 1 只 → 待命",
+      "🐱 猫 → 待命"
+    ],
+    "rawPetsUnchanged": true,
+    "internalIds": [
+      "qa-dog-original",
+      "qa-cat-original"
+    ],
+    "result": "PASS"
+  },
+  {
+    "entry": "/pet/game/",
+    "duplicate": false,
+    "quarantine": "1 条记录暂时用不了\n\n第 1 条 · 已经帮你留着，暂时用不了",
+    "replaceLabels": [
+      "🐶 暖棕白小狗 → 待命",
+      "🐱 猫 → 待命"
+    ],
+    "rawPetsUnchanged": true,
+    "internalIds": [
+      "qa-dog-original",
+      "qa-cat-original"
+    ],
+    "result": "PASS"
+  },
+  {
+    "entry": "/pet/game/",
+    "duplicate": true,
+    "quarantine": "1 条记录暂时用不了\n\n第 1 条 · 已经帮你留着，暂时用不了",
+    "replaceLabels": [
+      "🐶 暖棕白小狗 · 第 1 只 → 待命",
+      "🐱 猫 → 待命"
+    ],
+    "rawPetsUnchanged": true,
+    "internalIds": [
+      "qa-dog-original",
+      "qa-cat-original"
+    ],
+    "result": "PASS"
+  },
+  {
+    "entry": "/preview/",
+    "duplicate": false,
+    "quarantine": "1 条未知物种记录已隔离\n\n第 1 条 · 原记录保留，暂停运行",
+    "replaceLabels": [
+      "🐶 暖棕白小狗 → 待命",
+      "🐱 猫 → 待命"
+    ],
+    "rawPetsUnchanged": true,
+    "internalIds": [
+      "qa-dog-original",
+      "qa-cat-original"
+    ],
+    "result": "PASS"
+  },
+  {
+    "entry": "/preview/",
+    "duplicate": true,
+    "quarantine": "1 条未知物种记录已隔离\n\n第 1 条 · 原记录保留，暂停运行",
+    "replaceLabels": [
+      "🐶 暖棕白小狗 · 第 1 只 → 待命",
+      "🐱 猫 → 待命"
+    ],
+    "rawPetsUnchanged": true,
+    "internalIds": [
+      "qa-dog-original",
+      "qa-cat-original"
+    ],
+    "result": "PASS"
+  },
+  {
+    "entry": "/preview/pet/game/",
+    "duplicate": false,
+    "quarantine": "1 条未知物种记录已隔离\n\n第 1 条 · 原记录保留，暂停运行",
+    "replaceLabels": [
+      "🐶 暖棕白小狗 → 待命",
+      "🐱 猫 → 待命"
+    ],
+    "rawPetsUnchanged": true,
+    "internalIds": [
+      "qa-dog-original",
+      "qa-cat-original"
+    ],
+    "result": "PASS"
+  },
+  {
+    "entry": "/preview/pet/game/",
+    "duplicate": true,
+    "quarantine": "1 条未知物种记录已隔离\n\n第 1 条 · 原记录保留，暂停运行",
+    "replaceLabels": [
+      "🐶 暖棕白小狗 · 第 1 只 → 待命",
+      "🐱 猫 → 待命"
+    ],
+    "rawPetsUnchanged": true,
+    "internalIds": [
+      "qa-dog-original",
+      "qa-cat-original"
+    ],
+    "result": "PASS"
+  }
+]

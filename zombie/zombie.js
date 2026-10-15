@@ -107,7 +107,7 @@ function onState(d) {
   // 13c：父页开局回执——ok 时锁定权威 ceo / runId；失败则回到菜单（父页没登记成功）
   // 只认本局请求的回执：开局后、或 runId 对不上的迟到回执一律忽略（失败回执没带 runId 时只在等待中认）
   if (d.ack === 'start' && G && G.pendStart && d.runId === G.runId) {
-    if (d.ok !== true || !ZB.CEO_IDS.includes(d.ceo)) return abortStart(d.why || '开局登记失败');
+    if (!startDocumentActive || performance.now() > G.startDeadline || d.ok !== true || !ZB.CEO_IDS.includes(d.ceo)) return abortStart(d.why || '开局登记失败');
     clearTimeout(G.pendTimer); G.pendStart = false; G.ceo = d.ceo; renderHero(); last = performance.now(); bgmTry();
     host({ zb:'started', runId:G.runId, ceo:G.ceo }); return;
   }
@@ -136,6 +136,10 @@ window.addEventListener('resize', resize);
 
 // ---- 对局 ----
 let G = null, raf = 0, last = 0, paused = false;
+let startDocumentActive = true;
+Object.defineProperty(window, '__zbStartIsLive', { value: (runId, ceo) => startDocumentActive && !!G && !G.pendStart && !G.over && G.runId === runId && G.ceo === ceo && performance.now() <= G.startDeadline });
+function invalidateStart() { if (EMBED && G) host({ zb:'startInvalidated', runId:G.runId }); }
+window.addEventListener('pagehide', () => { startDocumentActive = false; invalidateStart(); });
 let selLv = 1;
 function newRun(mode, n) {
   const lv = proto.lv, maxHp = Math.round(100 * 1.12 ** lv.hp);
@@ -653,7 +657,8 @@ function start(mode, n) {
   if (!canPlay()) return false;
   if (mode === 'endless' && proto.cleared < MAX_LV) return false;
   if (mode !== 'endless') { mode = 'level'; n = Math.min(Math.max(1, Math.floor(fin(n, selLv))), Math.min(MAX_LV, proto.cleared + 1)); selLv = n; }
-  resize(); G = newRun(mode, n); G.runId = newRunId();
+  invalidateStart();
+  resize(); G = newRun(mode, n); G.runId = newRunId(); G.startDeadline = performance.now() + 4000;
   paused = false; joy.on = false; show(null); renderHero(); hud(); last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(loop);
   if (!EMBED) bgmTry();
   // 嵌入模式先向父页登记本局，等到对应 runId 的 ok 回执才开始计时（onState ack:'start'），超时回菜单
@@ -664,6 +669,7 @@ function start(mode, n) {
   }
   return true; }
 function abortStart(why) {
+  invalidateStart();
   SFX.stopBgm();
   if (G) clearTimeout(G.pendTimer);
   cancelAnimationFrame(raf); G = null; paused = false;
@@ -729,14 +735,14 @@ $('#boardBtn').addEventListener('click', () => { renderBoard(); show('#board'); 
 $('#boardBack').addEventListener('click', () => { renderTrain(); show('#menu'); draw(); });
 $('#againBtn').addEventListener('click', () => {
   if (G && G.wait) return;
-  if (!canPlay()) { G = null; renderTrain(); show('#menu'); draw(); return; }
+  if (!canPlay()) { invalidateStart(); G = null; renderTrain(); show('#menu'); draw(); return; }
   if (G && G.mode === 'endless') return start('endless');
   if (G && G.win && proto.cleared >= G.n) return G.n >= MAX_LV ? start('endless') : start('level', G.n + 1);
   start('level', G ? G.n : selLv);
 });
 $('#lvPrev').addEventListener('click', () => { selLv--; renderLv(); });
 $('#lvNext').addEventListener('click', () => { selLv++; renderLv(); });
-$('#menuBtn').addEventListener('click', () => { G = null; renderTrain(); show('#menu'); draw(); });
+$('#menuBtn').addEventListener('click', () => { invalidateStart(); G = null; renderTrain(); show('#menu'); draw(); });
 $('#pauseBtn').addEventListener('click', () => setPause(true));
 $('#sndBtn').addEventListener('click', () => { userMute = !userMute; applyMute(); });
 // iPhone 要在用户点按里解锁声音
