@@ -1,0 +1,61 @@
+[
+  {
+    "group": "suites",
+    "files": 78,
+    "exit": 0
+  },
+  {
+    "file": "test_root_keys.js",
+    "exit": 1,
+    "log": "baseline-test_root_keys.js.log"
+  },
+  {
+    "file": "test_economy.js",
+    "exit": 1,
+    "log": "baseline-test_economy.js.log"
+  },
+  {
+    "file": "test_coin_safety.js",
+    "exit": 1,
+    "log": "baseline-test_coin_safety.js.log"
+  },
+  {
+    "file": "pet/test_engine.js",
+    "exit": 0,
+    "log": "baseline-pet_test_engine.js.log"
+  },
+  {
+    "file": "pet/game/test_petgame.js",
+    "exit": 1,
+    "log": "baseline-pet_game_test_petgame.js.log"
+  },
+  {
+    "file": "test_home_actions57.js",
+    "exit": 0,
+    "log": "baseline-test_home_actions57.js.log"
+  },
+  {
+    "file": "test_home_autonomy.js",
+    "exit": 0,
+    "log": "baseline-test_home_autonomy.js.log"
+  },
+  {
+    "file": "test_home_autonomy_mover.js",
+    "exit": 0,
+    "log": "baseline-test_home_autonomy_mover.js.log"
+  },
+  {
+    "file": "test_home_live_hint.js",
+    "exit": 0,
+    "log": "baseline-test_home_live_hint.js.log"
+  },
+  {
+    "file": "test_home_window_weather.mjs",
+    "exit": 0,
+    "log": "baseline-test_home_window_weather.mjs.log"
+  },
+  {
+    "file": "test_home_click128.js",
+    "status": "NOT_PRESENT"
+  }
+]

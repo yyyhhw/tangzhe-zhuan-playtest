@@ -1,0 +1,326 @@
+{
+  "preTokenHead": "cd623410d6d850efb88d5b96a37d8e4b482a3055",
+  "oldToken": "xtentry-20261015-r1",
+  "newToken": "home128-xingtu129-20261015-r1",
+  "files": [
+    {
+      "path": "app.js",
+      "occurrences": 4,
+      "change": "token-only"
+    },
+    {
+      "path": "candidates/blindbox18/display.mjs",
+      "occurrences": 3,
+      "change": "token-only"
+    },
+    {
+      "path": "candidates/blindbox18/review.mjs",
+      "occurrences": 6,
+      "change": "token-only"
+    },
+    {
+      "path": "collectibles/box200-catalog.mjs",
+      "occurrences": 2,
+      "change": "token-only"
+    },
+    {
+      "path": "collectibles/box200-display.mjs",
+      "occurrences": 2,
+      "change": "token-only"
+    },
+    {
+      "path": "collectibles/box200-hidden.mjs",
+      "occurrences": 1,
+      "change": "token-only"
+    },
+    {
+      "path": "collectibles/decor6-display.mjs",
+      "occurrences": 3,
+      "change": "token-only"
+    },
+    {
+      "path": "collectibles/decor6-grants.mjs",
+      "occurrences": 3,
+      "change": "token-only"
+    },
+    {
+      "path": "collectibles/entry.mjs",
+      "occurrences": 19,
+      "change": "token-only"
+    },
+    {
+      "path": "collectibles/release.mjs",
+      "occurrences": 1,
+      "change": "token-only"
+    },
+    {
+      "path": "collectibles/wearables18-catalog.mjs",
+      "occurrences": 3,
+      "change": "token-only"
+    },
+    {
+      "path": "collection/bootstrap.mjs",
+      "occurrences": 8,
+      "change": "token-only"
+    },
+    {
+      "path": "collection/host-save.mjs",
+      "occurrences": 1,
+      "change": "token-only"
+    },
+    {
+      "path": "index.html",
+      "occurrences": 7,
+      "change": "token-only"
+    },
+    {
+      "path": "pet/game/app.js",
+      "occurrences": 2,
+      "change": "token-only"
+    },
+    {
+      "path": "pet/game/index.html",
+      "occurrences": 7,
+      "change": "token-only"
+    },
+    {
+      "path": "pet/game/version.json",
+      "occurrences": 1,
+      "change": "token-only"
+    },
+    {
+      "path": "preview/app.js",
+      "occurrences": 1,
+      "change": "token-only"
+    },
+    {
+      "path": "preview/collection/bootstrap.mjs",
+      "occurrences": 5,
+      "change": "token-only"
+    },
+    {
+      "path": "preview/collection/host-save.mjs",
+      "occurrences": 1,
+      "change": "token-only"
+    },
+    {
+      "path": "preview/index.html",
+      "occurrences": 2,
+      "change": "token-only"
+    },
+    {
+      "path": "preview/td/test_td_bridge.js",
+      "occurrences": 2,
+      "change": "token-only"
+    },
+    {
+      "path": "preview/version.json",
+      "occurrences": 1,
+      "change": "token-only"
+    },
+    {
+      "path": "qa-protocol2/entry.mjs",
+      "occurrences": 14,
+      "change": "token-only"
+    },
+    {
+      "path": "qa-protocol2/guard/deck-storage-scope.mjs",
+      "occurrences": 1,
+      "change": "token-only"
+    },
+    {
+      "path": "qa-protocol2/guard/storage-boundary.mjs",
+      "occurrences": 2,
+      "change": "token-only"
+    },
+    {
+      "path": "qa-protocol2/host-storage.mjs",
+      "occurrences": 1,
+      "change": "token-only"
+    },
+    {
+      "path": "qa-protocol2/real-page-facade.mjs",
+      "occurrences": 1,
+      "change": "token-only"
+    },
+    {
+      "path": "qa-protocol2/vendor/cards/card-coordinator.mjs",
+      "occurrences": 4,
+      "change": "token-only"
+    },
+    {
+      "path": "qa-protocol2/vendor/codec/snapshot-codec.mjs",
+      "occurrences": 2,
+      "change": "token-only"
+    },
+    {
+      "path": "qa-protocol2/vendor/planner/migration.mjs",
+      "occurrences": 2,
+      "change": "token-only"
+    },
+    {
+      "path": "qa-protocol2/vendor/runtime/validator.mjs",
+      "occurrences": 2,
+      "change": "token-only"
+    },
+    {
+      "path": "qa-protocol2/wearables8-display.mjs",
+      "occurrences": 3,
+      "change": "token-only"
+    },
+    {
+      "path": "space/moon.mjs",
+      "occurrences": 4,
+      "change": "token-only"
+    },
+    {
+      "path": "space/overlay.mjs",
+      "occurrences": 10,
+      "change": "token-only"
+    },
+    {
+      "path": "space/voyage-ev.mjs",
+      "occurrences": 1,
+      "change": "token-only"
+    },
+    {
+      "path": "space/xingtu-views.mjs",
+      "occurrences": 2,
+      "change": "token-only"
+    },
+    {
+      "path": "tests/autosave15/scope.test.mjs",
+      "occurrences": 1,
+      "change": "token-only"
+    },
+    {
+      "path": "tests/bb70/integration-scope.test.mjs",
+      "occurrences": 1,
+      "change": "token-only"
+    },
+    {
+      "path": "tests/box83/catalog.test.mjs",
+      "occurrences": 1,
+      "change": "token-only"
+    },
+    {
+      "path": "tests/copy98/home-pet-copy.test.mjs",
+      "occurrences": 2,
+      "change": "token-only"
+    },
+    {
+      "path": "tests/formal/carefree-bgm.test.mjs",
+      "occurrences": 3,
+      "change": "token-only"
+    },
+    {
+      "path": "tests/formal/copy52-display.test.mjs",
+      "occurrences": 3,
+      "change": "token-only"
+    },
+    {
+      "path": "tests/formal/tea-entry-cards-out.test.mjs",
+      "occurrences": 3,
+      "change": "token-only"
+    },
+    {
+      "path": "tests/lifecycle-save/lifecycle.test.mjs",
+      "occurrences": 1,
+      "change": "token-only"
+    },
+    {
+      "path": "tests/lockfix/smoke.py",
+      "occurrences": 1,
+      "change": "token-only"
+    },
+    {
+      "path": "tests/moon/full-app-startup.test.mjs",
+      "occurrences": 2,
+      "change": "token-only"
+    },
+    {
+      "path": "tests/moon/lock-lifetime.test.mjs",
+      "occurrences": 1,
+      "change": "token-only"
+    },
+    {
+      "path": "tests/moon/overlay-dom.test.mjs",
+      "occurrences": 1,
+      "change": "token-only"
+    },
+    {
+      "path": "tests/moon/resources.test.mjs",
+      "occurrences": 3,
+      "change": "token-only"
+    },
+    {
+      "path": "tests/wearables8/production-entry.test.mjs",
+      "occurrences": 1,
+      "change": "token-only"
+    },
+    {
+      "path": "tests/wearables8/production-harness.mjs",
+      "occurrences": 1,
+      "change": "token-only"
+    },
+    {
+      "path": "tests/wearables8/resource-chain.test.mjs",
+      "occurrences": 5,
+      "change": "token-only"
+    },
+    {
+      "path": "tests/xt11/art-ui.test.mjs",
+      "occurrences": 1,
+      "change": "token-only"
+    },
+    {
+      "path": "version.json",
+      "occurrences": 1,
+      "change": "token-only"
+    }
+  ],
+  "derivedPins": [
+    {
+      "path": "qa-protocol2/vendor/planner/migration.mjs",
+      "oldHash": "575ba9fbdfda87bd05b178534e0772a40b13d35bd21c88449c861c26cadc5a5a",
+      "newHash": "681220eebbff1c87ceddd919c8cadc6ec27f6a0688e6d8fee1b60662c6522d94",
+      "oldBytes": 12600,
+      "newBytes": 12620
+    },
+    {
+      "path": "qa-protocol2/vendor/codec/snapshot-codec.mjs",
+      "oldHash": "393c434c1b31054a606a0d209611e0728dd830a53ce686a5a3f6964307317950",
+      "newHash": "f48fc4f5a07e3660cade708cd1d19c29bdac3d883791ee5511721d077235311e",
+      "oldBytes": 4343,
+      "newBytes": 4363
+    },
+    {
+      "path": "qa-protocol2/vendor/runtime/validator.mjs",
+      "oldHash": "0466b862e8080c8f8e4e8f061267c172b1ed2616304cf44bee9b18f9b1526dce",
+      "newHash": "8ce0092c7d140d24c8550382f2a86274ef8a8a6aad3a3bbbe406f62b62dcad98",
+      "oldBytes": 13535,
+      "newBytes": 13555
+    },
+    {
+      "path": "qa-protocol2/vendor/cards/card-coordinator.mjs",
+      "oldHash": "f911cb1c697eed13d635a437a0ce1adda48d6fc24a51e1535d2f6ed394d9a777",
+      "newHash": "0b71bb427064b7c0cc24dac2ac2eded13269c4bfa9fafc90897308e269740cdf",
+      "oldBytes": 12666,
+      "newBytes": 12706
+    },
+    {
+      "path": "space/moon.mjs",
+      "oldHash": "40dff2d4f9b4c7d5a67fb901eaee58ead8f3bbdb534250a228ea108c554ae8e8",
+      "newHash": "78af3c5fff1487329f35b0c181218f78381d9c20fd4a174fd61ecaa43b8b4778",
+      "oldBytes": 15007,
+      "newBytes": 15047
+    },
+    {
+      "path": "space/overlay.mjs",
+      "oldHash": "0c9ce29c366e33c61ae01745cc562916f2ea71796232eedaa42feb702ca9a737",
+      "newHash": "e03f90fcd8a13cd0110560f145c2edf1d073f91e39f1c9e964027c15d1b138df",
+      "oldBytes": 21280,
+      "newBytes": 21380
+    }
+  ]
+}

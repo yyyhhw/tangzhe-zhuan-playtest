@@ -1,11 +1,11 @@
-import {createMoonHost} from './host.mjs?v=xtentry-20261015-r1';
-import {moonArt} from './art.mjs?v=xtentry-20261015-r1';
-import {MOON_CSS} from './styles.mjs?v=xtentry-20261015-r1';
-import {EVENTS} from './voyage-ev.mjs?v=xtentry-20261015-r1';
-import {TIER_PRICE} from './moon.mjs?v=xtentry-20261015-r1';
-import {XT2_CSS} from './xingtu-css.mjs?v=xtentry-20261015-r1';
-import {renderMap,renderShip,gate,ART,ROUTE_TIME,renderEnding,renderCredits,renderEarth,renderRecap} from './xingtu-views.mjs?v=xtentry-20261015-r1';
-import {ROUTES,ROUTE_BY_ID,OPEN_ROUTES,TOTAL_CARDS,ALIEN_DENOM,cardOf} from './album.mjs?v=xtentry-20261015-r1';
+import {createMoonHost} from './host.mjs?v=home128-xingtu129-20261015-r1';
+import {moonArt} from './art.mjs?v=home128-xingtu129-20261015-r1';
+import {MOON_CSS} from './styles.mjs?v=home128-xingtu129-20261015-r1';
+import {EVENTS} from './voyage-ev.mjs?v=home128-xingtu129-20261015-r1';
+import {TIER_PRICE} from './moon.mjs?v=home128-xingtu129-20261015-r1';
+import {XT2_CSS} from './xingtu-css.mjs?v=home128-xingtu129-20261015-r1';
+import {renderMap,renderShip,gate,ART,ROUTE_TIME,renderEnding,renderCredits,renderEarth,renderRecap} from './xingtu-views.mjs?v=home128-xingtu129-20261015-r1';
+import {ROUTES,ROUTE_BY_ID,OPEN_ROUTES,TOTAL_CARDS,ALIEN_DENOM,cardOf} from './album.mjs?v=home128-xingtu129-20261015-r1';
 const RID=view=>view.voyage?.route??'moon',RN=view=>ROUTE_BY_ID[RID(view)]?.name??'月面基地',DUR=view=>view.voyage?.dur||600000;
 const TABS=[['xingtuTabVoyage','出航','voyage'],['xingtuTabMap','星图','map'],['xingtuTabShip','飞船','ship'],['xingtuTabAlbum','册子','album']];
 export function installMoonOverlay({app,runtime,document:doc=globalThis.document,window:win=globalThis}){
@@ -21,7 +21,7 @@ export function installMoonOverlay({app,runtime,document:doc=globalThis.document
  const node=(tag,id,text)=>{const n=doc.createElement(tag);if(id)n.id=id;if(text!==undefined)n.textContent=text;return n;};
  const cardImage=(route,n,title,thumb=false)=>{
   if(!OPEN_ROUTES.includes(route)||!Number.isInteger(n)||!cardOf(route,n))return null;
-  const img=node('img');img.className='xingtu-cardart'+(thumb?' xingtu-cardart-thumb':'');img.src=new URL(`../art/spacecards/${route}_${n}.webp?v=xtentry-20261015-r1`,import.meta.url).href;img.alt=thumb?'':title;img.width=1024;img.height=768;img.loading=thumb?'lazy':'eager';img.decoding='async';img.onerror=()=>{img.hidden=true;};return img;
+  const img=node('img');img.className='xingtu-cardart'+(thumb?' xingtu-cardart-thumb':'');img.src=new URL(`../art/spacecards/${route}_${n}.webp?v=home128-xingtu129-20261015-r1`,import.meta.url).href;img.alt=thumb?'':title;img.width=1024;img.height=768;img.loading=thumb?'lazy':'eager';img.decoding='async';img.onerror=()=>{img.hidden=true;};return img;
  };
  const appendCardImage=(parent,route,n,title,thumb=false)=>{const img=cardImage(route,n,title,thumb);if(img)parent.append(img);};
  const fmt=ms=>{const s=Math.ceil(ms/1000);return `${Math.floor(s/60)}分${String(s%60).padStart(2,'0')}秒`;};
@@ -68,7 +68,7 @@ export function installMoonOverlay({app,runtime,document:doc=globalThis.document
    else renderRecap(wrap,{doc,space:view.space,next:()=>{tab='voyage';host.refresh();}});return;}
   if(view.ok&&(tab==='map'||tab==='ship')){const wrap=node('div','xingtuV2');wrap.className='xt2';content.append(wrap);
    if(tab==='map')renderMap(wrap,{doc,space:view.space,pick:mapPick,flying:!!(view.voyage&&!view.voyage.completed),onPick:id=>{mapPick=id;host.refresh();},goVoyage:()=>{tab='voyage';host.refresh();},launch:id=>{const r=host.perform({type:'depart',route:id},host.token);if(r.ok){try{app.xingtuSfx?.('swoosh');}catch{}tab='voyage';}host.refresh();return r;}});
-   else renderShip(wrap,{doc,space:view.space,room:shipRoom,onRoom:k=>{shipRoom=k;host.refresh();},artUrl:rel=>new URL(`${rel}?v=xtentry-20261015-r1`,import.meta.url).href,upgrade:k=>{const r=host.perform({type:'upgrade',sys:k},host.token);host.refresh();return r;},coins:Number.isFinite(app.state?.coins)?app.state.coins:null,prices:TIER_PRICE,research:(k,t)=>{const r=host.perform({type:'research',sys:k,tier:t},host.token);if(r.ok)try{app.render?.();}catch{}host.refresh();return r;}});return;}
+   else renderShip(wrap,{doc,space:view.space,room:shipRoom,onRoom:k=>{shipRoom=k;host.refresh();},artUrl:rel=>new URL(`${rel}?v=home128-xingtu129-20261015-r1`,import.meta.url).href,upgrade:k=>{const r=host.perform({type:'upgrade',sys:k},host.token);host.refresh();return r;},coins:Number.isFinite(app.state?.coins)?app.state.coins:null,prices:TIER_PRICE,research:(k,t)=>{const r=host.perform({type:'research',sys:k,tier:t},host.token);if(r.ok)try{app.render?.();}catch{}host.refresh();return r;}});return;}
   if(!view.ok){const error=node('p','xingtuProtection',view.code.includes('COMPATIBILITY')?'这趟航程的记录读不懂，先原样留着：航程没清，探索点也没多发。点「返回经营」接着玩就好。':'星途现在存不了档，先不动它。看看手机时间对不对、别的页面是不是也开着游戏，处理好后点「返回经营」，再重新打开星图。');error.className='xingtu-error';content.append(error,detail(view.code));return;}
   const art=node('div','xingtuStarMap');art.className='xingtu-art';art.innerHTML=moonArt(view.phase==='flying'?1-view.remaining/DUR(view):0,RN(view));content.append(art);
   const status=node('div','xingtuStatus');status.className='xingtu-status';content.append(status);
