@@ -75,7 +75,7 @@
     },
     {
       "path": "economy.js",
-      "sha256": "66c8877ecaece5cce7e2dbde7a313bcd3a3d8c23e2b53e3a9d8ff8ceda4457b2",
+      "sha256": "46542f4b88df49af0e200d039dab26d1ce7195797af0bbe823bd0c7444e6d7ac",
       "expectedChange": "Six-decoration hidden-pool/claim extension; behavioral coverage in tests/decor6. This full file is intentionally not identical to b16."
     },
     {
@@ -85,7 +85,7 @@
     },
     {
       "path": "pet/game/economy.js",
-      "sha256": "39b7a59a29f7929112e8e000ff03af2c75adfc962efc87fda4d1877b6470001f",
+      "sha256": "b789460eaaddc84c43832ffec69f0e77e89598d8fec7a36a9d2d23bf2b7340c6",
       "expectedChange": "Six-decoration hidden-pool/claim extension; behavioral coverage in tests/decor6. This full file is intentionally not identical to b16."
     },
     {
