@@ -1,4 +1,4 @@
-import {canonical} from './vendor/codec/lib/json.mjs?v=xingtuv2-full-20261015-r1';
+import {canonical} from './vendor/codec/lib/json.mjs?v=xtcopyfix-20261015-r1';
 /** Default-off QA-only adapter for the actual app coordinator and __tzz hooks.
  * Pure injected orchestration: no browser globals, storage selection, seeding,
  * grants, timer, automatic migration approval, gameplay replay, or publication.
