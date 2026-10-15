@@ -10,12 +10,19 @@ At a 390×844 mobile viewport (`isMobile` + `hasTouch`), on **both** entry point
 Chromium smoke (`tests/milestones/browser.py`):
 
 - buy-earth button (`#xingtuBuyEarth`) shows the **10 万亿** wording;
-- with **15 万亿** coins one click deducts **exactly once** (`15e12 → 5e12`) and sets
-  `space.earth = true`;
-- a page **refresh persists** `earth = true` and the `5e12` balance;
-- with **9 万亿** coins (below `EARTH_PRICE = 1e13`) the button is **disabled/greyed**;
+- with **15 万亿** coins one click deducts **exactly once** — the balance drops by exactly
+  `EARTH_PRICE` (10 万亿) — and sets `space.earth = true`;
+- a page **refresh persists** `earth = true` and the deducted (~`5e12`) balance;
+- with **9 万亿** coins (below `EARTH_PRICE = 1e13`) the button is **disabled/greyed** and
+  nothing is deducted;
 - a cheap home-scene sanity check (`#app` / `canvas#scene`) on a fresh load;
 - **fails** on any uncaught `pageerror` or JS `console.error`.
+
+Because the fixture opens every shop (Lv35), the game accrues a tiny amount of **idle
+income** between save injection and each coin read, so coin balances are compared within
+`COIN_DRIFT_TOL` (1e9 — ~1e4× smaller than `EARTH_PRICE`) rather than by exact equality.
+The purchase itself is still asserted exactly: `coins_before − coins_after == EARTH_PRICE`
+within that tolerance, which still catches a double deduction, a no-op, or a wrong price.
 
 Screenshots + `report.json` / `report.txt` are written to `./output` (uploaded as a CI
 artifact).

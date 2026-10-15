@@ -40,6 +40,16 @@ export const COINS_RICH = 15e12;
 export const COINS_POOR = 9e12;
 export const COINS_AFTER_BUY = COINS_RICH - EARTH_PRICE;   // 5e12
 
+// The fixture opens every shop (lv 35, employed), so the game accrues a small amount of
+// idle/passive income on each tick between save injection and every coin read. Coin
+// assertions therefore tolerate that drift instead of demanding exact equality. The
+// PURCHASE itself is still checked exactly — (coins_before - coins_after) must equal
+// EARTH_PRICE within this tolerance — which still catches a double deduction (~2e13), a
+// no-op, or a wrong price while ignoring sub-second income. Observed CI drift is ~1e6 per
+// scenario; 1e9 is ~1000x that yet still 1e4x below EARTH_PRICE (1e13) and 1e3x below the
+// poor-vs-price gap (1e12), so it can never blur a real check.
+export const COIN_DRIFT_TOL = 1e9;
+
 // Guard key so an addInitScript re-fire (Playwright runs it on every navigation,
 // including reload) does NOT re-seed and clobber the game's own persisted save —
 // that is what lets the "refresh persists earth=true" assertion be meaningful.

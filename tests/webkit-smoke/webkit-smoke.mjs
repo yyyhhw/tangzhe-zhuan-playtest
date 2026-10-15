@@ -4,10 +4,17 @@
 // mobile viewport and exercises the "买下地球 / buy Earth" ending flow — mirroring the
 // checks the existing Chromium smoke (tests/milestones/browser.py) performs:
 //   * the buy-earth button shows the "10 万亿" wording
-//   * with 15 万亿 coins one click deducts EXACTLY once (15e12 -> 5e12) and sets earth=true
+//   * with 15 万亿 coins one click deducts EXACTLY once (by EARTH_PRICE) and sets earth=true
 //   * a page refresh persists earth=true / the deducted balance
 //   * with 9 万亿 coins (below EARTH_PRICE) the button is disabled / greyed
 // plus a cheap home-scene sanity check, on BOTH entry points (/ and /pet/game/).
+//
+// Coin balances are compared within COIN_DRIFT_TOL rather than by exact equality: the
+// fixture opens every shop (lv 35), so the game accrues a small amount of idle income on
+// each tick between save injection and a coin read. The purchase itself is still asserted
+// EXACTLY — (coins_before - coins_after) must equal EARTH_PRICE within that tolerance,
+// which catches a double deduction, a no-op, or a wrong price while ignoring sub-second
+// income (see save-recipe.mjs for why the tolerance is safe).
 //
 // Fails on any uncaught pageerror or JS console error. Writes screenshots + a JSON/text
 // report to the output dir (uploaded as a CI artifact).
@@ -22,7 +29,7 @@ import { startServer } from './static-server.mjs';
 import {
   SAVE_KEY, EARTH_PRICE, BUY_EARTH_SELECTOR, RECAP_SELECTOR, START_BUTTON_LABEL,
   APP_SELECTOR, SCENE_SELECTOR, CLAIM_SELECTOR, ENTRY_POINTS, VIEWPORT,
-  COINS_RICH, COINS_POOR, COINS_AFTER_BUY, SEED_SENTINEL, buildSeed,
+  COINS_RICH, COINS_POOR, COINS_AFTER_BUY, COIN_DRIFT_TOL, SEED_SENTINEL, buildSeed,
 } from './save-recipe.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -37,6 +44,10 @@ function check(name, ok, detail = '') {
   checks.push({ name, ok: !!ok, detail: String(detail).slice(0, 400) });
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  — ' + detail : ''}`);
 }
+
+// Coin balances drift upward as idle income accrues (see COIN_DRIFT_TOL in
+// save-recipe.mjs); compare within that tolerance rather than by exact equality.
+const near = (a, b, tol = COIN_DRIFT_TOL) => Math.abs(a - b) <= tol;
 
 // Resource-load failures (404s for optional art/audio) are not JS errors; keep them
 // out of the hard-fail set so the smoke doesn't go red on cosmetic missing assets.
@@ -131,17 +142,24 @@ async function scenarioRich(browser, base, entry, seed, def) {
       label.includes('10 万亿') || label.includes('10万亿'), label);
     const disabledBefore = await page.locator(BUY_EARTH_SELECTOR).isDisabled();
     check(`${tag}: button enabled with 15 万亿`, !disabledBefore);
-    check(`${tag}: coins == 15e12 before buy`,
-      await page.evaluate(() => window.__tzz.state.coins) === COINS_RICH);
     await shot(page, `earth-before-${entry.replace(/\W+/g, '') || 'root'}`);
+    // Read the balance right before the click so the purchase delta is measured over the
+    // tightest window; idle income only adds a sub-second drift (see COIN_DRIFT_TOL).
+    const beforeCoins = await page.evaluate(() => window.__tzz.state.coins);
+    check(`${tag}: coins ~= 15e12 before buy (idle income tolerated)`,
+      beforeCoins >= COINS_RICH && near(beforeCoins, COINS_RICH), `coins=${beforeCoins}`);
 
     await page.locator(BUY_EARTH_SELECTOR).click();
     await page.waitForSelector(RECAP_SELECTOR, { timeout: 15000 });
     const afterCoins = await page.evaluate(() => window.__tzz.state.coins);
     const earth = await page.evaluate(() => window.__tzz.state.space.earth);
     check(`${tag}: earth == true after one click`, earth === true);
-    check(`${tag}: deducts exactly once (15e12 -> 5e12)`, afterCoins === COINS_AFTER_BUY,
-      `coins=${afterCoins} expected=${COINS_AFTER_BUY}`);
+    // Exact purchase check: the balance must drop by EXACTLY EARTH_PRICE (10 万亿) once.
+    // The drift tolerance only absorbs income accrued during the click and is 1e4x smaller
+    // than EARTH_PRICE, so a double deduction (~2e13), a no-op, or a wrong price still fails.
+    check(`${tag}: deducts exactly once (Δ == EARTH_PRICE = 10 万亿)`,
+      near(beforeCoins - afterCoins, EARTH_PRICE),
+      `before=${beforeCoins} after=${afterCoins} delta=${beforeCoins - afterCoins} expected≈${EARTH_PRICE}`);
     await shot(page, `earth-after-${entry.replace(/\W+/g, '') || 'root'}`);
 
     // Refresh must persist (addInitScript is guarded, so the game's own save is kept).
@@ -150,8 +168,10 @@ async function scenarioRich(browser, base, entry, seed, def) {
     const pEarth = await page.evaluate(() => window.__tzz.state.space.earth);
     const pCoins = await page.evaluate(() => window.__tzz.state.coins);
     check(`${tag}: refresh persists earth == true`, pEarth === true);
-    check(`${tag}: refresh persists coins == 5e12`, pCoins === COINS_AFTER_BUY,
-      `coins=${pCoins}`);
+    // Persisted balance must be the DEDUCTED one (~5e12), clearly not the pre-buy ~15e12;
+    // the 1e13 gap between them dwarfs the income drift tolerance.
+    check(`${tag}: refresh persists deducted balance (~5e12, not ~15e12)`,
+      pCoins >= COINS_AFTER_BUY && near(pCoins, COINS_AFTER_BUY), `coins=${pCoins}`);
     await shot(page, `earth-reload-${entry.replace(/\W+/g, '') || 'root'}`);
   } finally {
     await ctx.close();
@@ -171,9 +191,13 @@ async function scenarioPoor(browser, base, entry, seed, def) {
       label.includes('10 万亿') || label.includes('10万亿'), label);
     const disabled = await page.locator(BUY_EARTH_SELECTOR).isDisabled();
     check(`${tag}: button disabled/greyed with 9 万亿 (< ${EARTH_PRICE})`, disabled === true);
-    check(`${tag}: coins unchanged (9e12), not bought`,
-      await page.evaluate(() => window.__tzz.state.coins) === COINS_POOR &&
-      await page.evaluate(() => window.__tzz.state.space.earth) === false);
+    const poorCoins = await page.evaluate(() => window.__tzz.state.coins);
+    const poorEarth = await page.evaluate(() => window.__tzz.state.space.earth);
+    // Not bought: earth stays false and the balance never dropped by EARTH_PRICE — it only
+    // drifts up by idle income, staying ~9e12 (far below the 1e13 price).
+    check(`${tag}: coins ~unchanged (~9e12), not bought`,
+      poorCoins >= COINS_POOR && near(poorCoins, COINS_POOR) && poorEarth === false,
+      `coins=${poorCoins} earth=${poorEarth}`);
     await shot(page, `earth-disabled-${entry.replace(/\W+/g, '') || 'root'}`);
   } finally {
     await ctx.close();
