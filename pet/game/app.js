@@ -2191,7 +2191,7 @@ function homeAutoMove(id, ac, x, y, pace) {
 function homeAutoStart(id, ac, list) {
   const H = E.homeOf(state, id), T = E.homeTier(H.lv);
   let c = HA.pick(list, { last:ac.autoLast || null, ceo:id, period:homeAutoPeriod(), rng:Math.random });
-  if (c && (c.kind === 'sit' || c.kind === 'rug') && HS && HS.lieOn && HS.lieOn({ owned:state.gacha.owned, who:'otaku' }, 'sofa') && id === 'otaku') {   // 熊大 r3：阿宅有 k6，屋里有沙发/床就不坐椅子、地毯，改去沙发躺（没沙发去床）
+  if (c && (c.kind === 'sit' || c.kind === 'rug') && typeof HS !== 'undefined' && HS && HS.lieOn && HS.lieOn({ owned:state.gacha.owned, who:'otaku' }, 'sofa') && id === 'otaku') {   // 熊大 r3：阿宅有 k6，屋里有沙发/床就不坐椅子、地毯，改去沙发躺（没沙发去床）
     const fidOf = u => H.placed.find(q => q.uid === u)?.fid || '';
     if (!HS.isSofa(fidOf(c.uid))) { const alt = list.find(q => q.kind === 'sit' && HS.isSofa(fidOf(q.uid))) || list.find(q => q.kind === 'lie'); if (alt) c = alt; }
   }
@@ -2733,7 +2733,7 @@ function homeLiveTap(e) {
     if (E.itemSurf(p) === 'wall') return;   // 非 57 墙饰保持原来的无动作行为
     const cap=HomeInteraction.capability(p.fid),act=E.furnLiveAct(p.fid);
     if(cap){let point={x:cx,y:cy};if(HomeInteraction.profile(p.fid).ground){const r=floor.getBoundingClientRect();point=HomeInteraction.rugPoint(E,E.homeOf(state,id),p,{x:(e.clientX-r.left)/r.width*T.cols-.5,y:(e.clientY-r.top)/r.height*T.rows-.5});if(!point){toast('地毯上挤满了，挪开一件家具再坐');return;}}
-      const pk=cap==='sit'&&HS&&HS.lieOn&&HS.lieOn({owned:state.gacha.owned,who:id},p.fid)?'lie':cap;if(go(point.x,point.y,pk==='lie'?'rest':'sit'))ac.pendingPose={uid:p.uid,kind:pk};return;}
+      const pk=cap==='sit'&&typeof HS!=='undefined'&&HS&&HS.lieOn&&HS.lieOn({owned:state.gacha.owned,who:id},p.fid)?'lie':cap;if(go(point.x,point.y,pk==='lie'?'rest':'sit'))ac.pendingPose={uid:p.uid,kind:pk};return;}
     if(act==='read'||act==='dress')return go(cx,cy,act);
     go(cx,cy,'walk');toast('这件只能看看，坐不上去');return;
   }

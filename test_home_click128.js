@@ -18,7 +18,7 @@ function harness(file, items, period = 'night', source = null) {
     const state=E.newState(0), H=E.homeOf(state,'c77'); H.placed=items;
     const homeActor={}, HA_STAND=['eat','use','water','lamp','wall','pet'], messages=[];
     let clock=10, dirty=false, homeWho='c77', homeDrag=null, frozen=false, tab='home',homeSub='room',homeMode='live',lit=null,autoSays=0;
-    const document={hidden:false}, homeAutoPeriod=()=>period, homeAutoPets=()=>[], homeAutoReduced=()=>false;
+    const HS=null, document={hidden:false}, homeAutoPeriod=()=>period, homeAutoPets=()=>[], homeAutoReduced=()=>false;
     const homeDrawActor=()=>{}, sfx=()=>{}, toast=s=>messages.push(s), liveLine=(id,act)=>act;
     const homeLightOn=uid=>{lit=uid},homeLightOff=()=>{lit=null},homeAutoSay=()=>{autoSays++};
     const floor={getBoundingClientRect:()=>({left:0,top:0,width:600,height:400})}, $=s=>s==='#roomFloor'?floor:null;
