@@ -7,7 +7,7 @@
  *                  （voyage 上的未知扩展字段，普通 commit 原样保留、不能改，见 space/README.md）
  *   旧档：没有 space / voyage 为 null / ev 为 null（月面往返）→ 读作「这趟没有事件」，不需要也不会写盘。
  * 事件文案见下方 EVENTS（星途-07）。 */
-import {readSpace} from './domain.mjs?v=xtentry-20261015-r1';
+import {readSpace} from './domain.mjs?v=xtearth-20261015-r1';
 export const VOYAGE_EV_SCHEMA=1;
 export const EVENT_IDS=Object.freeze(['ev_drift_pod','ev_meteor_rain','ev_pirates','ev_supply_low','ev_strange_signal','ev_alien_caravan']);
 /** 星途-07 文案（王大妈 2/2，16:22）。按钮小字用「现在」版（星途-06 舱室等级未上）；hint06 留给 06 上线后换。

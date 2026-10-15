@@ -36,9 +36,9 @@ function setup(prefix, options={}){
  return {c,calls,events,devents,api:c.audioAPI,app};
 }
 for(const prefix of ['', 'preview/']){
- const assetVersion='xtentry-20261015-r1';
- const uiVersion='xtentry-20261015-r1';
- const pageVersion='xtentry-20261015-r1';const version=(prefix?'preview-':'formal-')+pageVersion;
+ const assetVersion='xtearth-20261015-r1';
+ const uiVersion='xtearth-20261015-r1';
+ const pageVersion='xtearth-20261015-r1';const version=(prefix?'preview-':'formal-')+pageVersion;
  const app=read(prefix+'app.js'),html=read(prefix+'index.html'),boot=read(prefix+'collection/bootstrap.mjs');
  assert.equal(JSON.parse(read(prefix+'version.json')).v,version);
  assert(html.includes("var B='"+version+"'"));assert(html.includes('collection/bootstrap.mjs?v='+pageVersion));

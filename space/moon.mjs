@@ -1,8 +1,8 @@
 /** Candidate-only moon rules. Pure host planner; no Storage, timers, UI results or wallet changes. */
-import {readSpace} from './domain.mjs?v=xtentry-20261015-r1';
-import {ROUTE_BY_ID,albumOk,awardFor,applyAward} from './album.mjs?v=xtentry-20261015-r1';
-import {gate} from './xingtu-views.mjs?v=xtentry-20261015-r1';
-import {EVENT_IDS,readVoyageEv,pickEvent,defaultEvState,resolveEvent,outcomeFor,rewardPoints} from './voyage-ev.mjs?v=xtentry-20261015-r1';
+import {readSpace} from './domain.mjs?v=xtearth-20261015-r1';
+import {ROUTE_BY_ID,albumOk,awardFor,applyAward} from './album.mjs?v=xtearth-20261015-r1';
+import {gate} from './xingtu-views.mjs?v=xtearth-20261015-r1';
+import {EVENT_IDS,readVoyageEv,pickEvent,defaultEvState,resolveEvent,outcomeFor,rewardPoints} from './voyage-ev.mjs?v=xtearth-20261015-r1';
 // 杨总 2026-10-14 01:32「星途所有店铺35级就可以了」：全部店铺 Lv35+ 解锁。正式航程 10 分钟、每次 8 探索点。
 export const MOON_RULES=Object.freeze({id:'xingtu-moon-10min-8pts-v1',route:'moon',duration:600000,points:8,minShopLevel:35});
 // 星途-113：新规则版本，新出航一律挂一件返航事件（星途-07）。旧 v1 航程/回执照旧可读可领（8 点、ev:null）。
@@ -21,8 +21,8 @@ export const RESEARCH_TOTAL_PER_POST=1e11;
 export const TIER_PRICE=Object.freeze((()=>{const w=[1,10,100,1000,10000],W=11111,p=w.map(x=>Math.round(RESEARCH_TOTAL_PER_POST*x/W));p[4]=RESEARCH_TOTAL_PER_POST-p[0]-p[1]-p[2]-p[3];return p;})());
 const ITEM_RE=/^(tech|war|med|life):([1-5])$/;
 /** 两份 space 之间买科研成果花了多少金币：只允许新增 'sys:t'=1；删、改、未知 key 一律 null（不是科研购买）。 */
-// 星途 v2-D：买下地球 = 金币上限 1000 万亿（1e15），只能在收到回信（ended）之后买一次。
-export const EARTH_PRICE=1e15;
+// 星途 v2-D：买下地球 = 10 万亿（1e13；杨总 2026-10-15 09:34 由 1000 万亿 1e15 改），只能在收到回信（ended）之后买一次。金币上限 COIN_CAP 仍是 1e15。
+export const EARTH_PRICE=1e13;
 export function researchSpend(prev,next){
  const a=prev?.items??{},b=next?.items??{};let sum=0;
  if(prev?.earth===true&&next?.earth!==true)return null;

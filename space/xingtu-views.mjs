@@ -1,7 +1,7 @@
 // 星途 v2 第一批：星图（5 圈 9 航线 + 出航需要四个岗位科研）与飞船（四个舱室）——只读，不写存档。
 // 画面与数值直接搬自王大妈 demo（wangdama/xingtu-demo、xingtu-4post-mock fd614ae）。
-import * as A from './xingtu-art.mjs?v=xtentry-20261015-r1';
-import {EVENTS,rewardPoints} from './voyage-ev.mjs?v=xtentry-20261015-r1';
+import * as A from './xingtu-art.mjs?v=xtearth-20261015-r1';
+import {EVENTS,rewardPoints} from './voyage-ev.mjs?v=xtearth-20261015-r1';
 // 星途-04（王大妈 23:13）：航程按航线写；探索点范围按 routePoints（事件点 × 航线倍数，和 v2-A 规则同一张表）算出来
 export const ROUTE_TIME=Object.freeze({moon:'10 分钟',station:'30 分钟',mars:'1 小时',venus:'1 小时',belt:'2 小时',pirate:'2 小时',europa:'4 小时',saturn:'4 小时',signal:'8 小时'});
 export const ROUTE_MULT=Object.freeze({moon:1,station:1,mars:2.5,venus:2.5,belt:5,pirate:5,europa:10,saturn:10,signal:20});
@@ -100,12 +100,12 @@ export function renderCredits(parent,{doc,next}){
  <h3 class="sec">电子员工群</h3><div class="cast">${A.CAST.map(c=>`<div class="mem" style="--tint:${c.tint}"><svg viewBox="-4 -6 108 126" aria-hidden="true"><use href="#c-${c.id}"/></svg><b>${c.name}</b><span class="r">${c.role}</span><span class="l">「${c.line}」</span></div>`).join('')}</div>`;
  box.append(btn(doc,'xingtuCreditsDone','继续经营 · 新目标：买下地球 →',next));parent.append(box);
 }
-export const EARTH_PRICE=1e15;
+export const EARTH_PRICE=1e13;   // 杨总 2026-10-15 09:34：10 万亿
 export function renderEarth(parent,{doc,space,coins,buy,recap}){
  const box=doc.createElement('div');box.className='box pdetail';box.id='xingtuEarth';
  if(space?.earth){box.innerHTML=`<span class="hudline">地球 · 已买下</span><h3>宇宙级摸鱼大王</h3>`;box.append(btn(doc,'xingtuRecap','看看我的创业史 →',recap));parent.append(box);return;}
- box.innerHTML=`<span class="hudline">最后一站 · 买下地球</span><h3>目标：买下地球</h3><div class="pd-desc">要 1000 万亿金币（金币上限）。现在 ${coins===null?'—':money(coins)}。</div>`;
- const b=btn(doc,'xingtuBuyEarth','买下地球 · 1000 万亿金币',buy);b.disabled=!(coins>=EARTH_PRICE)||!buy;box.append(b);parent.append(box);
+ box.innerHTML=`<span class="hudline">最后一站 · 买下地球</span><h3>目标：买下地球</h3><div class="pd-desc">要 10 万亿金币。现在 ${coins===null?'—':money(coins)}。</div>`;
+ const b=btn(doc,'xingtuBuyEarth','买下地球 · 10 万亿金币',buy);b.disabled=!(coins>=EARTH_PRICE)||!buy;box.append(b);parent.append(box);
 }
 export function renderRecap(parent,{doc,space,next}){
  const cards=Object.values(space?.cards??{}).reduce((a,b)=>a+(Number.isInteger(b)?b:0),0),hidden=Object.values(space?.hidden??{}).filter(x=>x===true).length;
