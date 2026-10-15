@@ -2166,7 +2166,7 @@ function homeAutoSay(id, ac, kind, emptyRoom) {
 }
 function homeAutoTick(id, ac) {
   if (!HA || homeDrag || frozen || document.hidden) return;
-  if (ac.autoHold && clock < ac.autoHold) return;
+  if (ac.autoHold && clock < ac.autoHold && !ac.auto?.player) return;
   let a = ac.auto;
   if (!a) a = ac.auto = { phase:'idle', until:clock + HA.idleFor(Math.random) };
   if (a.phase === 'idle') {
@@ -2181,7 +2181,9 @@ function homeAutoTick(id, ac) {
     ac.autoPace = null; a.walked = clock - a.since;   // r3：记下本段实际走了多久（测试读这个）
     if (a.kind === 'dress') ac.fadeUntil = clock + .4;   // 换衣服：停下时人物闪一下
     if (HA_STAND.includes(a.kind)) { ac.act = a.kind; ac.actIcon = HA.iconFor(a.kind, id); if (a.kind === 'lamp') homeLightOn(a.uid); dirty = true; }   // 家宅-57：到了才冒图标
-    homeAutoSay(id, ac, a.pace ? null : a.kind, a.emptyRoom);
+    // 家宅-128：玩家点击必说同组原台词；自主活动仍走原概率和冷却。
+    if (a.player) { const lines = HA.linesFor(a.kind, id); ac.line = lines[Math.floor(Math.random() * lines.length)]; ac.until = clock + HA.LINE_SEC; }
+    else homeAutoSay(id, ac, a.pace ? null : a.kind, a.emptyRoom);
     a.phase = 'stay'; a.until = clock + (a.pace ? HA.paceStay(Math.random) : HA.stayFor(a.kind, Math.random));
     return;
   }
@@ -2633,7 +2635,7 @@ function homeCellAt(px, py, fid, rot, offX, offY, surf) {
 function homeLiveTap(e) {
   const floor = $('#roomFloor'); if (!floor) return;
   homeAutoHold(homeWho);   // 家宅-56：玩家的指令永远优先
-  const fEl = e.target.closest('#roomFloor .furn');
+  const fEl = e.target.closest('#roomFloor .furn, #roomWall .furn');
   const id = homeWho, T = E.homeTier(E.homeOf(state, id).lv), ac = homeActorOf(id);
   const go = (x, y, act) => {
     if(!homeLeavePose(id))return;
@@ -2646,6 +2648,17 @@ function homeLiveTap(e) {
     const p = E.homeOf(state, id).placed.find(q => q.uid === fEl.dataset.uid); if (!p) return;
     const f = E.FURN_BY_ID[p.fid], sz = E.furnSize(p.fid, p.rot);
     const cx = p.x + Math.floor(sz.w / 2), cy = p.y + Math.floor(sz.h / 2);
+    // 家宅-128：只接 57 白名单，沿用时段、合法站位、移动和停留收尾；桌子优先「吃」。
+    const kind = HA?.kindOf(p.fid, HomeInteraction.capability, E.furnLiveAct);
+    if (HA_STAND.includes(kind)) {
+      const candidate = homeAutoList(id).find(c => c.uid === p.uid && c.kind === kind);
+      if (!candidate) return;
+      const point = homeAutoStandPoint(id, p, kind); if (!point || !homeLeavePose(id)) return;
+      ac.pendingPose = null; ac.act = null; ac.line = '';
+      if (homeAutoMove(id, ac, point.x, point.y)) { ac.auto = { phase:'moving', uid:p.uid, kind, since:clock, player:true }; sfx('tap'); }
+      return;
+    }
+    if (E.itemSurf(p) === 'wall') return;   // 非 57 墙饰保持原来的无动作行为
     const cap=HomeInteraction.capability(p.fid),act=E.furnLiveAct(p.fid);
     if(cap){let point={x:cx,y:cy};if(HomeInteraction.profile(p.fid).ground){const r=floor.getBoundingClientRect();point=HomeInteraction.rugPoint(E,E.homeOf(state,id),p,{x:(e.clientX-r.left)/r.width*T.cols-.5,y:(e.clientY-r.top)/r.height*T.rows-.5});if(!point){toast('地毯上挤满了，挪开一件家具再坐');return;}}
       if(go(point.x,point.y,cap==='lie'?'rest':'sit'))ac.pendingPose={uid:p.uid,kind:cap};return;}
