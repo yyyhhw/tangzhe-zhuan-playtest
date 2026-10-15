@@ -1,7 +1,7 @@
 /** The approved second eight join the same protocol2 catalog, not a new migration. */
-import {ITEMS} from '../candidates/blindbox18/catalog.mjs?v=home128-xingtu129-20261015-r1';
-import {EIGHT_WEARABLES} from '../qa-protocol2/eight-catalog.mjs?v=home128-xingtu129-20261015-r1';
-import {LEGACY_IDS} from '../qa-protocol2/vendor/planner/migration.mjs?v=home128-xingtu129-20261015-r1';
+import {ITEMS} from '../candidates/blindbox18/catalog.mjs?v=copy127-20261015-r1';
+import {EIGHT_WEARABLES} from '../qa-protocol2/eight-catalog.mjs?v=copy127-20261015-r1';
+import {LEGACY_IDS} from '../qa-protocol2/vendor/planner/migration.mjs?v=copy127-20261015-r1';
 export {ITEMS as SECOND_EIGHT_WEARABLES};
 const expectedIds=[...LEGACY_IDS,...EIGHT_WEARABLES.map(x=>x.id)].join('|');
 const installed=new WeakSet();

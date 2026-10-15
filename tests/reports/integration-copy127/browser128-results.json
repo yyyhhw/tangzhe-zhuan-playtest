@@ -1,0 +1,471 @@
+[
+  {
+    "entry": "/",
+    "kind": "lamp",
+    "actor": {
+      "x": 1,
+      "y": 0,
+      "tx": null,
+      "pose": null,
+      "act": "lamp",
+      "line": "天黑了，灯开起，像夜市一样。",
+      "auto": {
+        "phase": "stay",
+        "uid": "u1",
+        "kind": "lamp",
+        "since": 2.32,
+        "player": true,
+        "walked": 1.1520000000000001,
+        "until": 8.261097605433948
+      },
+      "hold": 62.32,
+      "lastMove": {
+        "from": {
+          "x": 0,
+          "y": 3
+        },
+        "to": {
+          "x": 1,
+          "y": 0
+        },
+        "dist": 3.1622776601683795,
+        "blocked": false,
+        "fade": false,
+        "pace": false,
+        "sec": null,
+        "at": 2.32
+      },
+      "speed": null,
+      "paceEl": null,
+      "ty": null,
+      "pendingPose": null,
+      "clock": 3.472
+    },
+    "icon": "bulb",
+    "lineOK": true,
+    "iconOK": true,
+    "renderedLine": "天黑了，灯开起，像夜市一样。",
+    "renderedIcon": "<svg class=\"ic\" aria-hidden=\"true\"><use href=\"#ic-bulb\"></use></svg>",
+    "lit": true,
+    "width": 390
+  },
+  {
+    "entry": "/",
+    "kind": "water",
+    "actor": {
+      "x": 1,
+      "y": 0,
+      "tx": null,
+      "pose": null,
+      "act": "water",
+      "line": "长得好，下回拿来摆盘。",
+      "auto": {
+        "phase": "stay",
+        "uid": "u2",
+        "kind": "water",
+        "since": 3.936,
+        "player": true,
+        "walked": 1.141,
+        "until": 11.841180495140389
+      },
+      "hold": 63.936,
+      "lastMove": {
+        "from": {
+          "x": 0,
+          "y": 3
+        },
+        "to": {
+          "x": 1,
+          "y": 0
+        },
+        "dist": 3.1622776601683795,
+        "blocked": false,
+        "fade": false,
+        "pace": false,
+        "sec": null,
+        "at": 3.936
+      },
+      "speed": null,
+      "paceEl": null,
+      "ty": null,
+      "pendingPose": null,
+      "clock": 5.088
+    },
+    "icon": "can",
+    "lineOK": true,
+    "iconOK": true,
+    "renderedLine": "长得好，下回拿来摆盘。",
+    "renderedIcon": "<svg class=\"ic\" aria-hidden=\"true\"><use href=\"#ic-can\"></use></svg>",
+    "lit": false,
+    "width": 390
+  },
+  {
+    "entry": "/",
+    "kind": "use",
+    "actor": {
+      "x": 1,
+      "y": 0,
+      "tx": null,
+      "pose": null,
+      "act": "use",
+      "line": "这些家电，比烤炉还难伺候。",
+      "auto": {
+        "phase": "stay",
+        "uid": "u3",
+        "kind": "use",
+        "since": 5.616,
+        "player": true,
+        "walked": 1.1360000000000001,
+        "until": 20.699634618410805
+      },
+      "hold": 65.616,
+      "lastMove": {
+        "from": {
+          "x": 0,
+          "y": 3
+        },
+        "to": {
+          "x": 1,
+          "y": 0
+        },
+        "dist": 3.1622776601683795,
+        "blocked": false,
+        "fade": false,
+        "pace": false,
+        "sec": null,
+        "at": 5.616
+      },
+      "speed": null,
+      "paceEl": null,
+      "ty": null,
+      "pendingPose": null,
+      "clock": 6.768
+    },
+    "icon": "pad",
+    "lineOK": true,
+    "iconOK": true,
+    "renderedLine": "这些家电，比烤炉还难伺候。",
+    "renderedIcon": "<svg class=\"ic\" aria-hidden=\"true\"><use href=\"#ic-pad\"></use></svg>",
+    "lit": false,
+    "width": 390
+  },
+  {
+    "entry": "/",
+    "kind": "wall",
+    "actor": {
+      "x": 0,
+      "y": 0,
+      "tx": null,
+      "pose": null,
+      "act": "wall",
+      "line": "这幅画……像不像炭火？",
+      "auto": {
+        "phase": "stay",
+        "uid": "u4",
+        "kind": "wall",
+        "since": 7.328,
+        "player": true,
+        "walked": 1.072,
+        "until": 17.301995309098697
+      },
+      "hold": 67.328,
+      "lastMove": {
+        "from": {
+          "x": 0,
+          "y": 3
+        },
+        "to": {
+          "x": 0,
+          "y": 0
+        },
+        "dist": 3,
+        "blocked": false,
+        "fade": false,
+        "pace": false,
+        "sec": null,
+        "at": 7.328
+      },
+      "speed": null,
+      "paceEl": null,
+      "ty": null,
+      "pendingPose": null,
+      "clock": 8.4
+    },
+    "icon": "scope",
+    "lineOK": true,
+    "iconOK": true,
+    "renderedLine": "这幅画……像不像炭火？",
+    "renderedIcon": "<svg class=\"ic\" aria-hidden=\"true\"><use href=\"#ic-scope\"></use></svg>",
+    "lit": false,
+    "width": 390
+  },
+  {
+    "entry": "/",
+    "kind": "eat",
+    "actor": {
+      "x": 2,
+      "y": 1,
+      "tx": null,
+      "pose": null,
+      "act": "eat",
+      "line": "桌上摆一把串，人生圆满。",
+      "auto": {
+        "phase": "stay",
+        "uid": "u5",
+        "kind": "eat",
+        "since": 8.913,
+        "player": true,
+        "walked": 1.0229999999999997,
+        "until": 27.75648039441608
+      },
+      "hold": 68.913,
+      "lastMove": {
+        "from": {
+          "x": 0,
+          "y": 3
+        },
+        "to": {
+          "x": 2,
+          "y": 1
+        },
+        "dist": 2.8284271247461903,
+        "blocked": false,
+        "fade": false,
+        "pace": false,
+        "sec": null,
+        "at": 8.913
+      },
+      "speed": null,
+      "paceEl": null,
+      "ty": null,
+      "pendingPose": null,
+      "clock": 9.954
+    },
+    "icon": "skewer",
+    "lineOK": true,
+    "iconOK": true,
+    "renderedLine": "桌上摆一把串，人生圆满。",
+    "renderedIcon": "<svg class=\"ic\" aria-hidden=\"true\"><use href=\"#ic-skewer\"></use></svg>",
+    "lit": false,
+    "width": 390
+  },
+  {
+    "entry": "/",
+    "pageerrors": [],
+    "decor": "5/5 passed",
+    "sitLie": "2/2 passed",
+    "unmatched": "passed"
+  },
+  {
+    "entry": "pet/game/",
+    "kind": "lamp",
+    "result": "no action: existing pet period is null"
+  },
+  {
+    "entry": "pet/game/",
+    "kind": "water",
+    "actor": {
+      "x": 1,
+      "y": 0,
+      "tx": null,
+      "pose": null,
+      "act": "water",
+      "line": "浇点水，跟守火候一个道理。",
+      "auto": {
+        "phase": "stay",
+        "uid": "u2",
+        "kind": "water",
+        "since": 1.73,
+        "player": true,
+        "walked": 1.134,
+        "until": 9.979076670526283
+      },
+      "hold": 61.73,
+      "lastMove": {
+        "from": {
+          "x": 0,
+          "y": 3
+        },
+        "to": {
+          "x": 1,
+          "y": 0
+        },
+        "dist": 3.1622776601683795,
+        "blocked": false,
+        "fade": false,
+        "pace": false,
+        "sec": null,
+        "at": 1.73
+      },
+      "speed": null,
+      "paceEl": null,
+      "ty": null,
+      "pendingPose": null,
+      "clock": 2.864
+    },
+    "icon": "can",
+    "lineOK": true,
+    "iconOK": true,
+    "renderedLine": "浇点水，跟守火候一个道理。",
+    "renderedIcon": "<svg class=\"ic\" aria-hidden=\"true\"><use href=\"#ic-can\"></use></svg>",
+    "lit": false,
+    "width": 390
+  },
+  {
+    "entry": "pet/game/",
+    "kind": "use",
+    "actor": {
+      "x": 1,
+      "y": 0,
+      "tx": null,
+      "pose": null,
+      "act": "use",
+      "line": "这个机器咋个开嘛……哦，亮了。",
+      "auto": {
+        "phase": "stay",
+        "uid": "u3",
+        "kind": "use",
+        "since": 3.329,
+        "player": true,
+        "walked": 1.1359999999999997,
+        "until": 17.279915698960636
+      },
+      "hold": 63.329,
+      "lastMove": {
+        "from": {
+          "x": 0,
+          "y": 3
+        },
+        "to": {
+          "x": 1,
+          "y": 0
+        },
+        "dist": 3.1622776601683795,
+        "blocked": false,
+        "fade": false,
+        "pace": false,
+        "sec": null,
+        "at": 3.329
+      },
+      "speed": null,
+      "paceEl": null,
+      "ty": null,
+      "pendingPose": null,
+      "clock": 4.465
+    },
+    "icon": "pad",
+    "lineOK": true,
+    "iconOK": true,
+    "renderedLine": "这个机器咋个开嘛……哦，亮了。",
+    "renderedIcon": "<svg class=\"ic\" aria-hidden=\"true\"><use href=\"#ic-pad\"></use></svg>",
+    "lit": false,
+    "width": 390
+  },
+  {
+    "entry": "pet/game/",
+    "kind": "wall",
+    "actor": {
+      "x": 0,
+      "y": 0,
+      "tx": null,
+      "pose": null,
+      "act": "wall",
+      "line": "这幅画……像不像炭火？",
+      "auto": {
+        "phase": "stay",
+        "uid": "u4",
+        "kind": "wall",
+        "since": 4.85,
+        "player": true,
+        "walked": 1.0700000000000003,
+        "until": 11.547225611373218
+      },
+      "hold": 64.85,
+      "lastMove": {
+        "from": {
+          "x": 0,
+          "y": 3
+        },
+        "to": {
+          "x": 0,
+          "y": 0
+        },
+        "dist": 3,
+        "blocked": false,
+        "fade": false,
+        "pace": false,
+        "sec": null,
+        "at": 4.85
+      },
+      "speed": null,
+      "paceEl": null,
+      "ty": null,
+      "pendingPose": null,
+      "clock": 5.92
+    },
+    "icon": "scope",
+    "lineOK": true,
+    "iconOK": true,
+    "renderedLine": "这幅画……像不像炭火？",
+    "renderedIcon": "<svg class=\"ic\" aria-hidden=\"true\"><use href=\"#ic-scope\"></use></svg>",
+    "lit": false,
+    "width": 390
+  },
+  {
+    "entry": "pet/game/",
+    "kind": "eat",
+    "actor": {
+      "x": 2,
+      "y": 1,
+      "tx": null,
+      "pose": null,
+      "act": "eat",
+      "line": "先吃一口，再算今天卖了好多。",
+      "auto": {
+        "phase": "stay",
+        "uid": "u5",
+        "kind": "eat",
+        "since": 6.368,
+        "player": true,
+        "walked": 1.0259999999999998,
+        "until": 17.05426930351819
+      },
+      "hold": 66.368,
+      "lastMove": {
+        "from": {
+          "x": 0,
+          "y": 3
+        },
+        "to": {
+          "x": 2,
+          "y": 1
+        },
+        "dist": 2.8284271247461903,
+        "blocked": false,
+        "fade": false,
+        "pace": false,
+        "sec": null,
+        "at": 6.368
+      },
+      "speed": null,
+      "paceEl": null,
+      "ty": null,
+      "pendingPose": null,
+      "clock": 7.41
+    },
+    "icon": "skewer",
+    "lineOK": true,
+    "iconOK": true,
+    "renderedLine": "先吃一口，再算今天卖了好多。",
+    "renderedIcon": "<svg class=\"ic\" aria-hidden=\"true\"><use href=\"#ic-skewer\"></use></svg>",
+    "lit": false,
+    "width": 390
+  },
+  {
+    "entry": "pet/game/",
+    "pageerrors": [],
+    "decor": "4/4 passed",
+    "sitLie": "2/2 passed",
+    "unmatched": "passed"
+  }
+]

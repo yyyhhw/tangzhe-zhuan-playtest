@@ -1,0 +1,20 @@
+{
+  "baseline": {
+    "tests": 858,
+    "pass": 850,
+    "fail": 0,
+    "skipped": 8
+  },
+  "integration-initial": {
+    "tests": 858,
+    "pass": 848,
+    "fail": 2,
+    "skipped": 8
+  },
+  "integration-final": {
+    "tests": 858,
+    "pass": 850,
+    "fail": 0,
+    "skipped": 8
+  }
+}
