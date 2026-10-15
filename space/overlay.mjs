@@ -54,7 +54,7 @@ export function installMoonOverlay({app,runtime,document:doc=globalThis.document
   if(signature===next){if(view.phase==='flying'&&tab==='voyage'&&doc.getElementById('xingtuRemaining')){doc.getElementById('xingtuRemaining').textContent=`剩余 ${fmt(view.remaining)}`;doc.getElementById('xingtuProgress').value=DUR(view)-view.remaining;const p=1-view.remaining/DUR(view);doc.getElementById('xingtuStarMap').querySelector?.('use')?.setAttribute('transform',`translate(${72+p*160} ${84-Math.sin(p*Math.PI)*38}) rotate(65)`);}schedule(view);return;}
   signature=next;const previousFocus=doc.activeElement;while(content.firstChild)content.firstChild.remove();
   // 星途-04 第7条：副标题跟当前航线（出航中=这趟航线，否则=星图选中）
-  {const rid=view.voyage?.route??mapPick??'moon',rs=doc.getElementById('xingtuRuleset');if(rs)rs.textContent=`这趟：${ROUTE_BY_ID[rid]?.name??'月面基地'} · ${ROUTE_TIME[rid]??'10 分钟'} · 返航途中会遇到一件事，看完再领探索点`;}
+  {const rid=view.voyage?.route??mapPick??'moon',rs=doc.getElementById('xingtuRuleset');if(rs)rs.textContent=view.voyage?.completed&&tab==='voyage'?`上趟：${RN(view)} · ${ROUTE_TIME[RID(view)]??'10 分钟'} · 返航报告已收下`:`这趟：${ROUTE_BY_ID[rid]?.name??'月面基地'} · ${ROUTE_TIME[rid]??'10 分钟'} · 返航途中会遇到一件事，看完再领探索点`;}
   renderContent(view);if(created||!usable(previousFocus))focus(closeButton);schedule(view);
  }
  function renderContent(view){
@@ -100,7 +100,8 @@ export function installMoonOverlay({app,runtime,document:doc=globalThis.document
   }else if(view.phase==='arrived'){
    const arrPts=Number.isInteger(view.event?.reward?.pts)?view.event.reward.pts:8;/* 旧 v1 航程固定 8 点（MOON_RULES.points） */status.append(node('p','xingtuArrivedLine',`${RN(view)}往返已完成，返航报告待确认。`),node('p','xingtuArrival',`已于${when(view.arrival)} 到达`));const box=node('div','xingtuEvent');box.className='xingtu-event';awardBlocks(box,view);if(box.firstChild)actions.append(box);actions.append(button('xingtuClaim',`确认返航报告 · 领取${arrPts}探索点`,()=>act({type:'claim',voyageId:view.voyage.voyageId})));
   }else{
-   status.append(node('p',null,`当前探索点：${view.space.pts} · 月面往返次数：${view.space.visits.moon??0}`));
+   status.append(node('p',null,`当前探索点：${view.space.pts} · 月面基地累计往返次数：${view.space.visits.moon??0}`));
+   status.append(node('p','xingtuNextRoute','下次出航：月面基地 · 其他目的地请到星图选择'));
    // 杨总 10/14 22:26：出航需要四个岗位科研——月面也要过四岗检查
    const g=gate(view.space,'moon'),dep=button('xingtuDepart',g.ok?'出航月面基地':'岗位科研不够，先去升级',()=>gate(view.space,'moon').ok?act({type:'depart',route:'moon'}):undefined);dep.disabled=!g.ok;actions.append(dep);
    if(!g.ok){const l=node('p','xingtuLack',`还差：${g.lack}`);l.className='xingtu-error';actions.append(l);}
