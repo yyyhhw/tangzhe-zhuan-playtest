@@ -17,11 +17,11 @@ test('legacy migration derives only proven history, no dates from counters/lastS
 });
 test('all business and space success predicates; Lv34/35 boundary uses current rule',()=>{
  const before=fresh(),after=copy(before);after.shops=Array.from({length:4},()=>({open:true,lv:35,emp:1}));after.ceos.rocket={unlocked:true};after.gacha.draws=1;after.zombie={cleared:1};after.tdCampaign={highestCleared:1};after.space={moonLoop:{sequence:1},cards:{moon:1},alienCards:1,hidden:{moon:true},items:{'tech:1':1},ended:true,earth:true};
- const m=recordTransition(before,after,2000,MOON_RULES);assert.equal(Object.keys(m.events).length,17);for(const [id]of EVENTS)assert.equal(m.events[id],id==='firstShop'?1000:2000,id);
+ const m=recordTransition(before,after,2000,MOON_RULES,{zombieStarted:true});assert.equal(Object.keys(m.events).length,17);for(const [id]of EVENTS)assert.equal(m.events[id],id==='firstShop'?1000:2000,id);
  assert.equal(MOON_RULES.minShopLevel,35);after.shops[3].lv=34;assert.equal(evidence(after,MOON_RULES).shopsReady,false);
 });
-test('failed/abandoned battles and empty collections do not invent success',()=>{
- const a=fresh(),b=copy(a);b.zombie={cleared:0,best:10};b.tdCampaign={highestCleared:0};b.space={cards:{},hidden:{moon:false},items:{},alienCards:0,visits:{},voyage:null};
+test('unstarted/abandoned battles and empty collections do not invent participation',()=>{
+ const a=fresh(),b=copy(a);b.zombie={cleared:0,best:0};b.tdCampaign={highestCleared:0};b.space={cards:{},hidden:{moon:false},items:{},alienCards:0,visits:{},voyage:null};
  assert.deepEqual(recordTransition(a,b,2000,MOON_RULES),a.milestones);
 });
 test('optional schema rejects malformed/unknown extensions; clock reversal never fabricates a date',()=>{
@@ -32,4 +32,10 @@ test('recap unknown history grey label; elapsed day/hour and earliest-record tot
  const s=fresh();s.milestones.events={firstShop:null,firstBox:3601000,firstEmployee:86401000,earth:90001000};s.space={earth:true};
  const r=recap(s,MOON_RULES);assert.equal(r.rows[0].when,'记录开始之前');assert.equal(r.rows.find(x=>x.id==='firstBox').when,'开局 1 小时');assert.equal(r.rows.find(x=>x.id==='firstEmployee').when,'开局第 2 天');assert.equal(r.duration,86400000);assert.match(r.total,/从有记录起.*1 天 0 小时/);
  s.milestones.events.earth=null;assert.equal(recap(s,MOON_RULES).duration,null);assert.match(recap(s,MOON_RULES).total,/暂无/);assert(!r.rows.some(x=>x.id==='firstZombie'));
+});
+
+test('confirmed battle participation records before victory; legacy loss proves participation without a date',()=>{
+ const a=fresh(),b=copy(a);const m=recordTransition(a,b,2000,MOON_RULES,{zombieStarted:true});assert.equal(m.events.firstZombie,2000);assert(!m.events.firstTDWin);
+ b.milestones=m;b.zombie={cleared:0,best:10};assert.equal(recordTransition(b,b,4000,MOON_RULES).events.firstZombie,2000);
+ const old=fresh();old.zombie={cleared:0,best:10};assert.equal(recordTransition(old,old,4000,MOON_RULES).events.firstZombie,null);
 });

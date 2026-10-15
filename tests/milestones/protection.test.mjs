@@ -5,5 +5,5 @@ test('protection baseline admits only exact candidate delta; changed guard still
  const baseline=withoutMilestoneDelta(path,s),guard="if(!lease.owns())fail('LOCK_NOT_OWNED');";
  assert(s.includes(guard));assert.notEqual(hash(withoutMilestoneDelta(path,s.replace(guard,''))),hash(baseline));
  assert.throws(()=>withoutMilestoneDelta(path,s.replace('if(!initializing)next.milestones','next.milestones')),/NOT_EXACT/);
- assert.throws(()=>withoutMilestoneDelta(path,s.replace('recordTransition(previous.state,next,spaceClock(),MOON_RULES)','recordTransition(previous.state,next,0,MOON_RULES)')),/NOT_EXACT/);
+ assert.throws(()=>withoutMilestoneDelta(path,s.replace('recordTransition(previous.state,next,spaceClock(),MOON_RULES,{zombieStarted})','recordTransition(previous.state,next,0,MOON_RULES)')),/NOT_EXACT/);
 });

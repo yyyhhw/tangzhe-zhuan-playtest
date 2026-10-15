@@ -3064,6 +3064,13 @@ function zbMsg(d) {
     zbRun = { runId, ceoId: ceo, startedAt: now(), settled: false };   // 权威是父页此刻的在任，不看小游戏自报的 ceo
     return zbReply('', Object.assign(ack, { ok:true, runId: zbRun.runId, ceo: zbRun.ceoId }));
   }
+  // Actual battle acknowledgement, after the child has accepted this start receipt.
+  if (d.zb === 'started') {
+    if (!zbRun || zbRun.settled || d.runId !== zbRun.runId || d.ceo !== zbRun.ceoId || zbBlocked() || document.hidden || !COLLECTION.ownsLock()) return;
+    zbRun.started = true;
+    COLLECTION.coordinator.recordZombieStarted?.();
+    return;
+  }
   if (d.zb === 'result') {
     const ack = { ack:'result' };
     // 13c：只认开局登记的那份 zbRun——ceo / runId 对上、同一局只结一次；不要求结算时此人仍在任（中途调岗不误伤）
@@ -3100,7 +3107,7 @@ function zbMsg(d) {
     return zbReply(r.stage === 'pay' || r.stage === 'apply' ? r.why : (COLLECTION.qaProtocol2 && COLLECTION.coordinator.failed ? '存档结果需要核对，请勿重复操作' : '存档失败，没扣金币'));
   }
 }
-Object.defineProperties(window.__tzz, { openZombie:{ value:openZombie }, closeZombie:{ value:closeZombie }, zbOpen:{ get:() => zbOpen }, zbCeo:{ value:zbCeo }, zbLastCeo:{ get:() => zbLastCeo }, zbRun:{ get:() => zbRun }, openAssignTo:{ value:openAssignTo }, zbReply:{ value:zbReply } });
+Object.defineProperties(window.__tzz, { zombieStartReady:{ value:()=>zbOpen&&!!zbRun?.started&&!zbRun.settled&&!zbBlocked()&&!document.hidden&&COLLECTION.ownsLock() }, openZombie:{ value:openZombie }, closeZombie:{ value:closeZombie }, zbOpen:{ get:() => zbOpen }, zbCeo:{ value:zbCeo }, zbLastCeo:{ get:() => zbLastCeo }, zbRun:{ get:() => zbRun }, openAssignTo:{ value:openAssignTo }, zbReply:{ value:zbReply } });
 // Deterministic pet-only inspection for isolated acceptance tools.
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&petPanelOpen&&!modalOpen()){e.preventDefault();homeAct('petClose');}});
 window.render_game_to_text = () => JSON.stringify({coordinates:'floor tiles; origin back-left, x right, y toward viewer',pets:petsHooks.debug()});

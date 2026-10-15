@@ -62,8 +62,8 @@
     "path": "qa-protocol2/vendor/cards/card-coordinator.mjs",
     "sourcePackage": "collectible-card-adapter-v1",
     "sourcePath": "module/card-coordinator.mjs",
-    "bytes": 13007,
-    "sha256": "c37d7c8873152b0f9454f2135f7002ad214e759691770a5610e167b8bc3e62ac",
+    "bytes": 13710,
+    "sha256": "0fa8629865862d965f9a0538e7b5f576b49cb0dba5337bc966f1a1d1e6ff0e73",
     "reviewedInputSha256": "c39527224902c835f2cc611527a5fcec2a23293adebd3b78bbb8684d2b41a034",
     "reviewedInputBytes": 8203,
     "integrationChange": "xingtu02 independent candidate: atomic first-event ledger and recap; requires independent review"
@@ -144,8 +144,8 @@
     "path": "milestones/domain.mjs",
     "sourcePackage": "xingtu02-candidate",
     "sourcePath": "milestones/domain.mjs",
-    "bytes": 5097,
-    "sha256": "9ffe82ea3fa28640b56a779eac8c70156acd4da2eab7b1e15cb58f73dec6a780"
+    "bytes": 5247,
+    "sha256": "f38c2ea8a561ced80ef35c7fdd944283f574bfea7e0607968f906eb6a5b3fd78"
   },
   {
     "path": "space/xingtu-views.mjs",

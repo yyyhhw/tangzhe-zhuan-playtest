@@ -26,12 +26,12 @@ export function validMilestones(state){
  const m=state.milestones;
  return obj(m)&&Object.keys(m).sort().join('|')==='events|schemaVersion'&&m.schemaVersion===1&&obj(m.events)&&Object.entries(m.events).every(([id,t])=>ids.has(id)&&(t===null||validTime(t)));
 }
-/** Conservative persisted evidence. A failed zombie run does not count as success. */
+/** Persisted legacy participation evidence; dates are never inferred from scores. */
 export function evidence(s,{minShopLevel}){
  const shops=s.shops??[],sp=s.space??{},positive=v=>Number.isSafeInteger(v)&&v>0,any=v=>Object.values(v??{}).some(positive);
  return {
   firstShop:shops[0]?.open===true,firstEmployee:shops.some(x=>positive(x.emp)),firstBox:positive(s.gacha?.draws),
-  teaShop:shops[1]?.open===true,firstZombie:positive(s.zombie?.cleared),bookShop:shops[2]?.open===true,techShop:shops[3]?.open===true,
+  teaShop:shops[1]?.open===true,firstZombie:positive(s.zombie?.cleared)||positive(s.zombie?.best)||(s.zombie?.endBest?.t>0),bookShop:shops[2]?.open===true,techShop:shops[3]?.open===true,
   rocketJoined:s.ceos?.rocket?.unlocked===true,firstTDWin:positive(s.td?.cleared)||positive(s.td50?.cleared)||positive(s.tdCampaign?.highestCleared),
   shopsReady:shops.length===4&&shops.every(x=>x.open===true&&Number.isSafeInteger(x.lv)&&x.lv>=minShopLevel),
   firstVoyage:positive(sp.moonLoop?.sequence)||!!sp.voyage||any(sp.visits),firstStory:any(sp.cards),firstAlien:positive(sp.alienCards),
@@ -42,13 +42,13 @@ export function evidence(s,{minShopLevel}){
  * Existing evidence is null (unknown date); only false→true gets a timestamp.
  * Caller must reject edits to the previous ledger, then use this returned value.
  */
-export function recordTransition(before,after,now,rules){
+export function recordTransition(before,after,now,rules,{zombieStarted=false}={}){
  if(!validMilestones(before)||!validMilestones(after))throw Error('MILESTONES_INVALID');
  const a=evidence(before,rules),b=evidence(after,rules),events={...(before.milestones?.events??{})};
  for(const [id] of EVENTS){
   if(own(events,id))continue;
   if(a[id])events[id]=null;
-  else if(b[id])events[id]=validTime(now)&&(!validTime(after.created)||now>=after.created)?now:null;
+  else if(b[id]||(id==='firstZombie'&&zombieStarted))events[id]=(id!=='firstZombie'||zombieStarted)&&validTime(now)&&(!validTime(after.created)||now>=after.created)?now:null;
  }
  return {schemaVersion:1,events};
 }

@@ -108,7 +108,8 @@ function onState(d) {
   // 只认本局请求的回执：开局后、或 runId 对不上的迟到回执一律忽略（失败回执没带 runId 时只在等待中认）
   if (d.ack === 'start' && G && G.pendStart && d.runId === G.runId) {
     if (d.ok !== true || !ZB.CEO_IDS.includes(d.ceo)) return abortStart(d.why || '开局登记失败');
-    clearTimeout(G.pendTimer); G.pendStart = false; G.ceo = d.ceo; renderHero(); last = performance.now(); bgmTry(); return;
+    clearTimeout(G.pendTimer); G.pendStart = false; G.ceo = d.ceo; renderHero(); last = performance.now(); bgmTry();
+    host({ zb:'started', runId:G.runId, ceo:G.ceo }); return;
   }
   if (d.ack === 'result' && G && G.over && G.wait) { G.wait = false; G.why = d.why || ''; renderResult(); }
 }
