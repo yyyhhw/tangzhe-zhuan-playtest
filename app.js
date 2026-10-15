@@ -2254,6 +2254,8 @@ function homeAutoTick(id, ac) {
     if (ac.pose) homeLeavePose(id);
     if (!ac.pose && (ac.act === 'read' || ac.act === 'dress' || ac.act === 'sit' || ac.act === 'rest' || HA_STAND.includes(ac.act))) ac.act = null;
     ac.actIcon = null; if (a.kind === 'lamp') homeLightOff();
+    // 家宅-128：点击收尾只清临时动作；不记自主上一件、不预建 idle，60 秒暂停后再由原逻辑起算。
+    if (a.player) { ac.auto = null; dirty = true; return; }
     ac.autoLast = a.pace ? null : a.uid;
     ac.auto = { phase:'idle', until:clock + HA.idleFor(Math.random) }; dirty = true;
   }

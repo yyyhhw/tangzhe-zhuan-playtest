@@ -10,10 +10,11 @@ function extract(src, name) {
   }
   throw Error(name);
 }
-function harness(file, items, period = 'night') {
-  const src = fs.readFileSync(file, 'utf8');
-  const names = ['homeLiveTap','homeAutoTick','homeAutoCancel','homeAutoHold','homeAutoList','homeFreePoint','homeActorOf','homeLeavePose','homeAutoBeside','homeAutoWallStand','homeAutoStandPoint','homeAutoSolids','homeAutoFreeCells','homeAutoMove','homeAdvanceActor'];
+function harness(file, items, period = 'night', source = null) {
+  const src = source || fs.readFileSync(file, 'utf8');
+  const names = ['homeLiveTap','homeAutoTick','homeAutoCancel','homeAutoHold','homeAutoList','homeFreePoint','homeActorOf','homeLeavePose','homeAutoBeside','homeAutoWallStand','homeAutoStandPoint','homeAutoSolids','homeAutoFreeCells','homeAutoMove','homeAdvanceActor','homeAutoStart'];
   return new Function('E','HA','HomeInteraction','items','period', `
+    const Math=Object.create(globalThis.Math); Math.random=()=>.5;
     const state=E.newState(0), H=E.homeOf(state,'c77'); H.placed=items;
     const homeActor={}, HA_STAND=['eat','use','water','lamp','wall','pet'], messages=[];
     let clock=10, dirty=false, homeWho='c77', homeDrag=null, frozen=false, tab='home',homeSub='room',homeMode='live',lit=null,autoSays=0;
@@ -28,12 +29,41 @@ function harness(file, items, period = 'night') {
       step(sec){for(let t=0;t<sec;t+=.02){clock+=.02;homeAdvanceActor(.02)}},
       decor(){homeMode='decor';homeAutoHold('c77')},
       autonomous(){ac.auto.player=false;ac.autoHold=0},
+      tickAt(time){clock=time;homeAutoTick('c77',ac)},
       now:()=>clock};
   `)(E, HA, HI, items, period);
 }
 const P=(fid,uid='target',x=2,y=1)=>({uid,fid,x,y,rot:0,...(E.FURN_BY_ID[fid].wall?{surf:'wall',y:0}:{})});
-let n=0;const ok=(label,fn)=>{fn();n++;console.log('PASS',label)};
+let n=0;const ok=(label,fn)=>{if(process.env.TEST_FILTER&&!label.includes(process.env.TEST_FILTER))return;fn();n++;console.log('PASS',label)};
 for(const file of ['app.js','pet/game/app.js']) {
+  // Compare the actual pre-128 lifecycle against the candidate with identical inputs/RNG.
+  const baseline = require('child_process').execFileSync('git', ['show', 'aea60f7f373c4045f33b90fdbf42f2cb8cefb7d5:'+file], {encoding:'utf8'});
+  ok(file+' manual completion preserves autonomous last choice and next selection vs baseline',()=>{
+    for(const previous of [undefined,'target','other']) {
+      const current=harness(file,[P('furn_plant')]), before=harness(file,[P('furn_plant')],'night',baseline);
+      for(const h of [before,current]) {h.ac.autoLast=previous;h.tap('target');h.step(25);}
+      assert.strictEqual(current.ac.autoLast,before.ac.autoLast,'manual action must not become autonomous last choice');
+      for(const h of [before,current]) {h.tickAt(70);h.tickAt(77.5);}
+      assert.strictEqual(current.ac.auto.kind,before.ac.auto.kind);
+      assert.strictEqual(current.ac.auto.pace,before.ac.auto.pace);
+      assert.strictEqual(current.ac.auto.uid,before.ac.auto.uid);
+      if(previous!=='target')assert.strictEqual(current.ac.auto.kind,'water');
+      else assert.strictEqual(current.ac.auto.pace,true);
+    }
+  });
+  ok(file+' idle countdown begins only after full player hold vs baseline (fixed RNG .5 = 7.5s)',()=>{
+    const current=harness(file,[P('furn_plant')]), before=harness(file,[P('furn_plant')],'night',baseline);
+    for(const h of [before,current]) {h.tap('target');h.step(25);h.tickAt(69.999);}
+    assert.strictEqual(before.ac.auto,null);
+    assert.strictEqual(current.ac.auto,null,'no pre-created autonomous idle during player hold');
+    for(const h of [before,current]) h.tickAt(70);
+    assert.deepStrictEqual(current.ac.auto,before.ac.auto);
+    assert.deepStrictEqual(current.ac.auto,{phase:'idle',until:77.5});
+    for(const h of [before,current]) h.tickAt(77.499);
+    assert.strictEqual(current.ac.auto.phase,'idle');assert.deepStrictEqual(current.ac.auto,before.ac.auto);
+    for(const h of [before,current]) h.tickAt(77.5);
+    assert.strictEqual(current.ac.auto.phase,'moving');assert.deepStrictEqual(current.ac.auto,before.ac.auto);
+  });
   for(const kind of ['eat','water','lamp','use','wall']) ok(file+' '+kind+' all whitelist IDs, arrival, original line/icon, repeat click, cleanup',()=>{
     for(const fid of HA.IDS[kind]) {
       const h=harness(file,[P(fid)]), saved=JSON.stringify(h.state);
@@ -42,7 +72,7 @@ for(const file of ['app.js','pet/game/app.js']) {
       assert.equal(h.autoSays,0); if(kind==='wall')assert(h.ac.y<=1&&h.ac.x>=2);
       if(kind==='lamp')assert.equal(h.lit,'target');
       h.tap('target');h.step(1);assert.equal(h.ac.auto.kind,kind);assert(HA.linesFor(kind,'c77').includes(h.ac.line));
-      h.step(20);assert(!h.ac.actIcon);assert.equal(h.lit,null);assert.equal(h.ac.auto.phase,'idle');
+      h.step(20);assert(!h.ac.actIcon);assert.equal(h.lit,null);assert.equal(h.ac.auto,null);
       assert.equal(JSON.stringify(h.state),saved,'interaction must not mutate save');assert(!h.messages.length);
     }
   });
