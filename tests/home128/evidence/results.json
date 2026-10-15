@@ -8,17 +8,17 @@
       "tx": null,
       "pose": null,
       "act": "lamp",
-      "line": "天黑了，灯开起，像夜市一样。",
+      "line": "灯一亮，就想出摊。",
       "auto": {
         "phase": "stay",
         "uid": "u1",
         "kind": "lamp",
-        "since": 1.393,
+        "since": 1.168,
         "player": true,
-        "walked": 1.151,
-        "until": 7.7502046675475516
+        "walked": 1.136,
+        "until": 10.0454010901688
       },
-      "hold": 61.393,
+      "hold": 61.168,
       "lastMove": {
         "from": {
           "x": 0,
@@ -33,18 +33,18 @@
         "fade": false,
         "pace": false,
         "sec": null,
-        "at": 1.393
+        "at": 1.168
       },
       "speed": null,
       "paceEl": null,
       "ty": null,
       "pendingPose": null,
-      "clock": 2.544
+      "clock": 2.304
     },
     "icon": "bulb",
     "lineOK": true,
     "iconOK": true,
-    "renderedLine": "天黑了，灯开起，像夜市一样。",
+    "renderedLine": "灯一亮，就想出摊。",
     "renderedIcon": "<svg class=\"ic\" aria-hidden=\"true\"><use href=\"#ic-bulb\"></use></svg>",
     "lit": true,
     "width": 390
@@ -63,12 +63,12 @@
         "phase": "stay",
         "uid": "u2",
         "kind": "water",
-        "since": 2.944,
+        "since": 2.688,
         "player": true,
-        "walked": 1.1360000000000001,
-        "until": 10.203179230388152
+        "walked": 1.1359999999999997,
+        "until": 8.906882511536573
       },
-      "hold": 62.944,
+      "hold": 62.688,
       "lastMove": {
         "from": {
           "x": 0,
@@ -83,13 +83,13 @@
         "fade": false,
         "pace": false,
         "sec": null,
-        "at": 2.944
+        "at": 2.688
       },
       "speed": null,
       "paceEl": null,
       "ty": null,
       "pendingPose": null,
-      "clock": 4.08
+      "clock": 3.824
     },
     "icon": "can",
     "lineOK": true,
@@ -108,17 +108,17 @@
       "tx": null,
       "pose": null,
       "act": "use",
-      "line": "这个机器咋个开嘛……哦，亮了。",
+      "line": "这些家电，比烤炉还难伺候。",
       "auto": {
         "phase": "stay",
         "uid": "u3",
         "kind": "use",
-        "since": 4.464,
+        "since": 4.192,
         "player": true,
-        "walked": 1.1359999999999992,
-        "until": 14.7074920195254
+        "walked": 1.1360000000000001,
+        "until": 13.114970039527282
       },
-      "hold": 64.464,
+      "hold": 64.19200000000001,
       "lastMove": {
         "from": {
           "x": 0,
@@ -133,18 +133,18 @@
         "fade": false,
         "pace": false,
         "sec": null,
-        "at": 4.464
+        "at": 4.192
       },
       "speed": null,
       "paceEl": null,
       "ty": null,
       "pendingPose": null,
-      "clock": 5.6
+      "clock": 5.328
     },
     "icon": "pad",
     "lineOK": true,
     "iconOK": true,
-    "renderedLine": "这个机器咋个开嘛……哦，亮了。",
+    "renderedLine": "这些家电，比烤炉还难伺候。",
     "renderedIcon": "<svg class=\"ic\" aria-hidden=\"true\"><use href=\"#ic-pad\"></use></svg>",
     "lit": false,
     "width": 390
@@ -163,12 +163,12 @@
         "phase": "stay",
         "uid": "u4",
         "kind": "wall",
-        "since": 6,
+        "since": 5.696,
         "player": true,
         "walked": 1.072,
-        "until": 15.229138741563336
+        "until": 16.895975297344638
       },
-      "hold": 66,
+      "hold": 65.696,
       "lastMove": {
         "from": {
           "x": 0,
@@ -183,13 +183,13 @@
         "fade": false,
         "pace": false,
         "sec": null,
-        "at": 6
+        "at": 5.696
       },
       "speed": null,
       "paceEl": null,
       "ty": null,
       "pendingPose": null,
-      "clock": 7.089
+      "clock": 6.784
     },
     "icon": "scope",
     "lineOK": true,
@@ -213,12 +213,12 @@
         "phase": "stay",
         "uid": "u5",
         "kind": "eat",
-        "since": 7.456,
+        "since": 7.152,
         "player": true,
         "walked": 1.024,
-        "until": 19.668970158981622
+        "until": 25.73611730948597
       },
-      "hold": 67.456,
+      "hold": 67.152,
       "lastMove": {
         "from": {
           "x": 0,
@@ -233,13 +233,13 @@
         "fade": false,
         "pace": false,
         "sec": null,
-        "at": 7.456
+        "at": 7.152
       },
       "speed": null,
       "paceEl": null,
       "ty": null,
       "pendingPose": null,
-      "clock": 8.48
+      "clock": 8.176
     },
     "icon": "skewer",
     "lineOK": true,
@@ -270,17 +270,17 @@
       "tx": null,
       "pose": null,
       "act": "water",
-      "line": "浇点水，跟守火候一个道理。",
+      "line": "长得好，下回拿来摆盘。",
       "auto": {
         "phase": "stay",
         "uid": "u2",
         "kind": "water",
-        "since": 1.504,
+        "since": 1.456,
         "player": true,
         "walked": 1.1360000000000001,
-        "until": 8.55572355448588
+        "until": 11.06586080231411
       },
-      "hold": 61.504,
+      "hold": 61.456,
       "lastMove": {
         "from": {
           "x": 0,
@@ -295,18 +295,18 @@
         "fade": false,
         "pace": false,
         "sec": null,
-        "at": 1.504
+        "at": 1.456
       },
       "speed": null,
       "paceEl": null,
       "ty": null,
       "pendingPose": null,
-      "clock": 2.64
+      "clock": 2.608
     },
     "icon": "can",
     "lineOK": true,
     "iconOK": true,
-    "renderedLine": "浇点水，跟守火候一个道理。",
+    "renderedLine": "长得好，下回拿来摆盘。",
     "renderedIcon": "<svg class=\"ic\" aria-hidden=\"true\"><use href=\"#ic-can\"></use></svg>",
     "lit": false,
     "width": 390
@@ -325,12 +325,12 @@
         "phase": "stay",
         "uid": "u3",
         "kind": "use",
-        "since": 3.008,
+        "since": 2.976,
         "player": true,
         "walked": 1.1360000000000001,
-        "until": 13.106033481536619
+        "until": 15.62317719390666
       },
-      "hold": 63.008,
+      "hold": 62.976,
       "lastMove": {
         "from": {
           "x": 0,
@@ -345,13 +345,13 @@
         "fade": false,
         "pace": false,
         "sec": null,
-        "at": 3.008
+        "at": 2.976
       },
       "speed": null,
       "paceEl": null,
       "ty": null,
       "pendingPose": null,
-      "clock": 4.16
+      "clock": 4.112
     },
     "icon": "pad",
     "lineOK": true,
@@ -375,12 +375,12 @@
         "phase": "stay",
         "uid": "u4",
         "kind": "wall",
-        "since": 4.544,
+        "since": 4.48,
         "player": true,
-        "walked": 1.072,
-        "until": 12.689622474795398
+        "walked": 1.0719999999999992,
+        "until": 15.160600996881811
       },
-      "hold": 64.544,
+      "hold": 64.48,
       "lastMove": {
         "from": {
           "x": 0,
@@ -395,13 +395,13 @@
         "fade": false,
         "pace": false,
         "sec": null,
-        "at": 4.544
+        "at": 4.48
       },
       "speed": null,
       "paceEl": null,
       "ty": null,
       "pendingPose": null,
-      "clock": 5.616
+      "clock": 5.552
     },
     "icon": "scope",
     "lineOK": true,
@@ -420,17 +420,17 @@
       "tx": null,
       "pose": null,
       "act": "eat",
-      "line": "先吃一口，再算今天卖了好多。",
+      "line": "桌上摆一把串，人生圆满。",
       "auto": {
         "phase": "stay",
         "uid": "u5",
         "kind": "eat",
-        "since": 5.984,
+        "since": 5.92,
         "player": true,
-        "walked": 1.0250000000000004,
-        "until": 18.876551052710383
+        "walked": 1.024,
+        "until": 17.454094053336597
       },
-      "hold": 65.984,
+      "hold": 65.92,
       "lastMove": {
         "from": {
           "x": 0,
@@ -445,18 +445,18 @@
         "fade": false,
         "pace": false,
         "sec": null,
-        "at": 5.984
+        "at": 5.92
       },
       "speed": null,
       "paceEl": null,
       "ty": null,
       "pendingPose": null,
-      "clock": 7.024
+      "clock": 6.96
     },
     "icon": "skewer",
     "lineOK": true,
     "iconOK": true,
-    "renderedLine": "先吃一口，再算今天卖了好多。",
+    "renderedLine": "桌上摆一把串，人生圆满。",
     "renderedIcon": "<svg class=\"ic\" aria-hidden=\"true\"><use href=\"#ic-skewer\"></use></svg>",
     "lit": false,
     "width": 390
