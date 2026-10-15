@@ -3,7 +3,7 @@ import {withoutZombieStartDelta} from './zombie-delta.mjs';
  * Any missing/duplicated/edited candidate line fails; all other bytes remain pinned.
  * This is test accounting, not independent approval of the milestone feature.
  */
-const TOKEN='home128-xingtu129-20261015-r1';
+const TOKEN='copy127-20261015-r1';
 export function withoutMilestoneDelta(path,source){
  source=withoutZombieStartDelta(path,source);
  const replace=(from,to='')=>{if(source.split(from).length!==2)throw Error('MILESTONE_DELTA_NOT_EXACT: '+path);source=source.replace(from,to);};

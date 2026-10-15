@@ -1,8 +1,8 @@
-import {recordTransition} from '../../../milestones/domain.mjs?v=home128-xingtu129-20261015-r1';
-import {planHiddenClaim,validHiddenTransition} from '../../../collectibles/decor6-grants.mjs?v=home128-xingtu129-20261015-r1';
-import {moonView,planMoon,researchSpend,MOON_RULES} from '../../../space/moon.mjs?v=home128-xingtu129-20261015-r1';
-import {migrateSpace,spaceTransition} from '../../../space/domain.mjs?v=home128-xingtu129-20261015-r1';
-import {createCardTransitionGuard} from './card-transition.mjs?v=home128-xingtu129-20261015-r1';
+import {recordTransition} from '../../../milestones/domain.mjs?v=copy127-20261015-r1';
+import {planHiddenClaim,validHiddenTransition} from '../../../collectibles/decor6-grants.mjs?v=copy127-20261015-r1';
+import {moonView,planMoon,researchSpend,MOON_RULES} from '../../../space/moon.mjs?v=copy127-20261015-r1';
+import {migrateSpace,spaceTransition} from '../../../space/domain.mjs?v=copy127-20261015-r1';
+import {createCardTransitionGuard} from './card-transition.mjs?v=copy127-20261015-r1';
 export const CARD_ADAPTER_ENABLED=false;
 /** Synthetic-adapter coordinator candidate; no global storage or automatic launch. */
 const fail=code=>{throw Error(code);};

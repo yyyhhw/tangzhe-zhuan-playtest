@@ -1,0 +1,77 @@
+{
+  "baseline": "0b7218d",
+  "checks": [
+    {
+      "path": "qa-protocol2/vendor/cards/card-coordinator.mjs",
+      "result": "only exact milestone delta; all original protection bytes retained"
+    },
+    {
+      "path": "qa-protocol2/vendor/runtime/validator.mjs",
+      "result": "only exact milestone delta; all original protection bytes retained"
+    },
+    {
+      "path": "qa-protocol2/real-page-facade.mjs",
+      "result": "only exact milestone delta; all original protection bytes retained"
+    },
+    {
+      "path": "app.js",
+      "result": "only started hook; all main copy127/gameplay bytes retained"
+    },
+    {
+      "path": "preview/app.js",
+      "result": "only started hook; all main copy127/gameplay bytes retained"
+    },
+    {
+      "path": "zombie/zombie.js",
+      "result": "only post-ack notification; combat rules unchanged"
+    },
+    {
+      "path": "preview/zombie/zombie.js",
+      "result": "only post-ack notification; combat rules unchanged"
+    },
+    {
+      "path": "economy.js",
+      "result": "byte-exact latest main"
+    },
+    {
+      "path": "preview/economy.js",
+      "result": "byte-exact latest main"
+    },
+    {
+      "path": "pet/game/app.js",
+      "result": "byte-exact latest main"
+    },
+    {
+      "path": "preview/pet/game/app.js",
+      "result": "byte-exact latest main"
+    },
+    {
+      "path": "home-interaction.js",
+      "result": "byte-exact latest main"
+    },
+    {
+      "path": "space/moon.mjs",
+      "result": "byte-exact latest main"
+    },
+    {
+      "path": "space/host.mjs",
+      "result": "byte-exact latest main"
+    },
+    {
+      "path": "space/domain.mjs",
+      "result": "byte-exact latest main"
+    },
+    {
+      "path": "tests/autosave15/baseline-integrity.json",
+      "result": "byte-exact latest main"
+    },
+    {
+      "path": "tests/lifecycle-save/protection-integrity.json",
+      "result": "byte-exact latest main"
+    },
+    {
+      "path": "tests/moon/protected-blobs.json",
+      "result": "byte-exact latest main"
+    }
+  ]
+}

@@ -1,0 +1,152 @@
+{
+  "baseline": "e48be1a52228fc1ec648e355183b6d27b5c589e9",
+  "preTokenHead": "7a4710c96c3986630586db5ae335f0abf6e74aa3",
+  "oldToken": "home128-xingtu129-20261015-r1",
+  "newToken": "copy127-20261015-r1",
+  "tokenFiles": [
+    "app.js",
+    "candidates/blindbox18/display.mjs",
+    "candidates/blindbox18/review.mjs",
+    "collectibles/box200-catalog.mjs",
+    "collectibles/box200-display.mjs",
+    "collectibles/box200-hidden.mjs",
+    "collectibles/decor6-display.mjs",
+    "collectibles/decor6-grants.mjs",
+    "collectibles/entry.mjs",
+    "collectibles/release.mjs",
+    "collectibles/wearables18-catalog.mjs",
+    "collection/bootstrap.mjs",
+    "collection/host-save.mjs",
+    "index.html",
+    "pet/game/app.js",
+    "pet/game/index.html",
+    "pet/game/version.json",
+    "preview/app.js",
+    "preview/collection/bootstrap.mjs",
+    "preview/collection/host-save.mjs",
+    "preview/index.html",
+    "preview/td/test_td_bridge.js",
+    "preview/version.json",
+    "qa-protocol2/entry.mjs",
+    "qa-protocol2/guard/deck-storage-scope.mjs",
+    "qa-protocol2/guard/storage-boundary.mjs",
+    "qa-protocol2/host-storage.mjs",
+    "qa-protocol2/real-page-facade.mjs",
+    "qa-protocol2/vendor/cards/card-coordinator.mjs",
+    "qa-protocol2/vendor/codec/snapshot-codec.mjs",
+    "qa-protocol2/vendor/planner/migration.mjs",
+    "qa-protocol2/vendor/runtime/validator.mjs",
+    "qa-protocol2/wearables8-display.mjs",
+    "space/moon.mjs",
+    "space/overlay.mjs",
+    "space/voyage-ev.mjs",
+    "space/xingtu-views.mjs",
+    "tests/autosave15/scope.test.mjs",
+    "tests/bb70/integration-scope.test.mjs",
+    "tests/box83/catalog.test.mjs",
+    "tests/copy98/home-pet-copy.test.mjs",
+    "tests/formal/carefree-bgm.test.mjs",
+    "tests/formal/copy52-display.test.mjs",
+    "tests/formal/tea-entry-cards-out.test.mjs",
+    "tests/lifecycle-save/lifecycle.test.mjs",
+    "tests/lockfix/smoke.py",
+    "tests/moon/full-app-startup.test.mjs",
+    "tests/moon/lock-lifetime.test.mjs",
+    "tests/moon/overlay-dom.test.mjs",
+    "tests/moon/resources.test.mjs",
+    "tests/wearables8/production-entry.test.mjs",
+    "tests/wearables8/production-harness.mjs",
+    "tests/wearables8/resource-chain.test.mjs",
+    "tests/xt11/art-ui.test.mjs",
+    "version.json"
+  ],
+  "liveFingerprintUpdates": [
+    {
+      "manifest": "tests/autosave15/baseline-integrity.json",
+      "path": "preview/pet/game/app.js",
+      "field": "sha256",
+      "normalization": null,
+      "old": "672be49f0208125969dc4097de04f28551c487b3655628843ddf147a36c8100c",
+      "new": "dfa3f984542e1fca6556caf055b0c8a32b80a214c25b55015ea0fd5aaf871865"
+    },
+    {
+      "manifest": "tests/moon/protected-blobs.json",
+      "path": "preview/pet/game/app.js",
+      "field": "sha256",
+      "normalization": null,
+      "old": "672be49f0208125969dc4097de04f28551c487b3655628843ddf147a36c8100c",
+      "new": "dfa3f984542e1fca6556caf055b0c8a32b80a214c25b55015ea0fd5aaf871865"
+    },
+    {
+      "manifest": "tests/bb70/integration-integrity.json",
+      "path": "preview/app.js",
+      "field": "sha256AfterReleaseNormalization",
+      "normalization": "decor6-preserve-order-20261013-r1",
+      "old": "12cb65a737593969bc0f4cd029c350003390ac0f7090946df8cbfe420f4c2c5b",
+      "new": "e446eccaca1eae51e66171e16fcac3620118c9f6f223c946bacdcb555942e7ff"
+    },
+    {
+      "manifest": "tests/moon/protected-blobs.json",
+      "path": "preview/pet/game/index.html",
+      "field": "sha256",
+      "normalization": null,
+      "old": "d6bd9f4940bdd00ff7545de3b2e1502495f0b4d60ae1d7a8c0b34572577eb213",
+      "new": "104a7089c8e8afe05086afeed75ceb66b27ea126e26f143725e8cb9dc4dd66f4"
+    },
+    {
+      "manifest": "tests/moon/protected-blobs.json",
+      "path": "preview/pet/game/version.json",
+      "field": "sha256",
+      "normalization": null,
+      "old": "d2e6ea9b98a730c711061c0aad39639facbcf5776b2302c1566b83f6614171fb",
+      "new": "08bcd914fb85fee57db25394c84bc3b3e91a4386a5e3128d529ecd20c45587d0"
+    }
+  ],
+  "dependencyPins": [
+    {
+      "path": "qa-protocol2/vendor/planner/migration.mjs",
+      "old": "681220eebbff1c87ceddd919c8cadc6ec27f6a0688e6d8fee1b60662c6522d94",
+      "new": "e5513b8413f8bd269f15bfce1a6a195e64fee08f3fee3711e9e00b13d5f948aa",
+      "bytes": 12600
+    },
+    {
+      "path": "qa-protocol2/vendor/codec/snapshot-codec.mjs",
+      "old": "f48fc4f5a07e3660cade708cd1d19c29bdac3d883791ee5511721d077235311e",
+      "new": "a5b63fe41c30c48781779fff766eeb889305e4ff4c88583bceb1584a4c80a8e1",
+      "bytes": 4343
+    },
+    {
+      "path": "qa-protocol2/vendor/runtime/validator.mjs",
+      "old": "8ce0092c7d140d24c8550382f2a86274ef8a8a6aad3a3bbbe406f62b62dcad98",
+      "new": "57f5222f9032713507c2ebead1e51ee65ddce27f98c99251443bee296ade9318",
+      "bytes": 13535
+    },
+    {
+      "path": "qa-protocol2/vendor/cards/card-coordinator.mjs",
+      "old": "0b71bb427064b7c0cc24dac2ac2eded13269c4bfa9fafc90897308e269740cdf",
+      "new": "565a4f351bcb89fa3d560ed1132c09d161dbb268516571c8222e269dbeeacc00",
+      "bytes": 12666
+    },
+    {
+      "path": "space/moon.mjs",
+      "old": "78af3c5fff1487329f35b0c181218f78381d9c20fd4a174fd61ecaa43b8b4778",
+      "new": "1e3ca89ed7ce5c23f9af8e89a6074b1b34904ff10232531840ec77a13e0dbecc",
+      "bytes": 15007
+    },
+    {
+      "path": "space/overlay.mjs",
+      "old": "e03f90fcd8a13cd0110560f145c2edf1d073f91e39f1c9e964027c15d1b138df",
+      "new": "4c7c9532f182d0abe1ded565b1d02cbd9029c5fa6e8ccca76a59caf89addb8aa",
+      "bytes": 21280
+    }
+  ],
+  "extraResourceFiles": [
+    "preview/pet/game/index.html",
+    "preview/pet/game/version.json"
+  ],
+  "extraCurrentTokenExpectations": [
+    "tests/formal/tea-entry-cards-out.test.mjs",
+    "tests/formal/copy52-display.test.mjs",
+    "tests/wearables8/resource-chain.test.mjs"
+  ]
+}

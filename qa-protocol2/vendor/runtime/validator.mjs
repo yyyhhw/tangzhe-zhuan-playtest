@@ -1,8 +1,8 @@
-import {validMilestones} from '../../../milestones/domain.mjs?v=home128-xingtu129-20261015-r1';
-import {validateHiddenLedger} from '../../../collectibles/decor6-grants.mjs?v=home128-xingtu129-20261015-r1';
+import {validMilestones} from '../../../milestones/domain.mjs?v=copy127-20261015-r1';
+import {validateHiddenLedger} from '../../../collectibles/decor6-grants.mjs?v=copy127-20261015-r1';
 /** Pure protocol2 validation: admitted catalog, immutable migration identity and
  * bounded hidden receipts. No normalization, award side effects or storage. */
-import {readSpace} from '../../../space/domain.mjs?v=home128-xingtu129-20261015-r1';
+import {readSpace} from '../../../space/domain.mjs?v=copy127-20261015-r1';
 export const PROTOCOL2_RUNTIME_ENABLED=false;
 const error=code=>{throw Error(code);};
 const object=x=>!!x&&typeof x==='object'&&!Array.isArray(x);
