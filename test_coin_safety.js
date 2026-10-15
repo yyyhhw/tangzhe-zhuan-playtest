@@ -303,8 +303,8 @@ t('12d3 ⑤ 经营购买也能走：transact(apply = upgradeShop) 存不上 → 
 const zombieTrain = (ls, price) => { const L = E.loadSave(ls.getItem(K), ls.getItem(KB), T0); if (L.blocked) return { ok:false, stage:'blocked', L };
   const r = E.transact(L.st, { price, apply:s => { const z = s.zombie || (s.zombie = { lv:0 }); z.lv++; return { ok:true, lv:z.lv }; }, save:s => E.commitSave(ls, K, KB, s) }); r.L = L; return r; };
 t('12d3 ⑤ 打僵尸训练（跨页，旧键）：commitSave 拒写 → transact 失败（stage save），主档不动、内存的钱 / 训练等级 / rev 全回滚', () => { if (!has12d3) return false; const P = JSON.stringify(raw3()); const ls = mem({ [K]:P }); const r = zombieTrain(ls, 5000); return !r.ok && r.stage === 'save' && ls.getItem(K) === P && ls.getItem(KB) === null && r.L.st.coins === 452000000 && !r.L.st.zombie && r.L.st.rev === 20; });
-t('12d3 ⑤ 打僵尸训练：备份写失败 → 主档 / 备份逐字节不变，内存里的钱和训练等级都回滚', () => { if (!has12d3) return false; const P = JSON.stringify(raw3()); const ls = mem({ [K]:P, [KB]:'B0' }, { [KB]:true }); const r = zombieTrain(ls, 5000); return !r.ok && r.stage === 'save' && ls.getItem(K) === P && ls.getItem(KB) === 'B0' && r.L.st.coins === 452000000 && !r.L.st.zombie && r.L.st.rev === 20; });
-t('12d3 ⑤ 打僵尸训练：主档写失败 → 主档不变，内存回滚（没有「扣了钱存不上」）', () => { if (!has12d3) return false; const P = JSON.stringify(raw3()); const ls = mem({ [K]:P }, { [K]:true }); const r = zombieTrain(ls, 5000); return !r.ok && ls.getItem(K) === P && r.L.st.coins === 452000000 && !r.L.st.zombie; });
+t('12d3 ⑤ 打僵尸训练（旧键 + 备份 setItem 会抛异常）：commitSave 先按旧键拒写（未走到写备份）→ 主档 / 备份逐字节不变，内存里的钱和训练等级都回滚', () => { if (!has12d3) return false; const P = JSON.stringify(raw3()); const ls = mem({ [K]:P, [KB]:'B0' }, { [KB]:true }); const r = zombieTrain(ls, 5000); return !r.ok && r.stage === 'save' && ls.getItem(K) === P && ls.getItem(KB) === 'B0' && r.L.st.coins === 452000000 && !r.L.st.zombie && r.L.st.rev === 20; });
+t('12d3 ⑤ 打僵尸训练（旧键 + 主档 setItem 会抛异常）：commitSave 先按旧键拒写（未走到写主档）→ 主档不变，内存回滚（没有「扣了钱存不上」）', () => { if (!has12d3) return false; const P = JSON.stringify(raw3()); const ls = mem({ [K]:P }, { [K]:true }); const r = zombieTrain(ls, 5000); return !r.ok && ls.getItem(K) === P && r.L.st.coins === 452000000 && !r.L.st.zombie; });
 t('12d3 ⑤ 打僵尸训练：存档余额 1e20 → 整局禁止训练扣款，原文不动', () => { if (!has12d3) return false; const u = raw3(); u.coins = 1e20; const U = JSON.stringify(u); const ls = mem({ [K]:U }); const r = zombieTrain(ls, 5000); return !r.ok && r.stage === 'blocked' && ls.getItem(K) === U; });
 t('12d3 ⑤ 宠物买狗（跨页，旧键）：存不上 / 旧键拒写 → pet 字段不出现、钱不扣、主档不动', () => { if (!has12d3) return false; const P = JSON.stringify(raw3());
   const buy = ls => { const L = E.loadSave(ls.getItem(K), ls.getItem(KB), T0); const r = E.transact(L.st, { price:8000, apply:s => { if (s.pet) return { ok:false, why:'已经有狗了' }; s.pet = { id:'puppy', t:T0 }; return { ok:true }; }, save:s => E.commitSave(ls, K, KB, s) }); return { r, st:L.st }; };
@@ -346,7 +346,12 @@ t('12d3 ⑥ 取舍不变：余额 1e20 仍是异常模式（不自动拿备份�
 
 /* ===== 测试-133 ③：正式存档协议下 commitSave 转交 coordinator（放在文件末尾：装上 coordinator 是全局一次性的，不影响前面各段） ===== */
 // 打僵尸 / 宠物买狗的「能存上」路径：正式键 + 已装 coordinator → 交给 coordinator.commit；ok 原样返回，REVISION_CONFLICT → stage conflict，其余失败 → stage save；只读档不调 coordinator。
-if (has12d3 && typeof E.installFormalCollectionProtocol === 'function') {
+// 覆盖范围（测试-133 ③ 补修，熊大 19:24）：下面的 coordinator 是本文件里的 mock，只证明 economy.js 这一层的转交 / 返回值映射 / transact 内存回滚；
+// 正式备份、rev 递增、跨页冲突检测的端到端行为不在本文件验证，归 tests/formal/protocol.mjs（真 coordinator）。
+// API 必须存在：若 economy.js 不再导出 installFormalCollectionProtocol，下面整段会被跳过，所以先单独记一条硬断言，让它变红而不是静默少测。
+const hasFCP = typeof E.installFormalCollectionProtocol === 'function';
+t('测试-133 ③ economy.js 必须导出 installFormalCollectionProtocol（缺了本段 7 条会整段跳过，这里直接记失败）', () => has12d3 && hasFCP);
+if (has12d3 && hasFCP) {
   const FK = 'tangzhe-formal-collection-v1-save', FKB = 'tangzhe-formal-collection-v1-save-bak';
   const co = { mode:'ok', calls:0, seen:null, store:null, validateCollection:() => [],
     commit(st) { this.calls++; this.seen = JSON.parse(JSON.stringify(st)); if (this.mode === 'ok') { if (this.store) this.store.setItem(FK, JSON.stringify(st)); return { ok:true, rev:(st.rev || 0) + 1 }; } return { ok:false, code:this.mode }; } };
