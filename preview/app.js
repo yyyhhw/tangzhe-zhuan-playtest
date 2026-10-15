@@ -1357,7 +1357,7 @@ function critLineInner(i) {
   if (tot > noCombo) add.push(`连击 ${n} 下 +${tot - noCombo}%`);
   if (noCombo > CRIT_BASE) add.push(`超级装饰 +${noCombo - CRIT_BASE}%`);
   return `<span>当前暴击率 <b id="critPct">${tot}%</b><small id="critTiers">（${CFG.CRIT_TIERS.map((c, k) => c.name + ' ' + pc(ps[k]) + '%').join(' · ')}）</small></span>`
-    + (add.length ? `<span>基础概率 <b id="critBase">${CRIT_BASE}%</b><small id="critBonus">（${add.join('，')}）</small></span>` : '')   // 文案-138：没加成时基础概率=当前暴击率，不重复显示
+    + `<span>基础概率 <b id="critBase">${CRIT_BASE}%</b><small id="critBonus">${add.length ? '（' + add.join('，') + '）' : '（现在没加成）'}</small></span>`
     + `<span>暴击倍率 <b>${CFG.CRIT_TIERS.map((c, k) => '×' + E.tierMult(state, i, t, k)).join(' / ')}</b></span>`
     + `<span class="cl-tip">连点（间隔 ≤1 秒）每满 ${CFG.COMBO_STEP} 下三档各 +5%，最高 100%；停手 1 秒回基础</span>`;
 }
@@ -1391,7 +1391,7 @@ function renderShop() {
   h += `<div class="card"><div class="ava sq">${SHOP_ICON[i]}</div><div class="info"><div class="name">${S.short}<span class="lv">Lv.${s.lv}</span></div>
     <div class="desc">当前基础产量 <b>${fmt(E.shopBase(i, s.lv))}</b>/秒原料${nm ? ` · 下一里程碑 Lv${nm} → 收益 ×${E.milestoneMult(nm)}` : ' · 里程碑全拿下 ×8'}</div>
     ${nm ? `<div class="mbar"><i style="width:${((s.lv - prevM) / (nm - prevM) * 100).toFixed(0)}%"></i></div>` : ''}
-    <div class="gain ${s.emp > 0 || shopTop ? '' : 'warn'}">${shopTop ? `已满级（店铺最高 Lv${E.shopMaxLv(i)}）` : s.emp > 0 ? '升级后 +' + fmt(upGain) + '/秒' : '先雇员工才会自动赚，升级让手点更值钱'}</div>
+    <div class="gain ${s.emp > 0 || shopTop ? '' : 'warn'}">${shopTop ? `已满级（店铺最高 Lv${E.shopMaxLv(i)}）` : s.emp > 0 ? '升级后 +' + fmt(upGain) + '/秒' : '还没员工：升级后自动收入仍是 +0/秒（先雇佣）· 手点会变强'}</div>
     <details class="details-fold"><summary>倍率怎么算</summary>店铺原料 × 员工 ×${E.empMult(s.emp).toFixed(2)} × CEO ×${info.mult.toFixed(2)}${E.hasSuper(state, i) ? ' × 超级装饰 ×' + CFG.SUPER_RATE : ''} = 每秒 <b>${fmt(sr)}</b></details></div>
     ${shopTop ? '<button class="buy no" disabled data-max="shop">满级</button>' : btn('up', i, '升级' + (k > 1 ? ' ×' + k : ''), upCost)}</div>`;
   h += `<div class="sec-title">员工</div>`;
@@ -1844,7 +1844,7 @@ function confirmReset() {
 function showIntro() {
   openModal(`<div class="mbubble">欢迎来到《躺着也能赚》</div><div style="display:flex;justify-content:center;margin:6px 0"><div class="ava art bust">${bustImg('c77')}</div></div>
     <div class="mtitle">77：巴适得很，串串烤起走！</div>
-    <div class="mnote">① 点画面里的烧烤摊赚第一桶金，1 秒内连点更容易<b>暴击</b><br>② 攒 50 雇员工阿炭，之后<b>躺着也能赚</b><br>③ 开新店、升级店铺/员工/CEO，把 CEO 调去别的店试试跨行事件<br>离线也有收益（50%，最多 8 小时），每天还有一次免费双倍。</div>
+    <div class="mnote">① 点画面里的烧烤摊赚第一桶金：每一下都有<b>暴击</b>机会（暴击 ×5 / 超级 ×10 / 超超超级 ×20），1 秒内连点越点越容易暴击<br>② 攒 50 雇员工阿炭，之后<b>躺着也能赚</b><br>③ 开新店、升级店铺/员工/CEO，把 CEO 调去别的店试试跨行事件<br>离线也有收益（50%，最多 8 小时），每天还有一次免费双倍。</div>
     <button class="buy big red" id="mOk" data-x="close">开摊！</button>`);
   $('#mOk').addEventListener('click', () => { audioUnlock(); closeModal(); sayLine('c', '巴适得很，串串烤起走！', 3); }, { once:true });
 }
