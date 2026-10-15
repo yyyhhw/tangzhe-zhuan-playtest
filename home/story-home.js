@@ -25,7 +25,7 @@
   if(own(c,'k_3')&&who==='c77'&&!k){out.push(L.k3);if((c.placed||[]).some(f=>BAMBOO.includes(f)))out.push(L.k3bamboo);}
   if(own(c,'k_4')&&per==='night'&&L.k4sit[who]){if(SIT.includes(k))out.push(L.k4sit[who]);else if(!k&&!c.hasSeat)out.push(L.k4stand[who]);}
   if(own(c,'k_5')&&who==='pearl'){if(k==='eat')out.push(...L.k5);else if(!c.hasTable&&(!k||SIT.includes(k))){out.length=0;out.push(L.k5hand);Object.defineProperty(out,'force',{value:true});return out;}}   // 熊大 r2：没桌子坐着也数手心，且必说
-  if(own(c,'k_6')&&who==='otaku'){if(k==='lie')out.push(...L.k6);else if(k==='sit'||k==='rug')out.push(L.k6sit);}
+  if(own(c,'k_6')&&who==='otaku'){if(k==='lie')out.push(...L.k6);else if((k==='sit'||k==='rug')&&!c.hasSofa&&!c.hasBed)out.push(L.k6sit);}   // 熊大 r3：坐椅/地毯句只在没沙发也没床时说
   if(own(c,'k_8')&&per==='dusk'&&L.k8[who])out.push(L.k8[who]);
   return out;
  }
@@ -37,8 +37,9 @@
  }
  // 熊大 r2：阿宅有 k6，沙发（sit 类里的沙发/长沙发）当床躺着看；床本来就是 lie
  const SOFA=/sofa|couch|sectional|lounge/;
+ function isSofa(fid){return SOFA.test(fid||'');}
  function lieOn(c,fid){return own(c,'k_6')&&c.who==='otaku'&&SOFA.test(fid||'');}
  // 发射倒计时：火箭老板已加入、拥有卡、本页第一次进他的家
  function countdownDue(c){return own(c,'k_7')&&c.who==='rocket'&&!!c.joined&&!c.done;}
- return Object.freeze({LINES:L,BAMBOO,STYLE_LIVE,linesFor,pick,scene,countdownDue,lieOn});
+ return Object.freeze({LINES:L,BAMBOO,STYLE_LIVE,linesFor,pick,scene,countdownDue,lieOn,isSofa});
 });

@@ -2130,7 +2130,8 @@ const storyPeriod = () => homeAutoPeriod() || (h => h >= 19 || h < 5 ? 'night' :
 function storyCtx(id, kind) {
   const H = E.homeOf(state, id), eat = (HA && HA.IDS && HA.IDS.eat) || [];
   return { owned:new Set(state.gacha.owned), who:id, kind:kind || null, period:storyPeriod(), placed:H.placed.map(p => p.fid),
-    hasSeat:H.placed.some(p => !!HomeInteraction.capability(p.fid)), hasTable:H.placed.some(p => eat.includes(p.fid)), posed:!!homeActorOf(id).pose };
+    hasSeat:H.placed.some(p => !!HomeInteraction.capability(p.fid)), hasTable:H.placed.some(p => eat.includes(p.fid)), posed:!!homeActorOf(id).pose,
+    hasSofa:H.placed.some(p => HomeInteraction.capability(p.fid) === 'sit' && HS && HS.isSofa && HS.isSofa(p.fid)), hasBed:H.placed.some(p => HomeInteraction.capability(p.fid) === 'lie') };
 }
 let storyBalloonAt = -1e9, storyBalloonWho = null; const storyCountdownDone = new Set();
 function storyCountdown(id) {   // 发射倒计时：本页第一次进火箭老板的家（他已加入）
@@ -2157,10 +2158,11 @@ function storyBambooSpot(id) {   // 熊大 r2：屋里有竹家具，熊猫就�
   const T = E.homeTier(E.homeOf(state, id).lv), z = E.furnSize(p.fid, p.rot);
   return { left:Math.min(92, (p.x + z.w) / T.cols * 100), top:(p.y + z.h) / T.rows * 100, uid:p.uid };
 }
-function storyPandaFloorHTML(id) {
+function storyPandaFloorHTML(id) {   // 熊大 r3：走到竹家具旁 → 停一会儿 → 接着走（24s 一圈，用 clock 续相位，重画不跳）
   if (!HS || homeMode !== 'live' || !HS.scene(storyCtx(id, null)).panda) return '';
   const q = storyBambooSpot(id); if (!q) return '';
-  return `<span class="story-panda at-bamboo still" data-story="panda" data-near="${q.uid}" aria-hidden="true" style="left:${q.left.toFixed(2)}%;top:${q.top.toFixed(2)}%">${storyPandaSVG(0)}${storyPandaSVG(1)}</span>`;
+  const red = homeAutoReduced(), d = -(clock % 24).toFixed(2);
+  return `<span class="story-panda at-bamboo${red ? ' still' : ' walking'}" data-story="panda" data-near="${q.uid}" aria-hidden="true" style="--bx:${q.left.toFixed(2)}%;left:${q.left.toFixed(2)}%;top:${q.top.toFixed(2)}%;animation-delay:${d}s">${storyPandaSVG(0)}${storyPandaSVG(1)}</span>`;
 }
 function storyTeaHTML(id) {
   return HS && homeMode === 'live' && HS.scene(storyCtx(id, homeActorOf(id).pose ? 'sit' : null)).tea && HomeInteraction.capability(E.homeOf(state, id).placed.find(p => p.uid === homeActorOf(id).pose?.uid)?.fid || '') === 'sit'
@@ -2251,6 +2253,10 @@ function homeAutoMove(id, ac, x, y, pace) {
 function homeAutoStart(id, ac, list) {
   const H = E.homeOf(state, id), T = E.homeTier(H.lv);
   let c = HA.pick(list, { last:ac.autoLast || null, ceo:id, period:homeAutoPeriod(), rng:Math.random });
+  if (c && (c.kind === 'sit' || c.kind === 'rug') && HS && HS.lieOn && HS.lieOn({ owned:state.gacha.owned, who:'otaku' }, 'sofa') && id === 'otaku') {   // 熊大 r3：阿宅有 k6，屋里有沙发/床就不坐椅子、地毯，改去沙发躺（没沙发去床）
+    const fidOf = u => H.placed.find(q => q.uid === u)?.fid || '';
+    if (!HS.isSofa(fidOf(c.uid))) { const alt = list.find(q => q.kind === 'sit' && HS.isSofa(fidOf(q.uid))) || list.find(q => q.kind === 'lie'); if (alt) c = alt; }
+  }
   if (ac.pose && !homeFreePoint(id, ac.x, ac.y)) return null;   // 起不了身（四周没空地）就继续待着，不弹提示
   if (c.pace) {
     homeLeavePose(id); ac.act = null; ac.pendingPose = null;

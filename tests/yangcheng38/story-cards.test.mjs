@@ -61,6 +61,9 @@ test('家里变化：8 张卡各自的台词条件，每句 ≤16 字',()=>{
   assert.deepEqual(HS.linesFor(C({who:'pearl',kind:null,period:'day',hasTable:false})),['没桌子，就在手心里数。']);
   assert.deepEqual(HS.linesFor(C({who:'otaku',kind:'lie',period:'day'})),HS.LINES.k6);
   assert.deepEqual(HS.linesFor(C({who:'otaku',kind:'rug',period:'day'})),['坐着看也行，名场面不挑地方。']);
+  // 熊大 r3：有沙发或床时不说坐椅/地毯句
+  for(const k of ['sit','rug']){assert.ok(!HS.linesFor(C({who:'otaku',kind:k,period:'day',hasSofa:true})).includes(HS.LINES.k6sit));assert.ok(!HS.linesFor(C({who:'otaku',kind:k,period:'day',hasBed:true})).includes(HS.LINES.k6sit));}
+  assert.equal(HS.isSofa('furn_x_sofa'),true);assert.equal(HS.isSofa('furn_x_chair'),false);
   assert.deepEqual(HS.linesFor(C({who:'pearl',kind:'read',period:'dusk'})),['四盏灯，一盏都不能少。']);
   assert.deepEqual(HS.linesFor({owned:[],who:'c77',kind:null,period:'night',placed:[]}),[]);
   const sc=HS.scene(C({who:'c77',period:'night',kind:'sit',posed:true}));assert.deepEqual(sc,{panda:true,moon:true,street:false,tea:true});
