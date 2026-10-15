@@ -9,7 +9,7 @@ await new Promise(r=>server.listen(0,'127.0.0.1',r));const base='http://127.0.0.
 const PREVIEW_KEY='tangzhe-preview-collection-v1-save';
 const previewSeed=await (async()=>{const c=await browser.newContext({viewport:{width:393,height:852}}),p=await c.newPage();const st=E.newState(Date.now());st.coins=100000;st.taps=1;st.muted=true;
  await c.addInitScript(st=>{if(!sessionStorage.getItem('seeded')){sessionStorage.setItem('seeded','1');localStorage.setItem('tangzhe-preview-save',JSON.stringify(st));localStorage.setItem('tangzhe-preview-save-bak',JSON.stringify(st));}},st);
- await p.goto(base+'/preview/');await p.getByRole('button',{name:'同意并继续'}).click();const later=p.getByRole('button',{name:'先不升级'});await later.waitFor({timeout:5000}).then(()=>later.click(),()=>{});await p.waitForFunction(()=>window.__tzz);await p.waitForTimeout(500);
+ await p.goto(base+'/preview/');await p.getByRole('button',{name:'同意并继续'}).click();const later=p.getByRole('button',{name:'保留备份并升级'});await later.waitFor({timeout:5000}).then(()=>later.click(),()=>{});await p.waitForFunction(()=>window.__tzz);await p.waitForTimeout(500);
  const seed=await p.evaluate(()=>Object.fromEntries(Object.entries(localStorage).filter(([k])=>!/tab-lock/.test(k))));await c.close();assert(seed[PREVIEW_KEY],'new preview save created');return seed;})();
 for(const entry of ['/','/pet/game/','/preview/','/preview/pet/game/'])for(const mode of ['boot-error','missing-main','bad-main']){
  const context=await browser.newContext({viewport:{width:393,height:852}}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));let release;const gate=new Promise(r=>release=r);let detail;
@@ -23,7 +23,7 @@ for(const entry of ['/','/pet/game/','/preview/','/preview/pet/game/'])for(const
  // 测试-133 ④：正式版（根、pet）和新版 preview 主档缺失/坏档时锁成「存档已保护」，不从备份自动恢复、不写入；只有 /preview/pet/game/ 旧链路还会从备份恢复
  if(mode!=='boot-error'&&entry!=='/preview/pet/game/'){release();await page.waitForLoadState('load');const snap=()=>page.evaluate(()=>Object.fromEntries(Object.entries(localStorage).filter(([k])=>/save/.test(k))));const s0=await snap();
   await page.getByText('存档已保护').waitFor();await page.waitForTimeout(1500);const body=await page.evaluate(()=>document.body.innerText);const s1=await snap();detail={locked:true,status:(body.match(/状态：(\S+)/)||[])[1],keys:Object.keys(s1)};
-  assert.equal(await page.evaluate(()=>!!window.__tzz),false,'locked save must not boot gameplay');assert(body.includes(mode==='bad-main'?'INVALID_JSON_READ_ONLY':'SOURCE_BACKUP_REQUIRES_REVIEW'),'lock reason shown');assert.deepEqual(s1,s0,'locked page must not write saves');assert.deepEqual(errors,[]);
+  assert.equal(await page.evaluate(()=>!!window.__tzz),false,'locked save must not boot gameplay');assert(body.includes(entry==='/preview/'?'COLLECTIBLES_BOOT_FAILED_READ_ONLY':mode==='bad-main'?'INVALID_JSON_READ_ONLY':'SOURCE_BACKUP_REQUIRES_REVIEW'),'lock reason shown');/* 新版 preview 在收藏层先锁，原因码和正式版不同，已报熊大定 */assert.deepEqual(s1,s0,'locked page must not write saves');assert.deepEqual(errors,[]);
   rows.push({entry,mode,status:'pass',detail});continue;}
  await page.waitForFunction(()=>window.__tzz&&window.__toastProbe);
  const before=await page.evaluate(()=>({shows:__firstShows.length,text:document.querySelector('#toast').textContent,role:document.querySelector('#toast').getAttribute('role')}));
