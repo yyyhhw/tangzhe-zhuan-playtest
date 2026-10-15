@@ -1,9 +1,9 @@
 // Node/VM and isolated in-memory storage only; not real browser evidence.
 import {test} from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';import {createRequire} from 'node:module';
 import {createSaveCoordinator,KEYS} from '../../collection/host-save.mjs';import {createApprovedTrialModel} from '../../collection/domain/model.mjs';import {TRIAL_CONFIG} from '../../collection/domain/trial-config.mjs';import {canonical} from '../../collection/domain/json.mjs';
-const pageToken='xingtu02-20261015-r1';
-const uiToken='xingtu02-20261015-r1';
-const root=new URL('../../',import.meta.url),read=p=>fs.readFileSync(new URL(p,root),'utf8'),require=createRequire(import.meta.url),token='xingtu02-20261015-r1';
+const pageToken='xingtu135-20261015-r1';
+const uiToken='xingtu135-20261015-r1';
+const root=new URL('../../',import.meta.url),read=p=>fs.readFileSync(new URL(p,root),'utf8'),require=createRequire(import.meta.url),token='xingtu135-20261015-r1';
 function fn(src,name){const start=src.indexOf('function '+name+'(');assert(start>=0);const next=src.indexOf('\nfunction ',start+1);return src.slice(start,next===-1?undefined:next);}
 for(const prefix of ['', 'preview/']){
  test(prefix+' actual parent entry gate and origin-checked iframe handshake (VM)',()=>{
@@ -52,7 +52,7 @@ test('isolated real coordinator preserves card compatibility keys and TD history
 });
 test('four entry version/changed-resource closure and preserved pet channel',()=>{
  for(const p of ['','preview/','pet/game/','preview/pet/game/']){
-  const kind=p.startsWith('preview/')?'preview':'formal',html=read(p+'index.html');assert.equal(JSON.parse(read(p+'version.json')).v,kind+'-'+(p==='preview/pet/game/'?'xingtu02-20261015-r1':pageToken));assert(html.includes("var B='"+kind+'-'+(p==='preview/pet/game/'?'xingtu02-20261015-r1':pageToken)+"'"));assert(!html.includes('cardsFrame'));
+  const kind=p.startsWith('preview/')?'preview':'formal',html=read(p+'index.html');assert.equal(JSON.parse(read(p+'version.json')).v,kind+'-'+(p==='preview/pet/game/'?'xingtu135-20261015-r1':pageToken));assert(html.includes("var B='"+kind+'-'+(p==='preview/pet/game/'?'xingtu135-20261015-r1':pageToken)+"'"));assert(!html.includes('cardsFrame'));
   for(const m of html.matchAll(/(?:src|href)="([^"?]+)\?v=([^"']+)"/g)){assert(fs.existsSync(new URL(m[1],new URL(p,root))),p+m[1]);if(/collection\/bootstrap\.mjs/.test(m[1]))assert.equal(m[2],pageToken);if(/td\/tdhost\.js/.test(m[1]))assert.equal(m[2],'tea-td-cards-out-20261012-r1');}
  }
  assert(read('collection/bootstrap.mjs').includes('../app.js?v='+uiToken));assert.equal((read('collection/bootstrap.mjs').match(new RegExp('pet/game/app\\.js\\?v='+token,'g'))||[]).length,2);assert(read('preview/collection/bootstrap.mjs').includes('../app.js?collectionHost=1c&v='+uiToken));

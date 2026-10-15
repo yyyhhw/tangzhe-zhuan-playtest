@@ -53,7 +53,7 @@
   },
   {
     "path": "preview/pet/game/index.html",
-    "sha256": "62ed2a6f33c6da591261d704f9376359bdffe01505fa9849be335e57637c50f5"
+    "sha256": "e70b737fc053bb488d72ea42ff0a0ffa44afa9ba1087d0e361f0ae9a730eb638"
   },
   {
     "path": "preview/pet/game/petgame.css",
@@ -77,7 +77,7 @@
   },
   {
     "path": "preview/pet/game/version.json",
-    "sha256": "4db9a228c43a85233f82e6703053b35b0d5ec62ac93d5ef9339367159476fd4c"
+    "sha256": "9eabd445a8eab55e1f766ae3290b390f6658fb409b6e44a248da7307062a6d30"
   },
   {
     "path": "preview/style.css",

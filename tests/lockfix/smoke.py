@@ -10,7 +10,7 @@ with sync_playwright() as pw:
       p.goto(base+path)
       try: p.wait_for_function("()=>!!window.__tzz&&!document.getElementById('collectionStartup')",timeout=25000); ok=True
       except Exception: ok=False
-      v=p.evaluate("()=>[...document.scripts].map(s=>s.src).filter(s=>s.includes('xingtu02-20261015-r1')).length")
+      v=p.evaluate("()=>[...document.scripts].map(s=>s.src).filter(s=>s.includes('xingtu135-20261015-r1')).length")
       print(n,path or '/','ok' if ok and not errs and v else 'BAD',v,errs[:2]); bad+= not(ok and not errs and v)
       c.close()
     b.close()
