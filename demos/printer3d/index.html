@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="theme-color" content="#0b1020" />
+<title>3D Printer — Tap to Print</title>
+<style>
+  :root { color-scheme: dark; }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: radial-gradient(120% 90% at 50% 15%, #1b2740 0%, #0b1020 60%, #05070d 100%);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #eaf0ff; touch-action: none; user-select: none; -webkit-user-select: none;
+  }
+  #app { position: fixed; inset: 0; }
+  canvas { display: block; touch-action: none; }
+
+  /* ---------- HUD ---------- */
+  .hud { position: fixed; left: 0; right: 0; pointer-events: none; z-index: 10; }
+  #topbar {
+    top: 0; padding: calc(env(safe-area-inset-top) + 12px) 14px 12px;
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 10px;
+  }
+  .panel {
+    pointer-events: none;
+    background: rgba(14,20,36,0.62);
+    border: 1px solid rgba(120,160,255,0.18);
+    border-radius: 14px;
+    padding: 10px 13px;
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  }
+  .title { font-size: 15px; font-weight: 700; letter-spacing: .2px; }
+  .subtitle { font-size: 11px; opacity: .65; margin-top: 2px; }
+
+  #readout { min-width: 148px; }
+  .stat { display: flex; justify-content: space-between; align-items: baseline; gap: 14px; font-variant-numeric: tabular-nums; }
+  .stat + .stat { margin-top: 5px; }
+  .stat .k { font-size: 11px; opacity: .62; }
+  .stat .v { font-size: 16px; font-weight: 700; }
+  .barwrap { margin-top: 7px; }
+  .barlabel { font-size: 10px; opacity: .6; display:flex; justify-content:space-between; margin-bottom:3px; }
+  .bar { height: 7px; border-radius: 6px; background: rgba(255,255,255,0.1); overflow: hidden; }
+  .bar > span { display:block; height:100%; width:100%; border-radius:6px;
+    background: linear-gradient(90deg,#38f0b0,#36c6ff); transition: width .5s ease; }
+  .bar.ink > span { background: linear-gradient(90deg,#ffd24a,#ff7a59); }
+
+  #status {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    top: calc(env(safe-area-inset-top) + 74px);
+    font-size: 12px; font-weight: 600; letter-spacing: .3px;
+    color: #bfe0ff; opacity: 0; transition: opacity .35s ease;
+    background: rgba(14,20,36,0.6); border:1px solid rgba(120,160,255,0.18);
+    padding: 6px 14px; border-radius: 999px; backdrop-filter: blur(8px);
+  }
+  #status.show { opacity: 1; }
+
+  /* ---------- Bottom controls ---------- */
+  #bottom {
+    bottom: 0; padding: 14px 16px calc(env(safe-area-inset-bottom) + 18px);
+    display: flex; flex-direction: column; align-items: center; gap: 10px;
+  }
+  #printBtn {
+    pointer-events: auto;
+    width: min(74vw, 320px); height: 64px; border: none; border-radius: 18px;
+    font-size: 19px; font-weight: 800; letter-spacing: .6px; color: #04210f;
+    background: linear-gradient(180deg,#5bf0a8,#22c07a);
+    box-shadow: 0 10px 26px rgba(34,192,122,0.45), inset 0 1px 0 rgba(255,255,255,0.5);
+    transition: transform .08s ease, filter .15s ease, opacity .2s ease;
+    display:flex; align-items:center; justify-content:center; gap:10px;
+  }
+  #printBtn:active { transform: translateY(2px) scale(.985); filter: brightness(1.05); }
+  #printBtn[disabled] { opacity: .5; filter: grayscale(.4); }
+  #printBtn .dot { width:11px; height:11px; border-radius:50%; background:#04210f; opacity:.75; }
+  #printBtn.busy { background: linear-gradient(180deg,#ffd24a,#ff9a3d); color:#2a1600;
+    box-shadow:0 10px 26px rgba(255,154,61,0.45), inset 0 1px 0 rgba(255,255,255,0.5); }
+  .hint { pointer-events:none; font-size: 11px; opacity:.5; }
+
+  #loader {
+    position: fixed; inset: 0; z-index: 50; display:flex; align-items:center; justify-content:center;
+    flex-direction:column; gap:14px; background: #06090f;
+    transition: opacity .6s ease; font-size: 13px; letter-spacing:.4px; color:#9db4e0;
+  }
+  #loader.hide { opacity: 0; pointer-events: none; }
+  .spin { width: 34px; height: 34px; border-radius:50%;
+    border: 3px solid rgba(120,160,255,0.2); border-top-color:#5bb0ff; animation: sp 0.9s linear infinite; }
+  @keyframes sp { to { transform: rotate(360deg); } }
+  #errbox { position:fixed; inset:auto 12px 12px 12px; z-index:60; display:none;
+    background:#351015; border:1px solid #863; color:#ffd7d7; padding:12px 14px;
+    border-radius:12px; font-size:12px; line-height:1.4; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<div id="loader"><div class="spin"></div><div>Loading 3D printer…</div></div>
+
+<div class="hud" id="topbar">
+  <div class="panel" id="titlebox">
+    <div class="title">Desk Printer 3D</div>
+    <div class="subtitle">Drag to orbit · pinch to zoom</div>
+  </div>
+  <div class="panel" id="readout">
+    <div class="stat"><span class="k">Pages printed</span><span class="v" id="pages">0</span></div>
+    <div class="stat"><span class="k">Paper left</span><span class="v" id="paper">30</span></div>
+    <div class="barwrap">
+      <div class="barlabel"><span>Ink</span><span id="inkpct">100%</span></div>
+      <div class="bar ink"><span id="inkbar"></span></div>
+    </div>
+  </div>
+</div>
+
+<div id="status" class="hud"></div>
+
+<div class="hud" id="bottom">
+  <button id="printBtn" aria-label="Print a page"><span class="dot"></span><span id="btnLabel">PRINT</span></button>
+  <div class="hint">Tap the green button — or the printer's own PRINT button</div>
+</div>
+
+<div id="errbox"></div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+// ---------- global error surfacing (helps on-device debugging) ----------
+function showErr(msg){
+  const b = document.getElementById('errbox');
+  b.style.display = 'block';
+  b.textContent = 'Error: ' + msg;
+}
+window.addEventListener('error', e => showErr(e.message || String(e.error||e)));
+window.addEventListener('unhandledrejection', e => showErr((e.reason && e.reason.message) || String(e.reason)));
+
+// ---------- state (single source of truth) ----------
+const PAPER_CAPACITY = 30;
+const state = {
+  pages: 0,
+  paper: PAPER_CAPACITY,
+  ink: 100,          // percent
+  printing: false,
+};
+
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ---------- renderer / scene / camera ----------
+const container = document.getElementById('app');
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2)); // cap DPR at 2
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+container.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color('#0b1020');
+scene.fog = new THREE.Fog('#0b1020', 14, 34);
+
+const camera = new THREE.PerspectiveCamera(42, window.innerWidth/window.innerHeight, 0.1, 100);
+camera.position.set(5.2, 4.0, 6.4);
+
+// ---------- controls (touch friendly) ----------
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.enablePan = false;
+controls.minDistance = 4.0;
+controls.maxDistance = 13.0;
+controls.target.set(0, 1.0, 0);
+// never go under the floor
+controls.minPolarAngle = 0.12;
+controls.maxPolarAngle = Math.PI * 0.49;
+controls.rotateSpeed = 0.9;
+controls.zoomSpeed = 0.9;
+// explicit touch mapping: 1 finger rotate, 2 finger pinch-zoom (no pan)
+controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN };
+
+// ---------- lighting ----------
+const hemi = new THREE.HemisphereLight('#bcd2ff', '#1a1e2a', 0.65);
+scene.add(hemi);
+
+const key = new THREE.DirectionalLight('#fff4e6', 2.0);
+key.position.set(5, 8, 5);
+key.castShadow = true;
+key.shadow.mapSize.set(1024, 1024);
+key.shadow.camera.near = 1; key.shadow.camera.far = 30;
+key.shadow.camera.left = -8; key.shadow.camera.right = 8;
+key.shadow.camera.top = 8; key.shadow.camera.bottom = -8;
+key.shadow.bias = -0.0004;
+key.shadow.radius = 4;
+scene.add(key);
+
+const fill = new THREE.DirectionalLight('#9ec5ff', 0.55);
+fill.position.set(-6, 4, -3);
+scene.add(fill);
+
+const rim = new THREE.DirectionalLight('#ffffff', 0.5);
+rim.position.set(-2, 3, -7);
+scene.add(rim);
+
+// ---------- ground + soft shadow ----------
+const ground = new THREE.Mesh(
+  new THREE.CircleGeometry(16, 64),
+  new THREE.MeshStandardMaterial({ color: '#0e1424', roughness: 0.95, metalness: 0.0 })
+);
+ground.rotation.x = -Math.PI/2;
+ground.position.y = 0;
+ground.receiveShadow = true;
+scene.add(ground);
+
+// subtle grid for depth
+const grid = new THREE.GridHelper(40, 40, 0x2a3a66, 0x182238);
+grid.position.y = 0.002;
+grid.material.opacity = 0.25; grid.material.transparent = true;
+scene.add(grid);
+
+// ---------- materials ----------
+const matBodyLight = new THREE.MeshStandardMaterial({ color: '#f3f5f8', roughness: 0.55, metalness: 0.05 });
+const matBodyDark  = new THREE.MeshStandardMaterial({ color: '#2c3340', roughness: 0.5,  metalness: 0.15 });
+const matAccent    = new THREE.MeshStandardMaterial({ color: '#3b86ff', roughness: 0.4,  metalness: 0.2 });
+const matDarkPlastic = new THREE.MeshStandardMaterial({ color: '#1b2029', roughness: 0.65, metalness: 0.1 });
+const matPaper     = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.9, metalness: 0.0, side: THREE.DoubleSide });
+const matTray      = new THREE.MeshStandardMaterial({ color: '#d7dde6', roughness: 0.6, metalness: 0.05 });
+const matScreenOff = new THREE.MeshStandardMaterial({ color: '#0a1726', roughness: 0.3, metalness: 0.2, emissive: '#06324a', emissiveIntensity: 0.5 });
+
+// printer group centred so it orbits nicely
+const printer = new THREE.Group();
+scene.add(printer);
+
+// --- main body (rounded box) ---
+const BODY_W = 4.2, BODY_H = 2.0, BODY_D = 3.0;
+const body = new THREE.Mesh(new RoundedBoxGeometry(BODY_W, BODY_H, BODY_D, 6, 0.28), matBodyLight);
+body.position.y = 1.0;
+body.castShadow = true; body.receiveShadow = true;
+printer.add(body);
+
+// lower dark base trim
+const base = new THREE.Mesh(new RoundedBoxGeometry(BODY_W+0.06, 0.5, BODY_D+0.06, 5, 0.18), matBodyDark);
+base.position.y = 0.26; base.castShadow = true; base.receiveShadow = true;
+printer.add(base);
+
+// seam line (thin dark box around the mid)
+const seam = new THREE.Mesh(new THREE.BoxGeometry(BODY_W+0.015, 0.05, BODY_D+0.015), matDarkPlastic);
+seam.position.y = 1.35; printer.add(seam);
+
+// side vents (thin slats on both sides)
+function addVents(sign){
+  const g = new THREE.Group();
+  for(let i=0;i<7;i++){
+    const slat = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.05, 1.5), matDarkPlastic);
+    slat.position.set(sign*(BODY_W/2+0.005), 0.8 + i*0.12, 0.2);
+    g.add(slat);
+  }
+  printer.add(g);
+}
+addVents(1); addVents(-1);
+
+// ---------- top control panel (raised, slightly tilted) ----------
+const panel = new THREE.Group();
+panel.position.set(1.05, BODY_H + 0.02, 0.15);
+printer.add(panel);
+
+const panelBase = new THREE.Mesh(new RoundedBoxGeometry(1.9, 0.22, 1.5, 4, 0.1), matBodyDark);
+panelBase.castShadow = true;
+panel.add(panelBase);
+panel.rotation.x = -0.18; // tilt toward viewer/front
+
+// status screen
+const screen = new THREE.Mesh(new RoundedBoxGeometry(0.95, 0.5, 0.06, 3, 0.03), matScreenOff);
+screen.position.set(-0.4, 0.14, 0.2);
+screen.rotation.x = -Math.PI/2 + 0.0;
+// lay screen flat-ish on panel top
+screen.rotation.set(-Math.PI/2, 0, 0);
+screen.position.set(-0.4, 0.12, 0.0);
+panel.add(screen);
+
+// screen glowing text via canvas texture
+const scrCanvas = document.createElement('canvas');
+scrCanvas.width = 256; scrCanvas.height = 128;
+const scrCtx = scrCanvas.getContext('2d');
+const scrTex = new THREE.CanvasTexture(scrCanvas);
+scrTex.colorSpace = THREE.SRGBColorSpace;
+const screenGlass = new THREE.Mesh(
+  new THREE.PlaneGeometry(0.9, 0.46),
+  new THREE.MeshBasicMaterial({ map: scrTex, transparent: true })
+);
+screenGlass.rotation.x = -Math.PI/2;
+screenGlass.position.set(-0.4, 0.155, 0.0);
+panel.add(screenGlass);
+
+function drawScreen(){
+  const c = scrCtx;
+  c.clearRect(0,0,256,128);
+  c.fillStyle = '#04141f'; c.fillRect(0,0,256,128);
+  c.fillStyle = state.printing ? '#ffd24a' : '#38f0b0';
+  c.font = 'bold 26px monospace';
+  c.textBaseline = 'top';
+  c.fillText(state.printing ? 'PRINTING' : 'READY', 14, 12);
+  c.font = '18px monospace';
+  c.fillStyle = '#7fd4ff';
+  c.fillText('PG ' + state.pages, 14, 48);
+  c.fillText('INK ' + Math.round(state.ink) + '%', 14, 74);
+  c.fillText('PPR ' + state.paper, 14, 100);
+  scrTex.needsUpdate = true;
+}
+
+// 3D PRINT button (raised cylinder, glowing)
+const btnMat = new THREE.MeshStandardMaterial({ color: '#27d07a', roughness: 0.35, metalness: 0.1, emissive: '#0f6b3a', emissiveIntensity: 0.6 });
+const printBtn3D = new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.28, 0.14, 40), btnMat);
+printBtn3D.position.set(0.55, 0.19, 0.0);
+printBtn3D.castShadow = true;
+printBtn3D.name = 'PRINT3D';
+panel.add(printBtn3D);
+// ring around button
+const btnRing = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.03, 12, 40), matDarkPlastic);
+btnRing.position.copy(printBtn3D.position); btnRing.position.y = 0.12;
+btnRing.rotation.x = Math.PI/2;
+panel.add(btnRing);
+
+// indicator LEDs
+function makeLED(color){
+  const m = new THREE.MeshStandardMaterial({ color, emissive: color, emissiveIntensity: 1.1, roughness: 0.3 });
+  const led = new THREE.Mesh(new THREE.SphereGeometry(0.055, 16, 16), m);
+  return led;
+}
+const ledPower = makeLED('#39e6ff');   // steady = power
+ledPower.position.set(0.3, 0.14, 0.52);
+panel.add(ledPower);
+const ledStatus = makeLED('#ffce3a');   // blinks while printing
+ledStatus.position.set(0.55, 0.14, 0.52);
+ledStatus.material.emissiveIntensity = 0.15;
+panel.add(ledStatus);
+
+// ---------- back paper feed tray + paper stack ----------
+const feedTray = new THREE.Group();
+feedTray.position.set(0, BODY_H + 0.05, -BODY_D/2 + 0.2);
+printer.add(feedTray);
+
+// angled tray plate
+const trayPlate = new THREE.Mesh(new RoundedBoxGeometry(3.0, 0.08, 1.4, 3, 0.05), matTray);
+trayPlate.position.set(0, 0.5, -0.7);
+trayPlate.rotation.x = -0.62;
+trayPlate.castShadow = true; trayPlate.receiveShadow = true;
+feedTray.add(trayPlate);
+// tray side guides
+for(const s of [-1,1]){
+  const guide = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.3, 1.3), matTray);
+  guide.position.set(s*1.3, 0.62, -0.7);
+  guide.rotation.x = -0.62;
+  feedTray.add(guide);
+}
+
+// paper stack (its scale.y shrinks as paper decreases)
+const stackFull = 0.5;
+const paperStack = new THREE.Mesh(new THREE.BoxGeometry(2.5, stackFull, 1.1), matPaper);
+paperStack.castShadow = true; paperStack.receiveShadow = true;
+// base pivot so it shrinks from top down
+const stackPivot = new THREE.Group();
+stackPivot.position.set(0, 0.42, -0.62);
+stackPivot.rotation.x = -0.62;
+stackPivot.add(paperStack);
+feedTray.add(stackPivot);
+// thin lines on stack to suggest sheets
+const stackEdge = new THREE.Mesh(new THREE.BoxGeometry(2.52, stackFull, 0.02),
+  new THREE.MeshStandardMaterial({ color:'#dfe3ea', roughness:0.9 }));
+stackEdge.position.set(0, 0, 0.56); paperStack.add(stackEdge);
+
+function updateStack(){
+  const frac = Math.max(0.001, state.paper / PAPER_CAPACITY);
+  paperStack.scale.y = frac;
+  // keep bottom anchored: box centred, so lift by half the removed height
+  paperStack.position.y = (stackFull * frac)/2 - stackFull/2 + 0.04;
+  paperStack.visible = state.paper > 0;
+}
+
+// ---------- front output tray + exit slot ----------
+const outTray = new THREE.Group();
+outTray.position.set(0, 0.95, BODY_D/2);
+printer.add(outTray);
+
+// exit slot (dark recess on the front face)
+const slot = new THREE.Mesh(new THREE.BoxGeometry(2.7, 0.14, 0.12), matDarkPlastic);
+slot.position.set(0, 0.0, 0.0);
+outTray.add(slot);
+
+// output tray lip sticking out at front, slightly downward
+const outPlate = new THREE.Mesh(new RoundedBoxGeometry(2.9, 0.06, 1.5, 3, 0.04), matTray);
+outPlate.position.set(0, -0.22, 0.85);
+outPlate.rotation.x = 0.14;
+outPlate.castShadow = true; outPlate.receiveShadow = true;
+outTray.add(outPlate);
+// small raised stopper at tray end
+const stopper = new THREE.Mesh(new THREE.BoxGeometry(2.9, 0.18, 0.06), matTray);
+stopper.position.set(0, -0.14, 1.55); stopper.rotation.x = 0.14;
+outTray.add(stopper);
+
+// the animated sheet that comes out of the slot
+const sheet = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 1.5), matPaper);
+sheet.rotation.x = -Math.PI/2 + 0.14;
+sheet.visible = false;
+outTray.add(sheet);
+// print lines on sheet via texture
+const sCanvas = document.createElement('canvas'); sCanvas.width=256; sCanvas.height=160;
+const sx = sCanvas.getContext('2d');
+sx.fillStyle='#ffffff'; sx.fillRect(0,0,256,160);
+sx.fillStyle='#8a94a6';
+for(let i=0;i<7;i++){ sx.fillRect(28, 24+i*18, (i%3===0?150:200), 6); }
+sx.fillStyle='#3b86ff'; sx.fillRect(28,12,80,8);
+const sheetTex = new THREE.CanvasTexture(sCanvas);
+sheetTex.colorSpace = THREE.SRGBColorSpace;
+sheet.material = new THREE.MeshStandardMaterial({ map: sheetTex, roughness:0.92, side: THREE.DoubleSide });
+
+// slot positions (local to outTray) the sheet travels between
+const SHEET_START = new THREE.Vector3(0, 0.02, 0.0);   // tucked in slot
+const SHEET_END   = new THREE.Vector3(0, -0.15, 1.0);  // out on the tray
+function placeSheet(t){ // t 0..1
+  sheet.position.lerpVectors(SHEET_START, SHEET_END, t);
+}
+placeSheet(0);
+
+// ---------- raycaster for tapping the 3D button ----------
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+let downXY = null;
+function onPointerDown(e){
+  const t = e.changedTouches ? e.changedTouches[0] : e;
+  downXY = { x: t.clientX, y: t.clientY };
+}
+function onPointerUp(e){
+  if(!downXY) return;
+  const t = e.changedTouches ? e.changedTouches[0] : e;
+  const dx = t.clientX - downXY.x, dy = t.clientY - downXY.y;
+  downXY = null;
+  if(Math.hypot(dx,dy) > 12) return; // was a drag, not a tap
+  pointer.x = (t.clientX / window.innerWidth) * 2 - 1;
+  pointer.y = -(t.clientY / window.innerHeight) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+  const hit = raycaster.intersectObject(printBtn3D, false);
+  if(hit.length) startPrint();
+}
+renderer.domElement.addEventListener('pointerdown', onPointerDown, {passive:true});
+renderer.domElement.addEventListener('pointerup', onPointerUp, {passive:true});
+
+// ---------- HUD refs ----------
+const elPages = document.getElementById('pages');
+const elPaper = document.getElementById('paper');
+const elInkPct = document.getElementById('inkpct');
+const elInkBar = document.getElementById('inkbar');
+const elStatus = document.getElementById('status');
+const btn = document.getElementById('printBtn');
+const btnLabel = document.getElementById('btnLabel');
+
+function flashStatus(msg){
+  elStatus.textContent = msg;
+  elStatus.classList.add('show');
+  clearTimeout(flashStatus._t);
+  flashStatus._t = setTimeout(()=> elStatus.classList.remove('show'), 1600);
+}
+
+function renderHUD(){
+  elPages.textContent = state.pages;
+  elPaper.textContent = state.paper;
+  elInkPct.textContent = Math.round(state.ink) + '%';
+  elInkBar.style.width = Math.max(0, state.ink) + '%';
+  btn.classList.toggle('busy', state.printing);
+  btnLabel.textContent = state.printing ? 'PRINTING…' : 'PRINT';
+  btn.disabled = state.printing;
+  drawScreen();
+}
+
+// ---------- print job logic ----------
+function startPrint(){
+  if(state.printing) return;
+
+  // reload paper automatically if empty
+  if(state.paper <= 0){
+    state.paper = PAPER_CAPACITY;
+    updateStack();
+    flashStatus('Paper reloaded — tray full');
+    renderHUD();
+    return;
+  }
+  // refill ink if depleted
+  if(state.ink <= 0){
+    state.ink = 100;
+    flashStatus('Ink cartridge replaced');
+    renderHUD();
+    return;
+  }
+
+  state.printing = true;
+  flashStatus('Printing page ' + (state.pages + 1));
+  renderHUD();
+
+  // consume resources now (state-driven)
+  state.paper = Math.max(0, state.paper - 1);
+  state.ink = Math.max(0, state.ink - 100/60); // ~60 pages per cartridge
+  state.pages += 1;
+  updateStack();
+
+  const DURATION = reduceMotion ? 220 : 1500;
+  const t0 = performance.now();
+  sheet.visible = true;
+
+  function step(now){
+    const t = Math.min(1, (now - t0) / DURATION);
+    const e = easeOutCubic(t);
+    placeSheet(e);
+    // blink the status LED + HTML button while printing
+    const blink = (Math.sin(now/90) > 0) ? 1.3 : 0.12;
+    ledStatus.material.emissiveIntensity = blink;
+    btnMat.emissiveIntensity = 0.6 + (blink>1?0.8:0);
+    if(t < 1){ requestAnimationFrame(step); }
+    else { finishPrint(); }
+  }
+  requestAnimationFrame(step);
+}
+
+function finishPrint(){
+  state.printing = false;
+  ledStatus.material.emissiveIntensity = 0.15;
+  btnMat.emissiveIntensity = 0.6;
+  // leave the printed sheet resting on the tray briefly, then tuck back for next job
+  setTimeout(()=>{ sheet.visible = false; placeSheet(0); }, reduceMotion ? 150 : 650);
+
+  let msg = 'Done · ' + state.pages + ' page' + (state.pages===1?'':'s');
+  if(state.paper <= 0) msg = 'Out of paper — tap PRINT to reload';
+  else if(state.ink <= 0) msg = 'Out of ink — tap PRINT to replace';
+  flashStatus(msg);
+  renderHUD();
+}
+
+function easeOutCubic(t){ return 1 - Math.pow(1 - t, 3); }
+
+btn.addEventListener('click', startPrint);
+
+// ---------- resize ----------
+function onResize(){
+  const w = window.innerWidth, h = window.innerHeight;
+  camera.aspect = w/h; camera.updateProjectionMatrix();
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.setSize(w, h);
+}
+window.addEventListener('resize', onResize);
+window.addEventListener('orientationchange', onResize);
+
+// ---------- idle animation + render loop ----------
+const clock = new THREE.Clock();
+function animate(){
+  requestAnimationFrame(animate);
+  const t = clock.getElapsedTime();
+  if(!reduceMotion){
+    // gentle breathing on the power LED
+    ledPower.material.emissiveIntensity = 0.9 + Math.sin(t*2)*0.25;
+    if(!state.printing){
+      // very subtle idle bob of the whole printer
+      printer.position.y = Math.sin(t*0.8) * 0.015;
+    }
+  } else {
+    printer.position.y = 0;
+  }
+  controls.update();
+  renderer.render(scene, camera);
+}
+
+// ---------- boot ----------
+updateStack();
+renderHUD();
+animate();
+// hide loader once first frame is up
+requestAnimationFrame(()=> {
+  const l = document.getElementById('loader');
+  l.classList.add('hide');
+  setTimeout(()=> l.remove(), 650);
+});
+</script>
+</body>
+</html>
