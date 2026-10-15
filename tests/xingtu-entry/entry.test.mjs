@@ -9,9 +9,11 @@ function ctx(file,shops){const src=read(file),toasts=[],opens=[];const c={state:
 const fresh=()=>[{open:true,lv:1},{open:false,lv:0},{open:false,lv:0},{open:false,lv:0}];
 for(const file of ['app.js','pet/game/app.js']){
  test(file+': entry visible on a fresh save, locked, explains every missing item',()=>{const {c,src}=ctx(file,fresh());
-  const pages=c.shopGameCard?[0,1,2,3].map(i=>c.shopGameCard(i)):[0,1,2,3].map(i=>c.xingtuCard(i));
-  for(const h of pages){assert(h.includes('data-act="xingtu"'));assert(!/data-act="xingtu"[^>]*disabled/.test(h));assert(h.includes('星途未解锁：还需 烧烤摊 Lv1→35（差34级）、奶茶店 未开店、漫画书店 未开店、科技公司 未开店'));}
-  assert(src.includes("'<button class=\"buy no\" disabled>未解锁</button>'}</div>` + xingtuCard(i)"),'unopened shop page also shows entry');
+  const h=c.shopGameCard?c.shopGameCard(3):c.xingtuCard(3);
+  assert(h.includes('data-act="xingtu"'));assert(!/data-act="xingtu"[^>]*disabled/.test(h));assert(h.includes('星途未解锁：还需 烧烤摊 Lv1→35（差34级）、奶茶店 未开店、漫画书店 未开店、科技公司 未开店'));
+  if(c.shopGameCard)for(const i of [0,1,2])assert(!c.shopGameCard(i).includes('xingtu'),'shop '+i+' has no xingtu entry');
+  assert(src.includes("'<button class=\"buy no\" disabled>未解锁</button>'}</div>` + (i === 3 ? xingtuCard(i) : '')"),'unopened tech page shows entry, other unopened pages do not');
+  assert(!src.includes('` + xingtuCard(i);'));
   c.act('xingtu');assert.equal(c.opens.length,0);assert.match(c.toasts[0],/^星途未解锁：还需 /);});
  test(file+': mixed state lists only what is missing',()=>{const {c}=ctx(file,[{open:true,lv:12},{open:true,lv:35},{open:true,lv:40},{open:false,lv:0}]);
   assert.equal(JSON.stringify(c.xingtuMissing(c.state.shops)),JSON.stringify(['烧烤摊 Lv12→35（差23级）','科技公司 未开店']));
@@ -21,4 +23,9 @@ for(const file of ['app.js','pet/game/app.js']){
   const h=c.xingtuCard(3);assert(h.includes('打开星图'));assert(h.includes('全部店铺Lv35解锁'));assert(!h.includes('星途未解锁'));assert(!h.includes('disabled'));
   assert.equal(c.xingtuLockText(),'');c.act('xingtu');assert.equal(c.opens.length,1);assert.equal(c.toasts.length,0);});
 }
+test('杨总 2026-10-15: xingtu has exactly one entry (tech company) in root and pet',()=>{for(const file of ['app.js','pet/game/app.js']){const src=read(file);
+ const calls=src.split('xingtuCard(i)').length-1-(src.match(/function xingtuCard\(i\)/g)||[]).length;
+ assert.equal((src.match(/data-act=\\?"xingtu\\?"/g)||[]).length,1,file+' one xingtu button template');
+ for(const m of src.matchAll(/xingtuCard\(i\)/g)){const pre=src.slice(Math.max(0,m.index-40),m.index);if(pre.includes('function '))continue;assert(/i === 3 \?|i === 3\) h \+= $/.test(pre),file+' guarded: '+pre);}
+ assert(!src.includes("const xt = i === 3 ? '' : xingtuCard(i)"));assert(calls>=1);}});
 test('unlock rule in space/host.mjs and moon.mjs unchanged',()=>{assert(read('space/host.mjs').includes("s?.open===true&&s.lv>=35)))return {ok:false,code:'SPACE_TECH_LEVEL_REQUIRED'}"));assert(read('space/moon.mjs').includes('minShopLevel:35'));});

@@ -7,7 +7,7 @@ const COLLECTION = window.FormalCollectionRuntime;
 if (!COLLECTION?.ownsLock()) {
   // Stale HTML can fetch a new script before bootstrap. No storage access here.
   const url=new URL(location.href);
-  if(url.searchParams.get('v')!=='formal-xtcopyfix-20261015-r1') {url.searchParams.set('v','formal-xtcopyfix-20261015-r1');location.replace(url.href);}
+  if(url.searchParams.get('v')!=='formal-xtentry-20261015-r1') {url.searchParams.set('v','formal-xtentry-20261015-r1');location.replace(url.href);}
   else {const notice=document.createElement('p');notice.textContent='页面资源尚未更新完整，存档未写入。请关闭此页后重新打开。';document.body.prepend(notice);}
   return;
 }
@@ -1400,7 +1400,7 @@ function renderShop() {
       <div class="card hl"><div class="ava sq">${SHOP_ICON[i]}</div><div class="info"><div class="name">${S.name}</div>
       <div class="desc">开张后可雇员工 <b>${S.emp.name}</b>${joins && joins.id !== 'rocket' ? `，CEO <b>${joins.name}</b>（${E.TYPES[joins.type]}）加入` : ''}${i === 3 ? `；雇到员工后开放<b>盲盒</b>，Lv${CFG.ROCKET_UNLOCK_LV} 后 <b>${E.ROCKET_NAME.name}</b> 加入` : ''}</div>
       <div class="gain">${prevOk ? '' : '先开 ' + E.SHOPS[i - 1].name}</div></div>
-      ${prevOk ? btn('open', i, '开张', S.open) : '<button class="buy no" disabled>未解锁</button>'}</div>` + xingtuCard(i);   // 星途入口：未开张的店页也常显，并说明还差什么
+      ${prevOk ? btn('open', i, '开张', S.open) : '<button class="buy no" disabled>未解锁</button>'}</div>` + (i === 3 ? xingtuCard(i) : '');   // 杨总 2026-10-15：星途只在科技公司一个入口（未开张也显示缺什么）   // 星途入口：未开张的店页也常显，并说明还差什么
   }
   const info = E.ceoInfo(state, i), sr = E.shopRate(state, i), sign = E.signOf(state, i);
   const nm = E.nextMilestone(s.lv), prevM = [0, 10, 25, 50].filter(m => m <= s.lv).pop() || 0;
@@ -1436,7 +1436,7 @@ function renderShop() {
     h += `<div class="card hl"><div class="ava">👔</div><div class="info"><div class="name">CEO 空缺</div><div class="desc">派一位 CEO 来：专长对口 ×${CFG.MATCH_MULT}，跨行 ×${CFG.CROSS_MULT} + 专属事件</div></div>
       <button class="buy" data-act="assignTo" data-arg="${i}">派 CEO</button></div>`;
   }
-  h += xingtuCard(i);
+  if (i === 3) h += xingtuCard(i);   // 杨总 2026-10-15：星途只在科技公司一个入口
   return h;
 }
 function xingtuMissing(shops) {   // 杨总 2026-10-14 09:12「需要出现星途入口 但是表明还差什么所以进不去」：只说明缺什么，解锁规则不变
