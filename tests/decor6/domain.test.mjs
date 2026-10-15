@@ -14,7 +14,7 @@ for(const scope of ['formal','preview']){
   reg.setActive(true);assert.equal(E.ITEMS.length,58);assert.equal(E.REGULAR_ITEMS.length,52);assert.deepEqual(E.ITEMS.slice(0,52),old);assert.equal(E.gachaRemaining(s).length,4);assert.equal(E.gachaPrice(s),200000);
   for(let i=0;i<4;i++){const r=E.gachaDraw(s,0);assert(r.ok);assert.equal(r.cost,200000);assert(!r.item.hidden);assert.equal(r.item.type,'decor');}
   assert.equal(E.gachaComplete(s),true);assert.equal(E.gachaDraw(s,0).ok,false);assert.equal(s.gacha.draws,56);assert.equal(s.gacha.pity,7);assert.equal(s.coins,4200000);assert(!s.gacha.owned.includes('d_opening_photo'));
-  const empty=E.newState(1);assert.equal(E.gachaOdds(empty).perReg,.9/52);assert.equal(E.gachaOdds(empty).superP,.1);empty.gacha.pity=14;assert.equal(E.gachaOdds(empty).superP,1);reg.setActive(false);assert.deepEqual(E.ITEMS,old);
+  const empty=E.newState(1);assert.equal(E.gachaOdds(empty).perReg,.9/(52-(E.STORY_COND_IDS||[]).length));assert.equal(E.gachaOdds(empty).superP,.1);empty.gacha.pity=14;assert.equal(E.gachaOdds(empty).superP,1);reg.setActive(false);assert.deepEqual(E.ITEMS,old);
  });
  test(scope+': exact single claim preserves all opaque fields, wallet, draws, pity and original input',async()=>{
   const t=await setup(undefined,scope);t.init();const p=t.prepare(),s=JSON.parse(p.candidateRaw);s.gacha.future={receipt:['unknown',9]};s.shops[0].future={raw:'preserve'};const before=JSON.stringify(s),evidence=[...t.data];
