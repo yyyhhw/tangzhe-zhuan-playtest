@@ -1,0 +1,46 @@
+name: WebKit/iOS smoke
+
+# Scoped to our session branch for now: manual dispatch + pushes to the branch.
+# Deliberately NOT triggered on main or on pull_request.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - claude/slack-session-qotgmg
+
+permissions:
+  contents: read
+
+jobs:
+  webkit-smoke:
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: tests/webkit-smoke
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install WebKit browser
+        run: npx playwright install --with-deps webkit
+
+      - name: Run WebKit smoke
+        env:
+          WEBKIT_SMOKE_OUT: ${{ github.workspace }}/tests/webkit-smoke/output
+        run: node webkit-smoke.mjs
+
+      - name: Upload screenshots + report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: webkit-smoke-output
+          path: tests/webkit-smoke/output
+          if-no-files-found: warn
