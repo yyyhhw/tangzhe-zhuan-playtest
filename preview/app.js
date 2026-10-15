@@ -2069,7 +2069,7 @@ const petEsc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;',
 const petRoster = () => PG ? PG.view(state, E) : { rooms:{}, standby:[], pets:{} };
 const petOwned = () => Object.keys(petRoster().pets).length > 0;
 const petToken = () => JSON.stringify(Object.values(petRoster().pets).map(p => [p.uid,p.room,p.species,p.boughtAt]));
-const petName = p => (PG.knownSpecies(p.species) ? PG.SPECIES[p.species].emoji + ' ' + PG.SPECIES[p.species].name : '宠物') + ' · ' + p.uid;
+const petName = p => { const same = Object.values(petRoster().pets).filter(q => q.species === p.species), base = PG.knownSpecies(p.species) ? PG.SPECIES[p.species].emoji + ' ' + PG.SPECIES[p.species].name : '宠物'; return same.length > 1 ? base + ' · 第 ' + (same.findIndex(q => q.uid === p.uid) + 1) + ' 只' : base; };
 const PET_WAIT = '等待安置：屋里没有空地，请收起或挪开家具、或升级房子', PET_UNSUP = '成长存档版本不支持：已原样保留，暂停活动';
 function petState(uid) { const a = petActors.get(uid); if (!a) return ''; if (a.rt.unsupported) return 'unsupported'; const w = a.rt.w; return w ? (w.noRoom ? 'waiting' : 'live') : ''; }
 function petInit(tryN) {
