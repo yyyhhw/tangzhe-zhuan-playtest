@@ -112,3 +112,20 @@ workflow file is unchanged. Report: `report-139-<engine>.txt|json`, screenshots 
 
 Not covered: iOS real-device Safari and background-freeze resume; 养成-38 special-guest (k_3) path and the
 home animations; 星途-02 sub-game receipts (firstZombie / firstTDWin).
+
+## 测试-141 养成-38 夜游食神 + 家里动画 (`scenarios-141.mjs`)
+
+Same server / save recipe / engines, 390×844, root + `/pet/game/`. Spawned by `scenarios-130.mjs` after 139
+(`SKIP_141=1` skips it); workflow file unchanged. Report: `report-141-<engine>.txt|json`, screenshots `141-*.png`.
+
+- **⑦a 收下夜游食神** — old save (four shops staffed, no k_3, on 烧烤摊): `forceSpecial()` → special guest is
+  夜游食神 at shop 0 → tap it via `__tzz.hitBig(x, y)` (the canvas tap handler) → comic with 「收下」. Read-before →
+  click 「收下」 → read-after in ONE synchronous `evaluate`: k_3 granted once, coins / draws / pity / daily strictly
+  equal (the guest's own small reward is paid at the tap, before this window). Negative control: same read with
+  an artificial −1 coin must fail `costFree()`. Save-then-refresh keeps k_3 once, disk matches.
+- **⑦b 家里动画** — local 22:00 (game period asserted `night`), owned k_3 + k_4 + k_7, 火箭老板 joined: 77's home
+  shows `[data-story=panda]` with a running CSS animation and `[data-story=moon]`; first visit to 火箭老板's home
+  shows `[data-story=balloons]` (animated) + countdown line 1, then a different line 2 after ~3.6 s; after the 6.2 s
+  balloon window, leaving and coming back does not replay it.
+- Not covered: iOS real device / background freeze; real touch-coordinate mapping for the guest tap; visual
+  quality of animations and the reduced-motion still version; firstZombie / firstTDWin (测试-142).
