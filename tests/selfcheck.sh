@@ -39,24 +39,31 @@ case "${1:-}" in
   *) echo "不认识的参数：$1" >&2; exit 2 ;;
 esac
 
-# 基线先校验，坏了不跑：每行必须「整数或~<TAB>文件」，文件名不能重复，至少一条。
-if [ "$MODE" = against ]; then
-  awk -F'\t' '/^#/ || $0=="" {next}
-    { n++; if (NF != 2 || $2 == "" || $1 !~ /^([0-9]+|~)$/) { print "基线第 " NR " 行格式不对：" $0; bad=1 }
-      else if ($2 in s) { print "基线重复记录：" $2 "（第 " s[$2] " 行和第 " NR " 行）"; bad=1 } else s[$2]=NR }
-    END { if (!n) { print "基线里一个测试都没有"; bad=1 } exit bad }' "$BASE" >&2 || { echo "基线无效，拒绝比较" >&2; exit 2; }
-fi
-
 # 原树不能有软/硬链接（.git 除外）。
 LINKS="$(find . -path ./.git -prune -o \( -type l -o \( -type f -links +1 \) \) -print 2>/dev/null)"
 [ -n "$LINKS" ] && { echo "工作树里有软链接/硬链接，拒绝跑（可能写到外部）：" >&2; echo "$LINKS" | head -20 >&2; exit 2; }
 
-OUT="$(mktemp -d "${TMPDIR:-/tmp}/selfcheck.XXXXXX")" || exit 2
+# 临时目录不能落在仓库里（否则拷贝会递归、测试也会写进原树）。
+TD="$(realpath -m -- "${TMPDIR:-/tmp}")" || exit 2
+case "$TD/" in "$ROOT"/*) echo "TMPDIR=$TD 在仓库 $ROOT 里，拒绝（会递归拷贝）" >&2; exit 2 ;; esac
+OUT="$(mktemp -d "$TD/selfcheck.XXXXXX")" || exit 2
+OUT="$(cd "$OUT" && pwd -P)" || exit 2
+case "$OUT/" in "$ROOT"/*) echo "输出目录 $OUT 落在仓库里，拒绝" >&2; rmdir "$OUT"; exit 2 ;; esac
 WORK="$OUT/repo"; RES="$OUT/results.tsv"; : >"$RES"
 SRV_PID=""
-cleanup() { [ -n "$SRV_PID" ] && kill "$SRV_PID" 2>/dev/null; wait 2>/dev/null; rm -rf "$WORK"; }
+cleanup() { [ -n "$SRV_PID" ] && kill "$SRV_PID" 2>/dev/null; wait 2>/dev/null; chmod -R u+rwx "$WORK" 2>/dev/null; rm -rf "$WORK"; }
 trap cleanup EXIT
 trap 'echo "被中断，原工作树未改动；临时拷贝已删" >&2; exit 130' INT TERM
+
+# 基线先拷成快照 OUT/baseline.tsv，只校验并比较这份快照（原文件之后再改也不影响）。坏了不跑：每行必须「整数或~<TAB>文件」，文件名不能重复，至少一条。
+if [ "$MODE" = against ]; then
+  BSNAP="$OUT/baseline.tsv"; cp -- "$BASE" "$BSNAP" || { echo "基线快照失败" >&2; exit 2; }
+  awk -F'\t' '/^#/ || $0=="" {next}
+    { n++; if (NF != 2 || $2 == "" || $1 !~ /^([0-9]+|~)$/) { print "基线第 " NR " 行格式不对：" $0; bad=1 }
+      else if ($2 in s) { print "基线重复记录：" $2 "（第 " s[$2] " 行和第 " NR " 行）"; bad=1 } else s[$2]=NR }
+    END { if (!n) { print "基线里一个测试都没有"; bad=1 } exit bad }' "$BSNAP" >&2 || { echo "基线无效，拒绝比较" >&2; exit 2; }
+fi
+
 
 if [ -n "${SELFCHECK_LOG:-}" ]; then
   LOGDIR="$(abspath "$SELFCHECK_LOG")"
@@ -69,7 +76,12 @@ else LOGDIR="$OUT/logs"; mkdir -p "$LOGDIR"; fi
 mkdir "$WORK" || exit 2
 ( set -o pipefail; tar -C "$ROOT" --exclude=./.git -cf - . | tar -C "$WORK" -xf - ) \
   || { echo "拷贝工作树到隔离目录失败，不跑测试" >&2; exit 2; }
-# 日志目录如果在原树里，拷贝里那份不算，测试仍只写拷贝。
+# 测试用钩子：只给 tests/selfcheck-neg 模拟「拷贝窗口里混进链接/扫描失败」，正常使用不要设。
+[ -n "${SELFCHECK_TEST_HOOK_AFTER_COPY:-}" ] && bash -c "$SELFCHECK_TEST_HOOK_AFTER_COPY" _ "$WORK"
+# 拷贝后再扫一遍拷贝本身：有软链接/硬链接（链接数>1）或扫描本身出错，都在起服务/跑测试前拒绝。
+CL="$(find "$WORK" \( -type l -o \( -type f -links +1 \) \) -print 2>"$OUT/scan.err")"; sc=$?
+[ "$sc" = 0 ] || { echo "扫描隔离拷贝失败（find 退出码 $sc），不跑测试：$(head -3 "$OUT/scan.err")" >&2; exit 2; }
+[ -n "$CL" ] && { echo "隔离拷贝里出现软链接/硬链接，不跑测试：" >&2; echo "$CL" | head -20 >&2; exit 2; }
 cd "$WORK" || exit 2
 
 files() {
@@ -122,7 +134,7 @@ case "$MODE" in
   against)
     # 基线格式：「退出码<TAB>文件」= 稳定结果；「~<TAB>文件」= 时好时坏；# 开头是注释
     [ -s "$RES" ] || { echo "一个测试都没找到/没跑——不能算通过"; exit 1; }
-    awk -F'\t' -v base="$BASE" '
+    awk -F'\t' -v base="$BSNAP" '
       BEGIN { while ((getline l < base) > 0) { if (l ~ /^#/ || l == "") continue; split(l, a, "\t"); b[a[2]] = a[1] } }
       { f = $2; c = $1; seen[f] = 1; n++
         if (!(f in b)) { if (c != 0) { print "新失败（基线里没有这个文件）\t" c "\t" f; bad = 1 } else print "新文件通过（不抵消缺失）\t" c "\t" f; next }

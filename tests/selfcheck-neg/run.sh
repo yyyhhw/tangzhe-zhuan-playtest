@@ -91,4 +91,29 @@ expect "SELFCHECK_LOG=evidence/logs →0" 0 env SELFCHECK_LOG=evidence/logs test
 rep="$(sed -n 's/.*（日志：\([^；]*\)；.*/\1/p' err.txt)"; echo "  报告的日志路径: $rep"
 chk "报告路径下确有日志且内容正确" '[ "$(cat "$rep/test_a.js.log")" = hello-log ] && [ "$rep" = "$(pwd -P)/evidence/logs" ]'
 
+echo "== 19:06 P1 拷贝后再扫：拷贝里混进链接 / 扫描失败 → 测试不启动"
+mk; EXT="$(mktemp -d)"; echo 外部旧证据 >"$EXT/old.txt"; e0="$(h "$EXT/old.txt")"
+mkdir evidence; echo "$WRITER" >test_w.js; echo 'require("fs").writeFileSync("'"$R"'/ran","1")' >test_m.js
+expect "拷贝里出现软链接→2" 2 env SELFCHECK_TEST_HOOK_AFTER_COPY='ln -s '"$EXT"'/old.txt "$1/evidence/shot.txt"' tests/selfcheck.sh
+chk "测试没启动、外部目标 hash 不变" '[ ! -e ran ] && [ "$e0" = "$(h "$EXT/old.txt")" ]'
+expect "拷贝里出现硬链接→2" 2 env SELFCHECK_TEST_HOOK_AFTER_COPY='ln '"$EXT"'/old.txt "$1/evidence/shot.txt" 2>/dev/null || ln "$1/test_w.js" "$1/evidence/hl.js"' tests/selfcheck.sh
+chk "测试没启动、外部目标 hash 不变" '[ ! -e ran ] && [ "$e0" = "$(h "$EXT/old.txt")" ]'
+expect "扫描拷贝失败→2" 2 env SELFCHECK_TEST_HOOK_AFTER_COPY='mkdir "$1/locked"; chmod 000 "$1/locked"' tests/selfcheck.sh
+chk "扫描失败时测试没启动" '[ ! -e ran ]'
+
+echo "== 19:06 P2 基线快照：校验后改写原基线不影响比较"
+mk; B="$R/base.txt"; printf '0\ttest_a.js\n' >"$B"
+echo 'require("fs").writeFileSync("'"$B"'","1\ttest_a.js\n");process.exit(1)' >test_a.js
+expect "测试中改写原基线 0→1，仍按快照判新失败→1" 1 tests/selfcheck.sh --against base.txt
+chk "输出是「新失败 0→1」" 'grep -q "新失败	0→1	test_a.js" out.txt'
+printf '0\ttest_a.js\n' >"$B"; echo "process.exit(1)" >test_a.js
+expect "钩子在校验后改写原基线（0→1），仍按快照→1" 1 env SELFCHECK_TEST_HOOK_AFTER_COPY='printf "1\ttest_a.js\n" >'"$B" tests/selfcheck.sh --against base.txt
+
+echo "== 19:06 P2 TMPDIR 在仓库里 → 拒绝、不递归"
+mk; echo 'require("fs").writeFileSync("'"$R"'/ran","1")' >test_m.js; mkdir tmpin
+expect "TMPDIR=仓库内→2" 2 env TMPDIR="$R/tmpin" tests/selfcheck.sh
+chk "没跑测试、tmpin 里没生成任何东西" '[ ! -e ran ] && [ -z "$(ls -A tmpin)" ]'
+expect "TMPDIR=仓库根→2" 2 env TMPDIR="$R" tests/selfcheck.sh
+chk "仓库根下没有 selfcheck.* 目录" '! ls -d selfcheck.* 2>/dev/null | grep -q .'
+
 echo "== 反例合计失败 $fails"; exit $fails
