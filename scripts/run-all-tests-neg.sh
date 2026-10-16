@@ -199,4 +199,30 @@ RC jb0 jc1; expect "144 compare 正控：业务 JSON ok 值变、两轮都 exit 
 RC jb0 jc2; expect "144 compare：业务 JSON 行 exit 0→1 → 不一致" 1 $?
 grep -q "退出码 0→1，退出退步" "$W/last.txt"; expect "144 compare 报出退出退步" 0 $?
 
+# 测试-146：toast 时间线行身份去掉实测 JSON，只留「路径 宽度 场景名」；其余变化仍拒绝
+TH='PASS / 320 A_同帧 [[25,"存档已保护"],[3220,""]]\nPASS / 320 B_对照 [[33,"存档已保护"],[3229,""]]\nPASS /preview/ 393 A_同帧 [[18,"存档已保护"],[3212,""]]\nALL PASS\n'
+mk th0 test_t.mjs "$TH" 0; RB th0
+grep -q '"name": "/ 320 A_同帧"' "$W/rb-th0/summary.json" && ! grep -q '3220' "$W/rb-th0/summary.json"; expect "146 基线身份只留路径/宽度/场景名，毫秒不进 summary" 0 $?
+t146() { mk "$1" test_t.mjs "$2" "$3"; RC th0 "$1"; expect "146 $5" "$4" $?; }
+t146 th1 'PASS / 320 A_同帧 [[24,"存档已保护"],[3221,""]]\nPASS / 320 B_对照 [[30,"存档已保护"],[3225,""]]\nPASS /preview/ 393 A_同帧 [[19,"存档已保护"],[3215,""]]\nALL PASS\n' 0 0 "正控：只有实测毫秒变 → 逐项一致"
+grep -q "逐项一致" "$W/last.txt"; expect "146 正控输出「逐项一致」" 0 $?
+t146 th2 'PASS / 393 A_同帧 [[25,"存档已保护"],[3220,""]]\nPASS / 320 B_对照 [[33,"存档已保护"],[3229,""]]\nPASS /preview/ 393 A_同帧 [[18,"存档已保护"],[3212,""]]\nALL PASS\n' 0 1 "宽度 320→393 → 不可比较"
+t146 th3 'PASS /preview/ 320 A_同帧 [[25,"存档已保护"],[3220,""]]\nPASS / 320 B_对照 [[33,"存档已保护"],[3229,""]]\nPASS /preview/ 393 A_同帧 [[18,"存档已保护"],[3212,""]]\nALL PASS\n' 0 1 "路径 /→/preview/ → 不可比较"
+t146 th4 'PASS / 320 A_同帧改 [[25,"存档已保护"],[3220,""]]\nPASS / 320 B_对照 [[33,"存档已保护"],[3229,""]]\nPASS /preview/ 393 A_同帧 [[18,"存档已保护"],[3212,""]]\nALL PASS\n' 0 1 "场景名变 → 不可比较"
+t146 th5 'PASS / 320 B_对照 [[33,"存档已保护"],[3229,""]]\nPASS /preview/ 393 A_同帧 [[18,"存档已保护"],[3212,""]]\nALL PASS\n' 0 1 "少跑一例（3→2）→ 不可比较"
+t146 th6 'PASS / 320 A_同帧 [[25,"存档已保护"],[3220,""]]\nPASS / 320 A_同帧 [[26,"存档已保护"],[3221,""]]\nPASS / 320 B_对照 [[33,"存档已保护"],[3229,""]]\nPASS /preview/ 393 A_同帧 [[18,"存档已保护"],[3212,""]]\nALL PASS\n' 0 1 "同一例重复两次（重复次数变）→ 不可比较"
+t146 th7 'FAIL / 320 A_同帧 [[25,"次元传送门"],[524,"超频"]]\nPASS / 320 B_对照 [[33,"存档已保护"],[3229,""]]\nPASS /preview/ 393 A_同帧 [[18,"存档已保护"],[3212,""]]\nSOME FAIL\n' 1 1 "PASS→FAIL 状态退步 → 拒绝"
+grep -q "新增失败：/ 320 A_同帧" "$W/last.txt"; expect "146 退步报出「新增失败：/ 320 A_同帧」" 0 $?
+mk th8 test_t.mjs 'PASS / 320 A_同帧 [[25,"存档已保护"],[3220\nPASS / 320 B_对照 [[33,"存档已保护"],[3229,""]]\nPASS /preview/ 393 A_同帧 [[18,"存档已保护"],[3212,""]]\nALL PASS\n' 0
+RB th8; expect "146 时间线 JSON 截断（畸形）→ 本次就判失败" 1 $?
+grep -q "时间线格式畸形" "$W/rb-th8/summary.json"; expect "146 畸形记进 incomplete" 0 $?
+RC th0 th8; expect "146 畸形 → compare 不可比较" 1 $?
+t146 th9 'PASS / 320 A_同帧 [["存档已保护",25]]\nPASS / 320 B_对照 [[33,"存档已保护"],[3229,""]]\nPASS /preview/ 393 A_同帧 [[18,"存档已保护"],[3212,""]]\nALL PASS\n' 0 1 "时间线元素不是 [数字,字符串] → 不可比较"
+mk te0 test_t.mjs 'FAIL / 320 A_同帧 [[25,"x"]] ERR pageerror: boom\nPASS / 320 B_对照 [[33,"y"]]\nSOME FAIL\n' 1; RB te0
+mk te1 test_t.mjs 'FAIL / 320 A_同帧 [[27,"x"]] ERR pageerror: boom 2\nPASS / 320 B_对照 [[31,"y"]]\nSOME FAIL\n' 1
+RC te0 te1; expect "146 正控：带 ERR 的 FAIL 行，毫秒和 ERR 文字变、两轮都 exit 1 → 逐项一致" 0 $?
+mk tn0 test_n.mjs 'PASS 场景甲 [[25,"x"]]\nPASS 场景乙 [[33,"y"]]\n2/2 PASS\n' 0; RB tn0
+mk tn1 test_n.mjs 'PASS 场景甲 [[26,"x"]]\nPASS 场景乙 [[33,"y"]]\n2/2 PASS\n' 0
+RC tn0 tn1; expect "146 非时间线格式（无路径/宽度）的行尾 JSON 不剥 → 仍不可比较" 1 $?
+
 echo; echo "负例 $pass 过 / $fail 败"; [ $fail = 0 ]
