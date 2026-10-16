@@ -89,10 +89,20 @@ workflow file is unchanged. Report: `report-139-<engine>.txt|json`, screenshots 
 
 - **⑤a 养成-38 老档** (k_3 already drawn, four shops staffed, no `milestones`), page timezone picked so local
   time is 22:00: loads writable; k_3/k_1 kept; k_3/k_4/k_8 are `STORY_COND_IDS` and not in the box pool; 图鉴
-  shows 「提示：」 for the 2 missing ones; 盲盒 page has `#storyCondNote`; entering 家 grants k_4 + k_8 with
-  draws / pity / daily unchanged and coins not lower; refresh keeps all, no duplicates, disk matches.
+  shows 「提示：」 for the 2 missing ones; 盲盒 page has `#storyCondNote`; the game's actual period is asserted
+  `night`; entering 家 grants k_4 + k_8 — read-before → `setTab('home')` → read-after run in ONE synchronous
+  `evaluate` (no game tick in between), and coins / draws / pity / daily must be **strictly equal**. A negative
+  control repeats that read with an artificial −1 coin after `setTab` (put back right away) and the same
+  `costFree()` check must fail with diff −1, else the run fails. Coin drift over a 700 ms idle wait is only
+  logged (`COIN DRIFT (not judged)`), never part of the verdict. Refresh keeps all, no duplicates, disk matches.
 - **⑤b 养成-38 default** — 养成-38 adds no save field (uses `gacha.owned`), so this checks "not granted by
-  default": a fresh save entering 家 at local 13:00 gets no condition card, also after refresh.
+  default": a fresh save entering 家 at local 13:00 (game period asserted `day`) gets no condition card, also
+  after refresh.
+- **Boundaries** — every [刷新保留] check calls `persist()` first, so it proves "refresh after save", not "closed
+  / killed without saving". Period = same rule as `app.js` `storyPeriod` (root: `home/home-ambience.mjs`
+  `homePeriodAt`; pet copy has no such module → inline hour rule; both computed). Not covered: iOS real
+  device / background-freeze resume, 夜游食神 real claim (k_3 special-guest popup) and home animations (测试-141),
+  firstZombie / firstTDWin sub-game receipts (测试-142).
 - **⑥a 星途-02 new game** — `milestones` is `{schemaVersion:1, events:{firstShop: created}}`; a real 雇佣 click
   records `firstEmployee`; refresh and root↔pet keep the ledger byte-identical (memory + disk).
 - **⑥b 星途-02 old save** (no `milestones`, `space.ended`) — loads writable with no numeric timestamp; real
