@@ -417,6 +417,14 @@ async function main() {
     ok139 = r.status === 0;
     console.log(`scenarios-139 exit=${r.status}`);
   }
-  process.exit(ok && ok139 ? 0 : 1);
+  // 测试-141：同理接着跑 scenarios-141.mjs（养成-38 夜游食神 + 家里动画）。SKIP_141=1 可跳过。
+  let ok141 = true;
+  if (process.env.SKIP_141 !== '1') {
+    const { spawnSync } = await import('node:child_process');
+    const r = spawnSync(process.execPath, [path.join(__dirname, 'scenarios-141.mjs')], { stdio: 'inherit', env: process.env });
+    ok141 = r.status === 0;
+    console.log(`scenarios-141 exit=${r.status}`);
+  }
+  process.exit(ok && ok139 && ok141 ? 0 : 1);
 }
 main();
