@@ -5,7 +5,8 @@
   "type": "module",
   "description": "WebKit / iOS-Safari smoke test for the buy-earth ending flow (closes 测试-130 env gap).",
   "scripts": {
-    "smoke": "node webkit-smoke.mjs"
+    "smoke": "node webkit-smoke.mjs",
+    "scenarios130": "node scenarios-130.mjs"
   },
   "devDependencies": {
     "playwright": "1.49.1"
