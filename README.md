@@ -19,5 +19,6 @@ v12 → v13 的根目录做法同 350eab7：`preview/` 的 app.js / index.html /
 
 开发（仓库根目录起静态服务）：
 - 一键全量：`node scripts/run-all-tests.mjs [--out 目录] [--compare 旧summary.json]`（自动起停 8931/8781–8784 静态服务、带 NODE_OPTIONS=--experimental-vm-modules，串行跑 node --test + 根目录 test_*.js/mjs + pet/game/test_petgame.js，出汇总表和 summary.json；不跑 .py 和 WebKit）
+- 自检失败清单（验收分级「改前改后失败清单一致」用）：`tests/selfcheck.sh` 按固定顺序串行跑根目录 test_*.mjs/js + pet/game/test_petgame.js + tests/formal/*.mjs，每个 timeout 120s，打印「退出码<TAB>文件」排序清单（超时记 124；`--fail` 只看非 0）。`tests/selfcheck.sh --against tests/selfcheck-baseline.txt` 和基线比，只报新失败/新通过，有新失败返回 1。基线是 main d091216 在云端（node 22 + playwright）连跑两遍一致的结果；环境不同就先在自己环境的 main 上跑一遍当改前清单
 - Node：`node test_root_keys.js`、`node test_economy.js`、`node test_coin_safety.js`、`node pet/test_engine.js`、`node pet/game/test_petgame.js`
 - WebKit/iPhone：`test_coin_e2e.py URL`、`test_playtest.py URL`、`pet/test_pet_e2e.py URL/pet/index.html`、`pet/game/test_petgame_e2e.py URL/`、`zombie/test_zombie_embed.py URL`、`zombie/test_zombie_e2e.py URL/zombie/`、`test_joint_12e.py URL`、`test_v12_save_e2e.py URL [v12 URL]`（v12 URL = `git archive 350eab7` 起的服务）

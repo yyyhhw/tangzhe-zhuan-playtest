@@ -1,0 +1,57 @@
+# 测试-143 自检基线：tests/selfcheck.sh 在 main d091216 上连跑两遍，两遍逐行一致。
+# 环境：Linux 云端、node v22.22.0、playwright 1.56.0（全局装，Chromium /opt/pw-browsers）、每个文件 timeout 120s，串行。
+# 格式：退出码<TAB>文件。0=通过，124=超时。「~」=两遍结果不同（时好时坏，不算新失败）；本次没有。
+# 这 22 个非 0 都是改动前就有的：tests/formal/*-browser.mjs 要靠自己的取证服务（8788/8791/8792）和 evidence/ 前置文件，单独 node 跑必失败；
+# test_economy.js 2 项、test_root_keys.js 8 项是测试-133 记过的已知断言失败；test_toast_hold.mjs 全量超过 120s 记超时。
+# 换了环境（没装 playwright、不同 node）数字会变，那就先在自己环境的 main 上重跑一遍当基线，再比改后。
+0	pet/game/test_petgame.js
+0	test_coin_safety.js
+1	test_economy.js
+0	test_home_actions57.js
+0	test_home_autonomy.js
+0	test_home_autonomy_mover.js
+0	test_home_click128.js
+0	test_home_live_hint.js
+0	test_home_window_weather.mjs
+0	test_integration_cross.mjs
+0	test_rc2_cache.mjs
+1	test_root_keys.js
+124	test_toast_hold.mjs
+0	test_toast_lifecycle.mjs
+0	test_toast_queue.mjs
+0	test_toast_regression.mjs
+0	test_zbtop_commit_failure.mjs
+0	test_zbtop_integration.mjs
+0	test_zbtop_preserve.js
+0	tests/formal/audio-probe.mjs
+1	tests/formal/bgm-native-browser.mjs
+1	tests/formal/bgm-pcm-browser.mjs
+0	tests/formal/bgm-pcm.test.mjs
+0	tests/formal/bgm.test.mjs
+1	tests/formal/browser.mjs
+1	tests/formal/cache-browser.mjs
+0	tests/formal/carefree-bgm.test.mjs
+1	tests/formal/combat-audio-browser.mjs
+0	tests/formal/copy52-display.test.mjs
+0	tests/formal/economy-v2.test.mjs
+0	tests/formal/fc2-archive.test.mjs
+1	tests/formal/fc2-audio-browser.mjs
+1	tests/formal/fc8-drag-browser.mjs
+0	tests/formal/fc8-fixtures.mjs
+1	tests/formal/fc8-ui-browser.mjs
+1	tests/formal/final-browser.mjs
+1	tests/formal/frame-retirement-browser.mjs
+1	tests/formal/hand-browser.mjs
+1	tests/formal/hand-repeat-browser.mjs
+1	tests/formal/legacy-browser.mjs
+1	tests/formal/loop-music-browser.mjs
+1	tests/formal/mode-audio-browser.mjs
+1	tests/formal/pause-safety-browser.mjs
+0	tests/formal/protocol.mjs
+0	tests/formal/target-preview.test.mjs
+0	tests/formal/td-fc2.test.mjs
+1	tests/formal/td-receipts-browser.mjs
+0	tests/formal/td-receipts.test.mjs
+0	tests/formal/tea-entry-cards-out.test.mjs
+1	tests/formal/transaction-browser.mjs
+1	tests/formal/weapon-browser.mjs
