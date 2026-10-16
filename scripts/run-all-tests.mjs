@@ -22,7 +22,8 @@
 //  --replay-node-exit CODE：配合 --replay-node-log 模拟进程结局（0/1/timeout/SIGKILL），负例用
 //  r4（熊大 20:31）：① 进程退出退步对所有身份分支都查（基线 0→本轮非 0、或用例全过而进程非 0 都判不一致）；
 //      ② 普通脚本只剥「N - 」这类明确序号，名字开头的数字保留；③ 基线每行 schema 严格校验（full 必须有 cases/ids 且类型对），不合格起服务前退出 2
-//  测试-144：JSON 计数只认带明确汇总（passed/failed、pass/fail、counts.pass/fail）的测试结果对象，业务 JSON 的 ok/status 不当断言；逐条失败多于汇总按逐条记
+//  测试-144：JSON 计数只认带明确汇总（passed/failed、pass/fail、counts.pass/fail）的测试结果对象，业务 JSON 的 ok/status 不当断言；逐条失败多于汇总按逐条记；
+//      r2（熊大 22:23）：只剥 Node 明确警告行，非单个 JSON 却含 ok/status 字段、或多套汇总冲突 → 记不完整、不可比较
 //  --replay-root-dir DIR：不跑普通脚本，改读 DIR/<脚本名，/ 换成 __>.log 和同名 .exit（负例用）
 // 不跑 Python 脚本（test_*.py）、tests/ 下的浏览器 .py、WebKit。退出码：有任何一项退出码不等于 0 就返回 1；用了 --compare 时，只有出现新失败才返回 1。
 import http from 'node:http';
@@ -189,23 +190,30 @@ function count(out) {
   if (pass || fail) return {pass, fail, by: '逐行标记 ✓/✗/PASS/FAIL'};
   return {pass: null, fail: null, by: '输出里没有可数的结果，只看退出码'};
 }
-function parseJsonOut(out) {
-  const t = out.trim();
-  try {return JSON.parse(t);} catch {}
-  // 前面夹了警告行时，从最后一个顶格「{」行开始再试一次
-  const lines = t.split(/\r?\n/);
-  for (let i = lines.length - 1; i >= 0; i--) if (lines[i].startsWith('{')) {try {return JSON.parse(lines.slice(i).join('\n'));} catch {} break;}
-  return null;
+// 144 r2（熊大 22:23）：只剥 Node 明确的非结果警告行「(node:N) XxxWarning: …」及紧跟的「(Use `node --trace-…` …)」提示，其余一字不丢
+function stripNodeWarnings(out) {
+  return out.split(/\r?\n/).filter(l => !/^\(node:\d+\) \w*Warning: /.test(l) && !/^\(Use `node --trace-[\w-]+ /.test(l)).join('\n').trim();
 }
 function jsonCount(out) {
-  const d = parseJsonOut(out);
+  const t = stripNodeWarnings(out);
+  let d;
+  try {d = JSON.parse(t);} catch {
+    // 不是单个可解析 JSON，却带 "ok"/"status" 结果字段（如前置失败 JSON + 后接成功 JSON）→ 不能可靠计数，记不完整、不可比较
+    if (/"(ok|status)"\s*:/.test(t)) return {pass: null, fail: null, by: '含 JSON 结果字段但不是单个可解析 JSON', problem: '输出含 "ok"/"status" 结果字段但不是单个可解析 JSON，无法可靠计数'};
+    return null;
+  }
   if (!d || typeof d !== 'object' || Array.isArray(d)) return null;
   const nn = x => Number.isInteger(x) && x >= 0;
-  let pass, fail, by;
-  if (nn(d.passed) && nn(d.failed)) [pass, fail, by] = [d.passed, d.failed, 'JSON 汇总 passed/failed'];
-  else if (nn(d.pass) && nn(d.fail)) [pass, fail, by] = [d.pass, d.fail, 'JSON 汇总 pass/fail'];
-  else if (d.counts && nn(d.counts.pass) && nn(d.counts.fail)) [pass, fail, by] = [d.counts.pass, d.counts.fail, 'JSON 汇总 counts.pass/fail'];
-  else return null;
+  const sets = [];
+  if (nn(d.passed) && nn(d.failed)) sets.push([d.passed, d.failed, 'passed/failed']);
+  if (nn(d.pass) && nn(d.fail)) sets.push([d.pass, d.fail, 'pass/fail']);
+  if (d.counts && nn(d.counts.pass) && nn(d.counts.fail)) sets.push([d.counts.pass, d.counts.fail, 'counts.pass/fail']);
+  if (!sets.length) return null;
+  // 多套汇总必须完全一致才用，不择首；冲突 → 记不完整、不可比较
+  if (sets.some(x => x[0] !== sets[0][0] || x[1] !== sets[0][1]))
+    return {pass: null, fail: null, by: 'JSON 多套汇总冲突', problem: `JSON 多套汇总互相冲突：${sets.map(x => `${x[2]} ${x[0]}过${x[1]}败`).join('；')}`};
+  let [pass, fail] = sets[0];
+  const by = `JSON 汇总 ${sets.map(x => x[2]).join(' = ')}`;
   // 汇总旁的顶层结果数组（元素带 ok 布尔或 status=pass/fail）逐条数一遍：逐条失败比汇总多就按多的记，真实失败不被汇总盖掉
   let rowFail = 0;
   for (const v of Object.values(d)) if (Array.isArray(v)) for (const x of v)
@@ -318,7 +326,7 @@ try {
       const log = logName(s);
       safeWrite(path.join(OUT, log), r.out);
       const c = count(r.out), id = plainIds(r.out, c);
-      const incomplete = cleanExit(r.code) ? [] : [`进程结局 ${r.code}（超时/信号/非 0/1 退出码）`];
+      const incomplete = [...(cleanExit(r.code) ? [] : [`进程结局 ${r.code}（超时/信号/非 0/1 退出码）`]), ...(c.problem ? [c.problem] : [])];
       rows.push({script: s, pass: c.pass, fail: c.fail, exit: incomplete.length ? 'incomplete' : r.code, rawExit: r.code, seconds: r.seconds, by: c.by, idMode: id.idMode, ids: id.ids, incomplete, log});
       console.log(`退出码 ${r.code}${incomplete.length ? '（不完整）' : ''}，身份 ${id.idMode}`);
     }

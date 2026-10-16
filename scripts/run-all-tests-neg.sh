@@ -162,7 +162,20 @@ j144 jq1 '{\n  "passed": 1,\n  "failed": 1,\n  "rows": [{"name":"A","ok":true},{
 j144 jq2 '{\n  "passed": 2,\n  "failed": 0,\n  "rows": [{"name":"A","ok":true},{"name":"B","ok":false}]\n}\n' 0 0 '2/1/0' "汇总写 0 败但逐条有 ok:false → 按逐条记 1 败，不被汇总盖掉"
 j144 jr0 '{\n  "results": [{"name":"A","status":"pass"},{"name":"B","status":"pass"},{"name":"C","status":"pending-policy"}],\n  "counts": {"pass": 2, "fail": 0, "pending-policy": 1}\n}\n' 0 0 '2/0/0' "正控 regression 式 counts.pass/fail → 2/0"
 j144 jl0 '{\n  "rows": [{"entry":"x","status":"pass","detail":{"status":"INVALID_JSON_READ_ONLY"}}],\n  "pass": 1,\n  "fail": 0\n}\n' 0 0 '1/0/0' "正控 lifecycle 式顶层 pass/fail，嵌套业务 status 不干扰 → 1/0"
-j144 jw0 'warn: something\n{\n  "passed": 3,\n  "failed": 0\n}\n' 0 0 '3/0/0' "正控 JSON 前夹警告行仍认汇总 → 3/0"
+j144 jw0 '(node:123) ExperimentalWarning: VM Modules is an experimental feature\n(Use `node --trace-warnings ...` to show where the warning was created)\n{\n  "passed": 3,\n  "failed": 0\n}\n' 0 0 '3/0/0' "正控 JSON 前只夹 Node 明确警告行 → 剥掉后认汇总 3/0"
+# 144 r2 P1-①：只剥 Node 明确警告；前置失败 JSON + 后接成功 JSON 不能被吞
+j144 jp0 '{"passed":0,"failed":1,"rows":[{"name":"A","ok":false}]}\n{"passed":1,"failed":0,"rows":[{"name":"A","ok":true}]}\n' 0 1 'null/null/incomplete' "r2 前置失败 JSON + 后接成功 JSON → 不完整，不吞失败"
+RC jq0 jp0; expect "144 r2 前置失败+后接成功 JSON → compare 不得返回 0" 1 $?
+grep -q "不是单个可解析 JSON" "$W/last.txt"; expect "144 r2 报出「不是单个可解析 JSON」" 0 $?
+j144 jw1 'warn: something\n{"passed":0,"failed":1,"rows":[{"name":"A","ok":false}]}\n' 0 1 'null/null/incomplete' "r2 非 Node 警告前缀 + 失败 JSON → 不剥、不完整"
+# 144 r2 P1-②：多套汇总冲突 → 不完整、不可比较；一致才用
+j144 jx1 '{"pass":1,"fail":0,"counts":{"pass":1,"fail":0},"rows":[{"name":"A","status":"pass"}]}\n' 0 0 '1/0/0' "r2 正控：pass/fail 与 counts 一致 → 1/0"
+j144 jx0 '{"pass":1,"fail":0,"counts":{"pass":0,"fail":1},"rows":[{"name":"A","status":"pass"}]}\n' 0 1 'null/null/incomplete' "r2 顶层 1过0败、counts 0过1败 → 冲突、不完整"
+RC jx1 jx0; expect "144 r2 汇总冲突 → compare 不可比较" 1 $?
+grep -q "多套汇总互相冲突" "$W/last.txt"; expect "144 r2 报出「多套汇总互相冲突」" 0 $?
+j144 jx2 '{"passed":2,"failed":0,"pass":1,"fail":1}\n' 0 1 'null/null/incomplete' "r2 passed/failed 与 pass/fail 冲突 → 不完整"
+mk jx3 test_j.mjs '{"pass":1,"fail":0,"counts":{"pass":1,"fail":0},"rows":[{"name":"A","status":"pass"}]}\n' 0
+RC jx1 jx3; expect "144 r2 正控：两轮一致汇总 → 逐项一致" 0 $?
 mk jt0 test_j.mjs '{"passed": 1, "failed": 0}\n  ✗ A\n' 1; RB jt0
 [ "$(row jt0)" = "null/null/1" ] || [ "$(row jt0)" = "0/1/1" ]; expect "144 JSON 后面还跟逐行 ✗ → 不当纯 JSON 汇总（实际 $(row jt0)）" 0 $?
 # compare：业务 JSON 行内容变了但都 exit 0 → 逐项一致；exit 0→1 仍拒绝
