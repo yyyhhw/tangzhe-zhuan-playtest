@@ -7,6 +7,7 @@ on:
   push:
     branches:
       - claude/slack-session-qotgmg
+      - 'wangdama/test130-*'
 
 permissions:
   contents: read
@@ -36,6 +37,12 @@ jobs:
         env:
           WEBKIT_SMOKE_OUT: ${{ github.workspace }}/tests/webkit-smoke/output
         run: node webkit-smoke.mjs
+
+      - name: Run 测试-130 ①–④ scenarios (WebKit)
+        if: always()
+        env:
+          WEBKIT_SMOKE_OUT: ${{ github.workspace }}/tests/webkit-smoke/output
+        run: node scenarios-130.mjs
 
       - name: Upload screenshots + report
         if: always()
