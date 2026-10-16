@@ -138,3 +138,16 @@ Same server / save recipe / engines, 390×844, root + `/pet/game/`. Spawned by `
   sample (sampled, not continuous).
 - Not covered: iOS real device / background freeze; real touch-coordinate mapping for the guest tap; visual
   quality of animations (only running state + progress/position over time) and the reduced-motion still version; firstZombie / firstTDWin (测试-142).
+
+## 测试-142 星途-02 子游戏回执 (`scenarios-142.mjs`)
+
+Spawned by `scenarios-130.mjs` after 141 (`SKIP_142=1` skips). Part 1 = 打僵尸 `firstZombie`, root only (the pet copy
+has no zombie entry → N/A): menu open / locked endless start / menu close record nothing; real `#startBtn` start
+records an integer `firstZombie` ≥ `firstShop` with `zombie.cleared` still 0; a defeat and a repeated `started`
+message keep the same time; save-then-refresh keeps it in memory + disk. Same path as
+`tests/milestones/zombie-browser.py` (Chromium).
+Part 2 = 塔防 `firstTDWin`, root only (the pet copy has no TD entry → N/A): opening the TD menu, a real `#startBtn`
+start alone, a saved defeat (`end(false)`) and closing TD record nothing; a real start + synthetic victory fixture
+(`wave=W`, enemies cleared, `end(true)` — same as `td/test_speed_parent.mjs`, NOT natural-balance evidence) whose
+result the parent saves (`saveOk`) records an integer `firstTDWin` ≥ `firstShop` with `tdCampaign.highestCleared=1`;
+a stage-2 win keeps the same time; save-then-refresh keeps it in memory + disk.
