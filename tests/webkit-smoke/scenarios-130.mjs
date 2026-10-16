@@ -138,6 +138,8 @@ async function scenarioMigration(browser, base, entry, seed, def) {
       }
       await shot(page, `migrate-${kind}-${tagOf(entry)}`);
       await page.evaluate(() => { try { window.__tzz.persist && window.__tzz.persist(); } catch {} });
+      // 等宠物素材 manifest 等请求落定再刷新：WebKit 会把刷新时被中断的 fetch 报成 pageerror（CI run 3 见 11 条），那是测试时序不是游戏错误。
+      try { await page.waitForLoadState('networkidle', { timeout: 10000 }); } catch {}
       await page.reload({ waitUntil: 'load' });
       await page.waitForFunction(READY, null, { timeout: 30000 });
       const b2 = await blocked(page);
@@ -184,6 +186,7 @@ async function scenarioResearch(browser, base, entry, seed, def) {
     });
     check(`${tag}: tier-2 perform refused (LV_REQUIRED), nothing deducted`, !lv.res.ok && /LV_REQUIRED/.test(lv.res.code) && lv.delta === 0 && !lv.item, JSON.stringify(lv));
     await shot(page, `research-after-${tagOf(entry)}`);
+    try { await page.waitForLoadState("networkidle", { timeout: 10000 }); } catch {}
     await page.reload({ waitUntil: 'load' });
     await page.waitForFunction(READY, null, { timeout: 30000 });
     const p = await page.evaluate(() => ({ coins: window.__tzz.state.coins, items: window.__tzz.state.space.items }));
