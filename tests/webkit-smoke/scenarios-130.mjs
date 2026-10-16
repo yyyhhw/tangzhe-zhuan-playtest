@@ -7,7 +7,9 @@
 // ③ 跨标签：同一浏览器上下文开两个页面，第二个被「同一作用域只能一个页面经营」拦下、星途打不开；
 //    在第一个页面买 tech:1，落盘只扣一次。B 页在任何脚本之前装写调用观测器（包 Storage setItem/removeItem/clear，
 //    保留原生调用），分「启动」「显式 perform/persist 尝试」两段断言对受保护存档键写 0 次；接口存在时核对拒绝结果；
-//    正控：A 买东西的写盘能被看到、B 同值写回主档被记 1 次且字节不变。
+//    正控：A 买东西对主档、备份的写盘分别能被看到、B 同值写回主档被记 1 次且字节不变、收藏 v2 快照键的写也能被记到。
+//    关门：boot→try、try（等 ≥1500ms）→control 两次切换前，都在同一次同步 evaluate 里取完整日志、
+//    断言全部非 control 阶段受保护写为 0，不满足即抛错不切阶段。B 被挡在 bootstrap 时 perform/persist 记 N/A（不计通过）。
 // ④ 外星倍率：册子 0 / 1（火星第 3 张）/ 7 张（6 航线第 3 张 + 回信）→ 产速 ×1 / ×1.25 / ×2.75；
 //    旧字段 alienCards 再大也不算数；离线待领按同一倍率（computeOffline 比值）。
 // 只测不改游戏代码。iOS 后台冻结标签恢复（lockfix 接管）macOS WebKit 测不到，单列未验。
@@ -29,18 +31,38 @@ const ENGINE = (process.env.BROWSER || 'webkit').toLowerCase();
 const OUT = process.env.WEBKIT_SMOKE_OUT || path.join(__dirname, 'output');
 fs.mkdirSync(OUT, { recursive: true });
 
-// 受保护存档键（collection/host-save.mjs:6 KEYS，除 tab 锁外全部）：主档、备份、原档存证、源档及其备份、v15 原档。
+// 受保护存档键 = collection/host-save.mjs KEYS ∪ collectibles/storage.mjs formal 布局（协议 2，含 snapshot），除 tab 锁外全部：
+// 主档、备份、原档存证、源档及其备份、v15 原档、收藏 v2 快照 tangzhe-formal-collectibles-v2-original。
+// 启动时从源码读这两处键表核对，漏一个就 FAIL（见 checkProtectedKeySet）。结论只限这些键，不是所有 localStorage 写。
+const SNAPSHOT_KEY = 'tangzhe-formal-collectibles-v2-original';
 const PROTECTED_KEYS = ['tangzhe-formal-collection-v1-save', 'tangzhe-formal-collection-v1-save-bak', 'tangzhe-formal-collection-v1-original',
-  'tangzhe-save', 'tangzhe-save-bak', 'tangzhe-upgrade-v15-original'];
+  'tangzhe-save', 'tangzhe-save-bak', 'tangzhe-upgrade-v15-original', SNAPSHOT_KEY];
+const BACKUP_KEY = 'tangzhe-formal-collection-v1-save-bak';
+const REPO = path.resolve(__dirname, '..', '..');
 const TIER1 = 9000090;                 // TIER_PRICE[0] = round(1e11 * 1 / 11111)
 const RICH = 1e12;
 const READY = 'window.__tzz && window.XingTu';
-const checks = [], errors = [], drifts = [];
+const checks = [], errors = [], drifts = [], notApplicable = [];
 let shotN = 0;
 
 function check(name, ok, detail = '') {
   checks.push({ name, ok: !!ok, detail: String(detail).slice(0, 500) });
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  — ' + detail : ''}`);
+}
+// N/A：前提不成立（如 B 没有接口可调），单独记，不算 PASS、不计入通过数，也不能当作「拒绝」证据。
+function na(name, detail = '') {
+  notApplicable.push({ name, detail: String(detail).slice(0, 500) });
+  console.log(`N/A   ${name}${detail ? '  — ' + detail : ''}`);
+}
+// 从源码读键表，核对 PROTECTED_KEYS 覆盖 host-save KEYS 与 collectibles formal 布局里除 tab 外的全部键。
+function checkProtectedKeySet() {
+  const vals = (src, re) => { const m = src.match(re); return m ? [...m[1].matchAll(/(\w+)\s*:\s*'([^']+)'/g)].map((x) => [x[1], x[2]]) : null; };
+  const host = vals(fs.readFileSync(path.join(REPO, 'collection/host-save.mjs'), 'utf8'), /export const KEYS\s*=\s*Object\.freeze\(\{([^}]*)\}/);
+  const coll = vals(fs.readFileSync(path.join(REPO, 'collectibles/storage.mjs'), 'utf8'), /formal:Object\.freeze\(\{([^}]*)\}/);
+  const want = [...new Set([...(host || []), ...(coll || [])].filter(([role]) => role !== 'tab').map(([, k]) => k))];
+  const missing = want.filter((k) => !PROTECTED_KEYS.includes(k));
+  check('protected key set covers host-save KEYS + collectibles formal layout (except tab lock)', host && coll && missing.length === 0 && want.includes(SNAPSHOT_KEY),
+    JSON.stringify({ missing, sourceKeys: want }));
 }
 function drift(name, expected, actual) {
   const d = actual - expected;
@@ -85,6 +107,22 @@ async function installWriteObserver(page) {
     P.removeItem = function (k) { log.push({ op: 'removeItem', key: String(k), phase: window.__wphase }); return rem.call(this, k); };
     P.clear = function () { log.push({ op: 'clear', key: '*', phase: window.__wphase }); return clr.call(this); };
   });
+}
+// 关门检查 + 切阶段：在同一次同步 evaluate 里取完整写日志，断言全部「非 control」阶段对受保护键的写为 0，
+// 不满足就在页面里抛错（不切阶段）；满足才把 __wphase 切到 next。这样 boot→try 切换前、try 后等待期里新增的写都会被查到，
+// 两次 evaluate 之间不会漏写。分阶段检查另外保留，只用来定位是哪一段写的。
+async function gateAndSwitch(page, keys, next) {
+  try {
+    const r = await page.evaluate(({ keys, next }) => {
+      const log = window.__wlog ? window.__wlog.slice() : null;
+      if (!log) throw new Error('WRITE_OBSERVER_MISSING');
+      const bad = log.filter((w) => w.phase !== 'control' && (w.key === '*' || keys.includes(w.key)));
+      if (bad.length) throw new Error('PROTECTED_WRITES ' + JSON.stringify(bad));
+      const from = window.__wphase; window.__wphase = next;
+      return { from, to: next, logLen: log.length };
+    }, { keys, next });
+    return { ok: true, ...r };
+  } catch (e) { return { ok: false, error: String(e && e.message || e) }; }
 }
 const writesOf = (page) => page.evaluate(() => window.__wlog ? window.__wlog.slice() : null);
 const protectedWrites = (log, phase) => (log || []).filter((w) => (w.key === '*' || PROTECTED_KEYS.includes(w.key)) && (!phase || w.phase === phase));
@@ -256,16 +294,20 @@ async function scenarioCrossTab(browser, base, entry, seed, def) {
     // 正控 1：A 买东西的落盘能被观测器看到（主档至少写一次），证明观测器对真实写盘有效。
     const aBuyW = protectedWrites(await writesOf(a), 'buy');
     check(`${tag}: positive control — A's buy is observed writing the main save`, aBuyW.some((w) => w.op === 'setItem' && w.key === SAVE_KEY), JSON.stringify(aBuyW));
+    check(`${tag}: positive control — A's buy is observed writing the backup save`, aBuyW.some((w) => w.op === 'setItem' && w.key === BACKUP_KEY), JSON.stringify(aBuyW));
     // 阶段 2：B 显式尝试 perform / persist（接口存在才调），写调用必须为 0；接口存在时核对拒绝结果。
-    await b.evaluate(() => { window.__wphase = 'try'; });
+    const g1 = await gateAndSwitch(b, PROTECTED_KEYS, 'try');
+    check(`${tag}: B gate before boot→try (same evaluate: full log, all non-control protected writes == 0)`, g1.ok, JSON.stringify(g1));
     const bTry = await b.evaluate(() => { const out = { hasXingTu: !!window.XingTu, hasPersist: !!(window.__tzz && window.__tzz.persist) };
       try { out.perform = window.XingTu ? window.XingTu.perform({ type: 'research', sys: 'war', tier: 1 }) : null; } catch (e) { out.err = String(e); }
       try { out.persist = out.hasPersist ? window.__tzz.persist() : null; } catch (e) { out.perr = String(e); } return out; });
     await b.waitForTimeout(500);
     const tryW = protectedWrites(await writesOf(b), 'try');
     check(`${tag}: B explicit perform/persist phase — 0 writes to protected save keys`, tryW.length === 0, JSON.stringify({ protectedWrites: tryW, bTry }));
-    check(`${tag}: B perform refused when XingTu exists`, !bTry.hasXingTu || (bTry.perform && bTry.perform.ok === false), JSON.stringify(bTry.perform ?? 'XingTu absent on B (not applicable)'));
-    check(`${tag}: B persist() returns false when exposed`, !bTry.hasPersist || bTry.persist === false, JSON.stringify(bTry.hasPersist ? bTry.persist : '__tzz.persist absent on B (not applicable)'));
+    if (bTry.hasXingTu) check(`${tag}: B perform refused`, bTry.perform && bTry.perform.ok === false, JSON.stringify(bTry.perform));
+    else na(`${tag}: B perform refused`, 'XingTu absent on B (blocked at bootstrap) — no interface to call; not rejection evidence');
+    if (bTry.hasPersist) check(`${tag}: B persist() returns false`, bTry.persist === false, JSON.stringify(bTry.persist));
+    else na(`${tag}: B persist() returns false`, '__tzz.persist absent on B (blocked at bootstrap) — no interface to call; not rejection evidence');
     await a.waitForTimeout(1500);
     const d = await diskSave(a);
     check(`${tag}: disk has tech:1, not war:1 (B never wrote)`, d?.space?.items?.['tech:1'] === 1 && !d?.space?.items?.['war:1'], JSON.stringify({ items: d?.space?.items, bTry }));
@@ -276,7 +318,9 @@ async function scenarioCrossTab(browser, base, entry, seed, def) {
     drift(`${tag} disk balance vs (diskBefore − price)`, (diskBefore?.coins ?? 0) - TIER1, d?.coins ?? 0);
     // 正控 2：在 B 里对主档做一次「同值写入」（读出来原样写回，盘上内容不变），观测器必须记到 1 次 same=true，
     // 证明「写了但值没变」不会漏；做完核对盘上主档字节未变。放在所有断言之后，不影响上面的结论。
-    await b.evaluate(() => { window.__wphase = 'control'; });
+    const g2 = await gateAndSwitch(b, PROTECTED_KEYS, 'control');
+    check(`${tag}: B gate before try→control, after ≥1500ms wait (same evaluate: full log, all non-control protected writes == 0)`, g2.ok, JSON.stringify(g2));
+    if (!g2.ok) throw new Error('gate before control failed; skip positive controls');
     const rawMid = await a.evaluate((k) => localStorage.getItem(k), SAVE_KEY);
     await b.evaluate((k) => { localStorage.setItem(k, localStorage.getItem(k)); }, SAVE_KEY);
     const ctlW = protectedWrites(await writesOf(b), 'control');
@@ -284,6 +328,17 @@ async function scenarioCrossTab(browser, base, entry, seed, def) {
     check(`${tag}: positive control — same-value write in B is counted (1 write, same=true, bytes unchanged)`,
       ctlW.length === 1 && ctlW[0].key === SAVE_KEY && ctlW[0].same === true && rawAfterCtl === rawMid, JSON.stringify({ ctlW, bytesUnchanged: rawAfterCtl === rawMid }));
     check(`${tag}: main save bytes changed by A's buy (sanity)`, rawBefore !== rawMid);
+    // 正控 3：收藏 v2 快照键。存在 → B 同值写回 1 次（same=true，字节不变）；不存在 → B setItem 再 removeItem，
+    // 两次都要被记到、最后键仍不存在（证明「新建该键」也逃不过观测器；不要求快照必须已存在）。
+    const snapBefore = await a.evaluate((k) => localStorage.getItem(k), SNAPSHOT_KEY);
+    const n0 = (await writesOf(b)).length;
+    if (snapBefore !== null) await b.evaluate((k) => { localStorage.setItem(k, localStorage.getItem(k)); }, SNAPSHOT_KEY);
+    else await b.evaluate((k) => { localStorage.setItem(k, '__probe__'); localStorage.removeItem(k); }, SNAPSHOT_KEY);
+    const snapW = (await writesOf(b)).slice(n0).filter((w) => w.key === SNAPSHOT_KEY && w.phase === 'control');
+    const snapAfter = await a.evaluate((k) => localStorage.getItem(k), SNAPSHOT_KEY);
+    check(`${tag}: positive control — ${SNAPSHOT_KEY} write in B is counted (${snapBefore !== null ? 'existing: 1 same-value write' : 'absent: set+remove both counted'}), bytes unchanged`,
+      snapAfter === snapBefore && (snapBefore !== null ? (snapW.length === 1 && snapW[0].op === 'setItem' && snapW[0].same === true)
+        : (snapW.length === 2 && snapW[0].op === 'setItem' && snapW[1].op === 'removeItem')), JSON.stringify({ existed: snapBefore !== null, snapW }));
   } catch (e) { check(`${tag}: ran`, false, e.stack || e); } finally { await ctx.close(); }
 }
 
@@ -330,6 +385,7 @@ async function main() {
   const browser = await launcher.launch(ENGINE === 'chromium' && process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
   console.log(`engine=${ENGINE} ${browser.version()} server=${base}`);
   try {
+    checkProtectedKeySet();
     const { seed, def } = await generateSeed(browser, base);
     for (const entry of ENTRY_POINTS) {
       await scenarioMigration(browser, base, entry, seed, def);
@@ -341,15 +397,17 @@ async function main() {
   finally { await browser.close(); server.close(); }
   const failed = checks.filter((c) => !c.ok);
   const ok = failed.length === 0 && errors.length === 0;
-  const report = { ok, engine: ENGINE, viewport: VIEWPORT, entryPoints: ENTRY_POINTS, counts: { checks: checks.length, failed: failed.length, jsErrors: errors.length }, checks, drifts, errors,
-    notCovered: ['iOS 后台冻结标签恢复（lockfix 接管）：macOS WebKit 无法模拟，单列未验'] };
+  const report = { ok, engine: ENGINE, viewport: VIEWPORT, entryPoints: ENTRY_POINTS, counts: { checks: checks.length, failed: failed.length, notApplicable: notApplicable.length, jsErrors: errors.length }, checks, notApplicable, drifts, errors,
+    scope: '③ 写观测结论只限受保护存档键：' + PROTECTED_KEYS.join(', ') + '；不是所有 localStorage 写，也不含 IndexedDB',
+    notCovered: ['iOS 后台冻结标签恢复（lockfix 接管）：macOS WebKit 无法模拟，单列未验', '已运行页面中途失锁：未验', 'B 被挡在 bootstrap，perform/persist 无接口可调：记 N/A，不是拒绝证据'] };
   fs.writeFileSync(path.join(OUT, `report-130-${ENGINE}.json`), JSON.stringify(report, null, 2));
-  const lines = [`测试-130 ①–④ (${ENGINE}): ${ok ? 'PASS' : 'FAIL'}`, `checks: ${checks.length - failed.length}/${checks.length} passed, js errors: ${errors.length}`, '',
-    ...checks.map((c) => `${c.ok ? '[PASS]' : '[FAIL]'} ${c.name}${c.detail ? '  — ' + c.detail : ''}`), '', 'DRIFT:',
+  const lines = [`测试-130 ①–④ (${ENGINE}): ${ok ? 'PASS' : 'FAIL'}`, `checks: ${checks.length - failed.length}/${checks.length} passed, N/A: ${notApplicable.length} (not counted), js errors: ${errors.length}`, '',
+    ...checks.map((c) => `${c.ok ? '[PASS]' : '[FAIL]'} ${c.name}${c.detail ? '  — ' + c.detail : ''}`),
+    ...notApplicable.map((c) => `[N/A] ${c.name}  — ${c.detail}`), '', 'SCOPE: ' + report.scope, '', 'DRIFT:',
     ...drifts.map((d) => `  ${d.name}: expected=${d.expected} actual=${d.actual} drift=${d.drift}`),
     ...(errors.length ? ['', 'JS ERRORS:', ...errors.map((e) => `  (${e.label}) ${e.kind}: ${e.text}`)] : []), '', 'NOT COVERED: ' + report.notCovered.join('; ')];
   fs.writeFileSync(path.join(OUT, `report-130-${ENGINE}.txt`), lines.join('\n'));
-  console.log(`\n${ok ? 'PASS' : 'FAIL'} — ${checks.length - failed.length}/${checks.length} checks, ${errors.length} js errors`);
+  console.log(`\n${ok ? 'PASS' : 'FAIL'} — ${checks.length - failed.length}/${checks.length} checks, ${notApplicable.length} N/A, ${errors.length} js errors`);
   process.exit(ok ? 0 : 1);
 }
 main();
