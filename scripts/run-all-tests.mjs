@@ -23,6 +23,7 @@
 //  r4（熊大 20:31）：① 进程退出退步对所有身份分支都查（基线 0→本轮非 0、或用例全过而进程非 0 都判不一致）；
 //      ② 普通脚本只剥「N - 」这类明确序号，名字开头的数字保留；③ 基线每行 schema 严格校验（full 必须有 cases/ids 且类型对），不合格起服务前退出 2
 //  测试-144：JSON 计数只认带明确汇总（passed/failed、pass/fail、counts.pass/fail）的测试结果对象，业务 JSON 的 ok/status 不当断言；逐条失败多于汇总按逐条记
+//  测试-146：「/路径 宽度 场景名 [[毫秒,"文字"],…]」这种时间线行，身份去掉实测 JSON 只留路径/宽度/场景名；时间线畸形记不完整
 //  --replay-root-dir DIR：不跑普通脚本，改读 DIR/<脚本名，/ 换成 __>.log 和同名 .exit（负例用）
 // 不跑 Python 脚本（test_*.py）、tests/ 下的浏览器 .py、WebKit。退出码：有任何一项退出码不等于 0 就返回 1；用了 --compare 时，只有出现新失败才返回 1。
 import http from 'node:http';
@@ -257,16 +258,33 @@ function parseNodeTest(out) {
 }
 // 普通脚本：逐行标记能和汇总计数对上才算完整身份；只打印失败名的记「仅失败名」
 function plainIds(out, c) {
-  const marks = [];
+  const marks = [], problems = [];
   for (const line of out.split(/\r?\n/)) {
     // r4 P1-②：只剥明确的序号格式「N - / N – / N: 」（如 ok 3 - 名），名字本身开头的数字保留（「3000金币购买」「5 分钟…」不被吞）
     const m = line.match(/^\s*(✓|✔|PASS\b|ok\b|✗|✘|×|FAIL\b|not ok\b)\s*(?:\d+\s+[-–:]\s+|[-–:]\s*)?(.*)$/);
-    if (m) marks.push({name: m[2].trim(), status: /^(✗|✘|×|FAIL|not ok)/.test(m[1]) ? 'fail' : 'pass'});
+    if (!m) continue;
+    let name = m[2].trim();
+    const tl = timelineId(name);
+    if (tl && tl.bad) problems.push(tl.bad);
+    else if (tl) name = tl.name;
+    marks.push({name, status: /^(✗|✘|×|FAIL|not ok)/.test(m[1]) ? 'fail' : 'pass'});
   }
   const nf = marks.filter(x => x.status === 'fail').length;
-  if (c.pass !== null && c.fail !== null && marks.length === c.pass + c.fail && nf === c.fail) return {idMode: 'full', ids: marks};
-  if (c.fail !== null && nf === c.fail && marks.every(x => x.status === 'fail')) return {idMode: 'failed-only', ids: marks};
-  return {idMode: 'none', ids: null};
+  if (c.pass !== null && c.fail !== null && marks.length === c.pass + c.fail && nf === c.fail) return {idMode: 'full', ids: marks, problems};
+  if (c.fail !== null && nf === c.fail && marks.every(x => x.status === 'fail')) return {idMode: 'failed-only', ids: marks, problems};
+  return {idMode: 'none', ids: null, problems};
+}
+// 测试-146：只认一种确定格式「/路径 宽度 场景名 [[毫秒,"文字"],…]（可再跟 ERR …）」（test_toast_hold 的 PASS/FAIL 行），
+// 把行尾实测时间线 JSON 从身份里拿掉，身份只留「路径 宽度 场景名」（重复次数靠多重集合计数、状态照比）；原 JSON/ERR 只留在日志里。
+// 不碰其他格式的行；像这种格式但时间线 JSON 畸形（解析不了、不是 [[数字,字符串],…]）→ 记不完整，明确拒绝
+function timelineId(name) {
+  const m = name.match(/^(\/\S*) (\d+) (\S+) (\[.*)$/);
+  if (!m) return null;
+  const ok = v => Array.isArray(v) && v.every(x => Array.isArray(x) && x.length === 2 && Number.isFinite(x[0]) && typeof x[1] === 'string');
+  const rest = m[4], cuts = [rest.length];
+  for (let i = rest.indexOf(' ERR '); i >= 0; i = rest.indexOf(' ERR ', i + 1)) cuts.push(i);
+  for (const k of cuts) {let v; try {v = JSON.parse(rest.slice(0, k));} catch {continue;} if (ok(v)) return {name: `${m[1]} ${m[2]} ${m[3]}`};}
+  return {bad: `时间线格式畸形：${name.slice(0, 80)}`};
 }
 const multiset = ids => {const m = new Map(); for (const x of ids) {const k = JSON.stringify([x.name, x.status]); m.set(k, (m.get(k) || 0) + 1);} return m;};
 const sameMultiset = (a, b) => a.size === b.size && [...a].every(([k, v]) => b.get(k) === v);
@@ -318,7 +336,7 @@ try {
       const log = logName(s);
       safeWrite(path.join(OUT, log), r.out);
       const c = count(r.out), id = plainIds(r.out, c);
-      const incomplete = cleanExit(r.code) ? [] : [`进程结局 ${r.code}（超时/信号/非 0/1 退出码）`];
+      const incomplete = [...(cleanExit(r.code) ? [] : [`进程结局 ${r.code}（超时/信号/非 0/1 退出码）`]), ...id.problems];
       rows.push({script: s, pass: c.pass, fail: c.fail, exit: incomplete.length ? 'incomplete' : r.code, rawExit: r.code, seconds: r.seconds, by: c.by, idMode: id.idMode, ids: id.ids, incomplete, log});
       console.log(`退出码 ${r.code}${incomplete.length ? '（不完整）' : ''}，身份 ${id.idMode}`);
     }
