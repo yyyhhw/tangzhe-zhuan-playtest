@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 测试-136 负例 + 正控（r2：熊大 18:33 三组；r3：熊大 19:18 三类阻断）。node --test 部分用真实 node --test 生成的完整 TAP 回放，
+# 测试-136 负例 + 正控（r2：熊大 18:33 三组；r3：熊大 19:18 三类阻断；r4：熊大 20:31 退出退步/序号/基线 schema）。node --test 部分用真实 node --test 生成的完整 TAP 回放，
 # 普通脚本部分用 --replay-root-dir 回放，不跑仓库真测试，约十几秒跑完。
 # 用法：bash scripts/run-all-tests-neg.sh   全过退出 0
 set -u
@@ -109,5 +109,43 @@ $RUN --only node --replay-node-log "$W/closed.tap" --out "$W/o7" >/dev/null 2>&1
 [ ! -e "$W/o3/summary.json" ] && [ ! -e "$W/o5/logs/node--test.log" ]; expect "输出 拒绝时一个文件都没写" 0 $?
 [ "$(sha "$BS")" = "$before" ]; expect "输出 基线 sha256 前后一致（$before）" 0 $?
 $RUN --only node --replay-node-log "$W/closed.tap" --out "$W/o8" >/dev/null 2>&1; expect "输出 正控：空目录正常写出" 0 $?
+
+# r4-① 进程退出退步：所有身份分支（含 full）都查，旧 exit 1 基线不豁免
+$RUN --only node --replay-node-log "$W/fixed.tap" --replay-node-exit 1 --out "$W/b-fixed1" >/dev/null 2>&1
+B fixed
+C fixed fixed --replay-node-exit 1; expect "r4-① full：同为全 PASS，基线 exit 0 → 本轮 exit 1 → 不一致" 1 $?
+grep -q "退出码 0→1，退出退步" "$W/last.txt"; expect "r4-① 报出退出退步" 0 $?
+$RUN --only node --replay-node-log "$W/fixed.tap" --replay-node-exit 1 --out "$W/c4-$RANDOM" --compare "$W/b-fixed1/summary.json" >"$W/last.txt" 2>&1; expect "r4-① full：两轮都全 PASS 且都 exit 1 → 不一致（旧 exit 1 不豁免）" 1 $?
+grep -q "用例全部通过但进程退出 1" "$W/last.txt"; expect "r4-① 报出全过却 exit 1" 0 $?
+C base base --replay-node-exit 1; expect "r4-① 正控：确有失败用例、两轮都正常 exit 1、日志完整 → 逐项一致" 0 $?
+C base base --replay-node-exit timeout; expect "r4-① 正控旁证：确有失败但超时仍不豁免" 1 $?
+mk pa4 test_y.js 'PASS A\nPASS B\n2/2 PASS\n' 1
+RB pa1; RC pa1 pa4; expect "r4-① 普通 full：全 PASS，exit 0 → 1 → 不一致" 1 $?
+
+# r4-② 序号只剥明确格式，名字开头的数字保留
+mk pn0 test_z.js 'FAIL 3000金币购买\nPASS B\n1/2 PASS\n' 1
+mk pn1 test_z.js 'PASS 5000金币购买\nPASS B\n2/2 PASS\n' 0
+mk pn2 test_z.js 'PASS 3000金币购买\nPASS B\n2/2 PASS\n' 0
+mk ps0 test_s.js 'not ok 1 - A\nok 2 - B\n1/2 PASS\n' 1
+mk ps1 test_s.js 'ok 1 - A\nok 2 - B\n2/2 PASS\n' 0
+RB pn0; RB ps0
+RC pn0 pn1; expect "r4-② FAIL「3000金币购买」→ PASS「5000金币购买」→ 不可比较，不算修好" 1 $?
+! grep -q "不再失败" "$W/last.txt"; expect "r4-② 改名不出现「不再失败」" 0 $?
+grep -q '"name": "3000金币购买"' "$W/rb-pn0/summary.json"; expect "r4-② 基线身份保留原名 3000金币购买" 0 $?
+RC pn0 pn2; expect "r4-② 正控：同名 3000金币购买 fail→pass → 可过" 0 $?
+grep -q "不再失败：3000金币购买" "$W/last.txt"; expect "r4-② 正控记「不再失败：3000金币购买」" 0 $?
+RC ps0 ps1; expect "r4-② 正控：明确序号「ok N - 」仍剥掉，A fail→pass 可过" 0 $?
+grep -q "不再失败：A" "$W/last.txt"; expect "r4-② 正控记「不再失败：A」（序号已剥）" 0 $?
+
+# r4-③ 基线行 schema：full 缺 ids/cases 或类型不对 → 起服务、跑测试、写文件之前退出 2
+s3() { local name=$1 json=$2 mode=$3; echo "$json" > "$W/$name.json"; local h=$(sha "$W/$name.json")
+  $RUN --only $mode $( [ $mode = node ] && echo --replay-node-log "$W/closed.tap" || echo --replay-root-dir "$W/pa1") --out "$W/o-$name" --compare "$W/$name.json" >"$W/last.txt" 2>&1; local rc=$?
+  expect "r4-③ $4 → 退出 2" 2 $rc
+  [ ! -e "$W/o-$name" ] && [ "$(sha "$W/$name.json")" = "$h" ]; expect "r4-③ $4：out 没建、基线字节不变" 0 $?
+  grep -q "拒绝：基线" "$W/last.txt" && ! grep -qE "静态服务|^仓库 |▶|端口" "$W/last.txt"; expect "r4-③ $4：报基线拒绝，未起服务/未跑测试" 0 $?; }
+s3 nocases '{"format":3,"rows":[{"script":"node --test","exit":0,"idMode":"full","incomplete":[]}]}' node "node 行 full 缺 cases"
+s3 badcases '{"format":3,"rows":[{"script":"node --test","exit":0,"idMode":"full","cases":[{"path":"A","n":1,"status":"pass"}],"incomplete":[]}]}' node "node 行 cases.path 不是数组"
+s3 noids '{"format":3,"rows":[{"script":"test_y.js","exit":0,"idMode":"full","incomplete":[]}]}' root "普通行 full 缺 ids"
+s3 badids '{"format":3,"rows":[{"script":"test_y.js","exit":0,"idMode":"full","ids":"A,B","incomplete":[]}]}' root "普通行 ids 不是数组"
 
 echo; echo "负例 $pass 过 / $fail 败"; [ $fail = 0 ]

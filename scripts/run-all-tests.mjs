@@ -20,6 +20,8 @@
 //      或进程超时/被信号结束/退出码不是 0 或 1，都算「不完整」→ 该行失败、--compare 时一律不可比较，旧基线里的失败不能豁免；YAML 诊断块里的内容不参与解析
 //   ③ 基线：--compare 在起服务、跑测试、写任何文件之前读入、校验格式并冻结；基线不存在/畸形/旧版格式/落在 --out 目录里（同路径或同实体）→ 退出 2，什么都不跑不写
 //  --replay-node-exit CODE：配合 --replay-node-log 模拟进程结局（0/1/timeout/SIGKILL），负例用
+//  r4（熊大 20:31）：① 进程退出退步对所有身份分支都查（基线 0→本轮非 0、或用例全过而进程非 0 都判不一致）；
+//      ② 普通脚本只剥「N - 」这类明确序号，名字开头的数字保留；③ 基线每行 schema 严格校验（full 必须有 cases/ids 且类型对），不合格起服务前退出 2
 //  --replay-root-dir DIR：不跑普通脚本，改读 DIR/<脚本名，/ 换成 __>.log 和同名 .exit（负例用）
 // 不跑 Python 脚本（test_*.py）、tests/ 下的浏览器 .py、WebKit。退出码：有任何一项退出码不等于 0 就返回 1；用了 --compare 时，只有出现新失败才返回 1。
 import http from 'node:http';
@@ -67,6 +69,19 @@ if (args.includes('--compare')) {
   if (!raw || raw.format !== FORMAT || !Array.isArray(raw.rows) || raw.rows.some(r => !r || typeof r.script !== 'string' || !('exit' in r)))
     refuse(`基线 ${abs} 不是本版（format ${FORMAT}）summary，请用本版脚本重跑基线`);
   if (new Set(raw.rows.map(r => r.script)).size !== raw.rows.length) refuse(`基线 ${abs} 里有重复的脚本行`);
+  // r4 P2：逐行 schema 严格校验，不合格在起服务、跑测试、写文件之前拒绝（不再等到比较时崩溃）
+  const str = x => typeof x === 'string', okSt = x => x === 'pass' || x === 'fail' || x === 'skip';
+  const okCase = c => c && Array.isArray(c.path) && c.path.every(str) && Number.isInteger(c.n) && c.n >= 1 && okSt(c.status);
+  const okId = x => x && str(x.name) && (x.status === 'pass' || x.status === 'fail');
+  for (const r of raw.rows) {
+    const bad = why => refuse(`基线 ${abs} 的「${r.script}」行${why}，请用本版脚本重跑基线`);
+    if (!['full', 'failed-only', 'none'].includes(r.idMode)) bad(`身份方式 ${JSON.stringify(r.idMode)} 不认识`);
+    if (!(r.exit === 'incomplete' || Number.isInteger(r.exit) || str(r.exit))) bad('退出码类型不对');
+    if ('incomplete' in r && !(Array.isArray(r.incomplete) && r.incomplete.every(str))) bad('incomplete 不是字符串数组');
+    if (r.idMode === 'full' && r.script === 'node --test' && !(Array.isArray(r.cases) && r.cases.every(okCase))) bad('是完整身份但缺 cases 或类型不对');
+    if (r.idMode === 'full' && r.script !== 'node --test' && !(Array.isArray(r.ids) && r.ids.every(okId))) bad('是完整身份但缺 ids 或类型不对');
+    if (r.idMode === 'failed-only' && !(Array.isArray(r.ids) && r.ids.every(x => okId(x) && x.status === 'fail'))) bad('是仅失败名但缺 ids 或类型不对');
+  }
   BASE = deepFreeze(raw);
 }
 // ③ 输出保护：写之前确认 out / out/logs 是真目录（不是 symlink），要写的文件都还不存在
@@ -219,7 +234,8 @@ function parseNodeTest(out) {
 function plainIds(out, c) {
   const marks = [];
   for (const line of out.split(/\r?\n/)) {
-    const m = line.match(/^\s*(✓|✔|PASS\b|ok\b|✗|✘|×|FAIL\b|not ok\b)\s*(?:\d+\s*)?(?:[-–:]\s*)?(.*)$/);
+    // r4 P1-②：只剥明确的序号格式「N - / N – / N: 」（如 ok 3 - 名），名字本身开头的数字保留（「3000金币购买」「5 分钟…」不被吞）
+    const m = line.match(/^\s*(✓|✔|PASS\b|ok\b|✗|✘|×|FAIL\b|not ok\b)\s*(?:\d+\s+[-–:]\s+|[-–:]\s*)?(.*)$/);
     if (m) marks.push({name: m[2].trim(), status: /^(✗|✘|×|FAIL|not ok)/.test(m[1]) ? 'fail' : 'pass'});
   }
   const nf = marks.filter(x => x.status === 'fail').length;
@@ -319,6 +335,10 @@ if (BASE) {
     if (o.incomplete?.length) {nc(`${r.script}：基线不完整，不可比较：${o.incomplete.join('；')}`); continue;}
     const changed = o.exit !== r.exit || o.fail !== r.fail || o.pass !== r.pass;
     if (changed) diffs.push(`${r.script}：通过 ${cell(o.pass)}→${cell(r.pass)}，失败 ${cell(o.fail)}→${cell(r.fail)}，退出码 ${cell(o.exit)}→${cell(r.exit)}`);
+    // r4 P1-①：进程退出退步对所有身份分支（含 full）都查，在分支 continue 之前；旧 exit 1 基线不能豁免
+    if (o.exit === 0 && r.exit !== 0) nc(`  ${r.script}：退出码 0→${cell(r.exit)}，退出退步 → 不一致`);
+    const noFail = r.idMode === 'full' && (r.cases ? r.cases.every(c => c.status !== 'fail') : r.ids.every(x => x.status !== 'fail'));
+    if (r.exit !== 0 && noFail) nc(`  ${r.script}：用例全部通过但进程退出 ${cell(r.exit)} → 不一致（不看基线）`);
     if (r.idMode !== o.idMode) {nc(`  ${r.script}：身份方式 ${o.idMode}→${r.idMode}，不可比较`); continue;}
     if (r.idMode === 'full') {
       // ① 完整身份集合比
