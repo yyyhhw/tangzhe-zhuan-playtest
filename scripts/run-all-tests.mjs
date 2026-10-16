@@ -6,6 +6,12 @@
 //  3. 依次（串行）跑：node --test、根目录 test_*.js / test_*.mjs、pet/game/test_petgame.js
 //  4. 打印「脚本 → 通过/失败 → 退出码」汇总表，写进 <out>/summary.json，每个脚本的完整输出在 <out>/logs/
 //  --compare：和另一次的 summary.json 逐个比，列出退出码、失败数、node --test 失败名的变化（改前/改后对照用）
+//  r2 门禁（熊大 18:33 三组反例）：
+//   ① node --test 的 TAP 按「# Subtest: 名」→ 同缩进「ok/not ok N - 名」配对；有子测试开了没收口（父级 ok 或输出结束先到）= 未完成，算失败
+//   ② summary.json 记每个用例的完整身份（父 > 子 路径）和状态；--compare 时身份集合不同（少了、换了、新增）一律「不可比较」→ 返回 1，
+//      身份集合相同时，失败→通过记「不再失败」，通过→失败记新增失败
+//   ③ 所有输出文件用 O_EXCL（wx）新建：目标已存在（含指向基线的 symlink / hardlink）就在写之前拒绝；out 与 out/logs 不能是 symlink
+//  --replay-node-log FILE：不跑 node --test，改读一份已存的 TAP 日志（复核/负例用），只影响 node --test 那一行
 // 不跑 Python 脚本（test_*.py）、tests/ 下的浏览器 .py、WebKit。退出码：有任何一项退出码不等于 0 就返回 1；用了 --compare 时，只有出现新失败才返回 1。
 import http from 'node:http';
 import fs from 'node:fs';
@@ -28,7 +34,30 @@ const stamp = new Date().toISOString().replace(/[:.]/g, '-');
 const OUT = path.resolve(opt('--out') || path.join(process.env.TMPDIR || '/tmp', `tzz-run-all-${stamp}`));
 const COMPARE = opt('--compare');
 const ONLY = opt('--only');
-fs.mkdirSync(path.join(OUT, 'logs'), {recursive: true});
+const REPLAY = opt('--replay-node-log');
+function refuse(msg) {console.error(`拒绝：${msg}`); process.exit(2);}
+// ③ 输出保护：写之前确认 out / out/logs 是真目录（不是 symlink），要写的文件都还不存在
+for (const d of [OUT, path.join(OUT, 'logs')]) {
+  let st = null;
+  try {st = fs.lstatSync(d);} catch {}
+  if (st && st.isSymbolicLink()) refuse(`${d} 是符号链接，不往里写`);
+  if (st && !st.isDirectory()) refuse(`${d} 已存在且不是目录`);
+  if (!st) fs.mkdirSync(d);
+}
+function safeWrite(file, data) {
+  // wx = O_CREAT|O_EXCL：目标已存在（普通文件、symlink、hardlink 都算）就失败，绝不改写原文件
+  try {fs.writeFileSync(file, data, {flag: 'wx'});}
+  catch (e) {if (e.code === 'EEXIST') refuse(`${file} 已存在（可能是指向基线的链接），不覆盖`); throw e;}
+}
+function preflight(names) {
+  for (const n of names) {
+    const f = path.join(OUT, n);
+    let st = null;
+    try {st = fs.lstatSync(f);} catch {}
+    if (st) refuse(`${f} 已存在${st.isSymbolicLink() ? '（符号链接）' : st.nlink > 1 ? '（硬链接）' : ''}，换一个空的 --out 目录`);
+  }
+}
+preflight(['summary.json', 'logs/node--test.log']);
 
 // ---------- 静态服务 ----------
 function serve(port) {
@@ -104,8 +133,32 @@ function count(out) {
 }
 function parseNodeTest(out) {
   const g = k => {const m = out.match(new RegExp(`^# ${k} (\\d+)`, 'm')); return m ? +m[1] : null;};
-  const failed = [...out.matchAll(/^\s*not ok \d+ - (.+?)(?: # .*)?$/gm)].map(x => x[1].trim());
-  return {tests: g('tests'), pass: g('pass'), fail: g('fail'), skipped: g('skipped'), failed: [...new Set(failed)]};
+  // ① 按缩进配对 Subtest 与结果行；cases = 完整身份路径 → pass/fail/skip
+  const stack = [], cases = {}, incomplete = [];
+  const pathOf = (upto) => stack.slice(0, upto).map(x => x.name);
+  for (const line of out.split(/\r?\n/)) {
+    const ind = line.length - line.trimStart().length, t = line.trim();
+    let m;
+    if ((m = t.match(/^# Subtest: (.+)$/))) {
+      while (stack.length && stack[stack.length - 1].indent >= ind) incomplete.push([...pathOf(stack.length)].join(' > ')), stack.pop();
+      stack.push({name: m[1].trim(), indent: ind});
+      continue;
+    }
+    if ((m = t.match(/^(not ok|ok) \d+(?: - (.*?))?(?: # (SKIP|TODO)\b.*)?$/i))) {
+      // 比这一行更深、还没收口的子测试 = 未完成
+      while (stack.length && stack[stack.length - 1].indent > ind) incomplete.push(pathOf(stack.length).join(' > ')), stack.pop();
+      const name = (m[2] || '').trim();
+      let key;
+      if (stack.length && stack[stack.length - 1].indent === ind) {key = pathOf(stack.length).join(' > '); stack.pop();}
+      else key = [...pathOf(stack.length), name].join(' > ');
+      const status = m[3] ? 'skip' : m[1] === 'ok' ? 'pass' : 'fail';
+      if (Object.hasOwn(cases, key)) key += ` #${Object.keys(cases).filter(k => k === key || k.startsWith(key + ' #')).length + 1}`;
+      cases[key] = status;
+    }
+  }
+  while (stack.length) incomplete.push(pathOf(stack.length).join(' > ')), stack.pop();
+  const failed = Object.entries(cases).filter(([, v]) => v === 'fail').map(([k]) => k);
+  return {tests: g('tests'), pass: g('pass'), fail: g('fail'), skipped: g('skipped'), failed, cases, incomplete: [...new Set(incomplete)]};
 }
 
 // ---------- 主流程 ----------
@@ -129,22 +182,26 @@ try {
   console.log(`静态服务：${PORTS.join('、')}；PLAYWRIGHT_MODULE=${pw || '（没找到，浏览器脚本会报错）'}；日志 ${OUT}`);
 
   if (ONLY !== 'root') {
-    process.stdout.write('▶ node --test（串行）… ');
-    const r = await run(process.execPath, ['--test', '--test-concurrency=1', '--test-reporter=tap'], {timeout: STEP_TIMEOUT_MS.node, env});
-    fs.writeFileSync(path.join(OUT, 'logs', 'node--test.log'), r.out);
+    process.stdout.write(REPLAY ? `▶ node --test（读已存日志 ${REPLAY}）… ` : '▶ node --test（串行）… ');
+    const r = REPLAY ? {out: fs.readFileSync(REPLAY, 'utf8'), code: 'replay', seconds: 0}
+      : await run(process.execPath, ['--test', '--test-concurrency=1', '--test-reporter=tap'], {timeout: STEP_TIMEOUT_MS.node, env});
+    safeWrite(path.join(OUT, 'logs', 'node--test.log'), r.out);
     const t = parseNodeTest(r.out);
-    rows.push({script: 'node --test', pass: t.pass, fail: t.fail, skipped: t.skipped, tests: t.tests, exit: r.code, seconds: r.seconds, by: 'TAP 汇总', failed: t.failed, log: 'logs/node--test.log'});
-    console.log(`${t.pass}/${t.tests} 过，${t.fail} 败，${t.skipped} 跳，退出码 ${r.code}`);
+    // 未收口的子测试不能被父级 ok 冲掉：本行记失败
+    const exit = t.incomplete.length ? 'incomplete' : REPLAY ? (t.fail === 0 && Object.keys(t.cases).length ? 0 : 1) : r.code;
+    rows.push({script: 'node --test', pass: t.pass, fail: t.fail, skipped: t.skipped, tests: t.tests, exit, seconds: r.seconds, by: 'TAP 汇总', failed: t.failed, cases: t.cases, incomplete: t.incomplete, log: 'logs/node--test.log'});
+    console.log(`${t.pass}/${t.tests} 过，${t.fail} 败，${t.skipped} 跳，退出码 ${exit}${t.incomplete.length ? `；未收口子测试 ${t.incomplete.length} 个：${t.incomplete.join('；')}` : ''}`);
   }
   if (ONLY !== 'node') {
     const scripts = fs.readdirSync(ROOT).filter(f => /^test_.*\.(m?js)$/.test(f)).sort();
     scripts.push('pet/game/test_petgame.js');
+    preflight(['summary.json', ...scripts.map(s => `logs/${s.replace(/\//g, '__')}.log`)]);
     for (const s of scripts) {
       if (!fs.existsSync(path.join(ROOT, s))) continue;
       process.stdout.write(`▶ ${s} … `);
       const r = await run(process.execPath, [s], {timeout: STEP_TIMEOUT_MS.script, env});
       const log = `logs/${s.replace(/\//g, '__')}.log`;
-      fs.writeFileSync(path.join(OUT, log), r.out);
+      safeWrite(path.join(OUT, log), r.out);
       const c = count(r.out);
       rows.push({script: s, pass: c.pass, fail: c.fail, exit: r.code, seconds: r.seconds, by: c.by, log});
       console.log(`退出码 ${r.code}`);
@@ -169,7 +226,7 @@ if (nodeRow?.failed?.length) console.log(`node --test 失败：\n  ${nodeRow.fai
 
 const summary = {sha, root: ROOT, at: new Date().toISOString(), node: process.version, playwright: pw, ports: PORTS,
   nodeOptions: env.NODE_OPTIONS, notRun: ['test_*.py', 'tests/**/*.py', 'WebKit'], rows};
-fs.writeFileSync(path.join(OUT, 'summary.json'), JSON.stringify(summary, null, 2));
+safeWrite(path.join(OUT, 'summary.json'), JSON.stringify(summary, null, 2));
 console.log(`汇总已写入 ${path.join(OUT, 'summary.json')}`);
 
 let exit = bad.length ? 1 : 0;
@@ -180,18 +237,28 @@ if (COMPARE) {
   let worse = false;
   for (const r of rows) {
     const o = prev.get(r.script);
-    if (!o) {diffs.push(`${r.script}：旧结果里没有`); continue;}
+    if (!o) {worse = true; diffs.push(`${r.script}：旧结果里没有（不可比较）`); continue;}
     if (o.exit !== r.exit || o.fail !== r.fail || o.pass !== r.pass) {
       diffs.push(`${r.script}：通过 ${cell(o.pass)}→${cell(r.pass)}，失败 ${cell(o.fail)}→${cell(r.fail)}，退出码 ${cell(o.exit)}→${cell(r.exit)}`);
       if ((r.fail ?? 0) > (o.fail ?? 0) || (o.exit === 0 && r.exit !== 0)) worse = true;
     }
-    if (r.failed && o.failed) {
-      const added = r.failed.filter(x => !o.failed.includes(x)), gone = o.failed.filter(x => !r.failed.includes(x));
+    if (r.cases || o.cases) {
+      // ② 按完整用例身份集合比：集合不同 = 不可比较（只数失败名会被「删失败 A + 加通过 C」骗成修好了）
+      if (!r.cases || !o.cases) {worse = true; diffs.push(`  ${r.script}：一边没有用例身份清单（旧版 summary），不可比较——请用本版脚本重跑基线`); continue;}
+      const ok = Object.keys(o.cases), nk = Object.keys(r.cases);
+      const missing = ok.filter(k => !Object.hasOwn(r.cases, k)), extra = nk.filter(k => !Object.hasOwn(o.cases, k));
+      if (missing.length || extra.length) {
+        worse = true;
+        diffs.push(`  用例身份集合变了，不可比较：${missing.length ? `少了 ${missing.join('；')}` : ''}${missing.length && extra.length ? '；' : ''}${extra.length ? `多了 ${extra.join('；')}` : ''}`);
+        continue;
+      }
+      const added = nk.filter(k => r.cases[k] === 'fail' && o.cases[k] !== 'fail'), gone = nk.filter(k => o.cases[k] === 'fail' && r.cases[k] !== 'fail');
       if (added.length) {worse = true; diffs.push(`  新增失败：${added.join('；')}`);}
       if (gone.length) diffs.push(`  不再失败：${gone.join('；')}`);
     }
+    if (r.incomplete?.length) {worse = true; diffs.push(`  未收口子测试：${r.incomplete.join('；')}`);}
   }
-  for (const s of prev.keys()) if (!rows.some(r => r.script === s)) diffs.push(`${s}：这次没跑`);
+  for (const s of prev.keys()) if (!rows.some(r => r.script === s)) {worse = true; diffs.push(`${s}：这次没跑（不可比较）`);}
   console.log(`\n对照 ${COMPARE}（${old.sha || '?'} → ${sha || '?'}）：${diffs.length ? '\n' + diffs.join('\n') : '逐项一致'}`);
   exit = worse ? 1 : 0;
 }
