@@ -4,15 +4,19 @@
 // 养成-38 故事卡获得路径（k_3/k_4/k_8 改条件卡，不进盲盒池；条件达成直接入库，不扣币、不计抽数、不动保底）：
 //   ⑤a 老档（已从盲盒抽到 k_3，四店都有员工，无 milestones）夜里进入：可写、不进保护；k_3 保留；三张条件卡都不在盲盒池；
 //       图鉴对未拥有的 2 张条件卡显示「提示：」；盲盒页有条件卡说明；夜里进家 → 入库 k_4（收摊月亮）+ k_8（一条街的灯），
-//       抽数 / 保底 / 每日次数不变、金币不减；刷新后三张都在且不重复、磁盘一致、仍可写。
+//       同一次同步 evaluate 里读前值→setTab('home')→读后值：金币 / 抽数 / 保底 / 每日次数严格相等（退修①）；
+//       人为扣 1 币的负对照必须被同一判定判失败（退修②）；等待后的金币漂移另记、不判；
+//       保存后刷新：三张都在且不重复、磁盘一致、仍可写。时段断言游戏实际 night。
 //   ⑤b 新字段默认值：养成-38 没有新增存档字段（只用 gacha.owned，源码 economy.js / app.js 已核），这里验「默认不给」：
-//       新档白天进家不发任何条件卡、刷新后仍没有。
+//       新档白天（断言游戏实际时段 day）进家不发任何条件卡、保存后刷新仍没有。
 // 星途-02 milestones（可选顶层字段 {schemaVersion:1, events:{ID: ms|null}}）：
 //   ⑥a 新字段默认值：新档开摊 → milestones 只有 firstShop = created；真点「雇佣」→ firstEmployee 记时间；刷新与 root↔pet 跨入口原样保留。
 //   ⑥b 老档（无 milestones，space.ended）进入：可写，读档不写时间（没有任何数字时间）；真点「买下地球」→ earth 记时间、
 //       firstShop 记 null（不编日期）、没证据的打僵尸不出现、「记录开始之前」「从有记录起」文案、390 不横向溢出；刷新后完全一致。
 //   ⑥c 坏字段：milestones.schemaVersion = 2 → 进保护（saveBlocked 或保护提示），原档字节不被改写。
-// 时段：页面时区按「现在」挑一个本地 22 点（夜）/ 13 点（白天）的 Etc/GMT±N，不装假时钟，游戏循环照常跑。
+// 时段：页面时区按「现在」挑一个本地 22 点（夜）/ 13 点（白天）的 Etc/GMT±N，不装假时钟，游戏循环照常跑；
+//       另在页面里按 app.js storyPeriod 的取法算出实际时段并断言 night / day（不只看小时）。
+// [刷新保留] 一律是「显式 persist 后刷新」，不覆盖未保存直接关页 / 被系统杀进程。
 // 没法在 macOS WebKit 验的：iOS 真机 Safari、后台冻结恢复（单列未验）。
 //
 // Usage: node scenarios-139.mjs                 (WebKit)
@@ -85,6 +89,7 @@ async function load(page, base, entry) {
   await page.waitForFunction(READY, null, { timeout: 30000 });
   await clearModals(page);
 }
+// 注意边界：这里先显式 persist 再刷新，所以 [刷新保留] 验的是「保存后刷新」，不是「没保存直接关页 / 被系统杀掉」。
 async function reload(page) {
   await page.evaluate(() => { try { window.__tzz.persist && window.__tzz.persist(); } catch {} });
   // 等素材请求落定再刷新：WebKit 会把刷新中断的 fetch 报成 pageerror（测试-130 run 3），那是时序不是游戏错误。
@@ -97,6 +102,34 @@ const blocked = (page) => page.evaluate(() => ({ saveBlocked: window.__tzz.saveB
 const protectText = (page) => page.evaluate(() => /只读|保护|未读取或写入存档/.test(document.body.innerText));
 const diskSave = (page) => page.evaluate((k) => { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } }, SAVE_KEY);
 const J = (v) => JSON.stringify(v);
+const drift = [];
+// 在页面里同步执行：读前值 → setTab('home') → (负对照时扣 1 币) → 读后值 → (负对照还回 1 币)。整段没有 await，游戏循环插不进来。
+const SNAP_AROUND_HOME = ({ tamper }) => {
+  const t = window.__tzz, s = () => t.state;
+  const snap = () => ({ coins: s().coins, draws: s().gacha.draws, pity: s().gacha.pity, daily: JSON.stringify(s().gachaDaily ?? null), owned: s().gacha.owned.slice() });
+  const before = snap();
+  t.setTab('home');
+  if (tamper) s().coins -= tamper;
+  const after = snap();
+  if (tamper) s().coins += tamper;
+  return { before, after, got: after.owned.filter((x) => !before.owned.includes(x)) };
+};
+// 「不扣币」判定：金币 / 抽数 / 保底 / 每日次数 全部严格相等。正式检查和负对照用同一个函数。
+function costFree(before, after) {
+  const coinDiff = after.coins - before.coins;
+  const ok = coinDiff === 0 && after.draws === before.draws && after.pity === before.pity && after.daily === before.daily;
+  return { ok, coinDiff };
+}
+// 游戏实际时段：照 app.js storyPeriod 的取法——root 先用 home/home-ambience.mjs 的 homePeriodAt，pet 副本没有这个模块，走内联小时规则。两个都算出来对照。
+const gamePeriod = (page) => page.evaluate(async () => {
+  const h = new Date().getHours();
+  const inline = h >= 19 || h < 5 ? 'night' : h >= 17 ? 'dusk' : h < 10 ? 'morning' : 'day';
+  let ambience = null;
+  if (location.pathname === '/' || location.pathname === '/index.html') {
+    try { ambience = (await import('/home/home-ambience.mjs')).homePeriodAt(Date.now()).id; } catch { ambience = 'import-failed'; }
+  }
+  return { hour: h, inline, ambience };
+});
 
 async function generateSeed(browser, base) {
   const ctx = await browser.newContext(ctxOpts());
@@ -150,12 +183,24 @@ async function scenarioStoryOld(browser, base, entry, seed, def) {
     await page.evaluate(() => window.__tzz.setTab('gacha')); await page.waitForTimeout(300);
     check(`${tag}: 盲盒页 has condition-card note`, await page.evaluate(() => !!document.getElementById('storyCondNote')));
     await page.evaluate(() => window.__tzz.setTab('shop')); await page.waitForTimeout(300);
-    const before = await page.evaluate(() => { const s = window.__tzz.state; return { coins: s.coins, draws: s.gacha.draws, pity: s.gacha.pity, daily: JSON.stringify(s.gachaDaily ?? null) }; });
-    await page.evaluate(() => window.__tzz.setTab('home')); await page.waitForTimeout(700);
-    const after = await page.evaluate(() => { const s = window.__tzz.state; return { coins: s.coins, draws: s.gacha.draws, pity: s.gacha.pity, daily: JSON.stringify(s.gachaDaily ?? null), owned: s.gacha.owned.slice() }; });
-    check(`${tag}: night home → k_4 + k_8 granted (k_3 already owned)`, after.owned.includes('k_4') && after.owned.includes('k_8') && after.owned.filter((x) => x === 'k_3').length === 1, J(after.owned));
-    check(`${tag}: grant costs nothing (draws/pity/daily same, coins not lower)`, after.draws === before.draws && after.pity === before.pity && after.daily === before.daily && after.coins >= before.coins,
-      J({ before, after: { ...after, owned: undefined } }));
+    const per = await gamePeriod(page);
+    check(`${tag}: [时段] game period is night (${tz})`, per.inline === 'night' && (per.ambience === null || per.ambience === 'night'), J(per));
+    // 退修①：同一次同步 evaluate 里 读前值 → setTab('home')（storyGrant 同步入库）→ 读后值；中间不让游戏循环跑，金币必须严格相等。
+    const grant = await page.evaluate(SNAP_AROUND_HOME, { tamper: 0 });
+    check(`${tag}: night home → k_4 + k_8 granted (k_3 already owned)`, grant.got.includes('k_4') && grant.got.includes('k_8') && grant.after.owned.filter((x) => x === 'k_3').length === 1, J(grant.after.owned));
+    const verdict = costFree(grant.before, grant.after);
+    check(`${tag}: grant costs nothing (same sync tick: coins/draws/pity/daily strictly equal)`, verdict.ok, J({ ...verdict, before: grant.before, after: { ...grant.after, owned: undefined } }));
+    // 退修②：负对照——同样的同步读取，但在 setTab 后人为扣 1 币（随即还回），同一判定必须判失败；判不出来整条失败。
+    await page.evaluate(() => window.__tzz.setTab('shop')); await page.waitForTimeout(200);
+    const neg = await page.evaluate(SNAP_AROUND_HOME, { tamper: 1 });
+    const negVerdict = costFree(neg.before, neg.after);
+    check(`${tag}: negative control — artificial −1 coin is detected by the same check`,
+      neg.before.coins - 1 !== neg.before.coins && neg.after.coins === neg.before.coins - 1 && !negVerdict.ok && negVerdict.coinDiff === -1, J({ negVerdict, b: neg.before.coins, a: neg.after.coins }));
+    // 等待后的金币变化只记录（员工收入会涨），不进判定
+    const c0 = await page.evaluate(() => window.__tzz.state.coins); await page.waitForTimeout(700);
+    const c1 = await page.evaluate(() => window.__tzz.state.coins);
+    drift.push({ tag, waitMs: 700, coinDelta: c1 - c0 });
+    console.log(`INFO  ${tag}: coin drift over 700ms idle (not judged) = ${c1 - c0}`);
     await shot(page, `yc38-home-night-${tagOf(entry)}`);
     await reload(page);
     const own2 = await page.evaluate(() => window.__tzz.state.gacha.owned.slice());
@@ -174,6 +219,8 @@ async function scenarioStoryFresh(browser, base, entry, seed) {
   try {
     await load(page, base, entry);
     const b = await blocked(page);
+    const per = await gamePeriod(page);
+    check(`${tag}: [时段] game period is day (${tz})`, per.inline === 'day' && (per.ambience === null || per.ambience === 'day'), J(per));
     await page.evaluate(() => window.__tzz.setTab('home')); await page.waitForTimeout(700);
     const own = await page.evaluate(() => window.__tzz.state.gacha.owned.slice());
     check(`${tag}: [新字段默认值] fresh save, day home (${tz}) → no condition card`, b.saveBlocked === false && !COND.some((k) => own.includes(k)), J({ b, own }));
@@ -282,15 +329,17 @@ async function main() {
   } catch (e) { check('scenarios ran to completion', false, e.stack || e); }
   finally { await browser.close(); server.close(); }
   notCovered.push('iOS 真机 Safari / 后台冻结后恢复：macOS WebKit 模拟不了，单列未验',
-    '养成-38 收下夜游食神（k_3 特殊客人路径）与 8 种家里动画（熊猫走、气球、倒计时）：不在 139 范围，WebKit 未验',
+    '[刷新保留] 只验「显式 persist 后刷新」，未验未保存直接关页 / 被系统杀进程',
+    '养成-38 夜游食神真实领取（k_3 特殊客人弹窗点收下）与家里动画（熊猫、月亮、发射倒计时）：不在 139 范围，WebKit 未验（测试-141）',
     '星途-02 打僵尸 / 塔防等子游戏回执写 firstZombie / firstTDWin：未验');
   const failed = checks.filter((c) => !c.ok);
   const ok = failed.length === 0 && errors.length === 0;
-  const report = { ok, engine: ENGINE, viewport: VIEWPORT, entryPoints: ENTRY_POINTS, counts: { checks: checks.length, failed: failed.length, jsErrors: errors.length }, checks, errors, notCovered };
+  const report = { ok, engine: ENGINE, viewport: VIEWPORT, entryPoints: ENTRY_POINTS, counts: { checks: checks.length, failed: failed.length, jsErrors: errors.length }, checks, errors, coinDriftNotJudged: drift, notCovered };
   fs.writeFileSync(path.join(OUT, `report-139-${ENGINE}.json`), JSON.stringify(report, null, 2));
   const lines = [`测试-139 养成-38 + 星途-02 (${ENGINE}): ${ok ? 'PASS' : 'FAIL'}`, `checks: ${checks.length - failed.length}/${checks.length} passed, js errors: ${errors.length}`, '',
     ...checks.map((c) => `${c.ok ? '[PASS]' : '[FAIL]'} ${c.name}${c.detail ? '  — ' + c.detail : ''}`),
-    ...(errors.length ? ['', 'JS ERRORS:', ...errors.map((e) => `  (${e.label}) ${e.kind}: ${e.text}`)] : []), '', 'NOT COVERED: ' + notCovered.join('; ')];
+    ...(errors.length ? ['', 'JS ERRORS:', ...errors.map((e) => `  (${e.label}) ${e.kind}: ${e.text}`)] : []), '',
+    'COIN DRIFT (not judged): ' + drift.map((d) => `${d.tag} +${d.coinDelta}/${d.waitMs}ms`).join('; '), 'NOT COVERED: ' + notCovered.join('; ')];
   fs.writeFileSync(path.join(OUT, `report-139-${ENGINE}.txt`), lines.join('\n'));
   console.log(`\n${ok ? 'PASS' : 'FAIL'} — ${checks.length - failed.length}/${checks.length} checks, ${errors.length} js errors`);
   process.exit(ok ? 0 : 1);
