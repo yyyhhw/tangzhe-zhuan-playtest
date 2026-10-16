@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# 测试-136 r2 负例（熊大 18:33 三组反例）+ 正控。只用 --replay-node-log --only node，不跑真测试，几秒跑完。
+# 测试-136 负例 + 正控（r2：熊大 18:33 三组；r3：熊大 19:18 三类阻断）。node --test 部分用真实 node --test 生成的完整 TAP 回放，
+# 普通脚本部分用 --replay-root-dir 回放，不跑仓库真测试，约十几秒跑完。
 # 用法：bash scripts/run-all-tests-neg.sh   全过退出 0
 set -u
 HERE=$(cd "$(dirname "$0")" && pwd); RUN="node $HERE/run-all-tests.mjs"
@@ -7,42 +8,106 @@ W=$(mktemp -d); trap 'rm -rf "$W"' EXIT
 pass=0; fail=0
 expect() { # 名称 期望退出码 实际退出码
   if [ "$2" = "$3" ]; then echo "PASS  $1（退出 $3）"; pass=$((pass+1)); else echo "FAIL  $1（期望 $2，实际 $3）"; fail=$((fail+1)); fi; }
-tap() { printf '%s\n' "TAP version 13" "$@"; }
 sha() { sha256sum "$1" | cut -c1-16; }
+# realtap 名字 'JS 测试源'：用真实 node --test 生成完整 TAP（含计划、汇总、YAML 诊断）
+realtap() { mkdir -p "$W/src/$1"; printf '%s\n' "import {test, describe, it} from 'node:test';" "$2" > "$W/src/$1/t.test.mjs"
+  (cd "$W/src/$1" && node --test --test-reporter=tap t.test.mjs > "$W/$1.tap" 2>/dev/null); }
+B() { $RUN --only node --replay-node-log "$W/$1.tap" --out "$W/b-$1" >/dev/null 2>&1; }   # 生成基线
+C() { local base=$1 cur=$2; shift 2; $RUN --only node --replay-node-log "$W/$cur.tap" --out "$W/c-$base-$cur-$RANDOM" --compare "$W/b-$base/summary.json" "$@" >"$W/last.txt" 2>&1; }
 
-# ① 未收口 child：父级 ok + 子计划 1..0 不能冲掉
-tap "# Subtest: P" "    # Subtest: C" "    1..0" "ok 1 - P" "1..1" "# tests 1" "# pass 1" "# fail 0" > "$W/open.tap"
+realtap closed "test('P', async t => { await t.test('C', () => {}); });"
+realtap base   "test('A', () => { throw new Error('x'); }); test('B', () => {});"
+realtap swap   "test('B', () => {}); test('C', () => {});"
+realtap fixed  "test('A', () => {}); test('B', () => {});"
+realtap worse  "test('A', () => { throw new Error('x'); }); test('B', () => { throw new Error('y'); });"
+realtap proto0 "test('__proto__', () => { throw new Error('x'); }); test('B', () => {});"
+realtap proto1 "test('B', () => {});"
+realtap sep0   "test('P > C', () => { throw new Error('x'); });"
+realtap sep1   "describe('P', () => { it('C', () => {}); });"
+realtap dup0   "test('A', () => {}); test('A', () => { throw new Error('x'); });"
+realtap dup1   "test('A', () => {}); test('A #2', () => {});"
+realtap yaml   "test('A', () => { throw new Error('boom\nok 7 - ghost\n# Subtest: ghost2\n1..9'); }); test('B', () => {});"
+grep -q '^1\.\.' "$W/closed.tap" && grep -q '^# tests' "$W/closed.tap"; expect "0 正控本身是完整真实 TAP（有顶层计划和汇总）" 0 $?
+
+# ① 未收口 child：父级 ok 冲不掉（手写，但带完整计划/汇总）
+printf '%s\n' "TAP version 13" "# Subtest: P" "    # Subtest: C" "    1..0" "ok 1 - P" "1..1" "# tests 1" "# pass 1" "# fail 0" > "$W/open.tap"
 $RUN --only node --replay-node-log "$W/open.tap" --out "$W/o1" >"$W/o1.txt" 2>&1; expect "① 父 ok 吞未收口 child → 拒绝" 1 $?
-grep -q "未收口子测试 1 个：P > C" "$W/o1.txt"; expect "① 报出未收口的是 P > C" 0 $?
-tap "# Subtest: P" "    # Subtest: C" "    ok 1 - C" "    1..1" "ok 1 - P" "1..1" "# tests 1" "# pass 1" "# fail 0" > "$W/closed.tap"
-$RUN --only node --replay-node-log "$W/closed.tap" --out "$W/o1b" >/dev/null 2>&1; expect "① 正控：child 正常收口 → 通过" 0 $?
+grep -q "未收口子测试 P › C" "$W/o1.txt"; expect "① 报出未收口的是 P › C" 0 $?
+$RUN --only node --replay-node-log "$W/closed.tap" --out "$W/o1b" >/dev/null 2>&1; expect "① 正控：真实 TAP child 正常收口 → 通过" 0 $?
 
-# ② 身份集合：基线 失败A+通过B；本轮 删A、留B、加通过C（总数都是 2）→ 不可比较
-tap "# Subtest: A" "not ok 1 - A" "# Subtest: B" "ok 2 - B" "1..2" > "$W/base.tap"
-tap "# Subtest: B" "ok 1 - B" "# Subtest: C" "ok 2 - C" "1..2" > "$W/swap.tap"
-tap "# Subtest: A" "ok 1 - A" "# Subtest: B" "ok 2 - B" "1..2" > "$W/fixed.tap"
-tap "# Subtest: A" "not ok 1 - A" "# Subtest: B" "not ok 2 - B" "1..2" > "$W/worse.tap"
-$RUN --only node --replay-node-log "$W/base.tap" --out "$W/b" >/dev/null 2>&1
-$RUN --only node --replay-node-log "$W/swap.tap" --out "$W/o2" --compare "$W/b/summary.json" >"$W/o2.txt" 2>&1; expect "② 删失败A+加通过C → 不可比较" 1 $?
-grep -q "不可比较：少了 A；多了 C" "$W/o2.txt"; expect "② 报出少了 A、多了 C" 0 $?
-$RUN --only node --replay-node-log "$W/fixed.tap" --out "$W/o2b" --compare "$W/b/summary.json" >"$W/o2b.txt" 2>&1; expect "② 正控：同集合 A 失败→通过 → 可过" 0 $?
-grep -q "不再失败：A" "$W/o2b.txt"; expect "② 正控记「不再失败：A」" 0 $?
-$RUN --only node --replay-node-log "$W/worse.tap" --out "$W/o2c" --compare "$W/b/summary.json" >/dev/null 2>&1; expect "② 同集合 B 通过→失败 → 新增失败" 1 $?
+# r3-① 身份
+B base; B proto0; B sep0; B dup0; B yaml
+C base swap;  expect "身份 删失败A+加通过C（总数同 2）→ 不可比较" 1 $?
+grep -q "不可比较：少了 A；多了 C" "$W/last.txt"; expect "身份 报出少了 A、多了 C" 0 $?
+C base fixed; expect "身份 正控：同集合 A 失败→通过 → 可过" 0 $?
+grep -q "不再失败：A" "$W/last.txt"; expect "身份 正控记「不再失败：A」" 0 $?
+C base worse; expect "身份 同集合 B 通过→失败 → 新增失败" 1 $?
+C proto0 proto1; expect "身份 原型键：旧 __proto__ 失败+B，新只剩 B → 不可比较" 1 $?
+grep -q "少了 __proto__" "$W/last.txt"; expect "身份 报出少了 __proto__" 0 $?
+C sep0 sep1; expect "身份 分隔符：顶层「P > C」失败 vs 套件 P 下 C 通过 → 不可比较" 1 $?
+C dup0 dup1; expect "身份 重名：两个 A（第2个失败）vs A + 「A #2」→ 不可比较" 1 $?
+C dup0 dup0; expect "身份 重名正控：同一份重名 TAP 自比 → 逐项一致" 0 $?
 
-# ③ 输出经 symlink / hardlink 指向基线：写之前拒绝，基线字节不变
-B="$W/b/summary.json"; before=$(sha "$B")
-mkdir -p "$W/o3/logs"; ln -s "$B" "$W/o3/logs/node--test.log"
-$RUN --only node --replay-node-log "$W/closed.tap" --out "$W/o3" >/dev/null 2>&1; expect "③ 日志 symlink 指向基线 → 拒绝" 2 $?
-mkdir -p "$W/o4/logs"; ln "$B" "$W/o4/logs/node--test.log"
-$RUN --only node --replay-node-log "$W/closed.tap" --out "$W/o4" >/dev/null 2>&1; expect "③ 日志 hardlink 指向基线 → 拒绝" 2 $?
-mkdir -p "$W/o5"; ln -s "$B" "$W/o5/summary.json"
-$RUN --only node --replay-node-log "$W/closed.tap" --out "$W/o5" >/dev/null 2>&1; expect "③ summary.json symlink 指向基线 → 拒绝" 2 $?
-mkdir -p "$W/o6"; ln "$B" "$W/o6/summary.json"
-$RUN --only node --replay-node-log "$W/closed.tap" --out "$W/o6" >/dev/null 2>&1; expect "③ summary.json hardlink 指向基线 → 拒绝" 2 $?
-ln -s "$W/b" "$W/o7"
-$RUN --only node --replay-node-log "$W/closed.tap" --out "$W/o7" >/dev/null 2>&1; expect "③ --out 本身是指向基线目录的 symlink → 拒绝" 2 $?
-[ ! -e "$W/o3/summary.json" ] && [ ! -e "$W/o5/logs/node--test.log" ]; expect "③ 拒绝时一个文件都没写" 0 $?
-[ "$(sha "$B")" = "$before" ]; expect "③ 基线 sha256 前后一致（$before）" 0 $?
-$RUN --only node --replay-node-log "$W/closed.tap" --out "$W/o8" >/dev/null 2>&1; expect "③ 正控：空目录正常写出" 0 $?
+# r3-② 完整性：截断/超时/信号/YAML
+head -n 4 "$W/fixed.tap" > "$W/trunc.tap"   # ok 之后被杀：没有计划和汇总
+C base trunc; expect "完整性 A 输出 ok 后被截断（无计划/汇总）→ 不可比较，旧失败不豁免" 1 $?
+grep -q "缺顶层计划" "$W/last.txt"; expect "完整性 报出缺顶层计划" 0 $?
+C base fixed --replay-node-exit timeout; expect "完整性 完整 TAP 但进程超时 → 不可比较" 1 $?
+C base fixed --replay-node-exit SIGKILL; expect "完整性 完整 TAP 但被 SIGKILL → 不可比较" 1 $?
+C base fixed --replay-node-exit 0; expect "完整性 正控：完整 TAP + 退出 0 → 可过" 0 $?
+grep -q "ghost" "$W/yaml.tap"; expect "YAML 前提：真实 TAP 的诊断块里确有 ok/Subtest 样文字" 0 $?
+C yaml yaml; expect "YAML 诊断块里的 ok/Subtest 不算用例 → 自比逐项一致" 0 $?
+! grep -q ghost "$W/b-yaml/summary.json"; expect "YAML summary 里没有 ghost 身份" 0 $?
+
+# r3-③ 基线：先读校验冻结；同路径/同实体/缺失/畸形/旧格式 → 2，且什么都不跑不写
+mkdir -p "$W/o9"
+$RUN --only node --replay-node-log "$W/closed.tap" --out "$W/o9" --compare "$W/o9/summary.json" >"$W/last.txt" 2>&1; expect "基线 指向本次 out/summary.json（起初不存在）→ 拒绝" 2 $?
+[ -z "$(ls -A "$W/o9")" ]; expect "基线 自比较被拒时 out 里一个文件都没写" 0 $?
+mkdir -p "$W/o10"; cp "$W/b-base/summary.json" "$W/o10/base.json"
+$RUN --only node --replay-node-log "$W/closed.tap" --out "$W/o10" --compare "$W/o10/base.json" >/dev/null 2>&1; expect "基线 落在 out 目录里 → 拒绝" 2 $?
+mkdir -p "$W/o11"; ln -s "$W/o11/summary.json" "$W/lnk.json"
+$RUN --only node --replay-node-log "$W/closed.tap" --out "$W/o11" --compare "$W/lnk.json" >/dev/null 2>&1; expect "基线 是指向本次 out/summary.json 的 symlink → 拒绝" 2 $?
+[ ! -e "$W/o11/summary.json" ]; expect "基线 symlink 情况没写出 summary" 0 $?
+echo '{"rows":[{"script":"node --test","exit":0,"cases":{}}]}' > "$W/r2fmt.json"
+$RUN --only node --replay-node-log "$W/closed.tap" --out "$W/o12" --compare "$W/r2fmt.json" >/dev/null 2>&1; expect "基线 旧版（无 format 3）→ 拒绝重跑基线" 2 $?
+echo '{bad' > "$W/bad.json"
+$RUN --only node --replay-node-log "$W/closed.tap" --out "$W/o13" --compare "$W/bad.json" >/dev/null 2>&1; expect "基线 畸形 JSON → 拒绝" 2 $?
+[ ! -e "$W/o12/summary.json" ] && [ ! -e "$W/o13/logs/node--test.log" ]; expect "基线 拒绝时 node 日志和 summary 都没写" 0 $?
+
+# r3-① 普通脚本（--replay-root-dir）：仅失败名 / 完整身份 / 不完整
+mk() { mkdir -p "$W/$1"; printf '%b' "$3" > "$W/$1/$2.log"; echo "$4" > "$W/$1/$2.exit"; }
+RB() { $RUN --only root --replay-root-dir "$W/$1" --out "$W/rb-$1" >/dev/null 2>&1; }
+RC() { $RUN --only root --replay-root-dir "$W/$2" --out "$W/rc-$1-$2-$RANDOM" --compare "$W/rb-$1/summary.json" >"$W/last.txt" 2>&1; }
+mk pf0 test_x.js '  ✗ A\nsuite: 1 passed, 1 failed\n' 1
+mk pf1 test_x.js 'suite: 2 passed, 0 failed\n' 0
+mk pf2 test_x.js '  ✗ C\nsuite: 1 passed, 1 failed\n' 1
+mk pa0 test_y.js 'PASS A\nFAIL B\n1/2 PASS\n' 1
+mk pa1 test_y.js 'PASS A\nPASS B\n2/2 PASS\n' 0
+mk pa2 test_y.js 'PASS A\nPASS C\n2/2 PASS\n' 0
+mk pa3 test_y.js 'PASS A\nPASS B\n2/2 PASS\n' timeout
+RB pf0; RB pa0
+RC pf0 pf1; expect "普通 仅失败名：旧 ✗A 退出1 → 新 0 失败退出0（总数同 2）→ 不可比较，不记修好" 1 $?
+! grep -q "不再失败" "$W/last.txt"; expect "普通 仅失败名不出现「不再失败」" 0 $?
+RC pf0 pf2; expect "普通 仅失败名：失败名 A→C 计数同 → 不可比较" 1 $?
+RC pf0 pf0; expect "普通 仅失败名正控：完全相同 → 逐项一致" 0 $?
+RC pa0 pa1; expect "普通 完整身份正控：同集合 B 失败→通过 → 可过" 0 $?
+RC pa0 pa2; expect "普通 完整身份：B 换成 C → 不可比较" 1 $?
+RC pa0 pa3; expect "普通 超时 → 不完整、不可比较" 1 $?
+
+# r2-③ 输出经 symlink / hardlink 指向基线：写之前拒绝，基线字节不变
+BS="$W/b-base/summary.json"; before=$(sha "$BS")
+mkdir -p "$W/o3/logs"; ln -s "$BS" "$W/o3/logs/node--test.log"
+$RUN --only node --replay-node-log "$W/closed.tap" --out "$W/o3" >/dev/null 2>&1; expect "输出 日志 symlink 指向基线 → 拒绝" 2 $?
+mkdir -p "$W/o4/logs"; ln "$BS" "$W/o4/logs/node--test.log"
+$RUN --only node --replay-node-log "$W/closed.tap" --out "$W/o4" >/dev/null 2>&1; expect "输出 日志 hardlink 指向基线 → 拒绝" 2 $?
+mkdir -p "$W/o5"; ln -s "$BS" "$W/o5/summary.json"
+$RUN --only node --replay-node-log "$W/closed.tap" --out "$W/o5" >/dev/null 2>&1; expect "输出 summary.json symlink 指向基线 → 拒绝" 2 $?
+mkdir -p "$W/o6"; ln "$BS" "$W/o6/summary.json"
+$RUN --only node --replay-node-log "$W/closed.tap" --out "$W/o6" >/dev/null 2>&1; expect "输出 summary.json hardlink 指向基线 → 拒绝" 2 $?
+ln -s "$W/b-base" "$W/o7"
+$RUN --only node --replay-node-log "$W/closed.tap" --out "$W/o7" >/dev/null 2>&1; expect "输出 --out 本身是指向基线目录的 symlink → 拒绝" 2 $?
+[ ! -e "$W/o3/summary.json" ] && [ ! -e "$W/o5/logs/node--test.log" ]; expect "输出 拒绝时一个文件都没写" 0 $?
+[ "$(sha "$BS")" = "$before" ]; expect "输出 基线 sha256 前后一致（$before）" 0 $?
+$RUN --only node --replay-node-log "$W/closed.tap" --out "$W/o8" >/dev/null 2>&1; expect "输出 正控：空目录正常写出" 0 $?
 
 echo; echo "负例 $pass 过 / $fail 败"; [ $fail = 0 ]
