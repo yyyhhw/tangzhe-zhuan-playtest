@@ -80,3 +80,25 @@ Deductions are measured inside one synchronous JS turn (read → click → read)
 balances re-read later are reported as `DRIFT` (idle income) in `report-130-<engine>.txt`.
 Not covered: iOS frozen background-tab recovery (lockfix takeover) — macOS WebKit can't reproduce it;
 losing the lock in an already-running page.
+
+## 测试-139 养成-38 + 星途-02 (`scenarios-139.mjs`)
+
+Same server / save recipe / engines, 390×844, root + `/pet/game/`. CI runs it right after
+`scenarios-130.mjs` (that script spawns it; either failing → exit 1; `SKIP_139=1` runs 130 alone), so the
+workflow file is unchanged. Report: `report-139-<engine>.txt|json`, screenshots `139-*.png`.
+
+- **⑤a 养成-38 老档** (k_3 already drawn, four shops staffed, no `milestones`), page timezone picked so local
+  time is 22:00: loads writable; k_3/k_1 kept; k_3/k_4/k_8 are `STORY_COND_IDS` and not in the box pool; 图鉴
+  shows 「提示：」 for the 2 missing ones; 盲盒 page has `#storyCondNote`; entering 家 grants k_4 + k_8 with
+  draws / pity / daily unchanged and coins not lower; refresh keeps all, no duplicates, disk matches.
+- **⑤b 养成-38 default** — 养成-38 adds no save field (uses `gacha.owned`), so this checks "not granted by
+  default": a fresh save entering 家 at local 13:00 gets no condition card, also after refresh.
+- **⑥a 星途-02 new game** — `milestones` is `{schemaVersion:1, events:{firstShop: created}}`; a real 雇佣 click
+  records `firstEmployee`; refresh and root↔pet keep the ledger byte-identical (memory + disk).
+- **⑥b 星途-02 old save** (no `milestones`, `space.ended`) — loads writable with no numeric timestamp; real
+  「买下地球」 click commits `earth` time, `firstShop` = null, no `firstZombie` row, 「记录开始之前」/「从有记录起」,
+  no horizontal overflow at 390; refresh keeps everything identical.
+- **⑥c 星途-02 bad field** — `schemaVersion: 2` → protection notice / blocked, original save bytes untouched.
+
+Not covered: iOS real-device Safari and background-freeze resume; 养成-38 special-guest (k_3) path and the
+home animations; 星途-02 sub-game receipts (firstZombie / firstTDWin).

@@ -408,6 +408,15 @@ async function main() {
     ...(errors.length ? ['', 'JS ERRORS:', ...errors.map((e) => `  (${e.label}) ${e.kind}: ${e.text}`)] : []), '', 'NOT COVERED: ' + report.notCovered.join('; ')];
   fs.writeFileSync(path.join(OUT, `report-130-${ENGINE}.txt`), lines.join('\n'));
   console.log(`\n${ok ? 'PASS' : 'FAIL'} — ${checks.length - failed.length}/${checks.length} checks, ${notApplicable.length} N/A, ${errors.length} js errors`);
-  process.exit(ok ? 0 : 1);
+  // 测试-139：CI 只调 scenarios-130.mjs（workflow 不在本任务范围内改），所以在这里接着跑 scenarios-139.mjs（同引擎、同输出目录），
+  // 两者任一失败整体 exit 1。SKIP_139=1 可单跑 130。
+  let ok139 = true;
+  if (process.env.SKIP_139 !== '1') {
+    const { spawnSync } = await import('node:child_process');
+    const r = spawnSync(process.execPath, [path.join(__dirname, 'scenarios-139.mjs')], { stdio: 'inherit', env: process.env });
+    ok139 = r.status === 0;
+    console.log(`scenarios-139 exit=${r.status}`);
+  }
+  process.exit(ok && ok139 ? 0 : 1);
 }
 main();
