@@ -61,12 +61,22 @@ for a local Chromium dry run), 390×844, root + `/pet/game/`:
    cannot open 星途; a buy in the first page lands on disk exactly once. The second page gets a
    write observer before any of its scripts (wraps `Storage.prototype.setItem/removeItem/clear`,
    native call kept, same-value writes counted): 0 writes to protected save keys during boot and
-   during explicit `perform`/`persist` attempts (refusal checked when those interfaces exist).
-   Positive controls: page A's buy is seen writing the main save; a same-value write-back in B is
-   counted once with bytes unchanged.
+   during explicit `perform`/`persist` attempts. Before each phase switch (boot→try, and try→control
+   after the ≥1500 ms wait) one synchronous `evaluate` reads the full log and throws unless every
+   non-control protected write is 0 — so writes between evaluates or during the wait can't slip by.
+   Protected keys = `collection/host-save.mjs` KEYS ∪ `collectibles/storage.mjs` formal layout
+   (incl. `tangzhe-formal-collectibles-v2-original`), minus the tab lock; the script re-reads both
+   key tables from source and fails if one is missing. Scope: protected save keys only — not every
+   localStorage write, not IndexedDB.
+   B is stopped at bootstrap (no `XingTu` / `__tzz`), so the refusal checks are reported as **N/A**
+   (not counted as passes, not evidence of refusal).
+   Positive controls: page A's buy is seen writing the main save and, separately, the backup; a
+   same-value write-back in B is counted once with bytes unchanged; a write to the v2 snapshot key in
+   B is counted (same-value if it exists, set+remove if absent).
 4. **外星倍率** — 0 / 1 (mars #3) / 7 (six #3 + 回信) alien cards → ×1 / ×1.25 / ×2.75 online rate
    and 2 h offline amount; the legacy `alienCards` field alone does not count; mars at 2 cards = ×1.
 
 Deductions are measured inside one synchronous JS turn (read → click → read), so they are exact;
 balances re-read later are reported as `DRIFT` (idle income) in `report-130-<engine>.txt`.
-Not covered: iOS frozen background-tab recovery (lockfix takeover) — macOS WebKit can't reproduce it.
+Not covered: iOS frozen background-tab recovery (lockfix takeover) — macOS WebKit can't reproduce it;
+losing the lock in an already-running page.
