@@ -146,6 +146,12 @@ has no zombie entry → N/A): menu open / locked endless start / menu close reco
 records an integer `firstZombie` ≥ `firstShop` with `zombie.cleared` still 0; a defeat and a repeated `started`
 message keep the same time; save-then-refresh keeps it in memory + disk. Same path as
 `tests/milestones/zombie-browser.py` (Chromium).
+r2 negatives (both start from an empty `firstZombie`, each with a positive control on the same memory + disk
+observation chain): ⑧c a second tab of the same context waits for the write lock (no `__tzz`) and a standalone
+`/zombie/` tab start record nothing, then the lock-owning tab's real start does record; ⑧d the child's `started`
+is held back, the run is lost and settled by the parent, then the held `started` is replayed → nothing recorded;
+un-holding and starting again records and survives save-then-refresh. Mutation check: removing the parent's
+settled/live guards makes ⑧d fail.
 Part 2 = 塔防 `firstTDWin`, root only (the pet copy has no TD entry → N/A): opening the TD menu, a real `#startBtn`
 start alone, a saved defeat (`end(false)`) and closing TD record nothing; a real start + synthetic victory fixture
 (`wave=W`, enemies cleared, `end(true)` — same as `td/test_speed_parent.mjs`, NOT natural-balance evidence) whose

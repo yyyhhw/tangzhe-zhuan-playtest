@@ -3,6 +3,10 @@
 //   ⑧a 新档：打开打僵尸菜单不算参与；锁着的无尽模式开局失败不记；关菜单不记；真点 #startBtn 开打 → 父页记
 //       firstZombie（整数时间，≥ firstShop），此时 zombie.cleared 仍是 0（不需要赢）；输掉一局时间不变；
 //       子页重复发 started 不覆盖；关掉打僵尸后保存再刷新，时间原样。照 tests/milestones/zombie-browser.py 的 Chromium 路径。
+//   ⑧c 负例（r2，熊大 18:29）：firstZombie 为空时开第二个标签页 B（等不到写锁、无 __tzz）+ 打僵尸子页独立标签 C 点开打，都不记；
+//       正控：A 真点开打能记，A 内存 + 磁盘可见，B 关后磁盘仍是 A 的那一个时间。
+//   ⑧d 负例（r2）：firstZombie 为空时，子页拦下本局 started，这局输掉并由父页结算后再原样补发 → 不记；正控：解除拦截重开一局能记，保存刷新保留。
+//       负控证据：去掉父页三处 settled/live 守卫（started 守卫、live 检查、zombieStartReady）后本条 FAIL（27/28）。
 // 第二部分：塔防通关 firstTDWin，只在 root（pet/game 副本没有塔防入口，记 N/A）。
 //   ⑧b 新档：打开塔防菜单不记；真点 #startBtn 开第 1 关后输掉（end(false)）并保存成功也不记；关塔防不记；
 //       再真点开局 → 合成胜利夹具（wave=W、清空敌人后 end(true)，同 td/test_speed_parent.mjs 的做法，不是自然平衡证据）
@@ -165,6 +169,97 @@ async function scenarioZombie(browser, base, seed) {
   } catch (e) { check(`${tag}: ran`, false, e.stack || e); } finally { await ctx.close(); }
 }
 
+// ⑧c 负例 1（熊大 18:29）：第二个标签页不能首次记账。前置：firstZombie 为空。
+//   同一浏览器上下文先开 A（拿到写锁），再开 B：B 等不到锁、不暴露 __tzz、不写盘；另开打僵尸子页 C 独立标签点开打（没有父页）也不记。
+//   正控：随后在 A 真点开打，同一条观察链（A 内存 + 磁盘）能看到合法记账；B 关掉后磁盘仍只有 A 记的那一个时间。
+async function scenarioZombieSecondTab(browser, base, seed) {
+  const tag = '⑧c xt02-zombie 2nd-tab root';
+  const ctx = await newCtx(browser, mkSeed(seed));
+  const a = await ctx.newPage(); wireErrors(a, tag + ' A');
+  try {
+    await load(a, base, '/');
+    const pre = await diskSave(a);
+    check(`${tag}: precondition — firstZombie empty in A memory + disk`, (await fz(a)) === undefined && pre && !Object.hasOwn(pre.milestones?.events ?? {}, 'firstZombie'), J(pre?.milestones));
+    const b = await ctx.newPage(); wireErrors(b, tag + ' B');
+    await b.goto(base.replace(/\/$/, '') + '/', { waitUntil: 'load' });
+    await b.waitForTimeout(3000);
+    const bState = await b.evaluate(() => ({ tzz: !!window.__tzz, owns: !!window.FormalCollectionRuntime?.ownsLock?.() }));
+    check(`${tag}: 2nd tab B waits for the write lock (no __tzz, does not own lock)`, bState.tzz === false && bState.owns === false, J(bState));
+    const c = await ctx.newPage(); wireErrors(c, tag + ' C');
+    await c.goto(base.replace(/\/$/, '') + '/zombie/', { waitUntil: 'load' });
+    await c.waitForTimeout(500);
+    try { await c.locator('#startBtn').click({ timeout: 3000 }); } catch {}
+    await c.waitForTimeout(1500);
+    const d1 = await diskSave(a);
+    check(`${tag}: B open + standalone zombie tab C start record nothing (A memory + disk)`, (await fz(a)) === undefined && !Object.hasOwn(d1?.milestones?.events ?? {}, 'firstZombie'), J(d1?.milestones?.events));
+    await c.close();
+    // 正控：A 真点开打 → 记账；同一观察链能看到
+    const f = await child(a);
+    await f.locator('#startBtn').click();
+    await f.waitForFunction(() => window.__zb.G && !window.__zb.G.pendStart && window.__zb.G.t > 0, null, { timeout: 15000 });
+    await a.waitForFunction(() => Number.isSafeInteger(window.__tzz.state.milestones?.events?.firstZombie), null, { timeout: 10000 });
+    const at = await fz(a);
+    await a.evaluate(() => window.__tzz.closeZombie());
+    await a.evaluate(() => { try { window.__tzz.persist && window.__tzz.persist(); } catch {} });
+    await a.waitForTimeout(300);
+    const d2 = await diskSave(a);
+    check(`${tag}: positive control — A real start records firstZombie, visible in A memory + disk`, Number.isSafeInteger(at) && d2?.milestones?.events?.firstZombie === at, J({ at, disk: d2?.milestones?.events?.firstZombie }));
+    const bAfter = await b.evaluate(() => !!window.__tzz);
+    await b.close();
+    await a.waitForTimeout(300);
+    const d3 = await diskSave(a);
+    check(`${tag}: B never got the lock while A alive; disk keeps A's single time after B closes`, bAfter === false && d3?.milestones?.events?.firstZombie === at && (await fz(a)) === at, J({ bAfter, disk: d3?.milestones?.events?.firstZombie, at }));
+    await shot(a, 'zombie-2nd-tab-root');
+  } catch (e) { check(`${tag}: ran`, false, e.stack || e); } finally { await ctx.close(); }
+}
+
+// ⑧d 负例 2（熊大 18:29）：firstZombie 为空时，已结束局收到迟到的 started 不能首次记账。
+//   子页 MessagePort 上拦下本局 started（父页没收到 → 没记账），让这局输掉并由父页结算；之后把拦下的原消息原样补发 → 仍不记。
+//   正控：拦截解除后重开一局，正常 started 记账，同一观察链（内存 + 磁盘）可见。
+async function scenarioZombieLateStarted(browser, base, seed) {
+  const tag = '⑧d xt02-zombie late-started root';
+  const ctx = await newCtx(browser, mkSeed(seed));
+  const page = await ctx.newPage(); wireErrors(page, tag);
+  try {
+    await load(page, base, '/');
+    check(`${tag}: precondition — firstZombie empty`, (await fz(page)) === undefined);
+    let f = await child(page);
+    await f.evaluate(() => {
+      const orig = MessagePort.prototype.postMessage;
+      window.__origPost = orig; window.__held = null;
+      MessagePort.prototype.postMessage = function (m, ...r) {
+        if (m && m.zb === 'started' && !window.__held) { window.__held = { port: this, m: JSON.parse(JSON.stringify(m)) }; return; }
+        return orig.call(this, m, ...r);
+      };
+    });
+    await f.locator('#startBtn').click();
+    await f.waitForFunction(() => window.__zb.G && !window.__zb.G.pendStart && !!window.__held, null, { timeout: 15000 });
+    await page.waitForTimeout(300);
+    const held = await f.evaluate(() => window.__held && window.__held.m);
+    check(`${tag}: started intercepted in child → parent has not recorded`, held && held.zb === 'started' && (await fz(page)) === undefined, J(held));
+    await f.evaluate(() => { const g = window.__zb.G, p = g.p; p.hp = 1; p.inv = 0; p.fireCd = 999; g.zs.push({ x: p.x, y: p.y, r: 15, hp: 100000, sp: 0, kx: 0, ky: 0, slow: 0, flash: 0, wob: 0, dmg: 999, type: 'normal' }); window.__zb.step(0.01); });
+    await f.waitForFunction(() => window.__zb.G.over && window.__zb.G.win === false && !window.__zb.G.wait, null, { timeout: 10000 });
+    const run = await page.evaluate(() => { const r = window.__tzz.zbRun; return r && { settled: r.settled, started: !!r.started }; });
+    check(`${tag}: run ended and parent settled it, still no firstZombie`, run && run.settled === true && run.started === false && (await fz(page)) === undefined, J(run));
+    await f.evaluate(() => window.__origPost.call(window.__held.port, window.__held.m));
+    await page.waitForTimeout(400);
+    const d1 = await diskSave(page);
+    check(`${tag}: late started after the run ended records nothing (memory + disk)`, (await fz(page)) === undefined && !Object.hasOwn(d1?.milestones?.events ?? {}, 'firstZombie'), J({ mem: await fz(page), disk: d1?.milestones?.events }));
+    // 正控
+    await f.evaluate(() => { MessagePort.prototype.postMessage = window.__origPost; });
+    await page.evaluate(() => window.__tzz.closeZombie());
+    f = await child(page);
+    await f.locator('#startBtn').click();
+    await f.waitForFunction(() => window.__zb.G && !window.__zb.G.pendStart && window.__zb.G.t > 0, null, { timeout: 15000 });
+    await page.waitForFunction(() => Number.isSafeInteger(window.__tzz.state.milestones?.events?.firstZombie), null, { timeout: 10000 });
+    const at = await fz(page);
+    await page.evaluate(() => window.__tzz.closeZombie());
+    await reload(page);
+    const d2 = await diskSave(page);
+    check(`${tag}: positive control — a normal start then records firstZombie, kept after save+refresh`, Number.isSafeInteger(at) && (await fz(page)) === at && d2?.milestones?.events?.firstZombie === at, J({ at, disk: d2?.milestones?.events?.firstZombie }));
+  } catch (e) { check(`${tag}: ran`, false, e.stack || e); } finally { await ctx.close(); }
+}
+
 const ftd = (page) => page.evaluate(() => { const e = window.__tzz.state.milestones?.events ?? {}; return Object.hasOwn(e, 'firstTDWin') ? e.firstTDWin : undefined; });
 async function tdChild(page) {
   await page.evaluate(() => window.__tzz.openTD());
@@ -227,6 +322,8 @@ async function main() {
   try {
     const seed = await generateSeed(browser, base);
     await scenarioZombie(browser, base, seed);
+    await scenarioZombieSecondTab(browser, base, seed);
+    await scenarioZombieLateStarted(browser, base, seed);
     await scenarioTD(browser, base, seed);
   } catch (e) { check('scenarios ran to completion', false, e.stack || e); }
   finally { await browser.close(); server.close(); }
