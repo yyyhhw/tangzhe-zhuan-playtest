@@ -22,6 +22,7 @@
 //  --replay-node-exit CODE：配合 --replay-node-log 模拟进程结局（0/1/timeout/SIGKILL），负例用
 //  r4（熊大 20:31）：① 进程退出退步对所有身份分支都查（基线 0→本轮非 0、或用例全过而进程非 0 都判不一致）；
 //      ② 普通脚本只剥「N - 」这类明确序号，名字开头的数字保留；③ 基线每行 schema 严格校验（full 必须有 cases/ids 且类型对），不合格起服务前退出 2
+//  测试-144：JSON 计数只认带明确汇总（passed/failed、pass/fail、counts.pass/fail）的测试结果对象，业务 JSON 的 ok/status 不当断言；逐条失败多于汇总按逐条记
 //  --replay-root-dir DIR：不跑普通脚本，改读 DIR/<脚本名，/ 换成 __>.log 和同名 .exit（负例用）
 // 不跑 Python 脚本（test_*.py）、tests/ 下的浏览器 .py、WebKit。退出码：有任何一项退出码不等于 0 就返回 1；用了 --compare 时，只有出现新失败才返回 1。
 import http from 'node:http';
@@ -180,13 +181,37 @@ function count(out) {
   if ((m = out.match(/(\d+)\s+passed,\s*(\d+)\s+failed/))) return {pass: +m[1], fail: +m[2], by: '汇总行 N passed, M failed'};
   if ((m = out.match(/(?:^|\n)\s*(\d+)\/(\d+)\s+PASS\s*(?:\n|$)/))) return {pass: +m[1], fail: +m[2] - +m[1], by: '汇总行 N/M PASS'};
   if ((m = out.match(/(\d+)\s+checks passed/)) && !/fail/i.test(out)) return {pass: +m[1], fail: 0, by: '汇总行 N checks passed'};
-  const status = [...out.matchAll(/"status"\s*:\s*"(pass|fail)"/g)].map(x => x[1]);
-  if (status.length) return {pass: status.filter(s => s === 'pass').length, fail: status.filter(s => s === 'fail').length, by: 'JSON "status"'};
-  const oks = [...out.matchAll(/"ok"\s*:\s*(true|false)/g)].map(x => x[1]);
-  if (oks.length) return {pass: oks.filter(s => s === 'true').length, fail: oks.filter(s => s === 'false').length, by: 'JSON "ok"'};
+  // 测试-144：JSON 只认「带明确汇总计数」的测试结果对象（顶层 passed/failed、pass/fail 或 counts.pass/fail 为非负整数）；
+  // 没有汇总的 JSON（如业务记录 [{"ok":false,…}]）里的 ok/status 不当断言数，交给下面逐行标记或只看退出码，不凭空生成 PASS/FAIL
+  const j = jsonCount(out);
+  if (j) return j;
   const pass = (out.match(/^\s*(✓|✔|PASS\b|ok\b)/gm) || []).length, fail = (out.match(/^\s*(✗|✘|×|FAIL\b|not ok\b)/gm) || []).length;
   if (pass || fail) return {pass, fail, by: '逐行标记 ✓/✗/PASS/FAIL'};
   return {pass: null, fail: null, by: '输出里没有可数的结果，只看退出码'};
+}
+function parseJsonOut(out) {
+  const t = out.trim();
+  try {return JSON.parse(t);} catch {}
+  // 前面夹了警告行时，从最后一个顶格「{」行开始再试一次
+  const lines = t.split(/\r?\n/);
+  for (let i = lines.length - 1; i >= 0; i--) if (lines[i].startsWith('{')) {try {return JSON.parse(lines.slice(i).join('\n'));} catch {} break;}
+  return null;
+}
+function jsonCount(out) {
+  const d = parseJsonOut(out);
+  if (!d || typeof d !== 'object' || Array.isArray(d)) return null;
+  const nn = x => Number.isInteger(x) && x >= 0;
+  let pass, fail, by;
+  if (nn(d.passed) && nn(d.failed)) [pass, fail, by] = [d.passed, d.failed, 'JSON 汇总 passed/failed'];
+  else if (nn(d.pass) && nn(d.fail)) [pass, fail, by] = [d.pass, d.fail, 'JSON 汇总 pass/fail'];
+  else if (d.counts && nn(d.counts.pass) && nn(d.counts.fail)) [pass, fail, by] = [d.counts.pass, d.counts.fail, 'JSON 汇总 counts.pass/fail'];
+  else return null;
+  // 汇总旁的顶层结果数组（元素带 ok 布尔或 status=pass/fail）逐条数一遍：逐条失败比汇总多就按多的记，真实失败不被汇总盖掉
+  let rowFail = 0;
+  for (const v of Object.values(d)) if (Array.isArray(v)) for (const x of v)
+    if (x && typeof x === 'object' && (x.ok === false || x.status === 'fail')) rowFail++;
+  if (rowFail > fail) return {pass, fail: rowFail, by: `${by}（逐条失败 ${rowFail} 多于汇总 ${fail}，按逐条记）`};
+  return {pass, fail, by};
 }
 function parseNodeTest(out) {
   const lines = out.split(/\r?\n/);

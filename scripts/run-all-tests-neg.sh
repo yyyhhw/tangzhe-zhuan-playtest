@@ -148,4 +148,27 @@ s3 badcases '{"format":3,"rows":[{"script":"node --test","exit":0,"idMode":"full
 s3 noids '{"format":3,"rows":[{"script":"test_y.js","exit":0,"idMode":"full","incomplete":[]}]}' root "普通行 full 缺 ids"
 s3 badids '{"format":3,"rows":[{"script":"test_y.js","exit":0,"idMode":"full","ids":"A,B","incomplete":[]}]}' root "普通行 ids 不是数组"
 
+# 测试-144：JSON 计数只认带明确汇总的测试结果对象；业务 JSON 的 ok/status 不当断言
+row() { node -e 'const r=JSON.parse(require("fs").readFileSync(process.argv[1],"utf8")).rows[0];console.log(`${r.pass}/${r.fail}/${r.exit}`)' "$W/rb-$1/summary.json"; }
+j144() { local name=$1 log=$2 code=$3 want_rc=$4 want_row=$5 what=$6
+  mk "$name" test_j.mjs "$log" "$code"; RB "$name"; local rc=$?
+  expect "144 $what：整体退出" "$want_rc" $rc
+  local got=$(row "$name"); [ "$got" = "$want_row" ]; expect "144 $what：计数 $want_row（实际 $got）" 0 $?; }
+j144 jb0 '[{"key":"a","ok":false,"same":true},{"key":"b","ok":false,"same":true}]\n' 0 0 'null/null/0' "业务记录数组 ok:false×2 + exit 0 → 记—/—，不算 2 败"
+j144 jb1 '[{"key":"a","ok":true}]\n' 1 1 'null/null/1' "业务 ok:true 但进程 exit 1 → 不凭 ok 记过、不判绿"
+j144 jb2 '{"ok":false,"status":"fail","detail":"预期保存失败"}\n' 0 0 'null/null/0' "业务对象无汇总（ok/status 字段）→ 记—/—"
+j144 jq0 '{\n  "passed": 2,\n  "failed": 0,\n  "rows": [{"name":"A","ok":true},{"name":"B","ok":true}]\n}\n' 0 0 '2/0/0' "正控 queue 式 passed/failed 汇总 → 2/0"
+j144 jq1 '{\n  "passed": 1,\n  "failed": 1,\n  "rows": [{"name":"A","ok":true},{"name":"B","ok":false}]\n}\n' 1 1 '1/1/1' "真实断言失败（汇总 failed 1）→ 1 败、整体退出 1"
+j144 jq2 '{\n  "passed": 2,\n  "failed": 0,\n  "rows": [{"name":"A","ok":true},{"name":"B","ok":false}]\n}\n' 0 0 '2/1/0' "汇总写 0 败但逐条有 ok:false → 按逐条记 1 败，不被汇总盖掉"
+j144 jr0 '{\n  "results": [{"name":"A","status":"pass"},{"name":"B","status":"pass"},{"name":"C","status":"pending-policy"}],\n  "counts": {"pass": 2, "fail": 0, "pending-policy": 1}\n}\n' 0 0 '2/0/0' "正控 regression 式 counts.pass/fail → 2/0"
+j144 jl0 '{\n  "rows": [{"entry":"x","status":"pass","detail":{"status":"INVALID_JSON_READ_ONLY"}}],\n  "pass": 1,\n  "fail": 0\n}\n' 0 0 '1/0/0' "正控 lifecycle 式顶层 pass/fail，嵌套业务 status 不干扰 → 1/0"
+j144 jw0 'warn: something\n{\n  "passed": 3,\n  "failed": 0\n}\n' 0 0 '3/0/0' "正控 JSON 前夹警告行仍认汇总 → 3/0"
+mk jt0 test_j.mjs '{"passed": 1, "failed": 0}\n  ✗ A\n' 1; RB jt0
+[ "$(row jt0)" = "null/null/1" ] || [ "$(row jt0)" = "0/1/1" ]; expect "144 JSON 后面还跟逐行 ✗ → 不当纯 JSON 汇总（实际 $(row jt0)）" 0 $?
+# compare：业务 JSON 行内容变了但都 exit 0 → 逐项一致；exit 0→1 仍拒绝
+mk jc1 test_j.mjs '[{"key":"a","ok":true}]\n' 0; mk jc2 test_j.mjs '[{"key":"a","ok":false}]\n' 1
+RC jb0 jc1; expect "144 compare 正控：业务 JSON ok 值变、两轮都 exit 0 → 逐项一致" 0 $?
+RC jb0 jc2; expect "144 compare：业务 JSON 行 exit 0→1 → 不一致" 1 $?
+grep -q "退出码 0→1，退出退步" "$W/last.txt"; expect "144 compare 报出退出退步" 0 $?
+
 echo; echo "负例 $pass 过 / $fail 败"; [ $fail = 0 ]
