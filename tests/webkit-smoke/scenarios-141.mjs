@@ -3,8 +3,10 @@
 //       → 漫画弹窗点「收下」→ k_3（熊猫监工）入库。收下这一下：同一次同步 evaluate 读前值→点收下→读后值，
 //       金币/抽数/保底/每日次数严格相等；扣 1 币负对照必须被同一判定判失败。保存后刷新 k_3 还在、不重复。
 //       （点客人本身给的小奖励在点「收下」之前就入账，不在「不扣币」窗口里。）
-//   ⑦b 家里动画：k_3 在 77 的家 → 熊猫（[data-story=panda]）在且在动；夜里 + k_4 → 月亮；火箭老板已加入 + k_7 →
-//       第一次进他家放气球 + 两句倒计时台词。只看 DOM 元素和 computed animation，不判画面好不好看。
+//   ⑦b 家里动画：k_3 在 77 的家 → 熊猫整体行走动画 running，隔 1.5s 采样进度前进；夜里 + k_4 → 月亮；火箭老板已加入 + k_7 →
+//       第一次进他家：从进入起采满 7.6s，台词精确依次「三、二、一——」→「……今天先放气球。」，气球可见、有尺寸、storyFloat running、
+//       进度/位置随时间变化、6.2s 后消失；换走再回来同样采满 7.6s，两句和气球都不得重放。不判画面好不好看。
+//   ⑦c 负向：k_7 已拥有但火箭老板未加入（homeOpen=false）→ 进他的家采满 7.6s，无气球、无两句倒数（⑦b 同一观察器作正控）。
 // [刷新保留] 一律是「显式 persist 后刷新」。时段断言游戏实际 night（同 139 的取法）。
 // 没法在 macOS WebKit 验的：iOS 真机 Safari、后台冻结恢复。
 //
@@ -168,7 +170,40 @@ async function scenarioGuest(browser, base, entry, seed) {
   } catch (e) { check(`${tag}: ran`, false, e.stack || e); } finally { await ctx.close(); }
 }
 
-// ⑦b 家里动画：熊猫 / 月亮 / 发射倒计时
+// ⑦b 家里动画：熊猫 / 月亮 / 发射倒计时（熊大 14:22 退修：跨时间采样，精确两句，重进与未加入都覆盖完整延迟窗口）
+const K7 = ['三、二、一——', '……今天先放气球。'];
+const WINDOW_MS = 7600;   // 气球窗口 6.2s（app.js storySceneHTML b<6.2）、第二句 3.6s 起显示 3.2s → 约 6.8s；多采到 7.6s
+// 页内一次采样：当前台词、气球、熊猫的 computed animation + Web Animations 进度 + 位置
+const PROBE = () => {
+  const room = document.querySelector('.room'), rr = room ? room.getBoundingClientRect() : null;
+  const info = (el) => {
+    if (!el) return null;
+    const cs = getComputedStyle(el), r = el.getBoundingClientRect();
+    const a = (el.getAnimations ? el.getAnimations() : []).find((x) => x.animationName === cs.animationName) || null;
+    const tm = a ? a.effect.getComputedTiming() : null;
+    return { name: cs.animationName, state: cs.animationPlayState, aState: a ? a.playState : null, prog: tm && tm.progress != null ? +tm.progress.toFixed(4) : null,
+      vis: cs.visibility !== 'hidden' && cs.display !== 'none' && +cs.opacity > 0, w: Math.round(r.width), h: Math.round(r.height), x: Math.round(r.left), y: Math.round(r.top),
+      inRoom: rr ? (r.width > 0 && r.height > 0 && r.right > rr.left && r.left < rr.right && r.bottom > rr.top && r.top < rr.bottom) : null,
+      still: el.classList.contains('still'), kids: el.children.length };
+  };
+  return { t: Math.round(performance.now()), who: window.__tzz.homeWho, line: document.querySelector('#homeActor .ha-line')?.textContent || '',
+    balloons: info(document.querySelector('[data-story="balloons"]')), panda: info(document.querySelector('[data-story="panda"]')) };
+};
+async function observe(page, ms, step = 150) {
+  const out = [], t0 = Date.now();
+  while (Date.now() - t0 < ms) { out.push(await page.evaluate(PROBE)); await page.waitForTimeout(step); }
+  out.push(await page.evaluate(PROBE));
+  return out;
+}
+const span = (ss) => ss.length ? ss[ss.length - 1].t - ss[0].t : 0;
+// 非空台词按出现顺序去重（连续相同只算一次）
+const lineSeq = (ss) => ss.map((x) => x.line).filter(Boolean).filter((v, i, a) => i === 0 || a[i - 1] !== v);
+const k7Hits = (ss) => ss.filter((x) => K7.includes(x.line)).length;
+async function enterHome(page, who) {
+  await page.evaluate(() => { window.__tzz.setTab('home'); window.__tzz.homeMode = 'live'; });
+  if ((await page.evaluate(() => window.__tzz.homeWho)) !== who) await page.evaluate((w) => window.__tzz.act('homeWho', w), who);
+}
+
 async function scenarioHomeAnim(browser, base, entry, seed) {
   const tag = `⑦b yc38-home-anim ${tagOf(entry)}`;
   const tz = tzAt(22);
@@ -181,36 +216,80 @@ async function scenarioHomeAnim(browser, base, entry, seed) {
     await load(page, base, entry);
     const per = await gamePeriod(page);
     check(`${tag}: [时段] game period is night (${tz})`, per.inline === 'night' && (per.ambience === null || per.ambience === 'night'), J(per));
-    const hs = await page.evaluate(() => ({ hs: !!window.HomeStory, rocket: window.__tzz.E.homeOpen(window.__tzz.state, 'rocket'), who: window.__tzz.homeWho, reduced: matchMedia('(prefers-reduced-motion: reduce)').matches }));
-    check(`${tag}: story-home.js loaded, rocket joined`, hs.hs && hs.rocket, J(hs));
-    await page.evaluate(() => { window.__tzz.setTab('home'); window.__tzz.homeMode = 'live'; });
-    if (hs.who !== 'c77') await page.evaluate(() => window.__tzz.act('homeWho', 'c77'));
+    const hs = await page.evaluate(() => ({ hs: !!window.HomeStory, k7: window.HomeStory && window.HomeStory.LINES.k7, rocket: window.__tzz.E.homeOpen(window.__tzz.state, 'rocket'), reduced: matchMedia('(prefers-reduced-motion: reduce)').matches }));
+    check(`${tag}: story-home.js loaded, rocket joined, k7 lines are exactly the two expected`, hs.hs && hs.rocket === true && J(hs.k7) === J(K7) && hs.reduced === false, J(hs));
+    await enterHome(page, 'c77');
     await page.waitForTimeout(800);
-    const anim = (sel) => page.evaluate((sel) => {
-      const el = document.querySelector(sel); if (!el) return null;
-      const cs = getComputedStyle(el); const r = el.getBoundingClientRect();
-      return { name: cs.animationName, state: cs.animationPlayState, w: Math.round(r.width), h: Math.round(r.height), vis: cs.visibility !== 'hidden' && cs.display !== 'none' };
-    }, sel);
-    const panda = await anim('[data-story="panda"]');
-    const pandaFoot = await anim('[data-story="panda"] .pf1');
-    check(`${tag}: 77 home — panda present and animated`, panda && panda.vis && panda.w > 0 && (panda.name !== 'none' || (pandaFoot && pandaFoot.name !== 'none')), J({ panda, pandaFoot }));
-    const moon = await anim('[data-story="moon"]');
-    check(`${tag}: night + k_4 — moon present`, moon && moon.vis && moon.w > 0, J(moon));
+    // 熊猫：整体行走动画（storyPandaWalk，或停在竹家具旁时 storyPandaBamboo）必须 running，且隔 1.5s 两次采样进度确实前进
+    const p0 = await page.evaluate(PROBE); await page.waitForTimeout(1500); const p1 = await page.evaluate(PROBE);
+    const a0 = p0.panda, a1 = p1.panda;
+    const WALK = ['storyPandaWalk', 'storyPandaBamboo'];
+    const dProg = a0 && a1 && a0.prog != null && a1.prog != null ? Math.abs((((a1.prog - a0.prog) % 1) + 1) % 1) : null;
+    check(`${tag}: 77 home — panda whole-body walk animation is running (not .still)`,
+      a0 && a1 && a0.vis && a0.w > 0 && a0.h > 0 && WALK.includes(a0.name) && a0.state === 'running' && a0.aState === 'running' && !a0.still && WALK.includes(a1.name) && a1.state === 'running',
+      J({ a0, a1 }));
+    check(`${tag}: 77 home — panda walk progress advances across 1.5s samples`, dProg != null && dProg > 0.01 && dProg < 0.5,
+      J({ prog0: a0 && a0.prog, prog1: a1 && a1.prog, dProg, dx: a0 && a1 ? a1.x - a0.x : null }));
+    const moon = await page.evaluate(() => { const el = document.querySelector('[data-story="moon"]'); if (!el) return null; const cs = getComputedStyle(el), r = el.getBoundingClientRect(); return { vis: cs.visibility !== 'hidden' && cs.display !== 'none', w: Math.round(r.width), h: Math.round(r.height) }; });
+    check(`${tag}: night + k_4 — moon present`, moon && moon.vis && moon.w > 0 && moon.h > 0, J(moon));
     await shot(page, `home-77-night-${tagOf(entry)}`);
+    // 第一次进火箭老板家：从进入那一刻起采满整个窗口
     await page.evaluate(() => window.__tzz.act('homeWho', 'rocket'));
-    await page.waitForTimeout(500);
-    const balloons = await anim('[data-story="balloons"]');
-    const line1 = await page.evaluate(() => ({ txt: document.querySelector('.ha-line')?.textContent || '' }));
-    check(`${tag}: rocket first visit — balloons + 1st countdown line`, balloons && balloons.name !== 'none' && line1.txt.length > 0, J({ balloons, line1 }));
-    await shot(page, `home-rocket-countdown-${tagOf(entry)}`);
-    await page.waitForTimeout(3600);
-    const line2 = await page.evaluate(() => document.querySelector('.ha-line')?.textContent || '');
-    check(`${tag}: countdown 2nd line after ~3.6s`, line2.length > 0 && line2 !== line1.txt, J({ first: line1.txt, second: line2 }));
-    // 同一页第二次进火箭老板家不再重放：先等过第一次气球的 6.2s 窗口，再换人回来
-    await page.waitForTimeout(2600);
+    const first = await observe(page, WINDOW_MS);
+    const seq = lineSeq(first), firstLineAt = first.findIndex((x) => x.line);
+    check(`${tag}: rocket first visit — exactly 「${K7[0]}」→「${K7[1]}」 in order, first line shown immediately`,
+      J(seq) === J(K7) && firstLineAt >= 0 && first[firstLineAt].t - first[0].t < 600 && span(first) >= WINDOW_MS - 300,
+      J({ seq, firstLineAfterMs: firstLineAt >= 0 ? first[firstLineAt].t - first[0].t : null, samples: first.length, spanMs: span(first) }));
+    const t2 = first.find((x) => x.line === K7[1]);
+    check(`${tag}: 2nd line appears ~3.6s after entering`, t2 && t2.t - first[0].t >= 3300 && t2.t - first[0].t <= 4600, J({ at: t2 ? t2.t - first[0].t : null }));
+    const bs = first.filter((x) => x.balloons).map((x) => ({ dt: x.t - first[0].t, ...x.balloons }));
+    const progs = bs.map((b) => b.prog).filter((v) => v != null);
+    check(`${tag}: balloons — present immediately, visible with real size, storyFloat running`,
+      bs.length > 0 && bs[0].dt < 600 && bs.every((b) => b.vis && b.w > 0 && b.h > 0 && b.kids === 3 && b.name === 'storyFloat' && b.state === 'running'),
+      J({ n: bs.length, firstAt: bs[0] && bs[0].dt, sample: bs[0] }));
+    check(`${tag}: balloons — float progress/position change over time and enter the room`,
+      progs.length >= 2 && Math.max(...progs) - Math.min(...progs) > 0.3 && bs.some((b) => b.inRoom) && new Set(bs.map((b) => b.y)).size > 3,
+      J({ progMin: Math.min(...progs), progMax: Math.max(...progs), yFirst: bs[0] && bs[0].y, yLast: bs.length && bs[bs.length - 1].y, inRoom: bs.filter((b) => b.inRoom).length }));
+    // 6.2s 后：下一次重画时元素被去掉；没重画前元素可能还在 DOM，但动画必须已播完（progress=1）且停在房间外
+    const endB = first[first.length - 1].balloons;
+    check(`${tag}: balloons finished after the window (removed, or animation finished and outside the room)`,
+      !endB || (endB.prog === 1 && endB.inRoom === false), J({ end: endB, lastInRoomAt: (bs.filter((b) => b.inRoom).pop() || {}).dt }));
+    await shot(page, `home-rocket-after-window-${tagOf(entry)}`);
+    // 同一页第二次进：换走再回来，从回来那一刻起采满整个窗口 —— 两句和气球都不得重放
     await page.evaluate(() => window.__tzz.act('homeWho', 'c77')); await page.waitForTimeout(300);
-    await page.evaluate(() => window.__tzz.act('homeWho', 'rocket')); await page.waitForTimeout(400);
-    check(`${tag}: countdown plays once per page (no balloons on 2nd visit)`, (await page.locator('[data-story="balloons"]').count()) === 0);
+    await page.evaluate(() => window.__tzz.act('homeWho', 'rocket'));
+    const again = await observe(page, WINDOW_MS);
+    check(`${tag}: re-entry (same page) — no balloons and neither k7 line, immediately or across the full window`,
+      again.every((x) => !x.balloons) && k7Hits(again) === 0 && again[0].who === 'rocket' && span(again) >= WINDOW_MS - 300,
+      J({ samples: again.length, spanMs: span(again), balloons: again.filter((x) => x.balloons).length, k7: k7Hits(again), lines: lineSeq(again) }));
+  } catch (e) { check(`${tag}: ran`, false, e.stack || e); } finally { await ctx.close(); }
+}
+
+// ⑦c 负向：k_7 已拥有但火箭老板未加入 → homeOpen=false，进他的家整个窗口里不得有气球或两句倒数
+async function scenarioRocketNotJoined(browser, base, entry, seed) {
+  const tag = `⑦c yc38-rocket-not-joined ${tagOf(entry)}`;
+  const tz = tzAt(22);
+  const ctx = await newCtx(browser, mkSeed(seed, (s) => {
+    s.gacha.owned = ['c_apron', 'k_3', 'k_4', 'k_7'];
+    if (s.ceos && s.ceos.rocket) s.ceos.rocket.unlocked = false;
+  }), tz);
+  const page = await ctx.newPage(); wireErrors(page, tag);
+  try {
+    await load(page, base, entry);
+    const pre = await page.evaluate(() => ({ k7: window.__tzz.state.gacha.owned.includes('k_7'), homeOpen: window.__tzz.E.homeOpen(window.__tzz.state, 'rocket'), hs: !!window.HomeStory, blocked: window.__tzz.saveBlocked }));
+    check(`${tag}: k_7 owned, rocket homeOpen=false, writable`, pre.k7 && pre.homeOpen === false && pre.hs && pre.blocked === false, J(pre));
+    const per = await gamePeriod(page);
+    check(`${tag}: [时段] game period is night (${tz})`, per.inline === 'night', J(per));
+    await enterHome(page, 'c77');
+    await page.waitForTimeout(500);
+    await page.evaluate(() => window.__tzz.act('homeWho', 'rocket'));
+    const obs = await observe(page, WINDOW_MS);
+    check(`${tag}: entering rocket home — no balloons and neither k7 line, immediately or across the full window (same observer as ⑦b positive control)`,
+      obs.every((x) => !x.balloons) && k7Hits(obs) === 0 && obs[0].who === 'rocket' && span(obs) >= WINDOW_MS - 300,
+      J({ samples: obs.length, spanMs: span(obs), balloons: obs.filter((x) => x.balloons).length, k7: k7Hits(obs), lines: lineSeq(obs) }));
+    const post = await page.evaluate(() => window.__tzz.E.homeOpen(window.__tzz.state, 'rocket'));
+    check(`${tag}: still homeOpen=false after the window`, post === false, J({ post }));
+    await shot(page, `home-rocket-not-joined-${tagOf(entry)}`);
   } catch (e) { check(`${tag}: ran`, false, e.stack || e); } finally { await ctx.close(); }
 }
 
@@ -224,12 +303,13 @@ async function main() {
     for (const entry of ENTRY_POINTS) {
       await scenarioGuest(browser, base, entry, seed);
       await scenarioHomeAnim(browser, base, entry, seed);
+      await scenarioRocketNotJoined(browser, base, entry, seed);
     }
   } catch (e) { check('scenarios ran to completion', false, e.stack || e); }
   finally { await browser.close(); server.close(); }
   notCovered.push('iOS 真机 Safari / 后台冻结后恢复：macOS WebKit 模拟不了',
     '点客人走 __tzz.hitBig（画布点击的同一处理函数），没模拟真实触摸坐标换算',
-    '动画只验元素在 + computed animation 不为 none，不判画面效果；prefers-reduced-motion 下的静止版未验',
+    '动画验 computed animation running + Web Animations 进度/位置跨时间变化，不判画面好不好看；prefers-reduced-motion 下的静止版未验',
     '[刷新保留] 只验「显式 persist 后刷新」',
     '星途-02 firstZombie / firstTDWin 子游戏回执：测试-142');
   const failed = checks.filter((c) => !c.ok);
