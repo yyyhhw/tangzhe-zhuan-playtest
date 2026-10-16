@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict';import fs from 'node:fs';
 const {chromium}=await import(process.env.PLAYWRIGHT_MODULE||'playwright');const base=process.env.INTEGRATION_BASE||'http://127.0.0.1:8781';const browser=await chromium.launch();const rows=[];
 try{for(const width of [320,393]){
- const open=async()=>{const c=await browser.newContext({viewport:{width,height:852},hasTouch:true,isMobile:true}),p=await c.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message));
+ const open=async()=>{const c=await browser.newContext({viewport:{width,height:852},hasTouch:true,isMobile:true,timezoneId:'UTC'}),p=await c.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message));
  await c.addInitScript(()=>{Date.now=()=>1790000000000;let t;Object.defineProperty(window,'__tzz',{get:()=>t,set:v=>{t=v;v?.pets?.manual(true)}});const set=Storage.prototype.setItem;Storage.prototype.setItem=function(k,v){if(k===window.__failKey)throw Error('injected');return set.call(this,k,v)};});
  await c.route('**/app.js*',async route=>{const r=await route.fetch();await route.fulfill({response:r,body:(await r.text()).replace('window.__tzz = {','window.__integrationAmbient=()=>toast("人造太阳提示",2400,"","ambient");window.__tzz = {')});});
  await p.goto(base+'/');await p.waitForFunction(()=>window.__tzz&&__tzz.pet.M&&PetGame.speciesReady('dog'));
