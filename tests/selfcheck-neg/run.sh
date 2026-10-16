@@ -42,13 +42,15 @@ outd="$(sed -n 's/^selfcheck 输出目录：\([^（]*\).*/\1/p' err.txt)"
 chk "新产物在 $outd/evidence、隔离拷贝已删" '[ "$(cat "$outd/evidence/new.txt")" = 新产物 ] && [ ! -e "$outd/repo" ]'
 
 echo "== P1-① 内部软链接/硬链接：拒绝，外部目标 hash 不变"
-mk; EXT="$(mktemp -d)"; echo 外部旧证据 >"$EXT/old.txt"; e0="$(h "$EXT/old.txt")"
+mk; EXT="$(mktemp -d)"; echo 外部旧证据 >"$EXT/old.txt"; chmod 600 "$EXT/old.txt"; e0="$(h "$EXT/old.txt")"; m0="$(stat -c %a "$EXT/old.txt")"
 mkdir evidence; ln -s "$EXT/old.txt" evidence/shot.txt; echo "$WRITER" >test_w.js
 expect "evidence 内软链接→拒绝(2)" 2 tests/selfcheck.sh
 chk "软链接外部目标 hash 不变 ($e0)" '[ "$e0" = "$(h "$EXT/old.txt")" ]'
+chk "软链接外部目标 mode 不变 ($m0)" '[ "$m0" = "$(stat -c %a "$EXT/old.txt")" ]'
 rm evidence/shot.txt; ln "$EXT/old.txt" evidence/shot.txt 2>/dev/null || cp "$EXT/old.txt" evidence/shot.txt
 expect "evidence 内硬链接→拒绝(2)" 2 tests/selfcheck.sh
 chk "硬链接外部目标 hash 不变" '[ "$e0" = "$(h "$EXT/old.txt")" ]'
+chk "硬链接外部目标 mode 不变 ($m0)" '[ "$m0" = "$(stat -c %a "$EXT/old.txt")" ]'
 
 echo "== P1-② 中断/提前退出：原 evidence 保全"
 mk; mkdir evidence; echo 原始证据 >evidence/shot.txt; b="$(h evidence/shot.txt)"
@@ -92,12 +94,14 @@ rep="$(sed -n 's/.*（日志：\([^；]*\)；.*/\1/p' err.txt)"; echo "  报告�
 chk "报告路径下确有日志且内容正确" '[ "$(cat "$rep/test_a.js.log")" = hello-log ] && [ "$rep" = "$(pwd -P)/evidence/logs" ]'
 
 echo "== 19:06 P1 拷贝后再扫：拷贝里混进链接 / 扫描失败 → 测试不启动"
-mk; EXT="$(mktemp -d)"; echo 外部旧证据 >"$EXT/old.txt"; e0="$(h "$EXT/old.txt")"
+mk; EXT="$(mktemp -d)"; echo 外部旧证据 >"$EXT/old.txt"; chmod 600 "$EXT/old.txt"; e0="$(h "$EXT/old.txt")"; m0="$(stat -c %a "$EXT/old.txt")"
 mkdir evidence; echo "$WRITER" >test_w.js; echo 'require("fs").writeFileSync("'"$R"'/ran","1")' >test_m.js
 expect "拷贝里出现软链接→2" 2 env SELFCHECK_TEST_HOOK_AFTER_COPY='ln -s '"$EXT"'/old.txt "$1/evidence/shot.txt"' tests/selfcheck.sh
 chk "测试没启动、外部目标 hash 不变" '[ ! -e ran ] && [ "$e0" = "$(h "$EXT/old.txt")" ]'
+chk "拷贝里链接：外部目标 mode 不变 ($m0)" '[ "$m0" = "$(stat -c %a "$EXT/old.txt")" ]'
 expect "拷贝里出现硬链接→2" 2 env SELFCHECK_TEST_HOOK_AFTER_COPY='ln '"$EXT"'/old.txt "$1/evidence/shot.txt" 2>/dev/null || ln "$1/test_w.js" "$1/evidence/hl.js"' tests/selfcheck.sh
 chk "测试没启动、外部目标 hash 不变" '[ ! -e ran ] && [ "$e0" = "$(h "$EXT/old.txt")" ]'
+chk "拷贝里链接：外部目标 mode 不变 ($m0)" '[ "$m0" = "$(stat -c %a "$EXT/old.txt")" ]'
 expect "扫描拷贝失败→2" 2 env SELFCHECK_TEST_HOOK_AFTER_COPY='mkdir "$1/locked"; chmod 000 "$1/locked"' tests/selfcheck.sh
 chk "扫描失败时测试没启动" '[ ! -e ran ]'
 
