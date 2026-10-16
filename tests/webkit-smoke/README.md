@@ -152,6 +152,9 @@ observation chain): ⑧c a second tab of the same context waits for the write lo
 is held back, the run is lost and settled by the parent, then the held `started` is replayed → nothing recorded;
 un-holding and starting again records and survives save-then-refresh. Mutation check: removing the parent's
 settled/live guards makes ⑧d fail.
+r3 (⑧c): the standalone tab C's click is no longer wrapped in an empty catch — C must be shown to really start
+(`__zb.EMBED=false`, `G` exists, `!pendStart`, `t>0`) before A is checked; negative control C2 has `#startBtn`
+removed and the same start helper must throw.
 Part 2 = 塔防 `firstTDWin`, root only (the pet copy has no TD entry → N/A): opening the TD menu, a real `#startBtn`
 start alone, a saved defeat (`end(false)`) and closing TD record nothing; a real start + synthetic victory fixture
 (`wave=W`, enemies cleared, `end(true)` — same as `td/test_speed_parent.mjs`, NOT natural-balance evidence) whose

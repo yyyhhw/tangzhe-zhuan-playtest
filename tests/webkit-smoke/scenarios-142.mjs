@@ -4,6 +4,7 @@
 //       firstZombie（整数时间，≥ firstShop），此时 zombie.cleared 仍是 0（不需要赢）；输掉一局时间不变；
 //       子页重复发 started 不覆盖；关掉打僵尸后保存再刷新，时间原样。照 tests/milestones/zombie-browser.py 的 Chromium 路径。
 //   ⑧c 负例（r2，熊大 18:29）：firstZombie 为空时开第二个标签页 B（等不到写锁、无 __tzz）+ 打僵尸子页独立标签 C 点开打，都不记；
+//       r3（熊大 19:17）：C 点击不吞异常，先断言 C 真开局（EMBED=false、G、!pendStart、t>0）再查 A；负控 C2 拿掉 #startBtn → 开局助手必须抛错。
 //       正控：A 真点开打能记，A 内存 + 磁盘可见，B 关后磁盘仍是 A 的那一个时间。
 //   ⑧d 负例（r2）：firstZombie 为空时，子页拦下本局 started，这局输掉并由父页结算后再原样补发 → 不记；正控：解除拦截重开一局能记，保存刷新保留。
 //       负控证据：去掉父页三处 settled/live 守卫（started 守卫、live 检查、zombieStartReady）后本条 FAIL（27/28）。
@@ -169,6 +170,13 @@ async function scenarioZombie(browser, base, seed) {
   } catch (e) { check(`${tag}: ran`, false, e.stack || e); } finally { await ctx.close(); }
 }
 
+// 独立打僵尸页（没有父页）真点开打：点击或等待失败都直接抛错，不吞；返回开局状态给调用方断言。
+async function startStandaloneC(c, timeout = 10000) {
+  await c.locator('#startBtn').click({ timeout });
+  await c.waitForFunction(() => window.__zb && window.__zb.EMBED === false && window.__zb.G && !window.__zb.G.pendStart && window.__zb.G.t > 0, null, { timeout });
+  return c.evaluate(() => ({ embed: window.__zb.EMBED, g: !!window.__zb.G, pend: !!window.__zb.G.pendStart, t: window.__zb.G.t }));
+}
+
 // ⑧c 负例 1（熊大 18:29）：第二个标签页不能首次记账。前置：firstZombie 为空。
 //   同一浏览器上下文先开 A（拿到写锁），再开 B：B 等不到锁、不暴露 __tzz、不写盘；另开打僵尸子页 C 独立标签点开打（没有父页）也不记。
 //   正控：随后在 A 真点开打，同一条观察链（A 内存 + 磁盘）能看到合法记账；B 关掉后磁盘仍只有 A 记的那一个时间。
@@ -187,12 +195,22 @@ async function scenarioZombieSecondTab(browser, base, seed) {
     check(`${tag}: 2nd tab B waits for the write lock (no __tzz, does not own lock)`, bState.tzz === false && bState.owns === false, J(bState));
     const c = await ctx.newPage(); wireErrors(c, tag + ' C');
     await c.goto(base.replace(/\/$/, '') + '/zombie/', { waitUntil: 'load' });
-    await c.waitForTimeout(500);
-    try { await c.locator('#startBtn').click({ timeout: 3000 }); } catch {}
-    await c.waitForTimeout(1500);
+    // r3（熊大 19:17）：点击异常不吞，直接让本场景失败；先证明 C 真的以独立页开局，再查 A。
+    const cs = await startStandaloneC(c);
+    check(`${tag}: C really started standalone (__zb.EMBED=false, G exists, !pendStart, t>0)`, cs.embed === false && cs.g === true && !cs.pend && cs.t > 0, J(cs));
+    await c.waitForTimeout(800);
     const d1 = await diskSave(a);
     check(`${tag}: B open + standalone zombie tab C start record nothing (A memory + disk)`, (await fz(a)) === undefined && !Object.hasOwn(d1?.milestones?.events ?? {}, 'firstZombie'), J(d1?.milestones?.events));
     await c.close();
+    // 负控：故意让独立页 C2 起不来（拿掉 #startBtn）→ 同一个开局助手必须报错，不能因为 A 没被写就算过。
+    const c2 = await ctx.newPage(); wireErrors(c2, tag + ' C2');
+    await c2.goto(base.replace(/\/$/, '') + '/zombie/', { waitUntil: 'load' });
+    await c2.evaluate(() => document.querySelector('#startBtn')?.remove());
+    let c2err = null;
+    try { await startStandaloneC(c2, 3000); } catch (e) { c2err = String(e && e.message || e).split('\n')[0]; }
+    const c2st = await c2.evaluate(() => ({ g: !!window.__zb?.G }));
+    check(`${tag}: negative control — C2 deliberately unable to start makes the start helper throw (not a silent pass)`, !!c2err && c2st.g === false, J({ c2err, ...c2st }));
+    await c2.close();
     // 正控：A 真点开打 → 记账；同一观察链能看到
     const f = await child(a);
     await f.locator('#startBtn').click();
