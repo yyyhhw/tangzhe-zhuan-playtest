@@ -58,7 +58,12 @@ for a local Chromium dry run), 390×844, root + `/pet/game/`:
 2. **科研固定价** — research-bench tier 1 = 9,000,090; four synchronous clicks deduct exactly once;
    tier 2 at research Lv1 is disabled and `perform` is refused; refresh keeps only `tech:1`.
 3. **跨标签** — a second page in the same context is stopped by 「同一作用域只能一个页面经营」 and
-   cannot open 星途; a buy in the first page lands on disk exactly once, the second never writes.
+   cannot open 星途; a buy in the first page lands on disk exactly once. The second page gets a
+   write observer before any of its scripts (wraps `Storage.prototype.setItem/removeItem/clear`,
+   native call kept, same-value writes counted): 0 writes to protected save keys during boot and
+   during explicit `perform`/`persist` attempts (refusal checked when those interfaces exist).
+   Positive controls: page A's buy is seen writing the main save; a same-value write-back in B is
+   counted once with bytes unchanged.
 4. **外星倍率** — 0 / 1 (mars #3) / 7 (six #3 + 回信) alien cards → ×1 / ×1.25 / ×2.75 online rate
    and 2 h offline amount; the legacy `alienCards` field alone does not count; mars at 2 cards = ×1.
 
