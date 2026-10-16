@@ -24,7 +24,8 @@
 //      ② 普通脚本只剥「N - 」这类明确序号，名字开头的数字保留；③ 基线每行 schema 严格校验（full 必须有 cases/ids 且类型对），不合格起服务前退出 2
 //  测试-144：JSON 计数只认带明确汇总（passed/failed、pass/fail、counts.pass/fail）的测试结果对象，业务 JSON 的 ok/status 不当断言；逐条失败多于汇总按逐条记；
 //      r2（熊大 22:23）：只剥 Node 明确警告行，非单个 JSON 却含 ok/status 字段、或多套汇总冲突 → 记不完整、不可比较
-//  测试-146：「/路径 宽度 场景名 [[毫秒,"文字"],…]」这种时间线行，身份去掉实测 JSON 只留路径/宽度/场景名；时间线畸形记不完整
+//  测试-146：「/路径 宽度 场景名 [[毫秒,"文字"],…]」这种时间线行，身份去掉实测 JSON 只留路径/宽度/场景名；时间线畸形记不完整；
+//      r3（熊大 22:43）：时间线身份带 tl:1 类型键，和整段时间线缺失的同名普通行不是同一身份
 //  --replay-root-dir DIR：不跑普通脚本，改读 DIR/<脚本名，/ 换成 __>.log 和同名 .exit（负例用）
 // 不跑 Python 脚本（test_*.py）、tests/ 下的浏览器 .py、WebKit。退出码：有任何一项退出码不等于 0 就返回 1；用了 --compare 时，只有出现新失败才返回 1。
 import http from 'node:http';
@@ -75,7 +76,7 @@ if (args.includes('--compare')) {
   // r4 P2：逐行 schema 严格校验，不合格在起服务、跑测试、写文件之前拒绝（不再等到比较时崩溃）
   const str = x => typeof x === 'string', okSt = x => x === 'pass' || x === 'fail' || x === 'skip';
   const okCase = c => c && Array.isArray(c.path) && c.path.every(str) && Number.isInteger(c.n) && c.n >= 1 && okSt(c.status);
-  const okId = x => x && str(x.name) && (x.status === 'pass' || x.status === 'fail');
+  const okId = x => x && str(x.name) && (x.status === 'pass' || x.status === 'fail') && (x.tl === undefined || x.tl === 1);
   for (const r of raw.rows) {
     const bad = why => refuse(`基线 ${abs} 的「${r.script}」行${why}，请用本版脚本重跑基线`);
     if (!['full', 'failed-only', 'none'].includes(r.idMode)) bad(`身份方式 ${JSON.stringify(r.idMode)} 不认识`);
@@ -273,11 +274,12 @@ function plainIds(out, c) {
     // r4 P1-②：只剥明确的序号格式「N - / N – / N: 」（如 ok 3 - 名），名字本身开头的数字保留（「3000金币购买」「5 分钟…」不被吞）
     const m = line.match(/^\s*(✓|✔|PASS\b|ok\b|✗|✘|×|FAIL\b|not ok\b)\s*(?:\d+\s+[-–:]\s+|[-–:]\s*)?(.*)$/);
     if (!m) continue;
-    let name = m[2].trim();
+    let name = m[2].trim(), isTl = false;
     const tl = timelineId(name);
     if (tl && tl.bad) problems.push(tl.bad);
-    else if (tl) name = tl.name;
-    marks.push({name, status: /^(✗|✘|×|FAIL|not ok)/.test(m[1]) ? 'fail' : 'pass'});
+    else if (tl) {name = tl.name; isTl = true;}
+    // 146 r3（熊大 22:43）：时间线身份带 tl:1，和同名普通行是不同类型键——整段时间线缺失的「PASS / 320 A」不会冒充「/ 320 A [[…]]」
+    marks.push({name, status: /^(✗|✘|×|FAIL|not ok)/.test(m[1]) ? 'fail' : 'pass', ...(isTl ? {tl: 1} : {})});
   }
   const nf = marks.filter(x => x.status === 'fail').length;
   if (c.pass !== null && c.fail !== null && marks.length === c.pass + c.fail && nf === c.fail) return {idMode: 'full', ids: marks, problems};
@@ -296,7 +298,7 @@ function timelineId(name) {
   for (const k of cuts) {let v; try {v = JSON.parse(rest.slice(0, k));} catch {continue;} if (ok(v)) return {name: `${m[1]} ${m[2]} ${m[3]}`};}
   return {bad: `时间线格式畸形：${name.slice(0, 80)}`};
 }
-const multiset = ids => {const m = new Map(); for (const x of ids) {const k = JSON.stringify([x.name, x.status]); m.set(k, (m.get(k) || 0) + 1);} return m;};
+const multiset = ids => {const m = new Map(); for (const x of ids) {const k = JSON.stringify([x.name, x.status, x.tl === 1 ? 'tl' : 'plain']); m.set(k, (m.get(k) || 0) + 1);} return m;};
 const sameMultiset = (a, b) => a.size === b.size && [...a].every(([k, v]) => b.get(k) === v);
 const cleanExit = code => code === 0 || code === 1;
 
@@ -400,11 +402,13 @@ if (BASE) {
       const nm = r.cases ? new Map(r.cases.map(c => [key(c), c])) : multiset(r.ids);
       if (!r.cases) {
         // 普通脚本完整身份：名字+状态的多重集合；集合元素按名字比较
-        const names = m => {const x = new Map(); for (const [k, v] of m) {const [nme] = JSON.parse(k); x.set(nme, (x.get(nme) || 0) + v);} return x;};
+        // 身份 = 名字 + 类型（时间线/普通），两者都相同才算同一用例；报告里只显示名字
+        const idk = (nme, kind) => JSON.stringify([nme, kind]), shown = k => JSON.parse(k)[0];
+        const names = m => {const x = new Map(); for (const [k, v] of m) {const [nme, , kind] = JSON.parse(k); const q = idk(nme, kind); x.set(q, (x.get(q) || 0) + v);} return x;};
         if (!sameMultiset(names(om), names(nm))) {nc(`  ${r.script}：用例身份集合变了，不可比较`); continue;}
-        const fails = m => {const x = new Map(); for (const [k, v] of m) {const [nme, st] = JSON.parse(k); if (st === 'fail') x.set(nme, v);} return x;};
+        const fails = m => {const x = new Map(); for (const [k, v] of m) {const [nme, st, kind] = JSON.parse(k); if (st === 'fail') x.set(idk(nme, kind), v);} return x;};
         const of = fails(om), nf = fails(nm);
-        const added = [...nf].filter(([k, v]) => (of.get(k) || 0) < v).map(([k]) => k), gone = [...of].filter(([k, v]) => (nf.get(k) || 0) < v).map(([k]) => k);
+        const added = [...nf].filter(([k, v]) => (of.get(k) || 0) < v).map(([k]) => shown(k)), gone = [...of].filter(([k, v]) => (nf.get(k) || 0) < v).map(([k]) => shown(k));
         if (added.length) nc(`  ${r.script} 新增失败：${added.join('；')}`);
         if (gone.length) diffs.push(`  ${r.script} 不再失败：${gone.join('；')}`);
         continue;

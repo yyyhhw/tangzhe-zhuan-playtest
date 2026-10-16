@@ -225,4 +225,20 @@ mk tn0 test_n.mjs 'PASS 场景甲 [[25,"x"]]\nPASS 场景乙 [[33,"y"]]\n2/2 PAS
 mk tn1 test_n.mjs 'PASS 场景甲 [[26,"x"]]\nPASS 场景乙 [[33,"y"]]\n2/2 PASS\n' 0
 RC tn0 tn1; expect "146 非时间线格式（无路径/宽度）的行尾 JSON 不剥 → 仍不可比较" 1 $?
 
+# 146 r3（熊大 22:43）：确定格式的整段时间线 JSON 缺失，不能按普通原名冒充同一身份
+mk tg0 test_g.mjs 'PASS / 320 A [[25,"x"]]\nALL PASS\n' 0; RB tg0
+mk tg1 test_g.mjs 'PASS / 320 A\nALL PASS\n' 0
+RC tg0 tg1; expect "146 r3 熊大反例：基线 / 320 A [[25,\"x\"]] → 本轮整段时间线缺失 → compare 不得返回 0" 1 $?
+grep -q "用例身份集合变了" "$W/last.txt"; expect "146 r3 整段缺失报「用例身份集合变了」" 0 $?
+mk tg2 test_g.mjs 'PASS / 320 A\nALL PASS\n' 0; RB tg2
+mk tg3 test_g.mjs 'PASS / 320 A [[25,"x"]]\nALL PASS\n' 0
+RC tg2 tg3; expect "146 r3 反向：基线普通行 → 本轮多出时间线 → 不可比较" 1 $?
+mk tg4 test_g.mjs 'FAIL / 320 A [[25,"x"]]\nSOME FAIL\n' 1; RB tg4
+mk tg5 test_g.mjs 'FAIL / 320 A\nSOME FAIL\n' 1
+RC tg4 tg5; expect "146 r3 失败行整段时间线缺失 → 不可比较（不记「不再失败」）" 1 $?
+! grep -q "不再失败" "$W/last.txt"; expect "146 r3 失败行缺时间线不报「不再失败」" 0 $?
+mk tg6 test_g.mjs 'PASS / 320 A [[31,"y"]]\nALL PASS\n' 0
+RC tg0 tg6; expect "146 r3 正控：两轮都有时间线、只毫秒/文字变 → 逐项一致" 0 $?
+grep -q '"tl": 1' "$W/rb-tg0/summary.json" && ! grep -q '"tl"' "$W/rb-tg2/summary.json"; expect "146 r3 summary 里时间线身份带 tl:1、普通行不带" 0 $?
+
 echo; echo "负例 $pass 过 / $fail 败"; [ $fail = 0 ]
