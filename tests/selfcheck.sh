@@ -51,7 +51,10 @@ OUT="$(cd "$OUT" && pwd -P)" || exit 2
 case "$OUT/" in "$ROOT"/*) echo "输出目录 $OUT 落在仓库里，拒绝" >&2; rmdir "$OUT"; exit 2 ;; esac
 WORK="$OUT/repo"; RES="$OUT/results.tsv"; : >"$RES"
 SRV_PID=""
-cleanup() { [ -n "$SRV_PID" ] && kill "$SRV_PID" 2>/dev/null; wait 2>/dev/null; [ -d "$WORK" ] && find "$WORK" -type d ! -type l -exec chmod u+rwx {} + 2>/dev/null; rm -rf "$WORK"; }
+cleanup() { [ -n "$SRV_PID" ] && kill "$SRV_PID" 2>/dev/null; wait 2>/dev/null; [ -d "$WORK" ] && [ ! -L "$WORK" ] && unlock_dirs "$WORK"; rm -rf "$WORK"; }
+# 逐层解锁：find 进不去 000 目录，所以每轮只 chmod 当前看得见、缺 u+rwx 的真目录（-type d 不含链接，find 默认不跟随链接，不碰文件），直到一轮都找不到为止（最多 200 轮防死循环）。
+unlock_dirs() { local i=0; while [ $i -lt 200 ] && [ -n "$(find "$1" -type d ! -perm -u+rwx -print -quit 2>/dev/null)" ]; do
+  find "$1" -type d ! -perm -u+rwx -exec chmod u+rwx {} + 2>/dev/null; i=$((i+1)); done; }
 trap cleanup EXIT
 trap 'echo "被中断，原工作树未改动；临时拷贝已删" >&2; exit 130' INT TERM
 

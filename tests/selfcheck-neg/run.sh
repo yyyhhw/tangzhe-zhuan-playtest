@@ -120,4 +120,13 @@ chk "没跑测试、tmpin 里没生成任何东西" '[ ! -e ran ] && [ -z "$(ls 
 expect "TMPDIR=仓库根→2" 2 env TMPDIR="$R" tests/selfcheck.sh
 chk "仓库根下没有 selfcheck.* 目录" '! ls -d selfcheck.* 2>/dev/null | grep -q .'
 
+echo "== 测试-145 cleanup：多层 000 目录也要删干净；外部链接目标 mode 不变"
+mk; echo 'process.exit(0)' >test_a.js; TDX="$(mktemp -d)"; EXT="$(mktemp -d)"; echo 外部 >"$EXT/t.txt"; chmod 640 "$EXT/t.txt"; chmod 750 "$EXT"; m0="$(stat -c %a "$EXT/t.txt")"; d0="$(stat -c %a "$EXT")"
+LOCK='mkdir -p "$1/n/a/b/c/d/e"; echo x >"$1/n/a/b/c/d/e/f.txt"; chmod 000 "$1/n/a/b/c/d/e" "$1/n/a/b/c/d" "$1/n/a/b/c" "$1/n/a/b" "$1/n/a" "$1/n"'
+expect "5 层 000 目录（扫描失败→2）" 2 env TMPDIR="$TDX" SELFCHECK_TEST_HOOK_AFTER_COPY="$LOCK" tests/selfcheck.sh
+chk "多层 000：临时拷贝已完全删除" '[ -z "$(find "$TDX" -path "*/repo" 2>/dev/null)" ]'
+expect "多层 000 + 硬链接外部文件→2" 2 env TMPDIR="$TDX" SELFCHECK_TEST_HOOK_AFTER_COPY='mkdir -p "$1/n/a/b"; ln '"$EXT"'/t.txt "$1/n/a/b/hl.txt" 2>/dev/null; ln -s '"$EXT"' "$1/n/a/b/sl"; ln -s '"$EXT"'/t.txt "$1/n/a/sf"; chmod 000 "$1/n/a/b" "$1/n/a" "$1/n"' tests/selfcheck.sh
+chk "链接+多层 000：临时拷贝已完全删除" '[ -z "$(find "$TDX" -path "*/repo" 2>/dev/null)" ]'
+chk "外部目标文件 mode 不变 ($m0)、目录 mode 不变 ($d0)、内容在" '[ "$m0" = "$(stat -c %a "$EXT/t.txt")" ] && [ "$d0" = "$(stat -c %a "$EXT")" ] && [ "$(cat "$EXT/t.txt")" = 外部 ]'
+
 echo "== 反例合计失败 $fails"; exit $fails
