@@ -126,11 +126,15 @@ Same server / save recipe / engines, 390×844, root + `/pet/game/`. Spawned by `
 - **⑦b 家里动画** (退修 after 熊大 14:22) — local 22:00 (game period asserted `night`), owned k_3 + k_4 + k_7,
   火箭老板 joined. Panda: whole-body walk animation (`storyPandaWalk` / `storyPandaBamboo`) must be `running`, not
   `.still`, and its Web-Animations progress must advance between two samples 1.5 s apart; moon present. First visit
-  to 火箭老板's home is sampled every 150 ms for 7.6 s from the moment of entry: the non-empty lines must be exactly
-  「三、二、一——」 then 「……今天先放气球。」 (line 1 immediately, line 2 at ~3.6 s); balloons visible with real size,
-  `storyFloat` running, progress / position changing and entering the room, finished and outside the room after the
-  6.2 s window. Leaving and coming back is sampled again for the full 7.6 s: no balloons and neither line.
+  to 火箭老板's home is observed by sampling for ~7.6 s from the moment of entry (a ~150 ms loop wait, max sampling gap
+  not guaranteed — reported as `maxGapMs`; this is a sampled observation, not proof of zero events over the continuous
+  window): the non-empty lines must be exactly 「三、二、一——」 then 「……今天先放气球。」 (line 1 immediately, line 2 at
+  ~3.6 s); balloons visible with real size, `storyFloat` running, progress / position changing and entering the room;
+  at the last sample the balloons are either gone or finished and outside the room (the element may linger in the DOM
+  until the next redraw — exact removal at 6.2 s is not asserted). Panda displacement is recorded only; the assertion is
+  on animation progress. Leaving and coming back is sampled the same way: no balloons and neither line at any sample.
 - **⑦c 火箭老板未加入** — k_7 owned but `homeOpen(rocket) === false`: entering his home is sampled for the full
-  7.6 s with the same observer (⑦b is its positive control): no balloons and neither countdown line.
+  ~7.6 s with the same sampling observer (⑦b is its positive control): no balloons and neither countdown line at any
+  sample (sampled, not continuous).
 - Not covered: iOS real device / background freeze; real touch-coordinate mapping for the guest tap; visual
   quality of animations (only running state + progress/position over time) and the reduced-motion still version; firstZombie / firstTDWin (测试-142).
