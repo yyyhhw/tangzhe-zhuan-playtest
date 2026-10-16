@@ -5,7 +5,9 @@
 // ② 科研固定价：研究台 tech 1 级成果 = TIER_PRICE[0] = 9,000,090；同一按钮同步连点 3 下只扣一次；
 //    2 级（科研只有 1 级）按钮禁用、直接 perform 也被拒、不扣钱；刷新后 items 保留。
 // ③ 跨标签：同一浏览器上下文开两个页面，第二个被「同一作用域只能一个页面经营」拦下、星途打不开；
-//    在第一个页面买 tech:1，落盘只扣一次，第二个页面不写盘。
+//    在第一个页面买 tech:1，落盘只扣一次。B 页在任何脚本之前装写调用观测器（包 Storage setItem/removeItem/clear，
+//    保留原生调用），分「启动」「显式 perform/persist 尝试」两段断言对受保护存档键写 0 次；接口存在时核对拒绝结果；
+//    正控：A 买东西的写盘能被看到、B 同值写回主档被记 1 次且字节不变。
 // ④ 外星倍率：册子 0 / 1（火星第 3 张）/ 7 张（6 航线第 3 张 + 回信）→ 产速 ×1 / ×1.25 / ×2.75；
 //    旧字段 alienCards 再大也不算数；离线待领按同一倍率（computeOffline 比值）。
 // 只测不改游戏代码。iOS 后台冻结标签恢复（lockfix 接管）macOS WebKit 测不到，单列未验。
@@ -27,6 +29,9 @@ const ENGINE = (process.env.BROWSER || 'webkit').toLowerCase();
 const OUT = process.env.WEBKIT_SMOKE_OUT || path.join(__dirname, 'output');
 fs.mkdirSync(OUT, { recursive: true });
 
+// 受保护存档键（collection/host-save.mjs:6 KEYS，除 tab 锁外全部）：主档、备份、原档存证、源档及其备份、v15 原档。
+const PROTECTED_KEYS = ['tangzhe-formal-collection-v1-save', 'tangzhe-formal-collection-v1-save-bak', 'tangzhe-formal-collection-v1-original',
+  'tangzhe-save', 'tangzhe-save-bak', 'tangzhe-upgrade-v15-original'];
 const TIER1 = 9000090;                 // TIER_PRICE[0] = round(1e11 * 1 / 11111)
 const RICH = 1e12;
 const READY = 'window.__tzz && window.XingTu';
@@ -69,6 +74,21 @@ async function newCtx(browser, seed) {
   }, { seed, sentinel: SEED_SENTINEL });
   return ctx;
 }
+// 写调用观测器：在页面任何脚本之前包住 Storage.prototype.setItem/removeItem/clear，保留原生调用（只记录不拦截）。
+// 每次调用都记 {op, key, phase, same}——同值写入也算一次，所以「写了但值没变」漏不掉。phase 由测试切换。
+async function installWriteObserver(page) {
+  await page.addInitScript(() => {
+    if (window.__wlog) return;
+    const log = []; window.__wlog = log; window.__wphase = 'boot';
+    const P = Storage.prototype, set = P.setItem, rem = P.removeItem, clr = P.clear;
+    P.setItem = function (k, v) { let same = false; try { same = this.getItem(k) === String(v); } catch {} log.push({ op: 'setItem', key: String(k), phase: window.__wphase, same }); return set.call(this, k, v); };
+    P.removeItem = function (k) { log.push({ op: 'removeItem', key: String(k), phase: window.__wphase }); return rem.call(this, k); };
+    P.clear = function () { log.push({ op: 'clear', key: '*', phase: window.__wphase }); return clr.call(this); };
+  });
+}
+const writesOf = (page) => page.evaluate(() => window.__wlog ? window.__wlog.slice() : null);
+const protectedWrites = (log, phase) => (log || []).filter((w) => (w.key === '*' || PROTECTED_KEYS.includes(w.key)) && (!phase || w.phase === phase));
+
 async function load(page, base, entry, { wait = true } = {}) {
   await page.goto(base.replace(/\/$/, '') + entry, { waitUntil: 'load' });
   if (!wait) return;
@@ -204,29 +224,48 @@ async function scenarioCrossTab(browser, base, entry, seed, def) {
   const ctx = await newCtx(browser, mkSeed(seed, { space: def }));
   const a = await ctx.newPage(); wireErrors(a, tag + ' A');
   const b = await ctx.newPage(); wireErrors(b, tag + ' B');
+  await installWriteObserver(a);
+  await installWriteObserver(b);           // B 的观测器在 B 任何脚本之前装好，B 启动期的写调用全部记录
   try {
     await load(a, base, entry);
     await load(b, base, entry, { wait: false });
     await b.waitForTimeout(2500);
     const bText = await b.evaluate(() => document.body.innerText);
-    const bState = await b.evaluate(() => ({ hasTzz: !!window.__tzz, blocked: window.__tzz ? window.__tzz.saveBlocked : null }));
+    const bState = await b.evaluate(() => ({ hasTzz: !!window.__tzz, blocked: window.__tzz ? window.__tzz.saveBlocked : null, hasXingTu: !!window.XingTu, hasPersist: !!(window.__tzz && window.__tzz.persist) }));
     check(`${tag}: 2nd tab blocked ("同一作用域只能一个页面经营")`, /同一作用域只能一个页面经营/.test(bText) || bState.blocked === true, JSON.stringify({ ...bState, text: bText.slice(0, 120) }));
+    // 阶段 1：B 启动（goto → 被拦 → 静置 2.5s）期间，对受保护键的写调用必须为 0。
+    const bootLog = await writesOf(b);
+    check(`${tag}: B write observer installed`, Array.isArray(bootLog), JSON.stringify(bootLog));
+    const bootW = protectedWrites(bootLog, 'boot');
+    check(`${tag}: B boot phase — 0 writes to protected save keys`, Array.isArray(bootLog) && bootW.length === 0, JSON.stringify({ protectedWrites: bootW, allWrites: bootLog }));
     const bOpen = await b.evaluate(() => window.XingTu ? window.XingTu.open() : { ok: false, code: 'NO_XINGTU' });
     check(`${tag}: 2nd tab cannot open 星途`, !bOpen.ok, JSON.stringify(bOpen));
     await shot(b, `crosstab-B-${tagOf(entry)}`);
     const diskBefore = await diskSave(a);
+    const rawBefore = await a.evaluate((k) => localStorage.getItem(k), SAVE_KEY);
     const opened = await a.evaluate(() => window.XingTu.open());
     check(`${tag}: 1st tab opens 星途`, opened && opened.ok, JSON.stringify(opened));
     await a.locator('#xingtuTabShip').click();
     await a.waitForSelector('#xingtuBuy-tech-1', { timeout: 15000 });
+    await a.evaluate(() => { window.__wphase = 'buy'; });
     const r = await a.evaluate(() => {
       const el = document.getElementById('xingtuBuy-tech-1'); const before = window.__tzz.state.coins;
       el.click(); el.click(); return { before, after: window.__tzz.state.coins };
     });
     check(`${tag}: 1st tab buy deducts once`, r.before - r.after === TIER1, `delta=${r.before - r.after}`);
-    // B tries to act: perform / persist must not touch the disk.
-    const bTry = await b.evaluate(() => { const out = {}; try { out.perform = window.XingTu ? window.XingTu.perform({ type: 'research', sys: 'war', tier: 1 }) : null; } catch (e) { out.err = String(e); }
-      try { out.persist = window.__tzz && window.__tzz.persist ? window.__tzz.persist() : null; } catch (e) { out.perr = String(e); } return out; });
+    // 正控 1：A 买东西的落盘能被观测器看到（主档至少写一次），证明观测器对真实写盘有效。
+    const aBuyW = protectedWrites(await writesOf(a), 'buy');
+    check(`${tag}: positive control — A's buy is observed writing the main save`, aBuyW.some((w) => w.op === 'setItem' && w.key === SAVE_KEY), JSON.stringify(aBuyW));
+    // 阶段 2：B 显式尝试 perform / persist（接口存在才调），写调用必须为 0；接口存在时核对拒绝结果。
+    await b.evaluate(() => { window.__wphase = 'try'; });
+    const bTry = await b.evaluate(() => { const out = { hasXingTu: !!window.XingTu, hasPersist: !!(window.__tzz && window.__tzz.persist) };
+      try { out.perform = window.XingTu ? window.XingTu.perform({ type: 'research', sys: 'war', tier: 1 }) : null; } catch (e) { out.err = String(e); }
+      try { out.persist = out.hasPersist ? window.__tzz.persist() : null; } catch (e) { out.perr = String(e); } return out; });
+    await b.waitForTimeout(500);
+    const tryW = protectedWrites(await writesOf(b), 'try');
+    check(`${tag}: B explicit perform/persist phase — 0 writes to protected save keys`, tryW.length === 0, JSON.stringify({ protectedWrites: tryW, bTry }));
+    check(`${tag}: B perform refused when XingTu exists`, !bTry.hasXingTu || (bTry.perform && bTry.perform.ok === false), JSON.stringify(bTry.perform ?? 'XingTu absent on B (not applicable)'));
+    check(`${tag}: B persist() returns false when exposed`, !bTry.hasPersist || bTry.persist === false, JSON.stringify(bTry.hasPersist ? bTry.persist : '__tzz.persist absent on B (not applicable)'));
     await a.waitForTimeout(1500);
     const d = await diskSave(a);
     check(`${tag}: disk has tech:1, not war:1 (B never wrote)`, d?.space?.items?.['tech:1'] === 1 && !d?.space?.items?.['war:1'], JSON.stringify({ items: d?.space?.items, bTry }));
@@ -235,6 +274,16 @@ async function scenarioCrossTab(browser, base, entry, seed, def) {
     check(`${tag}: disk deducted exactly once (0 ≤ drift < 0.5×price)`, dd >= 0 && dd < 0.5 * TIER1,
       `before=${diskBefore?.coins} after=${d?.coins} drift=${dd}`);
     drift(`${tag} disk balance vs (diskBefore − price)`, (diskBefore?.coins ?? 0) - TIER1, d?.coins ?? 0);
+    // 正控 2：在 B 里对主档做一次「同值写入」（读出来原样写回，盘上内容不变），观测器必须记到 1 次 same=true，
+    // 证明「写了但值没变」不会漏；做完核对盘上主档字节未变。放在所有断言之后，不影响上面的结论。
+    await b.evaluate(() => { window.__wphase = 'control'; });
+    const rawMid = await a.evaluate((k) => localStorage.getItem(k), SAVE_KEY);
+    await b.evaluate((k) => { localStorage.setItem(k, localStorage.getItem(k)); }, SAVE_KEY);
+    const ctlW = protectedWrites(await writesOf(b), 'control');
+    const rawAfterCtl = await a.evaluate((k) => localStorage.getItem(k), SAVE_KEY);
+    check(`${tag}: positive control — same-value write in B is counted (1 write, same=true, bytes unchanged)`,
+      ctlW.length === 1 && ctlW[0].key === SAVE_KEY && ctlW[0].same === true && rawAfterCtl === rawMid, JSON.stringify({ ctlW, bytesUnchanged: rawAfterCtl === rawMid }));
+    check(`${tag}: main save bytes changed by A's buy (sanity)`, rawBefore !== rawMid);
   } catch (e) { check(`${tag}: ran`, false, e.stack || e); } finally { await ctx.close(); }
 }
 
