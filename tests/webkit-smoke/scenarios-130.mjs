@@ -425,6 +425,14 @@ async function main() {
     ok141 = r.status === 0;
     console.log(`scenarios-141 exit=${r.status}`);
   }
-  process.exit(ok && ok139 && ok141 ? 0 : 1);
+  // 测试-142：接着跑 scenarios-142.mjs（星途-02 子游戏回执）。SKIP_142=1 可跳过。
+  let ok142 = true;
+  if (process.env.SKIP_142 !== '1') {
+    const { spawnSync } = await import('node:child_process');
+    const r = spawnSync(process.execPath, [path.join(__dirname, 'scenarios-142.mjs')], { stdio: 'inherit', env: process.env });
+    ok142 = r.status === 0;
+    console.log(`scenarios-142 exit=${r.status}`);
+  }
+  process.exit(ok && ok139 && ok141 && ok142 ? 0 : 1);
 }
 main();

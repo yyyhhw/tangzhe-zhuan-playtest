@@ -129,3 +129,11 @@ Same server / save recipe / engines, 390×844, root + `/pet/game/`. Spawned by `
   balloon window, leaving and coming back does not replay it.
 - Not covered: iOS real device / background freeze; real touch-coordinate mapping for the guest tap; visual
   quality of animations and the reduced-motion still version; firstZombie / firstTDWin (测试-142).
+
+## 测试-142 星途-02 子游戏回执 (`scenarios-142.mjs`) — 第一部分
+
+Spawned by `scenarios-130.mjs` after 141 (`SKIP_142=1` skips). Part 1 = 打僵尸 `firstZombie`, root only (the pet copy
+has no zombie entry → N/A): menu open / locked endless start / menu close record nothing; real `#startBtn` start
+records an integer `firstZombie` ≥ `firstShop` with `zombie.cleared` still 0; a defeat and a repeated `started`
+message keep the same time; save-then-refresh keeps it in memory + disk. Same path as
+`tests/milestones/zombie-browser.py` (Chromium). Part 2 (`firstTDWin`, 塔防通关) comes next.
