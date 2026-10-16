@@ -177,7 +177,22 @@ j144 jx2 '{"passed":2,"failed":0,"pass":1,"fail":1}\n' 0 1 'null/null/incomplete
 mk jx3 test_j.mjs '{"pass":1,"fail":0,"counts":{"pass":1,"fail":0},"rows":[{"name":"A","status":"pass"}]}\n' 0
 RC jx1 jx3; expect "144 r2 正控：两轮一致汇总 → 逐项一致" 0 $?
 mk jt0 test_j.mjs '{"passed": 1, "failed": 0}\n  ✗ A\n' 1; RB jt0
-[ "$(row jt0)" = "null/null/1" ] || [ "$(row jt0)" = "0/1/1" ]; expect "144 JSON 后面还跟逐行 ✗ → 不当纯 JSON 汇总（实际 $(row jt0)）" 0 $?
+# 144 r3：带汇总字段又不是单个 JSON → 记不完整（比原来接受的 —/1、0/1 更保守）
+# （先取值再判断：原写法把 $(row …) 放在 expect 参数里，会把 $? 冲成 0，断言恒过）
+got_jt0=$(row jt0); [ "$got_jt0" = "null/null/incomplete" ]; expect "144 JSON 后面还跟逐行 ✗ → 不当纯 JSON 汇总，记不完整（实际 $got_jt0）" 0 $?
+# 144 r3（熊大 22:55）：不含 rows/ok/status、只有汇总字段的多段报告也不能吞失败
+mk jm0 test_j.mjs '{"passed":1,"failed":0}\n{"passed":1,"failed":0}\n' 0; RB jm0
+j144 jm1 '{"passed":0,"failed":1}\n{"passed":1,"failed":0}\n' 0 1 'null/null/incomplete' "r3 两段只含 passed/failed、首段失败 → 不完整"
+RC jm0 jm1; expect "144 r3 熊大反例：两段汇总首段变失败 → compare 不得返回 0" 1 $?
+grep -q '"passed" 等结果/汇总字段但不是单个可解析 JSON' "$W/last.txt"; expect "144 r3 报出汇总字段多段" 0 $?
+j144 jm2 '{"pass":1,"fail":0}\n{"pass":1,"fail":0}\n' 0 1 'null/null/incomplete' "r3 两段只含 pass/fail → 不完整"
+j144 jm3 '{"counts":{"pass":1,"fail":0}}\n{"counts":{"pass":1,"fail":0}}\n' 0 1 'null/null/incomplete' "r3 两段只含 counts → 不完整"
+j144 jm4 '{"failed":1,"passed":0}\n{"passed":2,"failed":0}\n' 0 1 'null/null/incomplete' "r3 两段汇总、字段顺序反 → 不完整"
+j144 js0 '{"passed":1,"failed":0}\n' 0 0 '1/0/0' "r3 正控：单段只含 passed/failed → 1/0"
+j144 js1 '{"pass":2,"fail":0}\n' 0 0 '2/0/0' "r3 正控：单段只含 pass/fail → 2/0"
+j144 js2 '{"counts":{"pass":3,"fail":0}}\n' 0 0 '3/0/0' "r3 正控：单段只含 counts → 3/0"
+mk js3 test_j.mjs '{"passed":1,"failed":0}\n' 0
+RC js0 js3; expect "144 r3 正控：两轮单段汇总一致 → 逐项一致" 0 $?
 # compare：业务 JSON 行内容变了但都 exit 0 → 逐项一致；exit 0→1 仍拒绝
 mk jc1 test_j.mjs '[{"key":"a","ok":true}]\n' 0; mk jc2 test_j.mjs '[{"key":"a","ok":false}]\n' 1
 RC jb0 jc1; expect "144 compare 正控：业务 JSON ok 值变、两轮都 exit 0 → 逐项一致" 0 $?

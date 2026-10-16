@@ -198,8 +198,10 @@ function jsonCount(out) {
   const t = stripNodeWarnings(out);
   let d;
   try {d = JSON.parse(t);} catch {
-    // 不是单个可解析 JSON，却带 "ok"/"status" 结果字段（如前置失败 JSON + 后接成功 JSON）→ 不能可靠计数，记不完整、不可比较
-    if (/"(ok|status)"\s*:/.test(t)) return {pass: null, fail: null, by: '含 JSON 结果字段但不是单个可解析 JSON', problem: '输出含 "ok"/"status" 结果字段但不是单个可解析 JSON，无法可靠计数'};
+    // 不是单个可解析 JSON，却带结果字段（ok/status，或 144 r3 熊大 22:55：已支持的汇总字段 passed/failed、pass/fail、counts）
+    // 如前置失败 JSON + 后接成功 JSON、两段只含汇总的报告 → 不能可靠计数，记不完整、不可比较
+    let km;
+    if ((km = t.match(/"(ok|status|passed|failed|pass|fail|counts)"\s*:/))) return {pass: null, fail: null, by: '含 JSON 结果字段但不是单个可解析 JSON', problem: `输出含 "${km[1]}" 等结果/汇总字段但不是单个可解析 JSON，无法可靠计数`};
     return null;
   }
   if (!d || typeof d !== 'object' || Array.isArray(d)) return null;
