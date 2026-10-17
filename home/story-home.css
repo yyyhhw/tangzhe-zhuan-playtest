@@ -24,3 +24,13 @@
 .room .home-actor{width:14%}
 .room.pet-host-docked .home-actor:not(.posed){width:14%!important}
 .room .home-actor .ha-line{padding:1px 5px;font-size:9.5px;max-width:112px}
+/* 体验-149：手机窄屏顶部金币卡（.money）——团单「团单服务中 N%」标签、金额、右侧拟声字（叮／开！／团单！，#sfxWord，不是按钮）挤在一行，
+   金额被省略成「1…」。只在 ≤420px 改这一块：标签出现时先收起拟声字（标签本身就在说团单），标签折成两行（「团单服务中」／「N%」）让出宽度，金额字号随屏宽收一点，
+   「每秒 +X（团单服务中）」放不下时只省略后面的括号，数字完整。style.css 受 tests/moon/protected-blobs.json 保护，覆盖写在这里。 */
+@media (max-width:420px){
+  .money:has(#boostTag:not(.hidden)) .sfx-word{display:none}
+  .money{gap:6px}
+  .money .boost-tag{flex:0 0 auto;font-size:10px;line-height:1.15;padding:2px 5px;white-space:normal;max-width:64px;text-align:center}
+  .money #coins{font-size:clamp(21px,6.8vw,30px)}
+  .money #cps{overflow:hidden;text-overflow:ellipsis}
+}
