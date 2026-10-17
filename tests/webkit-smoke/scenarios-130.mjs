@@ -441,6 +441,14 @@ async function main() {
     ok153 = r.status === 0;
     console.log(`scenarios-153 exit=${r.status}`);
   }
-  process.exit(ok && ok139 && ok141 && ok142 && ok153 ? 0 : 1);
+  // 测试-154：接着跑 scenarios-154.mjs（家宅-150 合后补验：底图失败 / 黄昏↔夜实时切换 / 减少动态）。SKIP_154=1 可跳过。
+  let ok154 = true;
+  if (process.env.SKIP_154 !== '1') {
+    const { spawnSync } = await import('node:child_process');
+    const r = spawnSync(process.execPath, [path.join(__dirname, 'scenarios-154.mjs')], { stdio: 'inherit', env: process.env });
+    ok154 = r.status === 0;
+    console.log(`scenarios-154 exit=${r.status}`);
+  }
+  process.exit(ok && ok139 && ok141 && ok142 && ok153 && ok154 ? 0 : 1);
 }
 main();

@@ -173,3 +173,13 @@ a stage-2 win keeps the same time; save-then-refresh keeps it in memory + disk.
 时段用 `Etc/GMT±N` 把本地时间拨到 22 点 / 18 点并断言；房间等级只改内存态做显示。iOS 真机不在范围内。
 本地干跑：`BROWSER=chromium CHROMIUM_PATH=… node scenarios-153.mjs`（8075633 上 111/111；main 6754963 上 74/111，②③④ 能抓到旧问题）。
 
+
+## 测试-154 家宅-150 合后补验：底图失败 / 黄昏↔夜实时切换 / 减少动态 (`scenarios-154.mjs`)
+
+只测不改游戏代码；`scenarios-130.mjs` 跑完 153 后接着跑（`SKIP_154=1` 可跳过）。root + `/pet/game/`，390×844：
+
+1. **底图加载失败**：`context.route` 拦掉 `art/home_*.webp`，夜晚+k_4、黄昏+k_8 各走四位 CEO × Lv1–3：月亮/街灯都不画、房间照常渲染、0 JS 错误；另判 `.room` 是否退回无底图样子（去掉 `has-art`）。
+2. **黄昏↔夜晚实时切换**：同页不刷新，`page.clock.setSystemTime` 把本地时间 18:59:40 → 19:00:05，6s 内街灯换成月亮、旧的街灯窗不残留（c77 Lv3、珍珠 Lv3）。倒拨回 18:59 只记录。
+3. **prefers-reduced-motion: reduce**：夜晚+k_3+k_4、黄昏+k_8，12 间房：有窗房型月亮/街灯照常显示、故事层没有 >10ms 的动画、熊猫 1.5s 不动；街灯逐盏亮起的 delay 只记录。
+
+本地干跑：`BROWSER=chromium CHROMIUM_PATH=… node scenarios-154.mjs`（8075633 上 ②③ 全过；① 抓到底图失败时 `has-art` 不掉、有窗房型照样画月亮/街灯——见报告）。
