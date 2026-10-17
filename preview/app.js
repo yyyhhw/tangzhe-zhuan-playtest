@@ -1897,7 +1897,7 @@ function furnInner(fid, rot, inRoom) {
   return `<div class="fi" style="${st}"><span class="fe">${f.emoji}</span>${img}</div>`;
 }
 document.addEventListener('error', e => { const el = e.target; if (el && el.tagName === 'IMG' && el.dataset && el.dataset.front) { const fi = el.parentNode; if (fi && el.dataset.fronth) fi.style.height = el.dataset.fronth; el.className = ''; el.src = el.dataset.front; delete el.dataset.front; return; } // 12c2：侧面图坏了 → 回正面图
-  if (el && el.tagName === 'IMG' && el.dataset && el.dataset.homefb) { const fu = el.closest('.furn'); if (fu) fu.classList.remove('art'); el.remove(); } }, true);
+  if (el && el.tagName === 'IMG' && el.dataset && el.dataset.homefb) { const fu = el.closest('.furn'); if (fu) fu.classList.remove('art'); if (el.classList.contains('room-art')) { const rm = el.closest('.room'); if (rm) rm.classList.remove('has-art'); } el.remove(); } }, true); // 家宅-155：房间底图坏了 → 先撤 has-art 再删图，退回无底图样子
 function homeBook(sub) {
   return `<div class="book-tabs" role="tablist"><button data-act="homeGo" data-arg="shop">${ic('shop')}经营</button><button class="${sub === 'room' ? 'on' : ''}" data-act="homeSub" data-arg="room">${ic('home')}家宅</button><button class="${sub === 'mall' ? 'on' : ''}" data-act="homeSub" data-arg="mall">${ic('mall')}商城</button></div>`;
 }

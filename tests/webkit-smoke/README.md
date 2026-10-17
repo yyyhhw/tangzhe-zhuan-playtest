@@ -160,3 +160,50 @@ start alone, a saved defeat (`end(false)`) and closing TD record nothing; a real
 (`wave=W`, enemies cleared, `end(true)` — same as `td/test_speed_parent.mjs`, NOT natural-balance evidence) whose
 result the parent saves (`saveOk`) records an integer `firstTDWin` ≥ `firstShop` with `tdCampaign.highestCleared=1`;
 a stage-2 win keeps the same time; save-then-refresh keeps it in memory + disk.
+
+## 测试-153 家宅夜景/黄昏/房名牌 + 顶部金币卡 (`scenarios-153.mjs`)
+
+只测不改游戏代码；`scenarios-130.mjs` 跑完后接着跑（`SKIP_153=1` 可跳过）。root + `/pet/game/`：
+
+1. **夜晚 + k_4**（家宅-148）：四位 CEO × Lv1–3，有窗房型月亮在窗框内、窗 `overflow:hidden`；没窗房型不画；77 的家 k_3 熊猫是静止小摆件（隔 1.5s 不动、无动画）。
+2. **黄昏 + k_8**（家宅-150）：同 12 间房，四盏灯在最左那扇窗内、窗裁切、灯有尺寸；没窗房型不画。
+3. **房名牌**（家宅-151）：有底图房间 `.rw-name` 不与 `HomeStory.windowsFor` 的任何窗重叠、文字不截断。
+4. **顶部金币卡**（体验-149/152）：320/390/420/421/430 × 团单开/关 × 拟声字「叮」/「超超超级暴击！！」，余额 1000.00万亿：金额与「每秒 +X」完整、标签/拟声字不压、无横向滚动（同一次同步 evaluate 写入并测量）。
+
+时段用 `Etc/GMT±N` 把本地时间拨到 22 点 / 18 点并断言；房间等级只改内存态做显示。iOS 真机不在范围内。
+本地干跑：`BROWSER=chromium CHROMIUM_PATH=… node scenarios-153.mjs`（8075633 上 111/111；main 6754963 上 74/111，②③④ 能抓到旧问题）。
+
+
+## 测试-154 家宅-150 合后补验：底图失败 / 黄昏↔夜实时切换 / 减少动态 (`scenarios-154.mjs`)
+
+只测不改游戏代码；`scenarios-130.mjs` 跑完 153 后接着跑（`SKIP_154=1` 可跳过）。root + `/pet/game/`，390×844：
+
+1. **底图加载失败**：`context.route` 拦掉 `art/home_*.webp`，夜晚+k_4、黄昏+k_8 各走四位 CEO × Lv1–3：月亮/街灯都不画、房间照常渲染、0 JS 错误；另判 `.room` 是否退回无底图样子（去掉 `has-art`）。
+2. **黄昏↔夜晚实时切换**：同页不刷新，`page.clock.setSystemTime` 把本地时间 18:59:40 → 19:00:05，6s 内街灯换成月亮、旧的街灯窗不残留（c77 Lv3、珍珠 Lv3）。倒拨回 18:59 只记录。
+3. **prefers-reduced-motion: reduce**：夜晚+k_3+k_4、黄昏+k_8，12 间房：有窗房型月亮/街灯照常显示、故事层没有 >10ms 的动画、熊猫 1.5s 不动；街灯逐盏亮起的 delay 只记录。
+
+本地干跑：`BROWSER=chromium CHROMIUM_PATH=… node scenarios-154.mjs`（8075633 上 ②③ 全过；① 抓到底图失败时 `has-art` 不掉、有窗房型照样画月亮/街灯——见报告）。
+
+**r2（熊大 10/17 16:53 意见）**：153 每间房先等「本房间那张底图」`complete && naturalWidth>0`（src 含 `home_<who>_<lv>.webp`，证据取加载成功那一刻；家宅 live 模式会定时重绘房间），超时不再吞掉；每间房的室外窗数钉死为 main 2af9076 的 `EXPECTED_WINS`（7 间有窗），缺底图或窗表变动都会红，不会被当「没窗」放过（153 共 159 项）。154 ① 每间房记录该房 `home_<who>_<lv>.webp` 被 route 拦截、`requestfailed`、回退后 `img.room-art` 已撤，再判月亮/街灯与 has-art，不再量到换房前的旧状态（154 共 217 项）。
+错误统计口径：`pageerror` 全收；`console.error` 过滤掉资源加载噪声（`^Failed to load resource`（只匹配浏览器资源错误前缀），① 故意拦图会产生这类）。③ 减少动态是两次采样（隔 1.5s）+ `getAnimations` 快照，不是连续录像。
+
+
+## 家宅-155 preview 底图回退（scenarios-155-preview.mjs）
+
+preview/app.js、preview/pet/game/app.js 的房间底图回退。preview 没有家宅-150 的月亮/街灯，所以只验回退本身。入口 `/preview/`、`/preview/pet/game/`，390×844，4 位 CEO × Lv1–3：
+
+- A 拦掉 `art/home_*.webp`：每间房都要有「被拦截 + 请求失败」证据，等到 `img.room-art` 被撤掉（10s 超时不吞），`.room` 不再带 `has-art`；
+- B 对照：底图正常时 `naturalWidth>0`、`.room` 带 `has-art`；
+- JS 错只滤掉 `Failed to load resource` 这类资源加载报错。preview 根入口新档先点「同意并继续」「保留备份并升级」建新版预览档。
+
+scenarios-130 跑完 154 接着跑它（`SKIP_155P=1` 可跳过）。本地干跑：`BROWSER=chromium CHROMIUM_PATH=… node scenarios-155-preview.mjs`（修复后 48/48；preview 换回 main 2af9076 原样时 ① 那一半全红）。
+
+整文件完整性断言（moon/resources、bb70/integration-scope、autosave15/scope）通过 `tests/home155/protection-delta.mjs` 只把这一行修复换回 main 原行再算哈希，旧哈希不改；这一行缺失/重复/被改都会报 `HOME155_DELTA_NOT_EXACT`（负例见 `tests/home155/delta.test.mjs`）。
+
+
+## 独立验收修订：154 / preview 请求证据
+
+154②③必须记录本房间底图完成且 naturalWidth>0、has-art 存在，并对照固定 EXPECTED_WINS；enterRoom 超时一律失败。③不能用缺图或窗表缺项走“无窗通过”分支。
+154 的 console.error 只过滤浏览器以“Failed to load resource”开头的资源错误；不再宽泛过滤 cancelled/aborted、net::、favicon 或任意 4xx/5xx 文案，业务错误必须计入。pageerror 全收。旧 r3 曾额外过滤 cancelled/aborted/Load request cancelled，旧说明漏列，现已收紧。
+155-preview 的 intercepted/requestfailed 证据按本次换房后的事件与准确 home_<who>_<lv>.webp URL 双重限定，上一房间的延迟失败不计入当前房间。
+产品修复另外修改正式 root/pet 的故事时段刷新：只在家宅生活页时段变化时触发既有重绘，不改变存档、收益、房间等级或自主动作。本变化超出原155底图失败回退范围，需单独审查。

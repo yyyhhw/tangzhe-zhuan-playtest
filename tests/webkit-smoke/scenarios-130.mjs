@@ -433,6 +433,31 @@ async function main() {
     ok142 = r.status === 0;
     console.log(`scenarios-142 exit=${r.status}`);
   }
-  process.exit(ok && ok139 && ok141 && ok142 ? 0 : 1);
+  // 测试-153：接着跑 scenarios-153.mjs（家宅-148/150/151 月亮/街灯/房名牌 + 体验-149/152 顶部金币卡）。SKIP_153=1 可跳过。
+  let ok153 = true;
+  if (process.env.SKIP_153 !== '1') {
+    const { spawnSync } = await import('node:child_process');
+    const r = spawnSync(process.execPath, [path.join(__dirname, 'scenarios-153.mjs')], { stdio: 'inherit', env: process.env });
+    ok153 = r.status === 0;
+    console.log(`scenarios-153 exit=${r.status}`);
+  }
+  // 测试-154：接着跑 scenarios-154.mjs（家宅-150 合后补验：底图失败 / 黄昏↔夜实时切换 / 减少动态）。SKIP_154=1 可跳过。
+  let ok154 = true;
+  if (process.env.SKIP_154 !== '1') {
+    const { spawnSync } = await import('node:child_process');
+    const r = spawnSync(process.execPath, [path.join(__dirname, 'scenarios-154.mjs')], { stdio: 'inherit', env: process.env });
+    ok154 = r.status === 0;
+    console.log(`scenarios-154 exit=${r.status}`);
+  }
+  // 家宅-155：接着跑 scenarios-155-preview.mjs（preview 两个入口的房间底图回退）。SKIP_155P=1 可跳过。
+  let ok155p = true;
+  if (process.env.SKIP_155P !== '1') {
+    console.log('\n=== scenarios-155-preview.mjs ===');
+    const { spawnSync } = await import('node:child_process');
+    const r = spawnSync(process.execPath, [path.join(__dirname, 'scenarios-155-preview.mjs')], { stdio: 'inherit', env: process.env });
+    ok155p = r.status === 0;
+    console.log(`scenarios-155-preview exit=${r.status}`);
+  }
+  process.exit(ok && ok139 && ok141 && ok142 && ok153 && ok154 && ok155p ? 0 : 1);
 }
 main();

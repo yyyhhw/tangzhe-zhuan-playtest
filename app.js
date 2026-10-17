@@ -2034,7 +2034,7 @@ function furnInner(fid, rot, inRoom) {
   return `<div class="fi" style="${st}"><span class="fe">${f.emoji}</span>${img}</div>`;
 }
 document.addEventListener('error', e => { const el = e.target; if (el && el.tagName === 'IMG' && el.dataset && el.dataset.front) { const fi = el.parentNode; if (fi && el.dataset.fronth) fi.style.height = el.dataset.fronth; el.className = ''; el.src = el.dataset.front; delete el.dataset.front; return; } // 12c2：侧面图坏了 → 回正面图
-  if (el && el.tagName === 'IMG' && el.dataset && el.dataset.homefb) { const fu = el.closest('.furn'); if (fu) fu.classList.remove('art'); el.remove(); } }, true);
+  if (el && el.tagName === 'IMG' && el.dataset && el.dataset.homefb) { const fu = el.closest('.furn'); if (fu) fu.classList.remove('art'); if (el.classList.contains('room-art')) { const rm = el.closest('.room'); if (rm) rm.classList.remove('has-art'); } el.remove(); } }, true); // 家宅-155：房间底图坏了 → 先撤 has-art 再删图，退回无底图样子
 function homeBook(sub) {
   return `<div class="book-tabs" role="tablist"><button data-act="homeGo" data-arg="shop">${ic('shop')}经营</button><button class="${sub === 'room' ? 'on' : ''}" data-act="homeSub" data-arg="room">${ic('home')}家宅</button><button class="${sub === 'mall' ? 'on' : ''}" data-act="homeSub" data-arg="mall">${ic('mall')}商城</button></div>`;
 }
@@ -2130,6 +2130,14 @@ const HA = window.HomeAutonomy || null;
 // ---- 养成-38：故事卡的家里变化（只氛围，不加收益、不存档）。决策在 home/story-home.js；脚本没加载到就整段不跑 ----
 const HS = window.HomeStory || null;
 const storyPeriod = () => homeAutoPeriod() || (h => h >= 19 || h < 5 ? 'night' : h >= 17 ? 'dusk' : h < 10 ? 'morning' : 'day')(new Date(now()).getHours());
+// 时段跨界必须主动刷新故事层，不能等待 CEO 自主动作偶然触发重绘。
+// 仅在当前可见的家宅生活页更新；不改存档、经济或自主活动状态。
+let storyObservedPeriod = null;
+function storyRefreshPeriod() {
+  if (tab !== 'home' || homeSub !== 'room' || homeMode !== 'live') return;
+  const period = storyPeriod();
+  if (period !== storyObservedPeriod) { storyObservedPeriod = period; dirty = true; }
+}
 function storyCtx(id, kind) {
   const H = E.homeOf(state, id), eat = (HA && HA.IDS && HA.IDS.eat) || [];
   return { owned:new Set(state.gacha.owned), who:id, kind:kind || null, period:storyPeriod(), placed:H.placed.map(p => p.fid),
@@ -2975,6 +2983,7 @@ function frame(ts) {
   dynAcc += dt; if (dynAcc > 0.25) { dynAcc = 0; refreshDynamic(); }
   // Owner movement updates the current interaction anchor.
   homeAdvanceActor(dt);
+  storyRefreshPeriod();
   if (dirty) renderTab();
   petFrame(dt);   // 宠物 p4：小狗一直在过日子；在它家的生活页才画
   // Use elapsed monotonic time, independent of the animation dt clamp. No catch-up writes.
