@@ -1,0 +1,62 @@
+Independent cross-review summary
+Frozen source: 54592428bd42f1fd2163fd1478042d2c03d3d2e3
+Original candidate: 8e4d390a4128ee676ab520373f32bd1d02b1be7f
+Reference main: 3cbd88b9e9846ca6e2fc9983936246e72928a55e
+
+Local repair commits:
+412e2130b7a97374b829dbe281cfacce6aaa037d — visible home story period refresh
+54592428bd42f1fd2163fd1478042d2c03d3d2e3 — room prerequisites / request evidence / documentation
+Repair diff: 7 files, +81/-15 relative to original candidate.
+Full candidate vs merge base with main: 16 files, +843/-8.
+
+Diagnosis:
+Original main reproduces dusk-to-night failure: Chromium 9/11, WebKit 10/11 in the isolated original scenario. Pearl Lv3 retains street lamps after the six-second deadline. Calling the existing renderer without another clock change immediately produces moon=true/street=false at hour 19. This is an existing missing period-triggered redraw, not a new image-fallback regression.
+Product change is separately scoped: root app.js and pet/game/app.js each add 9 lines. Only visible home/room/live mode marks dirty on a period transition. Same-period frames and shop/mall/decor do not. No save/economy/schema/preview product changes. Boundary redraw can coincide with existing story presentation; real-device long-duration boundary combinations are not covered.
+
+Final independent local runs: Playwright1.58.2 / Node24.19.0.
+Chromium145.0.7632.6 (build1208), WebKit26.0 (build2248).
+153: 159/159 per engine, root + pet/game.
+154: 269/269 per engine, root + pet/game.
+155-preview: 48/48 per engine, preview + preview/pet/game.
+Total952/952, zero JS errors. Original live-switch scenario on repaired source also11/11 per engine.
+154 count217→269: four normal-art/fixed-window prerequisites for live switching (2rooms×2entries), plus48 reduced-motion prerequisites (12rooms×2periods×2entries). No assertions removed and no six-second threshold relaxation.
+Related regressions22/22; actual story refresh function26 assertions passed.
+Evidence negatives reject timeout/missing art/wrong room/window-table drift, preceding-room delayed requests, and application errors containing aborted/cancelled.
+Console filtering now only accepts browser resource-error prefix “Failed to load resource”; pageerror remains unfiltered.
+
+Existing failures, unchanged:
+1. tests/bb70/integration-scope.test.mjs:
+   both changed bb70 stylesheets use current release URLs; stale prior CSS URL fails the check
+   actual home150-151-money152-20261017-r1 vs expected xingtu135-20261015-r1.
+2. tests/moon/resources.test.mjs:
+   complete changed ancestor→bootstrap→entry→app→overlay→intent chain uses one candidate token and real pins
+   actual formal-home150-151-money152-20261017-r1 vs expected formal-xingtu135-20261015-r1.
+The same two tests fail on old baseline2af90765871b95a4f4ffbd571ad0e4826a17f1d2: combined3/5. Repaired source also3/5. Protected hashes and exact-one-line delta were not weakened.
+
+Related accepted candidates:
+158 df33d121758308393c5730515493ac600e80d886: Chromium/WebKit root+pet story success style/collection wording/refresh12/12, real Earth-purchase0.5h/5h recap and refresh32/32, unit24/24. Preview regex source-reviewed; no claim of an unavailable preview story-grant flow.
+160 1f36c5b8c62a7430299487c2bc4752ad36c170c4: Chromium/WebKit across root, pet/game, preview, preview/pet/game24/24. Locked room hint retained, no duplicate homeWho toast, mall locked-CEO switch works. Remaining three same-text refusal sites unchanged in each app; source evidence, not three dynamic-path claims.
+
+Ancestry/integration:
+Frozen fix vs main merge base2af9076, left/right unique10/3; neither is ancestor of the other.
+Frozen fix vs158 merge base2af9076, unique10/2.
+Frozen fix vs160 merge base2af9076, unique10/4.
+158/main merge base5e79a9f461ba48d6c70dd1d47cca328b00b344c2;160 descends directly from current main3cbd88b.
+Use a branch from current main, merge repaired155 after review, then158 and160, and rerun combined regression. Do not attempt to fast-forward main directly to the old-base repair branch. Repair-vs-main merge-tree has no textual conflict; this does not substitute for integrated runtime checks.
+
+Commands (repository root):
+BROWSER=chromium node tests/webkit-smoke/scenarios-153.mjs
+BROWSER=chromium node tests/webkit-smoke/scenarios-154.mjs
+BROWSER=chromium node tests/webkit-smoke/scenarios-155-preview.mjs
+Repeat with BROWSER=webkit; set PLAYWRIGHT_BROWSERS_PATH and WEBKIT_SMOKE_OUT for the local environment.
+node --test tests/webkit-smoke/home-evidence.test.mjs tests/yangcheng38/story-cards.test.mjs tests/home155/delta.test.mjs tests/autosave15/scope.test.mjs
+node --test tests/moon/resources.test.mjs tests/bb70/integration-scope.test.mjs
+
+Publication status: candidate push failed for missing HTTPS username credential; no force push, no main merge, no deployment. This summary is prepared as an uncommitted review file so the frozen push target remains5459242. No CI/Actions/checks/log/artifact service was accessed.
+
+Integration follow-up:
+Current-main3cbd88b + repair5459242 + UX158df33d12 + UX1601f36c5b merged without conflicts into a separate local integration branch. No remote write or main branch mutation.
+Cache token home155-ux158-160-20261018-r1 versions four apps and the complete incoming dependency chain for milestones/domain. Four HTML version markers and version.json agree. COLLECTIBLES_RELEASE and unrelated CSS/art/economy versions are retained; the production app loader has its own explicit batch token.
+Cache-only scope includes bootstrap/host-save, collectibles entry, QA entry/validator/card-coordinator, space moon/overlay/views and four HTML/version entries. Runtime dependency pins change only for six files with changed bytes: validator, card-coordinator, moon, overlay, milestones/domain, xingtu-views. No validation/storage business logic changed in cache-only files.
+Current main protection baseline differs from older2af9076: the six selected legacy protection tests produce1/6 (five failures) already on3cbd88b, reflecting later preview copy plus stale tokens. Integrated initial run has the same five test names failing; error details are retained externally. Do not claim the current-main baseline has only the two older failures.
+Dedicated integration cache/fingerprint tests validate exact accepted source bytes, all updated incoming module links, HTML/version agreement and every runtime dependency pin. Historical protection tests remain unmodified rather than normalizing away integration changes. Final combined browser run is recorded in the external audit report tied to the integration commit.
