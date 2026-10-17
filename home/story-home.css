@@ -39,3 +39,10 @@
      窄屏拟声字缩成 16px、最宽 4 个字、超出折行，金额那一栏始终留出整宽。 */
   .money .sfx-word{flex:0 1 auto;min-width:0;max-width:4em;font-size:16px;line-height:1.15;white-space:normal;text-align:center;overflow-wrap:anywhere}
 }
+/* 家宅-150：黄昏 k_8「一条街的灯」和月亮一样进窗：窗框裁切（同窗形圆角），灯在窗下半截排成一栋对街的楼，大小跟着窗走；没底图的房间不画 */
+.story-streetwin{position:absolute;overflow:hidden;pointer-events:none;background:linear-gradient(#f2a65a33,#5b3b6a22)}
+.story-streetwin.win-arch{border-radius:50% 50% 0 0/44% 44% 0 0}.story-streetwin.win-round{border-radius:50%}
+.room:not(.has-art) .story-streetwin{display:none}
+.story-streetwin .story-street{top:auto;left:12%;right:12%;bottom:0;height:46%;gap:8%;padding:6% 7% 0;border:0;border-radius:2px 2px 0 0;box-sizing:border-box;align-items:flex-start}
+.story-streetwin.win-round .story-street{left:18%;right:18%}
+.story-streetwin .story-street i{flex:1 1 0;width:auto;height:52%;min-width:0;border-width:1px;box-shadow:0 0 4px 1px rgba(255,210,90,.7)}
