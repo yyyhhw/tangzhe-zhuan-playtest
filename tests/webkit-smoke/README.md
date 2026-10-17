@@ -160,3 +160,16 @@ start alone, a saved defeat (`end(false)`) and closing TD record nothing; a real
 (`wave=W`, enemies cleared, `end(true)` — same as `td/test_speed_parent.mjs`, NOT natural-balance evidence) whose
 result the parent saves (`saveOk`) records an integer `firstTDWin` ≥ `firstShop` with `tdCampaign.highestCleared=1`;
 a stage-2 win keeps the same time; save-then-refresh keeps it in memory + disk.
+
+## 测试-153 家宅夜景/黄昏/房名牌 + 顶部金币卡 (`scenarios-153.mjs`)
+
+只测不改游戏代码；`scenarios-130.mjs` 跑完后接着跑（`SKIP_153=1` 可跳过）。root + `/pet/game/`：
+
+1. **夜晚 + k_4**（家宅-148）：四位 CEO × Lv1–3，有窗房型月亮在窗框内、窗 `overflow:hidden`；没窗房型不画；77 的家 k_3 熊猫是静止小摆件（隔 1.5s 不动、无动画）。
+2. **黄昏 + k_8**（家宅-150）：同 12 间房，四盏灯在最左那扇窗内、窗裁切、灯有尺寸；没窗房型不画。
+3. **房名牌**（家宅-151）：有底图房间 `.rw-name` 不与 `HomeStory.windowsFor` 的任何窗重叠、文字不截断。
+4. **顶部金币卡**（体验-149/152）：320/390/420/421/430 × 团单开/关 × 拟声字「叮」/「超超超级暴击！！」，余额 1000.00万亿：金额与「每秒 +X」完整、标签/拟声字不压、无横向滚动（同一次同步 evaluate 写入并测量）。
+
+时段用 `Etc/GMT±N` 把本地时间拨到 22 点 / 18 点并断言；房间等级只改内存态做显示。iOS 真机不在范围内。
+本地干跑：`BROWSER=chromium CHROMIUM_PATH=… node scenarios-153.mjs`（8075633 上 111/111；main 6754963 上 74/111，②③④ 能抓到旧问题）。
+

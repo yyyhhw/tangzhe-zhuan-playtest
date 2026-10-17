@@ -433,6 +433,14 @@ async function main() {
     ok142 = r.status === 0;
     console.log(`scenarios-142 exit=${r.status}`);
   }
-  process.exit(ok && ok139 && ok141 && ok142 ? 0 : 1);
+  // 测试-153：接着跑 scenarios-153.mjs（家宅-148/150/151 月亮/街灯/房名牌 + 体验-149/152 顶部金币卡）。SKIP_153=1 可跳过。
+  let ok153 = true;
+  if (process.env.SKIP_153 !== '1') {
+    const { spawnSync } = await import('node:child_process');
+    const r = spawnSync(process.execPath, [path.join(__dirname, 'scenarios-153.mjs')], { stdio: 'inherit', env: process.env });
+    ok153 = r.status === 0;
+    console.log(`scenarios-153 exit=${r.status}`);
+  }
+  process.exit(ok && ok139 && ok141 && ok142 && ok153 ? 0 : 1);
 }
 main();
