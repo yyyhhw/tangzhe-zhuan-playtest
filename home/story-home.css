@@ -32,5 +32,10 @@
   .money{gap:6px}
   .money .boost-tag{flex:0 0 auto;font-size:10px;line-height:1.15;padding:2px 5px;white-space:normal;max-width:64px;text-align:center}
   .money #coins{font-size:clamp(21px,6.8vw,30px)}
-  .money #cps{overflow:hidden;text-overflow:ellipsis}
+  .money #cps{display:flex;min-width:0;overflow:hidden}
+  .money #cps .cps-num{flex:0 0 auto}
+  .money #cps .cps-busy{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* 体验-149 r2（熊大 10:59 退修）：没团单时拟声字照常显示，但「超超超级暴击！！」这类长词不能再把金额挤成省略号——
+     窄屏拟声字缩成 16px、最宽 4 个字、超出折行，金额那一栏始终留出整宽。 */
+  .money .sfx-word{flex:0 1 auto;min-width:0;max-width:4em;font-size:16px;line-height:1.15;white-space:normal;text-align:center;overflow-wrap:anywhere}
 }

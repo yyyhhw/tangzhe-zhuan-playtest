@@ -1617,7 +1617,10 @@ function refreshDynamic(force) {
   // 顶部
   const r = E.onlineRate(state, t), busy = !!(order && order.progress < 1);
   const ct = E.walletOk(state) ? fmt(E.balance(state)) : '存档异常'; if (coinsEl.textContent !== ct) coinsEl.textContent = ct;
-  const cps = '每秒 +' + fmt(r) + (busy ? '（团单服务中）' : ''); if (cpsEl.textContent !== cps) cpsEl.textContent = cps;
+  const cpsNum = '每秒 +' + fmt(r), cps = cpsNum + (busy ? '（团单服务中）' : '');
+  if (cpsEl.textContent !== cps) { // 体验-149：数字和「（团单服务中）」分两段，窄屏放不下时只省略括号那段
+    cpsEl.innerHTML = '<span class="cps-num">' + cpsNum + '</span>' + (busy ? '<span class="cps-busy">（团单服务中）</span>' : '');
+  }
   $('#boostTag').classList.toggle('hidden', !busy); if (busy) $('#boostSec').textContent = Math.round(order.progress * 100);
   const dc = $('#dailyChip'), can = E.canDouble(state, t);
   const dtxt = can ? '今日双倍 ✓' : '双倍 ' + fmtClockLocal(E.nextResetTs(t)) + ' 重置'; if (dc.textContent !== dtxt) dc.textContent = dtxt;
