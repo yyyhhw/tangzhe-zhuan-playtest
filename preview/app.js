@@ -2295,7 +2295,7 @@ function homeAct(a, arg, b) {
     case 'homeGo': petPanelOpen=false;return setTab(arg);
     case 'homeMode': homeMode = arg === 'decor' ? 'decor' : 'live'; homeSel = null; if (homeDrag) homeEnd(); sfx('tap'); dirty = true; return;
     case 'homeSub': petPanelOpen=false;if (homeSub !== arg) { homeSub = arg; homeSel = null; pageFlip(arg === 'mall' ? 'next' : 'prev'); $('#panel').scrollTop = 0; sfx('swoosh'); } dirty = true; return;
-    case 'homeWho': if (homeWho !== arg) { homeWho = arg; homeSel = null; sfx('tap'); } if (!E.homeOpen(state, arg)) toast('这位 CEO 还没加入'); dirty = true; return;
+    case 'homeWho': if (homeWho !== arg) { homeWho = arg; homeSel = null; sfx('tap'); } dirty = true; return; // 体验-160：锁着的 CEO 下面已有锁定房卡/仓库提示，不再弹红 toast
     case 'homeUp': return confirmHomeUp(arg);
     case 'petActivate': { const r=PG.activateDuplicate(state,E,arg,{save:petSave,blocked:saveBlocked||frozen,prepare:petPrepare}); return petAfterResult(r); }
     case 'homePetBuy': { const [room,species] = (arg || homeWho).split('|'); petSelection=species||'dog';return confirmPetBuy(room,petSelection); }
