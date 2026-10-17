@@ -156,8 +156,12 @@ async function scenarioArtFail(browser, base, entry, seed) {
         const st = await enterRoom(page, who, lv, true);
         // 等到「这一间」的底图请求确实失败、且回退把图撤掉（最多再等 8s），防止量到换房前的旧状态
         const isFailed = () => failedUrls.some((u) => u.includes(`/art/${file}`));
-        for (let t0 = Date.now(); Date.now() - t0 < 8000;) { if (isFailed() && !(await page.evaluate(() => !!document.querySelector('.room img.room-art')))) break; await page.waitForTimeout(100); }
-        if (!isFailed()) st.timedOut = true;
+        // r3（家宅-155 CI #24 WebKit：进页后第一间房偶尔会被重渲染再插一次 room-art，量到的是新图还没失败的瞬间）：
+        // 撤图状态要隔 300ms 连着两次都成立才算稳定；新插的图同样被拦、会被回退再撤掉。8s 内稳不住记超时，不吞
+        const noImg = () => page.evaluate(() => !document.querySelector('.room img.room-art'));
+        let stable = false;
+        for (let t0 = Date.now(); Date.now() - t0 < 8000;) { if (isFailed() && await noImg()) { await page.waitForTimeout(300); if (await noImg()) { stable = true; break; } } else await page.waitForTimeout(100); }
+        if (!isFailed() || !stable) st.timedOut = true;
         await page.waitForTimeout(150);
         const p = await page.evaluate(STORY_PROBE, { who, lv });
         const ev = { blocked: blockedUrls.some((u) => u.includes(`/art/${file}`)), failed: failedUrls.some((u) => u.includes(`/art/${file}`)), imgGone: !p.artImg, timedOut: st.timedOut };
