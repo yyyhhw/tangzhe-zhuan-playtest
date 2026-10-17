@@ -98,10 +98,10 @@ export function installMoonOverlay({app,runtime,document:doc=globalThis.document
    }
    actions.append(card);
   }else if(view.phase==='arrived'){
-   const arrPts=Number.isInteger(view.event?.reward?.pts)?view.event.reward.pts:8;/* 旧 v1 航程固定 8 点（MOON_RULES.points） */status.append(node('p','xingtuArrivedLine',`${RN(view)}往返已完成，返航报告待确认。`),node('p','xingtuArrival',`已于${when(view.arrival)} 到达`));const box=node('div','xingtuEvent');box.className='xingtu-event';awardBlocks(box,view);if(box.firstChild)actions.append(box);actions.append(button('xingtuClaim',`确认返航报告 · 领取${arrPts}探索点`,()=>act({type:'claim',voyageId:view.voyage.voyageId})));
+   const arrPts=Number.isInteger(view.event?.reward?.pts)?view.event.reward.pts:8;/* 旧 v1 航程固定 8 点（MOON_RULES.points） */status.append(node('p','xingtuArrivedLine',`${RN(view)}往返已完成，返航报告待确认。`),node('p','xingtuArrival',`已于${when(view.arrival)} 到达`));const box=node('div','xingtuEvent');box.className='xingtu-event';awardBlocks(box,view);if(box.firstChild)actions.append(box);actions.append(button('xingtuClaim',`确认返航报告 · 领取 ${arrPts} 探索点`,()=>act({type:'claim',voyageId:view.voyage.voyageId})));
   }else{
-   status.append(node('p',null,`当前探索点：${view.space.pts} · 月面基地累计往返次数：${view.space.visits.moon??0}`));
-   status.append(node('p','xingtuNextRoute','下次出航：月面基地 · 其他目的地请到星图选择'));
+   status.append(node('p',null,`探索点 ${view.space.pts} · 去过月面 ${view.space.visits.moon??0} 次`));
+   status.append(node('p','xingtuNextRoute','下一趟默认去月面基地，想去别处到星图里挑'));
    // 杨总 10/14 22:26：出航需要四个岗位科研——月面也要过四岗检查
    const g=gate(view.space,'moon'),dep=button('xingtuDepart',g.ok?'出航月面基地':'岗位科研不够，先去升级',()=>gate(view.space,'moon').ok?act({type:'depart',route:'moon'}):undefined);dep.disabled=!g.ok;actions.append(dep);
    if(!g.ok){const l=node('p','xingtuLack',`还差：${g.lack}`);l.className='xingtu-error';actions.append(l);}
@@ -109,21 +109,21 @@ export function installMoonOverlay({app,runtime,document:doc=globalThis.document
     wrap.append(button('xingtuReplay','再看一遍回信',()=>{tab='ending';host.refresh();}));
     renderEarth(wrap,{doc,space:view.space,coins:Number.isFinite(app.state?.coins)?app.state.coins:null,buy:()=>{const r=host.perform({type:'earth'},host.token);if(r.ok)tab='recap';host.refresh();return r;},recap:()=>{tab='recap';host.refresh();}});}
   }
-   if(view.receipt){const evName=view.receipt.ev?EVENTS[view.receipt.ev]?.name:null;const got=view.receipt.card?cardOf(view.receipt.route,view.receipt.card):null,extra=got?` · 剧情卡「${got.title}」`:'';const report=node('div','xingtuReport',evName?`最近返航报告：${evName} · 已入账 ${view.receipt.points} 探索点${extra} · ${when(view.receipt.claimedAt)}`:`最近返航报告：月面基地 · 已入账 ${view.receipt.points} 探索点（一次）${extra} · ${when(view.receipt.claimedAt)}`);report.className='xingtu-receipt';content.append(report);}
+   if(view.receipt){const evName=view.receipt.ev?EVENTS[view.receipt.ev]?.name:null;const got=view.receipt.card?cardOf(view.receipt.route,view.receipt.card):null,extra=got?` · 剧情卡「${got.title}」`:'';const report=node('div','xingtuReport',evName?`最近返航报告：${evName} · 已入账 ${view.receipt.points} 探索点${extra} · ${when(view.receipt.claimedAt)}`:`最近返航报告：月面基地 · 已入账 ${view.receipt.points} 探索点${extra} · ${when(view.receipt.claimedAt)}`);report.className='xingtu-receipt';content.append(report);}
 
  }
 
  // 星途-114：返航报告里的「新剧情卡」块 + 隐藏物金色一行（点一下展开介绍）。显示的就是 claim 会写入的（同一个 awardFor）。
  function awardBlocks(parent,view){
   const a=view.award;if(!a)return;
-  if(a.card){const route=RID(view),c=cardOf(route,a.card),box=node('div','xingtuNewCard');box.className='xingtu-newcard'+(c.alien?' xingtu-alien':'');appendCardImage(box,route,a.card,c.title);box.append(node('p','xingtuNewCardTag',c.alien?'外星来客 · 四家店产速永久 +25%':'新剧情卡'),node('h4','xingtuNewCardTitle',c.title),node('p','xingtuNewCardText',c.text));parent.append(box);}
+  if(a.card){const route=RID(view),c=cardOf(route,a.card),box=node('div','xingtuNewCard');box.className='xingtu-newcard'+(c.alien?' xingtu-alien':'');appendCardImage(box,route,a.card,c.title);box.append(node('p','xingtuNewCardTag',c.alien?'外星来客 · 四家店产量永久 +25%':'新剧情卡'),node('h4','xingtuNewCardTitle',c.title),node('p','xingtuNewCardText',c.text));parent.append(box);}
   if(a.hidden){const h=ROUTE_BY_ID[a.hidden].hid,line=button('xingtuNewHidden',`◆ 找到隐藏物「${h.name}」`,()=>{const d=doc.getElementById('xingtuNewHiddenIntro');if(d)d.hidden=!d.hidden;});line.className='xingtu-hidline';const intro=node('p','xingtuNewHiddenIntro',h.intro);intro.hidden=true;parent.append(line,intro);}
  }
  // 星途-114：册子页签。只有已开航的航线露卡名/线索；别的整行「还没开航」。外星卡不写产速加成（等星途-09）。
  function renderAlbum(view){
   const sp=view.space,cards=sp.cards??{},hidden=sp.hidden??{};
   const got=ROUTES.reduce((a,r)=>a+Math.min(cards[r.id]??0,r.cards.length),0),hid=ROUTES.filter(r=>hidden[r.id]===true).length,alien=ROUTES.reduce((a,r)=>a+r.cards.slice(0,cards[r.id]??0).filter(c=>c.alien).length,0);
-  const head=node('p','xingtuAlbumHead',got===TOTAL_CARDS&&hid===ROUTES.length?'这本册子满了。':`${got}/${TOTAL_CARDS} 剧情卡   ${hid}/${ROUTES.length} 隐藏物   ${alien}/${ALIEN_DENOM} 外星`);head.className='xingtu-albumhead';content.append(head);
+  const head=node('p','xingtuAlbumHead',got===TOTAL_CARDS&&hid===ROUTES.length?'这本册子满了。':`${got}/${TOTAL_CARDS} 剧情卡   ${hid}/${ROUTES.length} 隐藏物   ${alien}/${ALIEN_DENOM} 外星来客`);head.className='xingtu-albumhead';content.append(head);
   const shelf=node('div','xingtuShelf');shelf.className='xingtu-shelf';shelf.append(node('p',null,'隐藏物展柜'));const grid=node('div');grid.className='xingtu-shelfgrid';
   for(const r of ROUTES){const on=hidden[r.id]===true,b=button('xingtuHid-'+r.id,on?r.hid.name:`？ ${r.name}`,()=>{albumPick='h:'+r.id;signature=null;host.refresh();});b.className='xingtu-hcell'+(on?' on':'');grid.append(b);}
   shelf.append(grid);

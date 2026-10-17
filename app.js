@@ -2071,7 +2071,7 @@ function homeActorOf(id) {
     else {const z=E.furnSize(p.fid,p.rot),key=[p.uid,p.x,p.y,p.rot].join(':');if(ac.pose.key!==key){ac.pose.key=key;ac.revision++;}if(HomeInteraction.profile(p.fid).ground){
       const q=HomeInteraction.rugPoint(E,H,p,ac);
       if(q){if(q.x!==ac.x||q.y!==ac.y)ac.revision++;Object.assign(ac,q);}
-      else{ac.pose=null;ac.pendingPose=null;ac.tx=ac.ty=null;ac.revision++;const free=homeFreePoint(id,ac.x,ac.y);if(free)Object.assign(ac,free);toast('地毯上挤满了，先站起来了');}
+      else{ac.pose=null;ac.pendingPose=null;ac.tx=ac.ty=null;ac.revision++;const free=homeFreePoint(id,ac.x,ac.y);if(free)Object.assign(ac,free);toast('地毯上挤满了，先站起来');}
     }else if(HomeInteraction.profile(p.fid).location==='beside'){const q=homeFreePoint(id,p.x+z.w,p.y+z.h-1);if(q)Object.assign(ac,q);else{ac.pose=null;ac.revision++;}}else{ac.x=p.x+z.w/2-.5;ac.y=p.y+z.h/2-.5;}}}
   if(ac.pendingPose){const p=H.placed.find(p=>p.uid===ac.pendingPose.uid);
     if(!p){ac.pendingPose=null;ac.tx=ac.ty=null;ac.revision++;}
@@ -2364,13 +2364,14 @@ function homeLiveHint(id) {
   if (floor.some(p => !cap(p) && act(p) === 'dress')) parts.push('点衣柜换装');
   return parts.join(' · ');
 }
-function homeRoomName(id) { const c = E.CEO_BY_ID[id], lv = state.homes?.[id]?.lv || 1; return `${c.name} 的${E.homeTier(lv).name}`; }   // 家宅-97：卡片 / 墙牌 / 宠物面板用同一个房名（只读，不调 homeOf、不建房）
+function ownerOf(name) { return /[0-9A-Za-z]$/.test(name) ? `${name} 的` : `${name}的`; }   // 文案-157：「77 的小屋」留空格，「珍珠姐的小屋」不留
+function homeRoomName(id) { const c = E.CEO_BY_ID[id], lv = state.homes?.[id]?.lv || 1; return `${ownerOf(c.name)}${E.homeTier(lv).name}`; }   // 家宅-97：卡片 / 墙牌 / 宠物面板用同一个房名（只读，不调 homeOf、不建房）
 function renderRoom() {
   const statusExistingRoom = state.homes?.[homeWho]; // Capture before legacy homeOf can initialize a missing room.
   const id = homeWho, c = E.CEO_BY_ID[id], H = E.homeOf(state, id), T = E.homeTier(H.lv), lux = E.homeLuxury(state, id);
   if (homeSel && !H.placed.some(p => p.uid === homeSel)) homeSel = null;
   const next = H.lv < E.HOME_MAX ? E.HOME_TIERS[H.lv] : null, sel = homeSel && H.placed.find(p => p.uid === homeSel);
-  let h = `<div class="card home-card"><div class="ava sq">${HOME_ICON[H.lv - 1]}</div><div class="info"><div class="name">${c.name} 的${T.name}<span class="lv">Lv.${H.lv}</span></div>
+  let h = `<div class="card home-card"><div class="ava sq">${HOME_ICON[H.lv - 1]}</div><div class="info"><div class="name">${ownerOf(c.name)}${T.name}<span class="lv">Lv.${H.lv}</span></div>
     <div class="desc">${T.cols}×${T.rows} 格 · 豪华度 <b class="lux" id="homeLux">${lux}</b></div>
     <div class="gain">${next ? `升级成${next.name}：${next.cols}×${next.rows} 格，房间自带豪华度 +${next.bonus}（现在 +${T.bonus}）` : '已经是最高档豪宅'}</div></div>
     ${next ? btn('homeUp', id, '升级', next.cost) : '<button class="buy no" disabled>顶级</button>'}</div>`;
@@ -2393,7 +2394,7 @@ function renderRoom() {
   const wallBlocks = E.wallBlockedCells(state, id).map(([x, y]) => `<i class="wall-block" style="left:${x / T.cols * 100}%;top:${y / E.WALL_ROWS * 100}%;width:${100 / T.cols}%;height:${100 / E.WALL_ROWS}%"></i>`).join('');
   h += `<div class="room tier-${T.id}${hasArt ? ' has-art' : ''}${dockHost ? ' pet-host-docked' : ''}" id="room" data-tier="${T.id}" style="--cols:${T.cols};--rows:${T.rows};--wall:${T.wall};--floor:${T.floor};--trim:${T.trim}">
     ${hasArt ? `<img class="room-art" src="art/home_${artKey}.webp?v=${ART_V}" data-homefb="1" alt="" onerror="this.closest('.room')&&this.closest('.room').classList.remove('has-art')">` : ''}${homeStatusContext ? homeWindowLayers(artKey) : ''}${storySceneHTML(id)}
-    <div class="room-wall" id="roomWall"><span class="rw-deco">${T.id === 'hut' ? ic('window') : T.id === 'apt' ? ic('window') + ic('window') : ic('spark') + ic('candle') + ic('spark')}</span><span class="rw-name">${c.name} 的${T.name}${homeStatusContext ? '<span class="rw-status" id="homeAmbienceStatus" hidden></span>' : ''}</span><div class="wall-grid" id="wallGrid">${wallBlocks}${wallItems}<div class="room-hl hidden" id="wallHl"></div></div></div>
+    <div class="room-wall" id="roomWall"><span class="rw-deco">${T.id === 'hut' ? ic('window') : T.id === 'apt' ? ic('window') + ic('window') : ic('spark') + ic('candle') + ic('spark')}</span><span class="rw-name">${ownerOf(c.name)}${T.name}${homeStatusContext ? '<span class="rw-status" id="homeAmbienceStatus" hidden></span>' : ''}</span><div class="wall-grid" id="wallGrid">${wallBlocks}${wallItems}<div class="room-hl hidden" id="wallHl"></div></div></div>
     <div class="room-floor" id="roomFloor">${floorItems}${storyPandaFloorHTML(id)}<div class="home-actor" id="homeActor" style="left:${(homeActorOf(id).x + 0.5) / T.cols * 100}%;top:${(homeActorOf(id).y + 0.5) / T.rows * 100}%"><canvas class="ha-pose" width="240" height="240" aria-label="${c.name}"></canvas><span class="ha-ava">${ava(id)}</span>${storyTeaHTML(id)}${(() => { const ac = homeActorOf(id); return ac.line && ac.until > clock ? `<b class="ha-line">${ac.line}</b>` : ''; })()}<i class="ha-act">${(() => { const ac = homeActorOf(id); return ac.act === 'rest' ? ic('zz') : ac.act === 'read' ? ic('book') : ac.act === 'dress' ? ic('shirt') : ac.actIcon ? ic(ac.actIcon) : ''; })()}</i></div><div class="room-hl hidden" id="roomHl"></div></div></div>`;
   h += petInteractionBar();
   if(homeActorOf(id).pose)h += `<button class="buy alt" data-act="homeGetUp">起身</button>`;

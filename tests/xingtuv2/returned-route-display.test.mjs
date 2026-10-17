@@ -24,7 +24,7 @@ for(const [scope,path] of [['formal','/'],['formal','/pet/game/'],['preview','/p
   assert.equal(view.phase,'report');assert.equal(view.voyage.route,route);assert.equal(view.space.visits[route],1);
   assert.ok(h.node('xingtuRuleset').textContent.startsWith(`上趟：${ROUTE_BY_ID[route].name} · `));
   assert.ok(h.node('xingtuRuleset').textContent.endsWith('返航报告已收下'));
-  assert.equal(h.node('xingtuNextRoute').textContent,'下次出航：月面基地 · 其他目的地请到星图选择');
+  assert.equal(h.node('xingtuNextRoute').textContent,'下一趟默认去月面基地，想去别处到星图里挑');
   assert.ok(h.node('xingtuStatus').children[0].textContent.includes(`月面基地累计往返次数：${route==='moon'?1:0}`));
   assert.equal(h.node('xingtuDepart').textContent,'出航月面基地');
   // The completed voyage stays completed on every tab, especially Ship (129 independent QA).
