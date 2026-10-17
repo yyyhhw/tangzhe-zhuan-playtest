@@ -1863,11 +1863,12 @@ function renderHome() {
   if (homeSub !== 'mall' && !E.homeOpen(state, homeWho)) return h + homeLocked(); // 商城是公共的，不受当前 CEO 是否加入限制
   return h + (homeSub === 'mall' ? renderMall() : renderRoom());
 }
+function ownerOf(name) { return /[0-9A-Za-z]$/.test(name) ? `${name} 的` : `${name}的`; }   // 文案-157：「77 的小屋」留空格，「珍珠姐的小屋」不留
 function renderRoom() {
   const id = homeWho, c = E.CEO_BY_ID[id], H = E.homeOf(state, id), T = E.homeTier(H.lv), lux = E.homeLuxury(state, id);
   if (homeSel && !H.placed.some(p => p.uid === homeSel)) homeSel = null;
   const next = H.lv < E.HOME_MAX ? E.HOME_TIERS[H.lv] : null, sel = homeSel && H.placed.find(p => p.uid === homeSel);
-  let h = `<div class="card home-card"><div class="ava sq">${HOME_ICON[H.lv - 1]}</div><div class="info"><div class="name">${c.name} 的${T.name}<span class="lv">Lv.${H.lv}</span></div>
+  let h = `<div class="card home-card"><div class="ava sq">${HOME_ICON[H.lv - 1]}</div><div class="info"><div class="name">${ownerOf(c.name)}${T.name}<span class="lv">Lv.${H.lv}</span></div>
     <div class="desc">${T.cols}×${T.rows} 格 · 豪华度 <b class="lux" id="homeLux">${lux}</b>（家具 ${lux - T.bonus} + 房型 ${T.bonus}）</div>
     <div class="gain">${next ? `升级 → ${next.name} ${next.cols}×${next.rows} 格，房型豪华 +${next.bonus}` : '已经是最高档豪宅'}</div></div>
     ${next ? btn('homeUp', id, '升级', next.cost) : '<button class="buy no" disabled>顶级</button>'}</div>`;

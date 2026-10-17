@@ -68,6 +68,6 @@ export function recap(state,rules){
  const dates=rows.filter(r=>r.at!==null).map(r=>r.at),end=saved.earth;
  // A historical Earth purchase has no endpoint: never substitute today's date.
  const duration=validTime(end)&&dates.length?end-Math.min(...dates):null;
- const total=duration===null?'总用时暂无完整时间记录':`从有记录起，你用了 ${Math.floor(duration/86400000)} 天 ${Math.floor(duration/3600000)%24} 小时，买下了整个地球。`;
+ const total=duration===null?'早期没记时间，总用时就不算了':`从有记录起，你用了 ${Math.floor(duration/86400000)} 天 ${Math.floor(duration/3600000)%24} 小时，买下了整个地球。`;
  return {rows,total,duration};
 }

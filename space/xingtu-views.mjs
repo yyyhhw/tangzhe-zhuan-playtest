@@ -46,7 +46,7 @@ export function renderMap(parent,{doc,space,pick,onPick,goVoyage,launch,flying=f
  if(!g.ok){b.disabled=true;b.textContent='岗位科研不够，先去升级';}
  else if(flying){b.disabled=true;b.textContent='飞船还在路上';b.onclick=goVoyage;}
  else if(open){b.textContent='出航 →';b.onclick=()=>launch?launch(r.id):goVoyage();}
- else{b.disabled=true;b.textContent='这条航线下一版开放';}
+ else{b.disabled=true;b.textContent='这条航线还没开通';}
  d.append(b);
  if(!g.ok){const l=doc.createElement('div');l.className='lackline';l.id='xingtuLack';l.textContent=`还差：${g.lack}`;d.append(l);}
  parent.append(d);

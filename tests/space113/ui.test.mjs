@@ -28,6 +28,6 @@ for(const scope of ['formal','preview'])test(`${scope} save-lock contention: pen
 });
 test('old v1 in-flight save opened in the new UI: no event card, old 8-point claim button, v1 receipt line',opts,async t=>{
  const h=await ready(t,{configure:f=>{const s=JSON.parse(f.data.get(f.keys.main));s.space={schemaVersion:1,lv:{tech:1,war:1,med:1,life:1},pts:3,voyage:{route:'moon',start:1700000001000,dur:600000,ev:null,voyageId:'moon:formal:1:12345678-1234-4234-8234-123456789abc',sequence:1,ruleset:'xingtu-moon-10min-8pts-v1',completed:false},items:{},cards:{},hidden:{},alienCards:0,wins:0,ended:false,earth:false,visits:{},moonLoop:{schemaVersion:1,sequence:1,claimed:0,lastReceipt:null}};f.data.set(f.keys.main,JSON.stringify(s));}});
- h.setTime(1700000601000);h.moon.open();assert.equal(h.node('xingtuChoiceA'),null);assert.equal(txt(h,'xingtuClaim'),'确认返航报告 · 领取8探索点');assert.equal(txt(h,'xingtuArrivedLine'),'月面基地往返已完成，返航报告待确认。');assert(h.node('xingtuClaim').onclick().ok);assert.equal(h.app.state.space.pts,11);assert.match(txt(h,'xingtuReport'),/^最近返航报告：月面基地 · 已入账 8 探索点（一次）/);
+ h.setTime(1700000601000);h.moon.open();assert.equal(h.node('xingtuChoiceA'),null);assert.equal(txt(h,'xingtuClaim'),'确认返航报告 · 领取 8 探索点');assert.equal(txt(h,'xingtuArrivedLine'),'月面基地往返已完成，返航报告待确认。');assert(h.node('xingtuClaim').onclick().ok);assert.equal(h.app.state.space.pts,11);assert.match(txt(h,'xingtuReport'),/^最近返航报告：月面基地 · 已入账 8 探索点 · /);
  assert(h.node('xingtuDepart').onclick().ok);assert.equal(h.app.state.space.voyage.ruleset,'xingtu-moon-10min-ev-v2');
 });
