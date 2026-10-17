@@ -39,3 +39,6 @@
      窄屏拟声字缩成 16px、最宽 4 个字、超出折行，金额那一栏始终留出整宽。 */
   .money .sfx-word{flex:0 1 auto;min-width:0;max-width:4em;font-size:16px;line-height:1.15;white-space:normal;text-align:center;overflow-wrap:anywhere}
 }
+/* 家宅-151：有底图的房间，窗都画在后墙右半边（77 Lv1–3、珍珠 Lv2/3、阿宅 Lv1、火箭 Lv1），右上角房名牌会盖住窗和窗里的月亮/街灯；
+   左上角在 12 张底图里都是空墙，房名牌挪过去（无底图的房间照旧靠右，和窗户/蜡烛小图标排一起）。style.css 受保护，覆盖写在这里。 */
+.room.has-art .room-wall{justify-content:flex-start}
