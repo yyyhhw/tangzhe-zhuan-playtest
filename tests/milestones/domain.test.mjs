@@ -33,6 +33,13 @@ test('recap unknown history grey label; elapsed day/hour and earliest-record tot
  const r=recap(s,MOON_RULES);assert.equal(r.rows[0].when,'记录开始之前');assert.equal(r.rows.find(x=>x.id==='firstBox').when,'开局 1 小时');assert.equal(r.rows.find(x=>x.id==='firstEmployee').when,'开局第 2 天');assert.equal(r.duration,86400000);assert.match(r.total,/从有记录起.*1 天 0 小时/);
  s.milestones.events.earth=null;assert.equal(recap(s,MOON_RULES).duration,null);assert.match(recap(s,MOON_RULES).total,/没记时间/);assert(!r.rows.some(x=>x.id==='firstZombie'));
 });
+test('体验-158：总用时不到 1 天不写「0 天」，不到 1 小时写「不到 1 小时」',()=>{
+ const at=ms=>{const s=fresh();s.milestones.events={firstBox:3601000,earth:3601000+ms};s.space={earth:true};return recap(s,MOON_RULES).total;};
+ assert.equal(at(5*3600000+59000),'从有记录起，你用了 5 小时，买下了整个地球。');
+ assert.equal(at(59*60000),'从有记录起，你用了不到 1 小时，买下了整个地球。');
+ assert.equal(at(2*86400000+3*3600000),'从有记录起，你用了 2 天 3 小时，买下了整个地球。');
+ assert(!/\b0 天/.test(at(5*3600000)));
+});
 
 test('confirmed battle participation records before victory; legacy loss proves participation without a date',()=>{
  const a=fresh(),b=copy(a);const m=recordTransition(a,b,2000,MOON_RULES,{zombieStarted:true});assert.equal(m.events.firstZombie,2000);assert(!m.events.firstTDWin);

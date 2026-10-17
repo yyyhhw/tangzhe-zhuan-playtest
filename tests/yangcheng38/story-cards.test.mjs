@@ -73,7 +73,7 @@ test('家里变化：8 张卡各自的台词条件，每句 ≤16 字',()=>{
 });
 for(const p of ['app.js','pet/game/app.js'])test(p+': 接线——收下夜游食神 / 进家 / 雇人入库，提示 toast，图鉴提示，家里画面',()=>{
   const s=fs.readFileSync(new URL('../../'+p,import.meta.url),'utf8');
-  for(const x of ["storyGrant({ kind:'guest', shop })","storyGrant({ kind:'home', period:storyPeriod() })","storyGrant({ kind:'hire' })","'新故事卡「' + E.ITEM_BY_ID[id].name + '」，去图鉴看看。'","'提示：' + c.hint","${storySceneHTML(id)}","${storyTeaHTML(id)}","storyCountdown(arg)","HS.pick(pool, HS.linesFor(storyCtx(id, kind))"])assert.ok(s.includes(x),x);
+  for(const x of ["storyGrant({ kind:'guest', shop })","storyGrant({ kind:'home', period:storyPeriod() })","storyGrant({ kind:'hire' })","'收到新故事卡「' + E.ITEM_BY_ID[id].name + '」，去收藏页看看。'","'提示：' + c.hint","${storySceneHTML(id)}","${storyTeaHTML(id)}","storyCountdown(arg)","HS.pick(pool, HS.linesFor(storyCtx(id, kind))"])assert.ok(s.includes(x),x);
 });
 // 熊大 r2 复验 6 项（fcb91c1）：k5 无桌坐着必说手心句；k6 沙发躺；pick 强制
 test('r2: k5 无桌坐着说「没桌子，就在手心里数。」且必说；k6 沙发当床',()=>{
