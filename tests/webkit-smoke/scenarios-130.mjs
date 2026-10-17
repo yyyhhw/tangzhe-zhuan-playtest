@@ -449,6 +449,15 @@ async function main() {
     ok154 = r.status === 0;
     console.log(`scenarios-154 exit=${r.status}`);
   }
-  process.exit(ok && ok139 && ok141 && ok142 && ok153 && ok154 ? 0 : 1);
+  // 家宅-155：接着跑 scenarios-155-preview.mjs（preview 两个入口的房间底图回退）。SKIP_155P=1 可跳过。
+  let ok155p = true;
+  if (process.env.SKIP_155P !== '1') {
+    console.log('\n=== scenarios-155-preview.mjs ===');
+    const { spawnSync } = await import('node:child_process');
+    const r = spawnSync(process.execPath, [path.join(__dirname, 'scenarios-155-preview.mjs')], { stdio: 'inherit', env: process.env });
+    ok155p = r.status === 0;
+    console.log(`scenarios-155-preview exit=${r.status}`);
+  }
+  process.exit(ok && ok139 && ok141 && ok142 && ok153 && ok154 && ok155p ? 0 : 1);
 }
 main();

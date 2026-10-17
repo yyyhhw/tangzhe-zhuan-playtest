@@ -187,3 +187,15 @@ a stage-2 win keeps the same time; save-then-refresh keeps it in memory + disk.
 **r2（熊大 10/17 16:53 意见）**：153 每间房先等「本房间那张底图」`complete && naturalWidth>0`（src 含 `home_<who>_<lv>.webp`，证据取加载成功那一刻；家宅 live 模式会定时重绘房间），超时不再吞掉；每间房的室外窗数钉死为 main 2af9076 的 `EXPECTED_WINS`（7 间有窗），缺底图或窗表变动都会红，不会被当「没窗」放过（153 共 159 项）。154 ① 每间房记录该房 `home_<who>_<lv>.webp` 被 route 拦截、`requestfailed`、回退后 `img.room-art` 已撤，再判月亮/街灯与 has-art，不再量到换房前的旧状态（154 共 217 项）。
 错误统计口径：`pageerror` 全收；`console.error` 过滤掉资源加载噪声（`Failed to load resource|net::|4xx/5xx|favicon`，① 故意拦图会产生这类）。③ 减少动态是两次采样（隔 1.5s）+ `getAnimations` 快照，不是连续录像。
 
+
+## 家宅-155 preview 底图回退（scenarios-155-preview.mjs）
+
+preview/app.js、preview/pet/game/app.js 的房间底图回退。preview 没有家宅-150 的月亮/街灯，所以只验回退本身。入口 `/preview/`、`/preview/pet/game/`，390×844，4 位 CEO × Lv1–3：
+
+- A 拦掉 `art/home_*.webp`：每间房都要有「被拦截 + 请求失败」证据，等到 `img.room-art` 被撤掉（10s 超时不吞），`.room` 不再带 `has-art`；
+- B 对照：底图正常时 `naturalWidth>0`、`.room` 带 `has-art`；
+- JS 错只滤掉 `Failed to load resource` 这类资源加载报错。preview 根入口新档先点「同意并继续」「保留备份并升级」建新版预览档。
+
+scenarios-130 跑完 154 接着跑它（`SKIP_155P=1` 可跳过）。本地干跑：`BROWSER=chromium CHROMIUM_PATH=… node scenarios-155-preview.mjs`（修复后 48/48；preview 换回 main 2af9076 原样时 ① 那一半全红）。
+
+整文件完整性断言（moon/resources、bb70/integration-scope、autosave15/scope）通过 `tests/home155/protection-delta.mjs` 只把这一行修复换回 main 原行再算哈希，旧哈希不改；这一行缺失/重复/被改都会报 `HOME155_DELTA_NOT_EXACT`（负例见 `tests/home155/delta.test.mjs`）。
