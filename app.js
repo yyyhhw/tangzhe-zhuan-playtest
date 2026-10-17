@@ -812,7 +812,7 @@ let toastTimer = 0, toastGeneration = 0, toastActive = null, toastQueue = [], to
 // Expiry uses both clocks so suspension or a wall-clock adjustment cannot replay old events.
 const TOAST_ERROR = /保存失败|存档异常|数据异常|没有生效/;
 // 文案-115：图标按情绪分。到账/获得/完成 → 金色对勾（toast-good）；错误、被挡、金币不够等其余一律保留红「!」。只改样式，不动优先级/队列。
-const TOAST_GOOD = /送你隐藏款|到账 ?\+|收入 \+|小红包|已入账|已领取：|已摆出|安排已保存|！收益 ×|完成|开张啦|！开始自动赚钱|已进公共仓库|搬进[^！]{1,12}啦！|大订单 \+|连续爆单|超频 \d|来了「|来了特殊客人「|已调任|交换任职|撤销了一步|转好了|收回仓库|已从四家店收起|跑出来了|存档已升级/;
+const TOAST_GOOD = /送你隐藏款|新故事卡「|到账 ?\+|收入 \+|小红包|已入账|已领取：|已摆出|安排已保存|！收益 ×|完成|开张啦|！开始自动赚钱|已进公共仓库|搬进[^！]{1,12}啦！|大订单 \+|连续爆单|超频 \d|来了「|来了特殊客人「|已调任|交换任职|撤销了一步|转好了|收回仓库|已从四家店收起|跑出来了|存档已升级/;
 const TOAST_BAD = /不够|失败|异常|没有生效|阻止|保护|不能|还没|不发|没有|没完成|未完成/;
 function toastMood(item) { return item.priority < 2 && TOAST_GOOD.test(item.msg) && !TOAST_BAD.test(item.msg) ? 'good' : 'alert'; }
 function toastExpired(item) { return performance.now() >= item.until || Date.now() >= item.wallUntil; }
@@ -2191,7 +2191,7 @@ function storyGrant(ev) {
   for (const id of E.storyCardsDue(state, ev)) {
     const r = atomic(() => E.grantStoryCard(state, id), '故事卡没有入账');
     if (!r || !r.ok) continue;
-    got.push(id); toast('新故事卡「' + E.ITEM_BY_ID[id].name + '」，去图鉴看看。', 2600);
+    got.push(id); toast('收到新故事卡「' + E.ITEM_BY_ID[id].name + '」，去收藏页看看。', 2600);
     if (r.setDone) toast('集齐 ' + E.CARD_COUNT + ' 张故事卡：解锁专属外观「金牌摊主」！', 2600);
   }
   if (got.length) dirty = true;
