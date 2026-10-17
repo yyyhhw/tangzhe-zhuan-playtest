@@ -10,6 +10,7 @@
 //
 // Usage: node scenarios-154.mjs   (WebKit)   |   BROWSER=chromium [CHROMIUM_PATH=...] node scenarios-154.mjs
 import { webkit, chromium } from 'playwright';
+import {expectedWindows as expWins, normalRoomReady, isResourceNoise} from './home-evidence.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -32,7 +33,6 @@ function check(name, ok, detail = '') {
   checks.push({ name, ok: !!ok, detail: String(detail).slice(0, 600) });
   console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  — ' + String(detail).slice(0, 300) : ''}`);
 }
-const isResourceNoise = (t) => /Failed to load resource|net::|status of 4\d\d|status of 5\d\d|favicon|cancelled|aborted|Load request cancelled/i.test(t);
 function wireErrors(page, label) {
   page.on('pageerror', (e) => { errors.push({ label, kind: 'pageerror', text: String(e) }); console.log(`PAGEERROR [${label}] ${e}`); });
   page.on('console', (m) => {
@@ -111,8 +111,9 @@ async function enterRoom(page, who, lv, waitFail = false) {
     t.act('homeWho', who); t.renderTab();
   }, { who, lv });
   // r2（熊大 16:53）：① 要等到底图真的失败、被回退逻辑撤掉（img.room-art 不在了）；其余场景等加载完。超时不吞，返回给调用方断言
-  let timedOut = false;
-  await page.waitForFunction(({ waitFail, file }) => { const r = document.querySelector('.room'); if (!r) return false; const img = r.querySelector('img.room-art'); return waitFail ? !img : (!!img && (img.getAttribute('src') || '').includes(file) && img.complete && img.naturalWidth > 0); }, { waitFail, file: `home_${who}_${lv}.webp` }, { timeout: 8000 }).catch(() => { timedOut = true; });
+  let timedOut = false, loaded = null;
+  const ready = await page.waitForFunction(({ waitFail, file }) => { const r = document.querySelector('.room'); if (!r) return false; const img = r.querySelector('img.room-art'); return waitFail ? !img : (!!img && (img.getAttribute('src') || '').includes(file) && img.complete && img.naturalWidth > 0 && r.classList.contains('has-art') ? { src: img.getAttribute('src'), width: img.naturalWidth, nWins: window.HomeStory.windowsFor(file.replace('home_', '').replace('.webp', '')).length } : false); }, { waitFail, file: `home_${who}_${lv}.webp` }, { timeout: 8000 }).catch(() => { timedOut = true; });
+  if (ready) loaded = await ready.jsonValue();
   let prev = '';
   for (let i = 0; i < 20; i++) {
     await page.waitForTimeout(150);
@@ -120,7 +121,7 @@ async function enterRoom(page, who, lv, waitFail = false) {
     if (cur === prev) break;
     prev = cur;
   }
-  return { timedOut };
+  return { timedOut, loaded };
 }
 // 页内：本房间故事层状态
 const STORY_PROBE = ({ who, lv }) => {
@@ -198,7 +199,8 @@ async function scenarioLiveSwitch(browser, base, entry, seed) {
     check(`${tag}: found rooms with outdoor windows`, pick.length > 0, J(pick));
     for (const [who, lv] of pick) {
       await page.clock.setSystemTime(DUSK);
-      await enterRoom(page, who, lv);
+      const ready = await enterRoom(page, who, lv);
+      check(tag + ' ' + who + ' Lv' + lv + ': normal room art loaded and fixed window table', normalRoomReady(ready, who, lv), J(ready));
       const k = `${tag} ${who} Lv${lv}`;
       const d0 = await waitFor((p) => p.streetShown && !p.moonShown, who, lv);
       check(`${k}: 18:59 dusk — street lamps shown, no moon`, d0.ms !== null && d0.p.hasArt, J({ ms: d0.ms, p: { hasArt: d0.p.hasArt, moon: d0.p.moonShown, street: d0.p.streetShown, nM: d0.p.nMoonWin, nS: d0.p.nStreetWin } }));
@@ -227,18 +229,19 @@ async function scenarioReducedMotion(browser, base, entry, seed) {
       check(`${tag}: prefers-reduced-motion: reduce is active`, rm);
       const night = hour === 22;
       for (const who of CEOS) for (const lv of LVS) {
-        await enterRoom(page, who, lv);
+        const ready = await enterRoom(page, who, lv);
+        check(tag + ' ' + who + ' Lv' + lv + ': normal room art loaded and fixed window table', normalRoomReady(ready, who, lv), J(ready));
         const p = await page.evaluate(STORY_PROBE, { who, lv });
         const k = `${tag} ${who} Lv${lv}`;
         const motion = p.anims.filter((a) => a.dur > 10 && a.state !== 'finished');
         const delayed = p.anims.filter((a) => a.delay > 0);
         if (delayed.length) notes.push(`${k}: ${delayed.length} story animation(s) with delay ${[...new Set(delayed.map((a) => a.delay))].join('/')}ms (duration ${[...new Set(delayed.map((a) => a.dur))].join('/')}ms)`);
-        if (p.nWins > 0 && p.hasArt) {
+        if (expWins(who, lv) > 0) {
           check(`${k}: ${night ? 'moon' : 'street lamps'} still shown, no story animation longer than 10ms`,
-            (night ? p.moonShown : p.streetShown) && motion.length === 0, J({ moon: p.moonShown, street: p.streetShown, motion }));
+            !ready.timedOut && p.hasArt && p.nWins === expWins(who, lv) && (night ? p.moonShown : p.streetShown) && motion.length === 0, J({ moon: p.moonShown, street: p.streetShown, motion }));
         } else {
           check(`${k}: no outdoor window (nWins=${p.nWins}, hasArt=${p.hasArt}) → nothing drawn, no story animation longer than 10ms`,
-            !p.moonShown && !p.streetShown && motion.length === 0, J({ moon: p.moonShown, street: p.streetShown, motion }));
+            !ready.timedOut && p.hasArt && p.nWins === 0 && !p.moonShown && !p.streetShown && motion.length === 0, J({ moon: p.moonShown, street: p.streetShown, motion }));
         }
         if (night && who === 'c77' && lv === 1) {
           const P = () => { const el = document.querySelector('[data-story="panda"]'); if (!el) return null; const r = el.getBoundingClientRect(), cs = getComputedStyle(el); return { x: Math.round(r.left), y: Math.round(r.top), w: Math.round(r.width), anim: cs.animationName, shown: cs.display !== 'none' && r.width > 0 }; };

@@ -185,7 +185,7 @@ a stage-2 win keeps the same time; save-then-refresh keeps it in memory + disk.
 本地干跑：`BROWSER=chromium CHROMIUM_PATH=… node scenarios-154.mjs`（8075633 上 ②③ 全过；① 抓到底图失败时 `has-art` 不掉、有窗房型照样画月亮/街灯——见报告）。
 
 **r2（熊大 10/17 16:53 意见）**：153 每间房先等「本房间那张底图」`complete && naturalWidth>0`（src 含 `home_<who>_<lv>.webp`，证据取加载成功那一刻；家宅 live 模式会定时重绘房间），超时不再吞掉；每间房的室外窗数钉死为 main 2af9076 的 `EXPECTED_WINS`（7 间有窗），缺底图或窗表变动都会红，不会被当「没窗」放过（153 共 159 项）。154 ① 每间房记录该房 `home_<who>_<lv>.webp` 被 route 拦截、`requestfailed`、回退后 `img.room-art` 已撤，再判月亮/街灯与 has-art，不再量到换房前的旧状态（154 共 217 项）。
-错误统计口径：`pageerror` 全收；`console.error` 过滤掉资源加载噪声（`Failed to load resource|net::|4xx/5xx|favicon`，① 故意拦图会产生这类）。③ 减少动态是两次采样（隔 1.5s）+ `getAnimations` 快照，不是连续录像。
+错误统计口径：`pageerror` 全收；`console.error` 过滤掉资源加载噪声（`^Failed to load resource`（只匹配浏览器资源错误前缀），① 故意拦图会产生这类）。③ 减少动态是两次采样（隔 1.5s）+ `getAnimations` 快照，不是连续录像。
 
 
 ## 家宅-155 preview 底图回退（scenarios-155-preview.mjs）
@@ -199,3 +199,11 @@ preview/app.js、preview/pet/game/app.js 的房间底图回退。preview 没有�
 scenarios-130 跑完 154 接着跑它（`SKIP_155P=1` 可跳过）。本地干跑：`BROWSER=chromium CHROMIUM_PATH=… node scenarios-155-preview.mjs`（修复后 48/48；preview 换回 main 2af9076 原样时 ① 那一半全红）。
 
 整文件完整性断言（moon/resources、bb70/integration-scope、autosave15/scope）通过 `tests/home155/protection-delta.mjs` 只把这一行修复换回 main 原行再算哈希，旧哈希不改；这一行缺失/重复/被改都会报 `HOME155_DELTA_NOT_EXACT`（负例见 `tests/home155/delta.test.mjs`）。
+
+
+## 独立验收修订：154 / preview 请求证据
+
+154②③必须记录本房间底图完成且 naturalWidth>0、has-art 存在，并对照固定 EXPECTED_WINS；enterRoom 超时一律失败。③不能用缺图或窗表缺项走“无窗通过”分支。
+154 的 console.error 只过滤浏览器以“Failed to load resource”开头的资源错误；不再宽泛过滤 cancelled/aborted、net::、favicon 或任意 4xx/5xx 文案，业务错误必须计入。pageerror 全收。旧 r3 曾额外过滤 cancelled/aborted/Load request cancelled，旧说明漏列，现已收紧。
+155-preview 的 intercepted/requestfailed 证据按本次换房后的事件与准确 home_<who>_<lv>.webp URL 双重限定，上一房间的延迟失败不计入当前房间。
+产品修复另外修改正式 root/pet 的故事时段刷新：只在家宅生活页时段变化时触发既有重绘，不改变存档、收益、房间等级或自主动作。本变化超出原155底图失败回退范围，需单独审查。

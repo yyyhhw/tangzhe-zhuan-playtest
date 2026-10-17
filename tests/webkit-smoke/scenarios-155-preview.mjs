@@ -5,6 +5,7 @@
 // 4 位 CEO × Lv1–3 × 2 个 preview 入口，390×844。preview 根入口先点「同意并继续」建新版预览档（新档，不碰正式档）。
 // 用法：BROWSER=chromium CHROMIUM_PATH=… node scenarios-155-preview.mjs（默认 WebKit）
 import { webkit, chromium } from 'playwright';
+import {roomRequestCount} from './home-evidence.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -44,15 +45,16 @@ async function run(browser, base, entry, mode) {
   const tag = `${tagOf(entry)} ${mode}`;
   const ctx = await browser.newContext({ viewport: VIEWPORT, isMobile: ENGINE !== 'firefox', hasTouch: true, timezoneId: 'Asia/Tokyo' });
   const page = await ctx.newPage();
-  let blocked = 0, failedReq = 0;
+  const blocked = [], failedReq = [];
   page.on('pageerror', (e) => errors.push({ label: tag, kind: 'pageerror', text: e.message }));
   page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errors.push({ label: tag, kind: 'console', text: m.text() }); });
-  page.on('requestfailed', (r) => { if (ART.test(r.url())) failedReq++; });
-  if (mode === 'fail') await page.route(ART, (r) => { blocked++; return r.abort(); });
+  page.on('requestfailed', (r) => { if (ART.test(r.url())) failedReq.push(r.url()); });
+  if (mode === 'fail') await page.route(ART, (r) => { blocked.push(r.request().url()); return r.abort(); });
   try {
     await boot(page, base, entry);
     for (const who of CEOS) for (const lv of LVS) {
-      const b0 = blocked, f0 = failedReq;
+      const b0 = blocked.length, f0 = failedReq.length;
+      const countRoom = (events, from) => roomRequestCount(events, from, who, lv);
       const setup = await page.evaluate(({ who, lv }) => {
         const t = window.__tzz;
         if (t.state.ceos && t.state.ceos[who]) t.state.ceos[who].unlocked = true;
@@ -70,7 +72,7 @@ async function run(browser, base, entry, mode) {
       try { st = await (await page.waitForFunction(probe, mode === 'fail', { timeout: 10000 })).jsonValue(); }
       catch { timedOut = true; st = await page.evaluate(() => { const r = document.querySelector('.room'), img = r && r.querySelector('img.room-art'); return { hasArt: !!r && r.classList.contains('has-art'), img: !!img, w: img ? img.naturalWidth : 0 }; }); }
       if (!setup.img.includes(`home_${who}_${lv}.`)) check(`${k}: rendered this CEO/Lv room art`, false, setup);
-      if (mode === 'fail') check(`${k}: art blocked+failed → img removed, has-art removed`, !timedOut && blocked > b0 && failedReq > f0 && !st.img && !st.hasArt, { timedOut, blocked: blocked - b0, failedReq: failedReq - f0, ...st, src: setup.img });
+      if (mode === 'fail') check(`${k}: art blocked+failed → img removed, has-art removed`, !timedOut && countRoom(blocked, b0) > 0 && countRoom(failedReq, f0) > 0 && !st.img && !st.hasArt, { timedOut, blocked: countRoom(blocked, b0), failedReq: countRoom(failedReq, f0), ...st, src: setup.img });
       else check(`${k}: art loads (naturalWidth>0) and has-art kept`, !timedOut && st.img && st.w > 0 && st.hasArt, { timedOut, ...st, src: setup.img });
       if (who === 'c77' && lv === 3) await page.screenshot({ path: path.join(OUT, `155-preview-${ENGINE}-${tagOf(entry)}-${mode}.png`) });
     }
