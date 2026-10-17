@@ -47,3 +47,6 @@
 .story-streetwin .story-street{top:auto;left:12%;bottom:0;height:46%;width:76%;width:min(76cqw,120cqh);gap:8%;gap:min(8cqw,7cqh);padding:6% 7% 0;padding:6cqh 7cqh 0;border:0;border-radius:2px 2px 0 0;box-sizing:border-box;align-items:flex-start}
 .story-streetwin.win-round .story-street{left:18%;width:64%;width:min(64cqw,120cqh)}
 .story-streetwin .story-street i{flex:1 1 0;width:auto;height:52%;min-width:0;max-width:18cqh;border-width:1px;box-shadow:0 0 4px 1px rgba(255,210,90,.7)}
+/* 家宅-151：有底图的房间，窗都画在后墙右半边（77 Lv1–3、珍珠 Lv2/3、阿宅 Lv1、火箭 Lv1），右上角房名牌会盖住窗和窗里的月亮/街灯；
+   左上角在 12 张底图里都是空墙，房名牌挪过去（无底图的房间照旧靠右，和窗户/蜡烛小图标排一起）。style.css 受保护，覆盖写在这里。 */
+.room.has-art .room-wall{justify-content:flex-start}
