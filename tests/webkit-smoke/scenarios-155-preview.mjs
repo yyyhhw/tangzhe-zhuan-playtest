@@ -69,6 +69,7 @@ async function run(browser, base, entry, mode) {
       let timedOut = false, st;
       try { st = await (await page.waitForFunction(probe, mode === 'fail', { timeout: 10000 })).jsonValue(); }
       catch { timedOut = true; st = await page.evaluate(() => { const r = document.querySelector('.room'), img = r && r.querySelector('img.room-art'); return { hasArt: !!r && r.classList.contains('has-art'), img: !!img, w: img ? img.naturalWidth : 0 }; }); }
+      if (!setup.img.includes(`home_${who}_${lv}.`)) check(`${k}: rendered this CEO/Lv room art`, false, setup);
       if (mode === 'fail') check(`${k}: art blocked+failed → img removed, has-art removed`, !timedOut && blocked > b0 && failedReq > f0 && !st.img && !st.hasArt, { timedOut, blocked: blocked - b0, failedReq: failedReq - f0, ...st, src: setup.img });
       else check(`${k}: art loads (naturalWidth>0) and has-art kept`, !timedOut && st.img && st.w > 0 && st.hasArt, { timedOut, ...st, src: setup.img });
       if (who === 'c77' && lv === 3) await page.screenshot({ path: path.join(OUT, `155-preview-${ENGINE}-${tagOf(entry)}-${mode}.png`) });
