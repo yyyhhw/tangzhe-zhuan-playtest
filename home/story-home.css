@@ -25,9 +25,9 @@
 .room.pet-host-docked .home-actor:not(.posed){width:14%!important}
 .room .home-actor .ha-line{padding:1px 5px;font-size:9.5px;max-width:112px}
 /* 体验-149：手机窄屏顶部金币卡（.money）——团单「团单服务中 N%」标签、金额、右侧拟声字（叮／开！／团单！，#sfxWord，不是按钮）挤在一行，
-   金额被省略成「1…」。只在 ≤420px 改这一块：标签出现时先收起拟声字（标签本身就在说团单），标签折成两行（「团单服务中」／「N%」）让出宽度，金额字号随屏宽收一点，
+   金额被省略成「1…」。改这一块（体验-152：原来只在 ≤420px 生效，421 以上——iPhone Pro Max/Plus 竖屏 428–430、平板/电脑最宽 560 的卡——照旧截断，改成不分宽度都生效）：标签出现时先收起拟声字（标签本身就在说团单），标签折成两行（「团单服务中」／「N%」）让出宽度，金额字号随屏宽收一点，
    「每秒 +X（团单服务中）」放不下时只省略后面的括号，数字完整。style.css 受 tests/moon/protected-blobs.json 保护，覆盖写在这里。 */
-@media (max-width:420px){
+@media all{   /* 体验-152：原 max-width:420px；外壳留着，149 这组规则原样不动、范围放开到所有宽度 */
   .money:has(#boostTag:not(.hidden)) .sfx-word{display:none}
   .money{gap:6px}
   .money .boost-tag{flex:0 0 auto;font-size:10px;line-height:1.15;padding:2px 5px;white-space:normal;max-width:64px;text-align:center}
