@@ -104,13 +104,15 @@ function mkSeed(seed, owned) {
   return out;
 }
 // 进某位 CEO 的家、设房间等级（只改内存态做显示，不 persist）、等底图加载完或失败
-async function enterRoom(page, who, lv) {
+async function enterRoom(page, who, lv, waitFail = false) {
   await page.evaluate(({ who, lv }) => {
     const t = window.__tzz; t.setTab('home'); t.homeMode = 'live';
     t.E.homeOf(t.state, who).lv = lv;
     t.act('homeWho', who); t.renderTab();
   }, { who, lv });
-  await page.waitForFunction(() => { const r = document.querySelector('.room'); const img = r && r.querySelector('img.room-art'); return r && (!img || img.complete); }, null, { timeout: 8000 }).catch(() => {});
+  // r2（熊大 16:53）：① 要等到底图真的失败、被回退逻辑撤掉（img.room-art 不在了）；其余场景等加载完。超时不吞，返回给调用方断言
+  let timedOut = false;
+  await page.waitForFunction(({ waitFail, file }) => { const r = document.querySelector('.room'); if (!r) return false; const img = r.querySelector('img.room-art'); return waitFail ? !img : (!!img && (img.getAttribute('src') || '').includes(file) && img.complete && img.naturalWidth > 0); }, { waitFail, file: `home_${who}_${lv}.webp` }, { timeout: 8000 }).catch(() => { timedOut = true; });
   let prev = '';
   for (let i = 0; i < 20; i++) {
     await page.waitForTimeout(150);
@@ -118,6 +120,7 @@ async function enterRoom(page, who, lv) {
     if (cur === prev) break;
     prev = cur;
   }
+  return { timedOut };
 }
 // 页内：本房间故事层状态
 const STORY_PROBE = ({ who, lv }) => {
@@ -140,16 +143,25 @@ async function scenarioArtFail(browser, base, entry, seed) {
     const tag = `① art-fail ${label} ${tagOf(entry)}`;
     const tz = tzAt(hour);
     const ctx = await newCtx(browser, mkSeed(seed, owned), tz);
-    let blocked = 0;
-    await ctx.route(/\/art\/home_[^/?]+\.webp/, (route) => { blocked++; return route.abort(); });
+    let blocked = 0; const blockedUrls = [], failedUrls = [];
+    await ctx.route(/\/art\/home_[^/?]+\.webp/, (route) => { blocked++; blockedUrls.push(route.request().url()); return route.abort(); });
+    ctx.on('requestfailed', (rq) => { if (/\/art\/home_/.test(rq.url())) failedUrls.push(rq.url()); });
     const page = await ctx.newPage(); wireErrors(page, tag);
     try {
       await load(page, base, entry);
       const per = await gamePeriod(page);
       check(`${tag}: [时段] game period is ${hour === 22 ? 'night' : 'dusk'} (${tz})`, per.inline === (hour === 22 ? 'night' : 'dusk'), J(per));
       for (const who of CEOS) for (const lv of LVS) {
-        await enterRoom(page, who, lv);
+        const file = `home_${who}_${lv}.webp`;
+        const st = await enterRoom(page, who, lv, true);
+        // 等到「这一间」的底图请求确实失败、且回退把图撤掉（最多再等 8s），防止量到换房前的旧状态
+        const isFailed = () => failedUrls.some((u) => u.includes(`/art/${file}`));
+        for (let t0 = Date.now(); Date.now() - t0 < 8000;) { if (isFailed() && !(await page.evaluate(() => !!document.querySelector('.room img.room-art')))) break; await page.waitForTimeout(100); }
+        if (!isFailed()) st.timedOut = true;
+        await page.waitForTimeout(150);
         const p = await page.evaluate(STORY_PROBE, { who, lv });
+        const ev = { blocked: blockedUrls.some((u) => u.includes(`/art/${file}`)), failed: failedUrls.some((u) => u.includes(`/art/${file}`)), imgGone: !p.artImg, timedOut: st.timedOut };
+        check(`${tag} ${who} Lv${lv}: [证据] ${file} request intercepted + failed, art img removed by fallback (no timeout)`, ev.blocked && ev.failed && ev.imgGone && !ev.timedOut, J(ev));
         check(`${tag} ${who} Lv${lv}: no ${kind} drawn, room still renders`,
           p.room && p.roomH > 50 && !p.moonShown && !p.streetShown, J({ hasArt: p.hasArt, img: p.artImg, nWins: p.nWins, moonShown: p.moonShown, streetShown: p.streetShown, roomH: Math.round(p.roomH || 0) }));
         check(`${tag} ${who} Lv${lv}: room falls back to no-art look (.room loses has-art once the art fails)`,

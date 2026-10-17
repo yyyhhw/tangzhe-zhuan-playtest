@@ -23,6 +23,10 @@ fs.mkdirSync(OUT, { recursive: true });
 const READY = 'window.__tzz && window.XingTu';
 const CEOS = ['c77', 'pearl', 'otaku', 'rocket'];
 const LVS = [1, 2, 3];
+// 测试-153 r2（熊大 16:53）：每间房预期的室外窗数钉死（= main 2af9076 home/story-home.js WINDOWS），
+// 缺底图或窗表被改不会再被当成「没窗」放过
+const EXPECTED_WINS = { c77_1: 1, c77_2: 1, c77_3: 2, otaku_1: 1, pearl_2: 1, pearl_3: 1, rocket_1: 1 };
+const expWins = (who, lv) => EXPECTED_WINS[`${who}_${lv}`] || 0;
 const checks = [], errors = [], notCovered = [];
 let shotN = 0;
 const J = (v) => JSON.stringify(v);
@@ -110,7 +114,13 @@ async function enterRoom(page, who, lv) {
     t.E.homeOf(t.state, who).lv = lv;
     t.act('homeWho', who); t.renderTab();
   }, { who, lv });
-  await page.waitForFunction(() => { const r = document.querySelector('.room'); const img = r && r.querySelector('img'); return r && (r.classList.contains('has-art') || !img || img.complete); }, null, { timeout: 8000 }).catch(() => {});
+  // r2：等底图真的加载完（complete 且 naturalWidth>0）或明确失败（图被撤掉），超时不再吞掉，交给调用方断言
+  let timedOut = false;
+  // 只认本房间那张图（src 含 home_<who>_<lv>.webp），避免量到换房前旧房间已加载好的图
+  // 返回加载成功那一刻的图片状态作为证据（家宅 live 模式会定时重绘房间、换新 img 元素，事后再读可能读到正在解码的新元素）
+  let art = { present: false, complete: false, naturalWidth: 0, src: null };
+  const h = await page.waitForFunction((file) => { const r = document.querySelector('.room'); if (!r) return false; const img = r.querySelector('img.room-art'); const ok = !!img && (img.getAttribute('src') || '').includes(file) && img.complete && img.naturalWidth > 0; return ok ? { present: true, complete: true, naturalWidth: img.naturalWidth, src: img.getAttribute('src') } : false; }, `home_${who}_${lv}.webp`, { timeout: 8000 }).catch(() => { timedOut = true; return null; });
+  if (h) art = await h.jsonValue();
   // 切到家宅页/换房间时房间有进场动画：等 .room 和其中故事窗的位置尺寸连续两次采样不变（最多 3s）再量
   let prev = '';
   for (let i = 0; i < 20; i++) {
@@ -119,6 +129,14 @@ async function enterRoom(page, who, lv) {
     if (cur === prev) break;
     prev = cur;
   }
+  return { timedOut, art };
+}
+// r2：正常底图前置断言——底图真的画出来了、has-art 在、窗数等于预期
+function checkArt(k, who, lv, st, p) {
+  const exp = expWins(who, lv);
+  check(`${k}: [底图] room art loaded (naturalWidth>0), has-art, outdoor windows = ${exp} as expected`,
+    !st.timedOut && st.art.present && st.art.naturalWidth > 0 && p.hasArt && p.nWins === exp && (exp === 0 || p.hasWinEl), J({ ...st, hasArt: p.hasArt, nWins: p.nWins, hasWinEl: p.hasWinEl }));
+  return exp;
 }
 // 页内：本房间窗位换算成屏幕矩形（以 story 窗或 .room-art/.room 为底图框）
 const ROOM_PROBE = ({ who, lv, kind }) => {
@@ -166,10 +184,10 @@ async function scenarioNight(browser, base, entry, seed) {
     const open = await page.evaluate((ids) => ids.map((i) => [i, window.__tzz.E.homeOpen(window.__tzz.state, i)]), CEOS);
     check(`${tag}: all four CEO homes open`, open.every((x) => x[1]), J(open));
     for (const who of CEOS) for (const lv of LVS) {
-      await enterRoom(page, who, lv);
+      const st = await enterRoom(page, who, lv);
       const p = await page.evaluate(ROOM_PROBE, { who, lv, kind: 'moon' });
       const k = `${tag} ${who} Lv${lv}`;
-      if (p.nWins > 0 && p.hasArt) {
+      if (checkArt(k, who, lv, st, p) > 0) {
         check(`${k}: ① moon inside its window, window clips (overflow:hidden)`, p.moon && p.moon.vis && p.moon.w > 0 && p.moon.inWin && p.moon.clip === 'hidden', J(p.moon));
         check(`${k}: ③ room name does not overlap any window, text not truncated`, p.name && p.name.overlaps.length === 0 && p.name.full, J(p.name && { text: p.name.text, full: p.name.full, overlaps: p.name.overlaps }));
       } else {
@@ -196,10 +214,10 @@ async function scenarioDusk(browser, base, entry, seed) {
     const per = await gamePeriod(page);
     check(`${tag}: [时段] game period is dusk (${tz})`, per.inline === 'dusk', J(per));
     for (const who of CEOS) for (const lv of LVS) {
-      await enterRoom(page, who, lv);
+      const st = await enterRoom(page, who, lv);
       const p = await page.evaluate(ROOM_PROBE, { who, lv, kind: 'street' });
       const k = `${tag} ${who} Lv${lv}`;
-      if (p.nWins > 0 && p.hasArt) {
+      if (checkArt(k, who, lv, st, p) > 0) {
         check(`${k}: ② 4 lamps inside the leftmost window, window clips, lamps have real size`,
           p.street && p.street.allIn && p.street.inFirstWin && p.street.clip === 'hidden' && p.street.sized, J(p.street));
       } else {

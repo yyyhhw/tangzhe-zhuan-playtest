@@ -183,3 +183,7 @@ a stage-2 win keeps the same time; save-then-refresh keeps it in memory + disk.
 3. **prefers-reduced-motion: reduce**：夜晚+k_3+k_4、黄昏+k_8，12 间房：有窗房型月亮/街灯照常显示、故事层没有 >10ms 的动画、熊猫 1.5s 不动；街灯逐盏亮起的 delay 只记录。
 
 本地干跑：`BROWSER=chromium CHROMIUM_PATH=… node scenarios-154.mjs`（8075633 上 ②③ 全过；① 抓到底图失败时 `has-art` 不掉、有窗房型照样画月亮/街灯——见报告）。
+
+**r2（熊大 10/17 16:53 意见）**：153 每间房先等「本房间那张底图」`complete && naturalWidth>0`（src 含 `home_<who>_<lv>.webp`，证据取加载成功那一刻；家宅 live 模式会定时重绘房间），超时不再吞掉；每间房的室外窗数钉死为 main 2af9076 的 `EXPECTED_WINS`（7 间有窗），缺底图或窗表变动都会红，不会被当「没窗」放过（153 共 159 项）。154 ① 每间房记录该房 `home_<who>_<lv>.webp` 被 route 拦截、`requestfailed`、回退后 `img.room-art` 已撤，再判月亮/街灯与 has-art，不再量到换房前的旧状态（154 共 217 项）。
+错误统计口径：`pageerror` 全收；`console.error` 过滤掉资源加载噪声（`Failed to load resource|net::|4xx/5xx|favicon`，① 故意拦图会产生这类）。③ 减少动态是两次采样（隔 1.5s）+ `getAnimations` 快照，不是连续录像。
+
