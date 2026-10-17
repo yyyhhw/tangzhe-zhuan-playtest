@@ -2130,6 +2130,14 @@ const HA = window.HomeAutonomy || null;
 // ---- 养成-38：故事卡的家里变化（只氛围，不加收益、不存档）。决策在 home/story-home.js；脚本没加载到就整段不跑 ----
 const HS = window.HomeStory || null;
 const storyPeriod = () => homeAutoPeriod() || (h => h >= 19 || h < 5 ? 'night' : h >= 17 ? 'dusk' : h < 10 ? 'morning' : 'day')(new Date(now()).getHours());
+// 时段跨界必须主动刷新故事层，不能等待 CEO 自主动作偶然触发重绘。
+// 仅在当前可见的家宅生活页更新；不改存档、经济或自主活动状态。
+let storyObservedPeriod = null;
+function storyRefreshPeriod() {
+  if (tab !== 'home' || homeSub !== 'room' || homeMode !== 'live') return;
+  const period = storyPeriod();
+  if (period !== storyObservedPeriod) { storyObservedPeriod = period; dirty = true; }
+}
 function storyCtx(id, kind) {
   const H = E.homeOf(state, id), eat = (HA && HA.IDS && HA.IDS.eat) || [];
   return { owned:new Set(state.gacha.owned), who:id, kind:kind || null, period:storyPeriod(), placed:H.placed.map(p => p.fid),
@@ -2974,6 +2982,7 @@ function frame(ts) {
   dynAcc += dt; if (dynAcc > 0.25) { dynAcc = 0; refreshDynamic(); }
   // Owner movement updates the current interaction anchor.
   homeAdvanceActor(dt);
+  storyRefreshPeriod();
   if (dirty) renderTab();
   petFrame(dt);   // 宠物 p4：小狗一直在过日子；在它家的生活页才画
   // Use elapsed monotonic time, independent of the animation dt clamp. No catch-up writes.
