@@ -1,0 +1,134 @@
+{
+  "token": "home155-ux158-160-20261018-r1",
+  "changes": [
+    {
+      "path": "collectibles/entry.mjs",
+      "beforeSha256": "e3443426d7c60852ae39e793a228d53a70cdd99523166022befb1f1f7a423517",
+      "afterSha256": "ee75120e830425f1c6731ad615166fc6d35031382d598b450bb9be37e54ceb6e"
+    },
+    {
+      "path": "collection/bootstrap.mjs",
+      "beforeSha256": "88581d9d816e1767883af05b130658349183dae1fb9dbf52d4f4044bc026d8ab",
+      "afterSha256": "5e801b8415d9404f0941411f32d60c60efce7dda040e9a334f7bafcf92fc19bf"
+    },
+    {
+      "path": "collection/host-save.mjs",
+      "beforeSha256": "027825f5f678934d9b2089d1208d54e4b7f5b72fee1a2d983611196ba8e157b7",
+      "afterSha256": "0a9f3d7334345528e1ccad95aa7d5cac4c954b758598a54298c7316b93128b26"
+    },
+    {
+      "path": "index.html",
+      "beforeSha256": "3ef037a8cf8381edfdc1602908964b8eb2ba1be82ff3fdaaaf5977875f2a30a6",
+      "afterSha256": "0f9c71c9816fc1d5067e7178ab154396140cdbb1dee036e4bfbb301fbcf59b0d"
+    },
+    {
+      "path": "pet/game/index.html",
+      "beforeSha256": "1bd7b55ec5853032d67a32f340dbb1fdfc6c228de14ad2bf8da2d2932bf5df88",
+      "afterSha256": "33c52590ce229995b271630b9ebb3e694faca684bce4786cabc5f558106380c2"
+    },
+    {
+      "path": "preview/collection/bootstrap.mjs",
+      "beforeSha256": "b543410f325188157cc3863fabe3ff0918c3001b7d96d7748dc0d259e97e33b1",
+      "afterSha256": "8ce13cf4f929d3cb2cbf7df2a493ab4aab5b3dafb5486ba69af45c2232ba3ff3"
+    },
+    {
+      "path": "preview/collection/host-save.mjs",
+      "beforeSha256": "64c86f95bd1752c61ef95eb5b209b205388c2205a62dbf3c5ff1f78ee2dc00ee",
+      "afterSha256": "e984045f3aa4b702edfeb905644d4ae51faeda88435561534f4c01999f900dc6"
+    },
+    {
+      "path": "preview/index.html",
+      "beforeSha256": "f1db929dbf366ea6ec2078dcf381e4eace481dd5f7d451105db021cfb8353bcc",
+      "afterSha256": "c465f49261a48a6914456646fb31801efa3ae3b15604fbff13e802931fd83bb8"
+    },
+    {
+      "path": "preview/pet/game/index.html",
+      "beforeSha256": "e70b737fc053bb488d72ea42ff0a0ffa44afa9ba1087d0e361f0ae9a730eb638",
+      "afterSha256": "1f0058d5e0c0596edc82d2b28582c283f0f56b251baeb1216526b4115e19c557"
+    },
+    {
+      "path": "qa-protocol2/entry.mjs",
+      "beforeSha256": "77dbf2aa2409416227d6ddb0bb1f2f4b7d12a739c4c0496f16797e3df5c1b011",
+      "afterSha256": "5ac2e4bfbbae0135ce79d10dfde4468be0d1a4675d2f9aa42c21e8834d1716e1"
+    },
+    {
+      "path": "qa-protocol2/vendor/cards/card-coordinator.mjs",
+      "beforeSha256": "adfc03b883c77b18a9f2bc9d0c06e5c4031f62a143df658e03c81e1eeb010b47",
+      "afterSha256": "ecf5400e2fa5c73a379ca938779125c27916e325769268b86f4e2a003c985995"
+    },
+    {
+      "path": "qa-protocol2/vendor/runtime/validator.mjs",
+      "beforeSha256": "7c5aa24c759c912f18bbcb5b8fd41d694e2377f5d8c5a4caf0d5b449c7cb0772",
+      "afterSha256": "57ae2a181cdbfaf8e73d26a999e5170bf9ccdebfb03e1c33e0e8f9242e3fded8"
+    },
+    {
+      "path": "space/moon.mjs",
+      "beforeSha256": "b447899cde8fa91a51e4b2f69b350725b57512aeae4fd8611b9e5804522d5411",
+      "afterSha256": "938a3151d2431a47ac1e5f859210e747ef3fa447b286d229f8981215488660c5"
+    },
+    {
+      "path": "space/overlay.mjs",
+      "beforeSha256": "e3524d364d1391d2b4ed8d5c0d2368455e4bd208bc773b1130b5e0f0f88630c0",
+      "afterSha256": "2efabe02934b8740789ff46f4d275b81646a075a0bb971186fb5bcc2fa965d49"
+    },
+    {
+      "path": "space/xingtu-views.mjs",
+      "beforeSha256": "f6affffead55fc1e179ad144ef44b45a86379fb444134fb93218e3f34c39e0b3",
+      "afterSha256": "1adedb34f941ebe370e1f57a0c89a1a0cec1176eca3f37c4da924997286daab9"
+    }
+  ],
+  "pinsUpdated": [
+    "qa-protocol2/vendor/runtime/validator.mjs",
+    "qa-protocol2/vendor/cards/card-coordinator.mjs",
+    "space/moon.mjs",
+    "space/overlay.mjs",
+    "milestones/domain.mjs",
+    "space/xingtu-views.mjs"
+  ],
+  "reason": "Version the changed four app entries and all ancestors of milestones/domain; retain unrelated resource query tokens.",
+  "accepted": {
+    "app.js": "6691305dc6611b3c7ef2306dcb23c99004917528f0fecb081bdac0c92acae651",
+    "collectibles/entry.mjs": "ee75120e830425f1c6731ad615166fc6d35031382d598b450bb9be37e54ceb6e",
+    "collection/bootstrap.mjs": "5e801b8415d9404f0941411f32d60c60efce7dda040e9a334f7bafcf92fc19bf",
+    "collection/host-save.mjs": "0a9f3d7334345528e1ccad95aa7d5cac4c954b758598a54298c7316b93128b26",
+    "index.html": "0f9c71c9816fc1d5067e7178ab154396140cdbb1dee036e4bfbb301fbcf59b0d",
+    "milestones/domain.mjs": "b2f56b397b71900f5a5d6ec88dcea0010a889fa45ca8063eea3aadb4d94d9d61",
+    "pet/game/app.js": "c3dce424bed03b3634755d3cff1d1ecc3f4638c423a05202e6d3a1ea56ff705e",
+    "pet/game/index.html": "33c52590ce229995b271630b9ebb3e694faca684bce4786cabc5f558106380c2",
+    "pet/game/version.json": "9a67acbb484f8a701ef95c433c3884bb27f0fa6a66d50d99923883c72c24a7b6",
+    "preview/app.js": "d683f6ffc88c013c86ecc0d4aa1cb61297633d1fb864f30121f8507917307f9b",
+    "preview/collection/bootstrap.mjs": "8ce13cf4f929d3cb2cbf7df2a493ab4aab5b3dafb5486ba69af45c2232ba3ff3",
+    "preview/collection/host-save.mjs": "e984045f3aa4b702edfeb905644d4ae51faeda88435561534f4c01999f900dc6",
+    "preview/index.html": "c465f49261a48a6914456646fb31801efa3ae3b15604fbff13e802931fd83bb8",
+    "preview/pet/game/app.js": "7fa6db76be063025af48e922e90d4ba73122168810d5930158e3ccc3b3b00c51",
+    "preview/pet/game/index.html": "1f0058d5e0c0596edc82d2b28582c283f0f56b251baeb1216526b4115e19c557",
+    "preview/pet/game/version.json": "54016aed31cd155023512af797ebfd2cf2b7ac6fef70de48e64ead680049731a",
+    "preview/version.json": "54016aed31cd155023512af797ebfd2cf2b7ac6fef70de48e64ead680049731a",
+    "qa-protocol2/dependency-pins.json": "5c95fa434851b6c4e155ceb388ef03dc65f44454d7bd20f8f271e42976bb24fb",
+    "qa-protocol2/entry.mjs": "5ac2e4bfbbae0135ce79d10dfde4468be0d1a4675d2f9aa42c21e8834d1716e1",
+    "qa-protocol2/vendor/cards/card-coordinator.mjs": "ecf5400e2fa5c73a379ca938779125c27916e325769268b86f4e2a003c985995",
+    "qa-protocol2/vendor/runtime/validator.mjs": "57ae2a181cdbfaf8e73d26a999e5170bf9ccdebfb03e1c33e0e8f9242e3fded8",
+    "space/moon.mjs": "938a3151d2431a47ac1e5f859210e747ef3fa447b286d229f8981215488660c5",
+    "space/overlay.mjs": "2efabe02934b8740789ff46f4d275b81646a075a0bb971186fb5bcc2fa965d49",
+    "space/xingtu-views.mjs": "1adedb34f941ebe370e1f57a0c89a1a0cec1176eca3f37c4da924997286daab9",
+    "version.json": "9a67acbb484f8a701ef95c433c3884bb27f0fa6a66d50d99923883c72c24a7b6"
+  },
+  "changedModules": [
+    "app.js",
+    "collectibles/entry.mjs",
+    "collection/bootstrap.mjs",
+    "collection/host-save.mjs",
+    "milestones/domain.mjs",
+    "pet/game/app.js",
+    "preview/app.js",
+    "preview/collection/bootstrap.mjs",
+    "preview/collection/host-save.mjs",
+    "preview/pet/game/app.js",
+    "qa-protocol2/entry.mjs",
+    "qa-protocol2/vendor/cards/card-coordinator.mjs",
+    "qa-protocol2/vendor/runtime/validator.mjs",
+    "space/moon.mjs",
+    "space/overlay.mjs",
+    "space/xingtu-views.mjs"
+  ]
+}

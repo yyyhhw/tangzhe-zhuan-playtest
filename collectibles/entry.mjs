@@ -10,8 +10,8 @@ import {createRealPageQAFacade} from '../qa-protocol2/real-page-facade.mjs?v=xin
 import {createMigrationPlanner} from '../qa-protocol2/vendor/planner/migration.mjs?v=xingtu135-20261015-r1';
 import * as codec from '../qa-protocol2/vendor/codec/snapshot-codec.mjs?v=xingtu135-20261015-r1';
 import {createPetDomain} from '../qa-protocol2/vendor/runtime/pet-domain.mjs?v=xingtu135-20261015-r1';
-import {createProtocol2Validator} from '../qa-protocol2/vendor/runtime/validator.mjs?v=xingtu135-20261015-r1';
-import {createCardAwareSession} from '../qa-protocol2/vendor/cards/card-coordinator.mjs?v=xingtu135-20261015-r1';
+import {createProtocol2Validator} from '../qa-protocol2/vendor/runtime/validator.mjs?v=home155-ux158-160-20261018-r1';
+import {createCardAwareSession} from '../qa-protocol2/vendor/cards/card-coordinator.mjs?v=home155-ux158-160-20261018-r1';
 import {createHostModel} from '../qa-protocol2/vendor/host/host-model.mjs?v=xingtu135-20261015-r1';
 import {prepareEightWearableCatalog} from '../qa-protocol2/eight-catalog.mjs?v=xingtu135-20261015-r1';
 
@@ -128,11 +128,11 @@ export async function launchProductionCollectibles(options){
             logicalStorageKey:storage.logicalKey,handle:message=>facade.card(message),snapshot:()=>facade.snapshot(),reconcile:()=>{const result=facade.reconcile();if(result.ok)globalThis.XingTu?.resume();return result;}};
           globalThis[scope==='formal'?'FormalCollectionRuntime':'PreviewCollectionRuntime']=runtime;
           const pet=scope==='formal'&&location.pathname.startsWith(new URL('pet/game/',sourceBase).pathname);
-          await import(new URL((pet?'pet/game/app.js':'app.js')+'?v='+COLLECTIBLES_RELEASE,sourceBase));
+          await import(new URL((pet?'pet/game/app.js':'app.js')+'?v='+ 'home155-ux158-160-20261018-r1',sourceBase));
           if(!lease.owns())throw Error('QA_APP_LOADED_AFTER_REVOKE');
           const attached=facade.attachApp(globalThis.__tzz,{enabled:walletBridgeApproved===true,randomInt:n=>secureRandomInt(crypto,n),makeId:()=>`tx:${crypto.randomUUID()}`});
           if(!attached.ok)throw Error(attached.code);
-          const {installMoonOverlay}=await import('../space/overlay.mjs?v=xingtu135-20261015-r1');
+          const {installMoonOverlay}=await import('../space/overlay.mjs?v=home155-ux158-160-20261018-r1');
           if(!lease.owns())throw Error('SPACE_LOADED_AFTER_REVOKE');
           installMoonOverlay({app:globalThis.__tzz,runtime});
           if(qaWearables8){const {installHiddenGoals}=await import('./box200-hidden.mjs?v=xingtu135-20261015-r1');if(!lease.owns())throw Error('BOX200_HIDDEN_LOADED_AFTER_REVOKE');installHiddenGoals(globalThis.__tzz);} // 盲盒-109：隐藏款达成目标直接获得

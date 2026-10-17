@@ -5,8 +5,8 @@ import {createRealPageQAFacade} from './real-page-facade.mjs?v=xingtu135-2026101
 import {createMigrationPlanner} from './vendor/planner/migration.mjs?v=xingtu135-20261015-r1';
 import * as codec from './vendor/codec/snapshot-codec.mjs?v=xingtu135-20261015-r1';
 import {createPetDomain} from './vendor/runtime/pet-domain.mjs?v=xingtu135-20261015-r1';
-import {createProtocol2Validator} from './vendor/runtime/validator.mjs?v=xingtu135-20261015-r1';
-import {createCardAwareSession} from './vendor/cards/card-coordinator.mjs?v=xingtu135-20261015-r1';
+import {createProtocol2Validator} from './vendor/runtime/validator.mjs?v=home155-ux158-160-20261018-r1';
+import {createCardAwareSession} from './vendor/cards/card-coordinator.mjs?v=home155-ux158-160-20261018-r1';
 import {createHostModel} from './vendor/host/host-model.mjs?v=xingtu135-20261015-r1';
 import {prepareEightWearableCatalog} from './eight-catalog.mjs?v=xingtu135-20261015-r1';
 export const PRODUCTION_PROTOCOL2_ENABLED=false;
@@ -63,7 +63,7 @@ export async function launchRealPageQA(options){
             logicalStorageKey:storage.logicalKey,handle:message=>facade.card(message),snapshot:()=>facade.snapshot(),reconcile:()=>facade.reconcile()};
           globalThis[scope==='formal'?'FormalCollectionRuntime':'PreviewCollectionRuntime']=runtime;
           const pet=scope==='formal'&&location.pathname.startsWith('/pet/game/');
-          await import(new URL(pet?'pet/game/app.js?qaProtocol2=1&v=xingtu135-20261015-r1':'app.js?qaProtocol2=1&v=xingtu135-20261015-r1',sourceBase));
+          await import(new URL(pet?'pet/game/app.js?qaProtocol2=1&v=home155-ux158-160-20261018-r1':'app.js?qaProtocol2=1&v=home155-ux158-160-20261018-r1',sourceBase));
           if(!lease.owns())throw Error('QA_APP_LOADED_AFTER_REVOKE');
           const attached=facade.attachApp(globalThis.__tzz,{enabled:true,randomInt:n=>secureRandomInt(crypto,n),makeId:()=>`tx:${crypto.randomUUID()}`});
           if(!attached.ok)throw Error(attached.code);appStarted=true;

@@ -51,22 +51,22 @@
     "path": "qa-protocol2/vendor/runtime/validator.mjs",
     "sourcePackage": "collectible-protocol2-runtime-v1",
     "sourcePath": "module/validator.mjs",
-    "bytes": 13685,
-    "sha256": "7c5aa24c759c912f18bbcb5b8fd41d694e2377f5d8c5a4caf0d5b449c7cb0772",
+    "bytes": 13693,
+    "sha256": "57ae2a181cdbfaf8e73d26a999e5170bf9ccdebfb03e1c33e0e8f9242e3fded8",
     "sourceSha256": "b710aa9da4c979036e980ffdbdf2f8ed46259d13c5d7ac90bf07ea42a806511a",
     "sourceBytes": 8201,
     "derivation": "Revision 2 exact boot migration markers, formal leaderboard mirror, optional source-bound pet roster transition guard; original reviewed archive unchanged. Revision 3: instance-local, single-entry cache of fully verified immutable snapshot/original raw pairs; current validation and write protections unchanged. Revision 4 (杨总 16:12): optional mutable gachaDaily {day,n} for the 5-per-day blind box limit; absent = 0 today.",
-    "integrationChange": "xingtu02 r2 candidate on 0b7218d: first-event ledger, confirmed zombie participation and recap; pending independent review"
+    "integrationChange": "xingtu02 r2 candidate on 0b7218d: first-event ledger, confirmed zombie participation and recap; pending independent review; home155/ux158/160 cache-chain integration (imports only where applicable)"
   },
   {
     "path": "qa-protocol2/vendor/cards/card-coordinator.mjs",
     "sourcePackage": "collectible-card-adapter-v1",
     "sourcePath": "module/card-coordinator.mjs",
-    "bytes": 13670,
-    "sha256": "adfc03b883c77b18a9f2bc9d0c06e5c4031f62a143df658e03c81e1eeb010b47",
+    "bytes": 13686,
+    "sha256": "ecf5400e2fa5c73a379ca938779125c27916e325769268b86f4e2a003c985995",
     "reviewedInputSha256": "c39527224902c835f2cc611527a5fcec2a23293adebd3b78bbb8684d2b41a034",
     "reviewedInputBytes": 8203,
-    "integrationChange": "xingtu02 r2 candidate on 0b7218d: first-event ledger, confirmed zombie participation and recap; pending independent review"
+    "integrationChange": "xingtu02 r2 candidate on 0b7218d: first-event ledger, confirmed zombie participation and recap; pending independent review; home155/ux158/160 cache-chain integration (imports only where applicable)"
   },
   {
     "path": "qa-protocol2/vendor/cards/card-transition.mjs",
@@ -104,8 +104,9 @@
     "sourcePackage": "space01b04-author-increment",
     "sourceCommit": "472349b5f31df4446e79694b6be5bd6f66bd6db4",
     "derivation": "Reviewed01a domain unchanged; new authored candidate moon intent/overlay increment; artwork selectively from pinned a1bc784b demo",
-    "bytes": 15087,
-    "sha256": "b447899cde8fa91a51e4b2f69b350725b57512aeae4fd8611b9e5804522d5411"
+    "bytes": 15095,
+    "sha256": "938a3151d2431a47ac1e5f859210e747ef3fa447b286d229f8981215488660c5",
+    "integrationChange": "; home155/ux158/160 cache-chain integration (imports only where applicable)"
   },
   {
     "path": "space/host.mjs",
@@ -120,9 +121,9 @@
     "sourcePackage": "space01b04-author-increment",
     "sourceCommit": "472349b5f31df4446e79694b6be5bd6f66bd6db4",
     "derivation": "Reviewed01a domain unchanged; new authored candidate moon intent/overlay increment; artwork selectively from pinned a1bc784b demo",
-    "bytes": 21353,
-    "sha256": "1a9756d06fc35cdb81160f0095b5d93eae8b945dd5f1018824b4fe60710d38ae",
-    "integrationChange": "xingtu02 r2 candidate on 0b7218d: first-event ledger, confirmed zombie participation and recap; pending independent review"
+    "bytes": 21337,
+    "sha256": "2efabe02934b8740789ff46f4d275b81646a075a0bb971186fb5bcc2fa965d49",
+    "integrationChange": "xingtu02 r2 candidate on 0b7218d: first-event ledger, confirmed zombie participation and recap; pending independent review; home155/ux158/160 cache-chain integration (imports only where applicable)"
   },
   {
     "path": "space/art.mjs",
@@ -144,15 +145,16 @@
     "path": "milestones/domain.mjs",
     "sourcePackage": "xingtu02-candidate",
     "sourcePath": "milestones/domain.mjs",
-    "bytes": 5247,
-    "sha256": "f38c2ea8a561ced80ef35c7fdd944283f574bfea7e0607968f906eb6a5b3fd78"
+    "bytes": 5446,
+    "sha256": "b2f56b397b71900f5a5d6ec88dcea0010a889fa45ca8063eea3aadb4d94d9d61",
+    "integrationChange": "; home155/ux158/160 cache-chain integration (imports only where applicable)"
   },
   {
     "path": "space/xingtu-views.mjs",
     "sourcePackage": "xingtu02-candidate",
     "sourcePath": "space/xingtu-views.mjs",
-    "bytes": 16044,
-    "sha256": "c857c346bb70a02e30bd7a26812576e2a78df736cd523b118d8f2559f591dc64",
-    "integrationChange": "xingtu02 r2 candidate on 0b7218d: first-event ledger, confirmed zombie participation and recap; pending independent review"
+    "bytes": 16049,
+    "sha256": "1adedb34f941ebe370e1f57a0c89a1a0cec1176eca3f37c4da924997286daab9",
+    "integrationChange": "xingtu02 r2 candidate on 0b7218d: first-event ledger, confirmed zombie participation and recap; pending independent review; home155/ux158/160 cache-chain integration (imports only where applicable)"
   }
 ]
