@@ -1841,7 +1841,7 @@ function homeWhoRow() {
 }
 function homeLocked() {
   const c = E.CEO_BY_ID[homeWho];
-  return `<div class="card dim home-lock"><div class="ava lock-ava">${LOCK_IC}</div><div class="info"><div class="name">${c.id === 'rocket' ? '？？？' : c.name} 的家还没开放</div><div class="desc">${c.unlock}，加入后就有自己的小屋。</div></div></div>`;
+  return `<div class="card dim home-lock"><div class="ava lock-ava">${LOCK_IC}</div><div class="info"><div class="name">${ownerOf(c.id === 'rocket' ? '？？？' : c.name)}家还没开放</div><div class="desc">${c.unlock}，加入后就有自己的小屋。</div></div></div>`;
 }
 
 const LIVE_LINES = {
@@ -1904,7 +1904,7 @@ function renderRoom() {
         const where = stt.where.length ? stt.where.map(w => w.name).join('、') : '';
         return `<div class="inv-item" data-fid="${fid}" style="--fc:${f.color}" title="${f.name} ${f.w}×${f.h}${where ? ' · 另有在 ' + where : ''}"><span class="ie">${f.emoji}</span><b>${f.name}</b><small>${f.w}×${f.h}</small><i>×${n}</i></div>`; }).join('')}</div>
         <div class="note">选中家具后可以旋转、收回。挂画只能挂在墙上。</div>`
-      : `<div class="note">仓库空空。去商城买家具，再回来布置 ${c.name} 的房间。</div>`;
+      : `<div class="note">仓库空空。去商城买家具，再回来布置${/^[0-9A-Za-z]/.test(c.name) ? ' ' : ''}${ownerOf(c.name)}房间。</div>`;
   } else {
     h += `<div class="note live-note">生活模式：点地板空位让 ${c.name} 走过去；点<b>床</b>休息、点<b>书架</b>看书、点<b>衣柜</b>换装。要摆家具请切到「布置」。</div>
       <button class="buy alt mall-go" data-act="homeSub" data-arg="mall">${ic('mall')}去商城</button>`;
