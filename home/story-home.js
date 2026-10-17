@@ -15,6 +15,10 @@
   k7:['三、二、一——','……今天先放气球。'],
   k8:{c77:'对面也亮了，今晚这条街热闹。',pearl:'四盏灯，一盏都不能少。',otaku:'整条街像一页彩稿。',rocket:'四个节点，全部在线。'}
  });
+ // 家宅-148：月亮 / 熊猫摆件用的窗位 [左,上,宽,高,形]（占底图百分比；和 app.js HOME_WINDOWS 同一套数，pet/game 没那张表所以放这里共用）
+ const WINDOWS=Object.freeze({c77_1:[[68.8,4.4,17,15.6]],c77_2:[[64,10.2,16.2,11.8]],c77_3:[[55.2,2.6,20.6,17.6,'arch'],[79,2.6,17.6,17.6,'arch']],
+  otaku_1:[[65.6,10.6,26.9,14.4]],pearl_2:[[53.6,6.4,40.4,15.6,'arch']],pearl_3:[[45.4,8.6,54.6,11.4]],rocket_1:[[78.7,6.5,14.9,15.3,'round']]});
+ function windowsFor(key){return WINDOWS[key]||[];}
  const SIT=['sit','rug','lie'];
  const own=(c,id)=>{const o=c&&c.owned;return !!o&&(typeof o.has==='function'?o.has(id):o.includes(id));};
  // ctx: {owned, who, kind(null=走动/站), period, placed:[fid], hasSeat, hasTable, style}
@@ -41,5 +45,5 @@
  function lieOn(c,fid){return own(c,'k_6')&&c.who==='otaku'&&SOFA.test(fid||'');}
  // 发射倒计时：火箭老板已加入、拥有卡、本页第一次进他的家
  function countdownDue(c){return own(c,'k_7')&&c.who==='rocket'&&!!c.joined&&!c.done;}
- return Object.freeze({LINES:L,BAMBOO,STYLE_LIVE,linesFor,pick,scene,countdownDue,lieOn,isSofa});
+ return Object.freeze({LINES:L,BAMBOO,STYLE_LIVE,WINDOWS,windowsFor,linesFor,pick,scene,countdownDue,lieOn,isSofa});
 });

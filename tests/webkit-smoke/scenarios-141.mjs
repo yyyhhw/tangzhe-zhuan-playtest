@@ -3,7 +3,7 @@
 //       → 漫画弹窗点「收下」→ k_3（熊猫监工）入库。收下这一下：同一次同步 evaluate 读前值→点收下→读后值，
 //       金币/抽数/保底/每日次数严格相等；扣 1 币负对照必须被同一判定判失败。保存后刷新 k_3 还在、不重复。
 //       （点客人本身给的小奖励在点「收下」之前就入账，不在「不扣币」窗口里。）
-//   ⑦b 家里动画：k_3 在 77 的家 → 熊猫整体行走动画 running，隔 1.5s 采样进度前进；夜里 + k_4 → 月亮；火箭老板已加入 + k_7 →
+//   ⑦b 家里动画：k_3 在 77 的家 → 熊猫小摆件静止（家宅-148 起不再走动）；夜里 + k_4 → 月亮；火箭老板已加入 + k_7 →
 //       第一次进他家：从进入起采满 7.6s，台词精确依次「三、二、一——」→「……今天先放气球。」，气球可见、有尺寸、storyFloat running、
 //       进度/位置随时间变化、末次采样已播完且在房间外（DOM 可残留到下次重画）；换走再回来同样抽样 7.6s，两句和气球都不得出现。
 //       「采满 7.6s」是约 150ms 循环等待的抽样观察（报告附最大采样间隙），不是连续全窗零事件证明。不判画面好不好看。
@@ -223,18 +223,17 @@ async function scenarioHomeAnim(browser, base, entry, seed) {
     check(`${tag}: story-home.js loaded, rocket joined, k7 lines are exactly the two expected`, hs.hs && hs.rocket === true && J(hs.k7) === J(K7) && hs.reduced === false, J(hs));
     await enterHome(page, 'c77');
     await page.waitForTimeout(800);
-    // 熊猫：整体行走动画（storyPandaWalk，或停在竹家具旁时 storyPandaBamboo）必须 running，且隔 1.5s 两次采样进度确实前进
+    // 家宅-148：k_3 熊猫监工改成不占地的静止小摆件（不再走动）：可见、无动画、隔 1.5s 位置不变、宽度 < 房间 10%、不在地板层
     const p0 = await page.evaluate(PROBE); await page.waitForTimeout(1500); const p1 = await page.evaluate(PROBE);
     const a0 = p0.panda, a1 = p1.panda;
-    const WALK = ['storyPandaWalk', 'storyPandaBamboo'];
-    const dProg = a0 && a1 && a0.prog != null && a1.prog != null ? Math.abs((((a1.prog - a0.prog) % 1) + 1) % 1) : null;
-    check(`${tag}: 77 home — panda whole-body walk animation is running (not .still)`,
-      a0 && a1 && a0.vis && a0.w > 0 && a0.h > 0 && WALK.includes(a0.name) && a0.state === 'running' && a0.aState === 'running' && !a0.still && WALK.includes(a1.name) && a1.state === 'running',
-      J({ a0, a1 }));
-    check(`${tag}: 77 home — panda walk progress advances across 1.5s samples`, dProg != null && dProg > 0.01 && dProg < 0.5,
-      J({ prog0: a0 && a0.prog, prog1: a1 && a1.prog, dProg, dxInfoOnly: a0 && a1 ? a1.x - a0.x : null }));
-    const moon = await page.evaluate(() => { const el = document.querySelector('[data-story="moon"]'); if (!el) return null; const cs = getComputedStyle(el), r = el.getBoundingClientRect(); return { vis: cs.visibility !== 'hidden' && cs.display !== 'none', w: Math.round(r.width), h: Math.round(r.height) }; });
-    check(`${tag}: night + k_4 — moon present`, moon && moon.vis && moon.w > 0 && moon.h > 0, J(moon));
+    const fig = await page.evaluate(() => { const el = document.querySelector('[data-story="panda"]'), room = document.querySelector('.room'); if (!el || !room) return null; return { figurine: el.classList.contains('figurine'), inFloor: !!el.closest('.room-floor'), wPct: +(el.getBoundingClientRect().width / room.getBoundingClientRect().width * 100).toFixed(1) }; });
+    check(`${tag}: 77 home — panda is a static figurine (no walk animation)`,
+      a0 && a1 && a0.vis && a0.w > 0 && a0.h > 0 && a0.name === 'none' && a1.name === 'none' && fig && fig.figurine && !fig.inFloor && fig.wPct < 10,
+      J({ a0, a1, fig }));
+    check(`${tag}: 77 home — panda figurine does not move across 1.5s samples`, a0 && a1 && a0.x === a1.x && a0.y === a1.y,
+      J({ x0: a0 && a0.x, x1: a1 && a1.x, y0: a0 && a0.y, y1: a1 && a1.y }));
+    const moon = await page.evaluate(() => { const el = document.querySelector('[data-story="moon"]'); if (!el) return null; const cs = getComputedStyle(el), r = el.getBoundingClientRect(), win = el.closest('.story-moonwin'), wr = win && win.getBoundingClientRect(); return { vis: cs.visibility !== 'hidden' && cs.display !== 'none', w: Math.round(r.width), h: Math.round(r.height), inWin: !!wr && r.left >= wr.left - 0.5 && r.right <= wr.right + 0.5 && r.top >= wr.top - 0.5 && r.bottom <= wr.bottom + 0.5, clip: win ? getComputedStyle(win).overflow : null }; });
+    check(`${tag}: night + k_4 — moon present, inside its window box (家宅-148 clipped)`, moon && moon.vis && moon.w > 0 && moon.h > 0 && moon.inWin && moon.clip === 'hidden', J(moon));
     await shot(page, `home-77-night-${tagOf(entry)}`);
     // 第一次进火箭老板家：从进入那一刻起采满整个窗口
     await page.evaluate(() => window.__tzz.act('homeWho', 'rocket'));
@@ -312,7 +311,7 @@ async function main() {
   finally { await browser.close(); server.close(); }
   notCovered.push('iOS 真机 Safari / 后台冻结后恢复：macOS WebKit 模拟不了',
     '点客人走 __tzz.hitBig（画布点击的同一处理函数），没模拟真实触摸坐标换算',
-    '动画验 computed animation running + Web Animations 进度跨时间变化（熊猫位移只记录不断言），不判画面好不好看；prefers-reduced-motion 下的静止版未验', '「无气球/无两句」是约 7.6s 内按 ~150ms 循环抽样观察（报告附最大采样间隙），不是连续全窗零事件证明', '气球窗口结束：只核末次采样已播完且在房间外，DOM 可残留到下次重画，不证明精确 6.2s 移除',
+    '动画验 computed animation running + Web Animations 进度跨时间变化（熊猫自家宅-148 起是静止小摆件，只验无动画、不位移），不判画面好不好看；prefers-reduced-motion 下的静止版未验', '「无气球/无两句」是约 7.6s 内按 ~150ms 循环抽样观察（报告附最大采样间隙），不是连续全窗零事件证明', '气球窗口结束：只核末次采样已播完且在房间外，DOM 可残留到下次重画，不证明精确 6.2s 移除',
     '[刷新保留] 只验「显式 persist 后刷新」',
     '星途-02 firstZombie / firstTDWin 子游戏回执：测试-142');
   const failed = checks.filter((c) => !c.ok);

@@ -2144,11 +2144,13 @@ function storyCountdown(id) {   // 发射倒计时：本页第一次进火箭老
 }
 function storySceneHTML(id) {
   if (!HS || homeMode !== 'live') return '';
-  const sc = HS.scene(storyCtx(id, null)), red = homeAutoReduced(), d = -(clock % 24).toFixed(2);
+  const sc = HS.scene(storyCtx(id, null)), wins = HS.windowsFor ? HS.windowsFor(`${id}_${E.homeOf(state, id).lv}`) : [];
+  const mw = wins[wins.length - 1], sill = wins[0];   // 家宅-148：月亮进最右那扇窗、按窗缩小并裁在窗里；没有看得到户外的窗就不画
   let h = '';
-  if (sc.moon) h += `<i class="story-moon" data-story="moon"></i>`;
+  if (sc.moon && mw) h += `<span class="story-moonwin${mw[4] ? ' win-' + mw[4] : ''}" style="left:${mw[0]}%;top:${mw[1]}%;width:${mw[2]}%;height:${mw[3]}%"><i class="story-moon" data-story="moon"></i></span>`;
   if (sc.street) h += `<span class="story-street" data-story="street">${'<i></i>'.repeat(4)}</span>`;
-  if (sc.panda && !storyBambooSpot(id)) h += `<span class="story-panda${red ? ' still' : ''}" data-story="panda" style="animation-delay:${d}s">${storyPandaSVG(0)}${storyPandaSVG(1)}</span>`;
+  // 家宅-148：k_3 熊猫监工改成不占地的小摆件（带底座、不走动），摆在最左那扇窗的窗台上；没窗就摆在墙脚
+  if (sc.panda && !storyBambooSpot(id)) h += `<span class="story-panda figurine" data-story="panda" style="${sill ? `left:${(sill[0] + sill[2] * .08).toFixed(2)}%;top:${(sill[1] + sill[3]).toFixed(2)}%` : 'left:4%;top:calc(200% / (2 + var(--rows)))'}">${storyPandaSVG()}</span>`;
   const b = clock - storyBalloonAt;
   if (storyBalloonWho === id && b >= 0 && b < 6.2) h += `<span class="story-balloons" data-story="balloons" style="animation-delay:${(1.2 - b).toFixed(2)}s"><i></i><i></i><i></i></span>`;
   return h ? `<div class="story-scene" aria-hidden="true">${h}</div>` : '';
@@ -2158,19 +2160,17 @@ function storyBambooSpot(id) {   // 熊大 r2：屋里有竹家具，熊猫就�
   const T = E.homeTier(E.homeOf(state, id).lv), z = E.furnSize(p.fid, p.rot);
   return { left:Math.min(92, (p.x + z.w) / T.cols * 100), top:(p.y + z.h) / T.rows * 100, uid:p.uid };
 }
-function storyPandaFloorHTML(id) {   // 熊大 r3：走到竹家具旁 → 停一会儿 → 接着走（24s 一圈，用 clock 续相位，重画不跳）
+function storyPandaFloorHTML(id) {   // 熊大 r3 读竹家具坐标；家宅-148：改成静止小摆件立在第一件竹家具旁，不走动、不占格
   if (!HS || homeMode !== 'live' || !HS.scene(storyCtx(id, null)).panda) return '';
   const q = storyBambooSpot(id); if (!q) return '';
-  const red = homeAutoReduced(), d = -(clock % 24).toFixed(2);
-  return `<span class="story-panda at-bamboo${red ? ' still' : ' walking'}" data-story="panda" data-near="${q.uid}" aria-hidden="true" style="--bx:${q.left.toFixed(2)}%;left:${q.left.toFixed(2)}%;top:${q.top.toFixed(2)}%;animation-delay:${d}s">${storyPandaSVG(0)}${storyPandaSVG(1)}</span>`;
+  return `<span class="story-panda figurine at-bamboo" data-story="panda" data-near="${q.uid}" aria-hidden="true" style="left:${q.left.toFixed(2)}%;top:${q.top.toFixed(2)}%">${storyPandaSVG()}</span>`;
 }
 function storyTeaHTML(id) {
   return HS && homeMode === 'live' && HS.scene(storyCtx(id, homeActorOf(id).pose ? 'sit' : null)).tea && HomeInteraction.capability(E.homeOf(state, id).placed.find(p => p.uid === homeActorOf(id).pose?.uid)?.fid || '') === 'sit'
     ? `<i class="story-tea" data-story="tea" aria-hidden="true"><svg viewBox="0 0 24 20"><path d="M4 6h13v6a6 6 0 0 1-6 6h-1a6 6 0 0 1-6-6z" fill="#fffaf0" stroke="#141414" stroke-width="2"/><path d="M17 8h2a3 3 0 0 1 0 6h-2" fill="none" stroke="#141414" stroke-width="2"/><path d="M7 8h7v3H7z" fill="#9bc47a"/></svg></i>` : '';
 }
-function storyPandaSVG(f) {
-  const l = f ? 'M9 26l-2 5M21 26l3 5' : 'M10 26l1 5M20 26l-1 5';
-  return `<svg class="pf pf${f}" viewBox="0 0 32 32"><path d="${l}" stroke="#141414" stroke-width="4" stroke-linecap="round"/><ellipse cx="16" cy="19" rx="10" ry="8" fill="#fff" stroke="#141414" stroke-width="2"/><circle cx="16" cy="10" r="7" fill="#fff" stroke="#141414" stroke-width="2"/><circle cx="10" cy="4.5" r="2.6" fill="#141414"/><circle cx="22" cy="4.5" r="2.6" fill="#141414"/><ellipse cx="13" cy="10" rx="1.8" ry="2.3" fill="#141414"/><ellipse cx="19" cy="10" rx="1.8" ry="2.3" fill="#141414"/><path d="M15 13h2" stroke="#141414" stroke-width="1.6"/></svg>`;
+function storyPandaSVG() {   // 家宅-148：坐着的熊猫小摆件 + 木底座（和会走的宠物分开）
+  return `<svg viewBox="0 0 32 36"><rect x="5" y="30" width="22" height="5" rx="2" fill="#b07a4a" stroke="#141414" stroke-width="1.6"/><ellipse cx="16" cy="23.5" rx="8.5" ry="6.5" fill="#fff" stroke="#141414" stroke-width="1.6"/><ellipse cx="9.5" cy="24" rx="2.6" ry="3.6" fill="#141414"/><ellipse cx="22.5" cy="24" rx="2.6" ry="3.6" fill="#141414"/><circle cx="16" cy="12.5" r="7" fill="#fff" stroke="#141414" stroke-width="1.6"/><circle cx="10.4" cy="6.8" r="2.4" fill="#141414"/><circle cx="21.6" cy="6.8" r="2.4" fill="#141414"/><ellipse cx="13.2" cy="12.6" rx="1.7" ry="2.1" fill="#141414"/><ellipse cx="18.8" cy="12.6" rx="1.7" ry="2.1" fill="#141414"/><path d="M15 15.6h2" stroke="#141414" stroke-width="1.4" stroke-linecap="round"/></svg>`;
 }
 // 条件故事卡入库：每张一次原子保存；不扣币、不动保底；提示文案 王大妈 养成-29
 function storyGrant(ev) {
