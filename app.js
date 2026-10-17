@@ -2148,7 +2148,8 @@ function storySceneHTML(id) {
   const mw = wins[wins.length - 1], sill = wins[0];   // 家宅-148：月亮进最右那扇窗、按窗缩小并裁在窗里；没有看得到户外的窗就不画
   let h = '';
   if (sc.moon && mw) h += `<span class="story-moonwin${mw[4] ? ' win-' + mw[4] : ''}" style="left:${mw[0]}%;top:${mw[1]}%;width:${mw[2]}%;height:${mw[3]}%"><i class="story-moon" data-story="moon"></i></span>`;
-  if (sc.street) h += `<span class="story-street" data-story="street">${'<i></i>'.repeat(4)}</span>`;
+  // 家宅-150：「一条街的灯」也进窗——画在最左那扇窗里（对街一排亮起来的窗），按窗缩小并裁在窗框里；没有户外窗的房型不画
+  if (sc.street && sill) h += `<span class="story-streetwin${sill[4] ? ' win-' + sill[4] : ''}" style="left:${sill[0]}%;top:${sill[1]}%;width:${sill[2]}%;height:${sill[3]}%"><span class="story-street" data-story="street">${'<i></i>'.repeat(4)}</span></span>`;
   // 家宅-148：k_3 熊猫监工改成不占地的小摆件（带底座、不走动），摆在最左那扇窗的窗台上；没窗就摆在墙脚
   if (sc.panda && !storyBambooSpot(id)) h += `<span class="story-panda figurine" data-story="panda" style="${sill ? `left:${(sill[0] + sill[2] * .08).toFixed(2)}%;top:${(sill[1] + sill[3]).toFixed(2)}%` : 'left:4%;top:calc(200% / (2 + var(--rows)))'}">${storyPandaSVG()}</span>`;
   const b = clock - storyBalloonAt;
