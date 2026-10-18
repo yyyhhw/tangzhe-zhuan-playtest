@@ -9,6 +9,10 @@ on:
         description: '要测的游戏代码 ref（分支名或完整 SHA；留空=本工作流所在提交）。测试脚本始终用本工作流所在提交的 tests/webkit-smoke。'
         required: false
         default: ''
+      old_ref:
+        description: '测试-43compat 用的「旧版」ref（不含 43 的 main）；留空=189fbe8'
+        required: false
+        default: ''
   push:
     branches:
       - claude/slack-session-qotgmg
@@ -70,6 +74,19 @@ jobs:
           WEBKIT_SMOKE_OUT: ${{ github.workspace }}/tests/webkit-smoke/output
           ENGINES: webkit
         run: node scenarios-162.mjs
+
+      # 王大妈 家宅-43 高风险代验：新旧两版同源切换（C 新版保留不认识的 fid；A/B 旧版兼容现状）。报告 report-43compat.json。
+      - name: Run 家宅-43 compat scenarios (WebKit)
+        if: always()
+        continue-on-error: true
+        env:
+          WEBKIT_SMOKE_OUT: ${{ github.workspace }}/tests/webkit-smoke/output
+          ENGINES: webkit
+          NEW_ROOT: ${{ github.workspace }}
+          OLD_ROOT: ${{ runner.temp }}/old-tree
+        run: |
+          git -C "$GITHUB_WORKSPACE" worktree add --detach "$OLD_ROOT" "${{ inputs.old_ref || '189fbe825c1c0445a3d35ab55c0c6985d3554dc1' }}"
+          node scenarios-43compat.mjs
 
       - name: Upload screenshots + report
         if: always()
