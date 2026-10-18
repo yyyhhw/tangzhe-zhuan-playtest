@@ -30,7 +30,7 @@ test('optional schema rejects malformed/unknown extensions; clock reversal never
 });
 test('recap unknown history grey label; elapsed day/hour and earliest-record total, missing Earth date never uses now',()=>{
  const s=fresh();s.milestones.events={firstShop:null,firstBox:3601000,firstEmployee:86401000,earth:90001000};s.space={earth:true};
- const r=recap(s,MOON_RULES);assert.equal(r.rows[0].when,'记录开始之前');assert.equal(r.rows.find(x=>x.id==='firstBox').when,'开局 1 小时');assert.equal(r.rows.find(x=>x.id==='firstEmployee').when,'开局第 2 天');assert.equal(r.duration,86400000);assert.match(r.total,/从有记录起.*1 天 0 小时/);
+ const r=recap(s,MOON_RULES);assert.equal(r.rows[0].when,'记录开始之前');assert.equal(r.rows.find(x=>x.id==='firstBox').when,'开局 1 小时');assert.equal(r.rows.find(x=>x.id==='firstEmployee').when,'开局第 2 天');assert.equal(r.duration,86400000);assert.match(r.total,/从有记录起，你用了 1 天，/);assert.doesNotMatch(r.total,/0 小时/);
  s.milestones.events.earth=null;assert.equal(recap(s,MOON_RULES).duration,null);assert.match(recap(s,MOON_RULES).total,/没记时间/);assert(!r.rows.some(x=>x.id==='firstZombie'));
 });
 test('体验-158：总用时不到 1 天不写「0 天」，不到 1 小时写「不到 1 小时」',()=>{

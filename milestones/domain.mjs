@@ -56,8 +56,8 @@ export function newGameMilestones(now){
  if(!validTime(now))throw Error('MILESTONES_TIME_INVALID');
  return {schemaVersion:1,events:{firstShop:now}};
 }
-// 体验-158：不到 1 天不写「0 天」，不到 1 小时写「不到 1 小时」。
-const spent=ms=>{const d=Math.floor(ms/86400000),h=Math.floor(ms/3600000)%24;return d?`用了 ${d} 天 ${h} 小时`:h?`用了 ${h} 小时`:'用了不到 1 小时';};
+// 体验-158：不到 1 天不写「0 天」，不到 1 小时写「不到 1 小时」；文案-167：整天不写「0 小时」。
+const spent=ms=>{const d=Math.floor(ms/86400000),h=Math.floor(ms/3600000)%24;return d?(h?`用了 ${d} 天 ${h} 小时`:`用了 ${d} 天`):h?`用了 ${h} 小时`:'用了不到 1 小时';};
 export function recap(state,rules){
  const known=evidence(state,rules),saved=validMilestones(state)?state.milestones?.events??{}:{};
  const rows=EVENTS.flatMap(([id,title,description,icon])=>{

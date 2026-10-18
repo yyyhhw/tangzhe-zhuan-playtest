@@ -1496,7 +1496,7 @@ function renderGacha() {
     h += `<div class="box-hero"><div class="box-ico">${box}</div><div class="info"><div class="name">还没开放</div><div class="desc">科技公司雇到员工后开放。<br>只花游戏金币，不卖真钱。</div></div></div>`;
   } else {
     h += `<div class="box-hero"><div class="box-ico" id="boxIco">${box}</div><div class="info"><div class="name">已收集 ${owned}/${total}</div>
-      <div class="desc">${rem ? `下一抽：<b>超级装饰 ${P(o.superP)}</b>${o.remSuper ? `（每件 ${P(o.perSuper)}）` : ''} · 普通收藏 ${P(o.regP)}${o.remReg ? `（每件 ${P(o.perReg)}）` : ''}<br>${o.remSuper ? (o.guaranteed ? '<b style="color:var(--red)">这一抽必出超级装饰！</b>' : `保底：再 <b>${o.pityLeft}</b> 抽内必出超级装饰`) : '超级装饰已集齐'}` : (condLeft ? `盒里的都收齐了！还有 ${condLeft} 张故事卡靠特殊条件获得，去图鉴看提示` : `${total} 件全收集！`)}</div>
+      <div class="desc">${rem ? `下一抽：<b>超级装饰 ${P(o.superP)}</b>${o.remSuper ? `（每件 ${P(o.perSuper)}）` : ''} · 普通收藏 ${P(o.regP)}${o.remReg ? `（每件 ${P(o.perReg)}）` : ''}<br>${o.remSuper ? (o.guaranteed ? '<b style="color:var(--red)">这一抽必出超级装饰！</b>' : `保底：再 <b>${o.pityLeft}</b> 抽内必出超级装饰`) : '超级装饰已集齐'}` : (condLeft ? `盒里的都收齐了！还有 ${condLeft} 张故事卡靠特殊条件获得，去收藏页看提示` : `${total} 件全收集！`)}</div>
       <div style="margin-top:6px">${!rem ? '<button class="buy no" disabled>已集齐</button>' : dailyLeft > 0 ? btn('draw', '', '开一个', price, 'red') : `<button class="buy no" id="gachaDailyDone" disabled>${E.CFG.GACHA_DAILY_LIMIT} 次已开完</button>`}</div>
       ${rem ? `<div class="desc" id="gachaDailyLeft" style="margin-top:4px">今日剩余 ${dailyLeft}/${E.CFG.GACHA_DAILY_LIMIT}${dailyLeft > 0 ? '' : ' · ' + gachaResumeText(now())}</div>` : ''}${rem ? gachaFutureNote(now()) : ''}</div></div>`;
   }
@@ -1510,7 +1510,7 @@ function renderGacha() {
     return `<div class="item ${has ? '' : 'no'}"${!has && it.cond ? ' data-cond="1"' : ''}><span class="t">${TYPE_LABEL[it.type]}</span>${itemIcon(it.id)}${has ? it.name : '？？？'}${!has && it.cond ? '<small class="cond-tag">不在盒里</small>' : ''}</div>`; }).join('')}</div>`;
   if (WEARABLES8?.box200HiddenHTML) h += WEARABLES8.box200HiddenHTML(E, state);   // 盲盒-109 fix：未得隐藏款「{unlock} 就送」
   const condCards = E.ITEMS.filter(it => it.type === 'card' && it.cond);
-  if (condCards.length) h += `<div class="note" id="storyCondNote">故事卡里的${condCards.map(c => '「' + c.name + '」').join('')}不在盒里，要靠特殊条件获得（提示见收藏页图鉴）；已经抽到的照旧保留。</div>`;
+  if (condCards.length) h += `<div class="note" id="storyCondNote">故事卡里的${condCards.map(c => '「' + c.name + '」').join('')}不在盒里，要靠特殊条件获得（去收藏页看提示）；已经抽到的照旧保留。</div>`;
   h += `<div class="note">规则：不重复收藏盒，共 ${total} 件：普通收藏 ${E.REGULAR_ITEMS.length} 件（衣服 ${E.ITEMS.filter(it => it.type === 'clothes').length} / 帽子 ${E.ITEMS.filter(it => it.type === 'hat').length} / 装饰 ${E.ITEMS.filter(it => it.type === 'decor').length} / 故事卡 ${E.ITEMS.filter(it => it.type === 'card').length}）+ 超级装饰 ${E.SUPER_ITEMS.length} 件。每抽先定类别：<b>超级装饰 ${P(CFG.SUPER_P)}</b>、普通收藏 ${P(1 - CFG.SUPER_P)}，再从该类<b>还没收集的</b>里等概率抽；连续 ${CFG.SUPER_PITY - 1} 抽没出超级装饰，第 ${CFG.SUPER_PITY} 抽必出。某一类抽完了，就只出另一类。每抽必得新物品，最多 ${total} 抽集齐，集齐后不能再买、不扣金币。普通收藏只是好看，<b>不加产速</b>；超级装饰加本店产量和专属效果，但不抽也能正常开齐店铺。单价 ${fmtPrice(CFG.GACHA_PRICE)}。</div>`;
   if(DECOR6)h+=DECOR6.hiddenHTML(state);
   return h;
