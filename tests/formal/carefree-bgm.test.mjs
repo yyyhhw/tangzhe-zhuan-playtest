@@ -35,10 +35,12 @@ function setup(prefix, options={}){
  assert(start>=0&&end>start);vm.runInContext(app.slice(start,end)+'\nthis.audioAPI={AU,audioInit,audioUnlock,audioPause,audioResume,startBgm,stopBgm};',c);
  return {c,calls,events,devents,api:c.audioAPI,app};
 }
+// 测试-174：缓存号跟 main 根目录 version.json 走（去掉 formal- 前缀），四份入口仍逐个比对，不再钉死旧号。
+const curToken=JSON.parse(read('version.json')).v.replace(/^formal-/,'');
 for(const prefix of ['', 'preview/']){
- const assetVersion='xingtu135-20261015-r1';
- const uiVersion='xingtu135-20261015-r1';
- const pageVersion='xingtu135-20261015-r1';const version=(prefix?'preview-':'formal-')+pageVersion;
+ const assetVersion=curToken;
+ const uiVersion=curToken;
+ const pageVersion=curToken;const version=(prefix?'preview-':'formal-')+pageVersion;
  const app=read(prefix+'app.js'),html=read(prefix+'index.html'),boot=read(prefix+'collection/bootstrap.mjs');
  assert.equal(JSON.parse(read(prefix+'version.json')).v,version);
  assert(html.includes("var B='"+version+"'"));assert(html.includes('collection/bootstrap.mjs?v='+pageVersion));

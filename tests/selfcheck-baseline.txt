@@ -1,8 +1,11 @@
-# 测试-143 自检基线：tests/selfcheck.sh 在 main d091216 上连跑两遍，两遍逐行一致。
+# 测试-174 自检基线：main 189fbe8 + 测试-174 改动，tests/selfcheck.sh --write 生成（2026-10-18 17:12 JST）。取代测试-143（10/16 d091216）那版。
 # 环境：Linux 云端、node v22.22.0、playwright 1.56.0（全局装，Chromium /opt/pw-browsers）、每个文件 timeout 120s，串行。
-# 格式：退出码<TAB>文件。0=通过，124=超时。「~」=两遍结果不同（时好时坏，不算新失败）；本次没有。
-# 这 22 个非 0 都是改动前就有的：tests/formal/*-browser.mjs 要靠自己的取证服务（8788/8791/8792）和 evidence/ 前置文件，单独 node 跑必失败；
+# 格式：退出码<TAB>文件。0=通过，124=超时，77=明确跳过（不算通过）。「~」=时好时坏，不算新失败；本次没有。
+# 这 23 个非 0 都是改动前就有的：tests/formal/*-browser.mjs 要靠自己的取证服务（8788/8791/8792）和 evidence/ 前置文件，单独 node 跑必失败；
 # test_economy.js 2 项、test_root_keys.js 8 项是测试-133 记过的已知断言失败；test_toast_hold.mjs 全量超过 120s 记超时。
+# test_home_click128.js 记 77：要 git show aea60f7 取基准，selfcheck 隔离拷贝里没有 .git，脚本会打印 SKIP 并退出 77。要验它就在仓库里直接 node test_home_click128.js（main 上 20/20）。
+# test_toast_regression.mjs 没有 .git 时报告 sha 记 unknown，用例照常全跑。
+# carefree-bgm / copy52-display / tea-entry-cards-out 的缓存号改成跟根目录 version.json 走，以后升缓存号不用再改这三条。
 # 换了环境（没装 playwright、不同 node）数字会变，那就先在自己环境的 main 上重跑一遍当基线，再比改后。
 0	pet/game/test_petgame.js
 0	test_coin_safety.js
@@ -10,7 +13,7 @@
 0	test_home_actions57.js
 0	test_home_autonomy.js
 0	test_home_autonomy_mover.js
-0	test_home_click128.js
+77	test_home_click128.js
 0	test_home_live_hint.js
 0	test_home_window_weather.mjs
 0	test_integration_cross.mjs

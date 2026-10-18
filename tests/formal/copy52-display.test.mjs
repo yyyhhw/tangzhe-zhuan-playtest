@@ -8,9 +8,11 @@ const root=path.resolve(new URL('../..',import.meta.url).pathname);
 const read=p=>fs.readFileSync(path.join(root,p),'utf8');
 const require=createRequire(import.meta.url);
 const apps=['app.js','preview/app.js','pet/game/app.js','preview/pet/game/app.js'];
-const pageToken='xingtu135-20261015-r1';
-const uiToken='xingtu135-20261015-r1';
-const token='xingtu135-20261015-r1';
+// 测试-174：缓存号跟 main 根目录 version.json 走（去掉 formal- 前缀），四份入口仍逐个比对，不再钉死旧号。
+const pageToken=JSON.parse(read('version.json')).v.replace(/^formal-/,'');
+const uiToken=pageToken;
+const token=pageToken;
+const tdToken='xingtu135-20261015-r1'; // 塔防 iframe 地址 td/index.html?embed=1&v= 的号，main 里没升，照旧钉死
 const cases=[
  ['Asia/Tokyo','2026-10-05T06:00:00Z','06:00'],
  ['Asia/Kuala_Lumpur','2026-10-05T06:00:00Z','05:00'],
@@ -68,12 +70,12 @@ else{
  for(const p of boots){const b=read(p);assert(b.includes('app.js?'+(p.startsWith('preview/')?'collectionHost=1c&':'')+'v='+uiToken));}
  assert.equal((read(boots[0]).match(new RegExp('pet/game/app\\.js\\?v='+token,'g'))||[]).length,2);
  for(const p of apps){const html=read(p.replace(/app\.js$/,'index.html')),kind=p.startsWith('preview/')?'preview':'formal';
-  assert(html.includes("var B='"+kind+'-'+(p==='preview/pet/game/app.js'?'xingtu135-20261015-r1':pageToken)+"'"));
-  assert.equal(JSON.parse(read(p.replace(/app\.js$/,'version.json'))).v,kind+'-'+(p==='preview/pet/game/app.js'?'xingtu135-20261015-r1':pageToken));
+  assert(html.includes("var B='"+kind+'-'+pageToken+"'"));
+  assert.equal(JSON.parse(read(p.replace(/app\.js$/,'version.json'))).v,kind+'-'+pageToken);
   const entry=p==='preview/pet/game/app.js'?'app.js':p==='pet/game/app.js'?'../../collection/bootstrap.mjs':'collection/bootstrap.mjs';
-  assert(html.includes(entry+'?v='+(p==='preview/pet/game/app.js'?'xingtu135-20261015-r1':pageToken)));
+  assert(html.includes(entry+'?v='+pageToken));
  }
  assert(read('index.html').includes('td/tdcore.js?v=tower39-copy34-clean01-20261012-r1'));
- assert(read('app.js').includes('td/index.html?embed=1&v='+token));
+ assert(read('app.js').includes('td/index.html?embed=1&v='+tdToken));
  console.log('Copy52 static cache closure: pass; no browser acceptance claimed.');
 }
