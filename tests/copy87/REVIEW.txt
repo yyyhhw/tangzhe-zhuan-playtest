@@ -1,0 +1,47 @@
+Copy87 minimal preview wording candidate — not merged or deployed
+Base: a739f613c326c000fbc5cdda7a6a78ab79dc2e49, independently read from current remote main.
+New isolated worktree/branch; no old b9b366c rebase/cherry-pick. No AGENTS.md found in repository/ancestors.
+
+Product scope: exactly three string substitutions in two files.
+collectibles/entry.mjs: preview upgrade summary and expandable explanation.
+collectibles/legacy-entry.mjs: preview legacy initialization explanation only; formal text unchanged.
+Update 66/60/2 to actual200/188/4/8, remove old 24+6 expansion description and protocol2/writeback jargon.
+Preserve meaningful save/backup, separate progress, no migration gift/debit, cancellation and protection guarantees.
+No economic, random, migration, save, lease, formal autoUpgrade, or recovery-confirmation control flow changes.
+Exact-copy-delta records the three complete strings and original whole-file main hashes; missing/duplicate/modified copy and unrelated guard changes fail. Existing integration source hash gate reverses ONLY this exact delta; accepted hashes are unchanged.
+
+Catalog/probability findings
+Run actual production registration order: EightWearable → SecondEight → Decor6 → Box200.
+Both formal and preview totals200, ordinary188, super4, hidden8. P1 remains36.
+Fresh formal random pool ordinary185 (3 condition stories excluded); preview ordinary188.
+No single-item denominator is written in player copy. Actual gachaOdds divides by remaining eligible unowned items.
+Both types remaining/non-pity super10%; no supers left0%; no ordinary left100%; pity at14 prior non-super draws guarantees next super while any remain.
+Price200000, growth1. Hidden items excluded, owned items excluded.
+No reward/probability semantics guessed or changed.
+
+Same-Mac Node24.19.0 complete comparison
+Command in each isolated tree:
+PLAYWRIGHT_BROWSERS_PATH=<workspace>/browsers <Node24> --experimental-vm-modules --test
+Current main:1076 total,1044 pass,24 fail,8 skip.
+Candidate:1082 total,1050 pass,24 fail,8 skip.
+Added failures0; removed0; full failure names adjacent review-results.json.
+Six new exact-copy/catalog/save-order/fault tests pass.
+Explicit preview snapshot/backup write-failure tests: exact P1 main and original source retained, protected/no gameplay.
+Confirmed order: snapshot, P1 backup, P2 main; coins/fraction/owned unchanged by migration.
+Existing full suite also exercises formal automatic upgrades, archive/backup failures and evidence corruption.
+The repository is NOT all-green; existing24 failures remain.
+
+Chromium145 / WebKit26 actual local browsers, temporary independent contexts:96/96.
+For each engine: preview new cancel/confirm; P1 cancel/confirm; snapshot failure; backup failure; corrupt main; formal root and pet each new/P1 no migration prompts.
+Waiting/cancel does not write an upgrade; P1 cancel starts the original36 catalog and remains P1 without migration snapshot.
+Confirm starts200 catalog, no grants; original source/backup unchanged; observed write order confirmed.
+Storage fault preserves exact P1 and blocks app; corrupt evidence unchanged and no game writes.
+Formal no prompt verified via DOM mutation observation, not only final absence.
+Every scenario reports zero pageerrors. WebKit expanded details screenshot inspected at390x844: copy/buttons fully visible.
+Initial browser harness mistakenly required final backup to remain P1 (normal gameplay saves legitimately update it), and used the wrong corrupt-heading selector. Corrected harness verifies migration write ordering and actual existing heading. Initial logs retained separately; not counted as product failures.
+Reproduce:
+PLAYWRIGHT_BROWSERS_PATH=<workspace>/browsers COPY87_OUT=<empty-output-directory> <Node24> tests/copy87/browser.mjs
+
+Release boundary
+This is a text-only review candidate, not release-ready cache metadata. Resource URLs/version tokens intentionally remain the reviewed main values. A separately reviewed cache bump/ancestor invalidation is required before any later deployment; do not merge/deploy this SHA directly as a cache-complete release.
+No CI/Actions/checks/logs/artifacts,163,tower54,31/43 or live-site edits performed. Previously deployed155/158/160 remains deployed with 熊二验收待完成; no acceptance row closed.

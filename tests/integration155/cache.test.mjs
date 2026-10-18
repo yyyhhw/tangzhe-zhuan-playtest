@@ -1,6 +1,7 @@
+import {withoutCopy87Delta} from '../copy87/exact-copy-delta.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import {createHash}from'node:crypto';
 const root=new URL('../../',import.meta.url),read=p=>fs.readFileSync(new URL(p,root),'utf8'),manifest=JSON.parse(read('tests/integration155/cache-manifest.json')),hash=s=>createHash('sha256').update(s).digest('hex');
-function accepted(p,s){assert.equal(hash(s),manifest.accepted[p],p+' unexpected bytes');}
+function accepted(p,s){assert.equal(hash(withoutCopy87Delta(p,s)),manifest.accepted[p],p+' unexpected bytes');}
 test('explicit integrated source fingerprints reject changed or reverted bytes',()=>{for(const[p,h]of Object.entries(manifest.accepted)){const s=read(p);accepted(p,s);assert.throws(()=>accepted(p,s+'\n/* unrelated */'));}});
 test('every changed module reference uses the batch token; unrelated imports retain their source tokens',()=>{
  const changed=new Set(manifest.changedModules);

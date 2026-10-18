@@ -53,7 +53,7 @@ export async function ensureLegacyReady({scope,legacy,keys,crypto,consent,alive,
       const balance=s?`${s.coins.toLocaleString('zh-CN')} 金币（零头 ${s.coinFrac} 保留）`:'正常新游戏初始余额 0 金币';
       const body=formal?
         `${s?'将复制旧正式经营进度：':'未找到旧正式存档，将建立正常新游戏：'}${balance}。只有点击继续才会写入新版正式存档；旧正式原档、备份与 v15 快照会保留，新版经营进度写入独立主档。旧页面之后的进度与新版分开，不能自动合并；以后切回旧版也不会自动带回新版进度。卡牌收藏从空白开始，不赠送卡或金币；采用已确认的抽卡与普通卡合成规则。`:
-        `${s?'将复制旧预览经营进度：':'未找到旧预览存档，将建立正常新游戏：'}${balance}。只有点击继续才会写入新版预览存档；原预览档和备份、正式经营余额都不会改动。旧页面之后的进度与新版分开，不能自动合并；以后切回旧版也不会自动带回新版进度。卡牌收藏从空白开始，不赠送卡或金币。`;
+        `${s?'将保留并复制你原来的预览进度：':'没有找到原来的预览存档，将从新游戏开始：'}${balance}。点击「同意并继续」才会建立新版预览存档，取消不会写入。原预览存档和备份会保留，正式版进度不受影响。新版和旧版之后的进度分别保存，不会同步或自动合并；切回旧版也不会带回新版进度。卡牌收藏从空白开始，不赠送卡或金币。`;
       const prompt=Object.freeze({kind:'legacy-initialize',title:formal?'建立新版正式存档':'建立新版预览存档',body,accept:'同意并继续',cancel:'暂不进入'});
       if(!live())return fail('SESSION_INVALIDATED');
       const approved=await consent(prompt);

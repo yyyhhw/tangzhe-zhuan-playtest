@@ -1,0 +1,77 @@
+{
+  "base": "a739f613c326c000fbc5cdda7a6a78ab79dc2e49",
+  "main": {
+    "counts": {
+      "tests": 1076,
+      "pass": 1044,
+      "fail": 24,
+      "skipped": 8
+    },
+    "failedNames": [
+      "A2j main readable again but holds a future dataVersion: read-only, never overwritten by backup",
+      "A7 future dataVersion: read-only, nothing written",
+      "offline gap/50% economy, atomic transactions, reveal, lifecycle save bodies and explicit protection-extension fingerprints match reviewed baseline (registration checked separately)",
+      "70 combination preserves 16 catalogs, renderer, ordered clone, protection, lifecycle entry, economics and preview byte-for-byte except resource token",
+      "index.html + pet/game/index.html load the bumped tokens",
+      "tests/formal/carefree-bgm.test.mjs",
+      "tests/formal/copy52-display.test.mjs",
+      "four entry version/changed-resource closure and preserved pet channel",
+      "root/preview/pet app imports all carry the xingtu release token",
+      "changed overlay exact import token and pin reject stale pre-xingtu URL",
+      "all protected01a/economy/42 CSS/47 icon/46 TD/previewpet/retired battle blobs exactly match main 66abd4c (unchanged by xingtu)",
+      "actual candidate production flag/token, root/preview/rootpet version chain and separate unchanged previewpet",
+      "all literal imports in new module closure resolve inside project and use the final token; derived pins match executed bytes",
+      "changed shared home renderer: every actual HTML entry uses the exact production token",
+      "negative control: old v=15c renderer URL is rejected for both root and formal pet",
+      "/ station 领完：上趟报告和下次月面出航明确区分，显示不写档",
+      "/ mars 领完：上趟报告和下次月面出航明确区分，显示不写档",
+      "/ moon 领完：上趟报告和下次月面出航明确区分，显示不写档",
+      "/pet/game/ station 领完：上趟报告和下次月面出航明确区分，显示不写档",
+      "/pet/game/ mars 领完：上趟报告和下次月面出航明确区分，显示不写档",
+      "/pet/game/ moon 领完：上趟报告和下次月面出航明确区分，显示不写档",
+      "/preview/ station 领完：上趟报告和下次月面出航明确区分，显示不写档",
+      "/preview/ mars 领完：上趟报告和下次月面出航明确区分，显示不写档",
+      "/preview/ moon 领完：上趟报告和下次月面出航明确区分，显示不写档"
+    ]
+  },
+  "candidate": {
+    "counts": {
+      "tests": 1082,
+      "pass": 1050,
+      "fail": 24,
+      "skipped": 8
+    },
+    "failedNames": [
+      "A2j main readable again but holds a future dataVersion: read-only, never overwritten by backup",
+      "A7 future dataVersion: read-only, nothing written",
+      "offline gap/50% economy, atomic transactions, reveal, lifecycle save bodies and explicit protection-extension fingerprints match reviewed baseline (registration checked separately)",
+      "70 combination preserves 16 catalogs, renderer, ordered clone, protection, lifecycle entry, economics and preview byte-for-byte except resource token",
+      "index.html + pet/game/index.html load the bumped tokens",
+      "tests/formal/carefree-bgm.test.mjs",
+      "tests/formal/copy52-display.test.mjs",
+      "four entry version/changed-resource closure and preserved pet channel",
+      "root/preview/pet app imports all carry the xingtu release token",
+      "changed overlay exact import token and pin reject stale pre-xingtu URL",
+      "all protected01a/economy/42 CSS/47 icon/46 TD/previewpet/retired battle blobs exactly match main 66abd4c (unchanged by xingtu)",
+      "actual candidate production flag/token, root/preview/rootpet version chain and separate unchanged previewpet",
+      "all literal imports in new module closure resolve inside project and use the final token; derived pins match executed bytes",
+      "changed shared home renderer: every actual HTML entry uses the exact production token",
+      "negative control: old v=15c renderer URL is rejected for both root and formal pet",
+      "/ station 领完：上趟报告和下次月面出航明确区分，显示不写档",
+      "/ mars 领完：上趟报告和下次月面出航明确区分，显示不写档",
+      "/ moon 领完：上趟报告和下次月面出航明确区分，显示不写档",
+      "/pet/game/ station 领完：上趟报告和下次月面出航明确区分，显示不写档",
+      "/pet/game/ mars 领完：上趟报告和下次月面出航明确区分，显示不写档",
+      "/pet/game/ moon 领完：上趟报告和下次月面出航明确区分，显示不写档",
+      "/preview/ station 领完：上趟报告和下次月面出航明确区分，显示不写档",
+      "/preview/ mars 领完：上趟报告和下次月面出航明确区分，显示不写档",
+      "/preview/ moon 领完：上趟报告和下次月面出航明确区分，显示不写档"
+    ]
+  },
+  "added": [],
+  "removed": [],
+  "browser": {
+    "passed": 96,
+    "total": 96
+  }
+}
