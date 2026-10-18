@@ -35,6 +35,8 @@ function harness(file, items, period = 'night', source = null) {
 }
 const P=(fid,uid='target',x=2,y=1)=>({uid,fid,x,y,rot:0,...(E.FURN_BY_ID[fid].wall?{surf:'wall',y:0}:{})});
 let n=0;const ok=(label,fn)=>{if(process.env.TEST_FILTER&&!label.includes(process.env.TEST_FILTER))return;fn();n++;console.log('PASS',label)};
+// 测试-174：要用 git show 取 128 之前的基准（aea60f7）。selfcheck 在不含 .git 的隔离拷贝里跑，取不到——明确跳过并退出 77（不算通过），在有 .git 的仓库里照常跑。
+if(!fs.existsSync(require('path').join(__dirname,'.git'))){console.log('SKIP test_home_click128.js：这里没有 .git（selfcheck 隔离拷贝），无法 git show aea60f7 取基准；退出 77，不算通过。请在仓库里直接 node test_home_click128.js 跑');process.exit(77);}
 for(const file of ['app.js','pet/game/app.js']) {
   // Compare the actual pre-128 lifecycle against the candidate with identical inputs/RNG.
   const baseline = require('child_process').execFileSync('git', ['show', 'aea60f7f373c4045f33b90fdbf42f2cb8cefb7d5:'+file], {encoding:'utf8'});

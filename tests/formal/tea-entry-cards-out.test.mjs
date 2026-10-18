@@ -1,9 +1,11 @@
 // Node/VM and isolated in-memory storage only; not real browser evidence.
 import {test} from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import vm from 'node:vm';import {createRequire} from 'node:module';
 import {createSaveCoordinator,KEYS} from '../../collection/host-save.mjs';import {createApprovedTrialModel} from '../../collection/domain/model.mjs';import {TRIAL_CONFIG} from '../../collection/domain/trial-config.mjs';import {canonical} from '../../collection/domain/json.mjs';
-const pageToken='xingtu135-20261015-r1';
-const uiToken='xingtu135-20261015-r1';
-const root=new URL('../../',import.meta.url),read=p=>fs.readFileSync(new URL(p,root),'utf8'),require=createRequire(import.meta.url),token='xingtu135-20261015-r1';
+// 测试-174：缓存号跟 main 根目录 version.json 走（去掉 formal- 前缀），四份入口仍逐个比对，不再钉死旧号。
+const pageToken=JSON.parse(fs.readFileSync(new URL('../../version.json',import.meta.url),'utf8')).v.replace(/^formal-/,'');
+const uiToken=pageToken;
+const tdToken='xingtu135-20261015-r1'; // 塔防 iframe 地址 td/index.html?embed=1&v= 的号，main 里没升，照旧钉死
+const root=new URL('../../',import.meta.url),read=p=>fs.readFileSync(new URL(p,root),'utf8'),require=createRequire(import.meta.url),token=pageToken;
 function fn(src,name){const start=src.indexOf('function '+name+'(');assert(start>=0);const next=src.indexOf('\nfunction ',start+1);return src.slice(start,next===-1?undefined:next);}
 for(const prefix of ['', 'preview/']){
  test(prefix+' actual parent entry gate and origin-checked iframe handshake (VM)',()=>{
@@ -13,7 +15,7 @@ for(const prefix of ['', 'preview/']){
   // Only evaluate actual function text, leaving its body and guards intact.
   vm.runInContext(src.slice(src.indexOf('function openTD()'),src.indexOf('\nfunction closeTD()')),c);
   c.openTD();assert.equal(c.tdOpen,false);assert.equal(events.length,0,'tech open cannot bypass unopened tea');
-  state.shops[1].open=true;state.shops[3].open=false;c.openTD();assert(c.tdOpen);assert(els.get('#tdFrame').src.includes(token));
+  state.shops[1].open=true;state.shops[3].open=false;c.openTD();assert(c.tdOpen);assert(els.get('#tdFrame').src.includes(tdToken));
   els.get('#tdFrame').contentWindow.location.href='https://evil.test/'+prefix+'td/index.html';els.get('#tdFrame').onload();assert(!events.some(Array.isArray),'wrong origin receives no port');
   els.get('#tdFrame').contentWindow.location.href='https://example.test/'+prefix+'td/index.html';els.get('#tdFrame').onload();assert(events.some(x=>Array.isArray(x)&&x[1]===c.location.origin));
   if(prefix===''){const cardContext={E:{SHOPS:[{short:'烧烤摊'},{short:'奶茶店'},{short:'漫画书店'},{short:'科技公司'}]},ZB_SHOP:0,zbCard:()=>'<zombie>',tdCard:()=>'<td>',state:{shops:[{},{},{},{open:true,lv:49}]},SHOP_ICON:['','','','<tech-svg>']};vm.createContext(cardContext);vm.runInContext(src.slice(src.indexOf('function shopGameCard('),src.indexOf('\n}',src.indexOf('function shopGameCard('))+2)+'\n'+fn(src,'xingtuMissing')+'\n'+fn(src,'xingtuLockText')+'\n'+fn(src,'xingtuCard'),cardContext);
@@ -52,7 +54,7 @@ test('isolated real coordinator preserves card compatibility keys and TD history
 });
 test('four entry version/changed-resource closure and preserved pet channel',()=>{
  for(const p of ['','preview/','pet/game/','preview/pet/game/']){
-  const kind=p.startsWith('preview/')?'preview':'formal',html=read(p+'index.html');assert.equal(JSON.parse(read(p+'version.json')).v,kind+'-'+(p==='preview/pet/game/'?'xingtu135-20261015-r1':pageToken));assert(html.includes("var B='"+kind+'-'+(p==='preview/pet/game/'?'xingtu135-20261015-r1':pageToken)+"'"));assert(!html.includes('cardsFrame'));
+  const kind=p.startsWith('preview/')?'preview':'formal',html=read(p+'index.html');assert.equal(JSON.parse(read(p+'version.json')).v,kind+'-'+pageToken);assert(html.includes("var B='"+kind+'-'+pageToken+"'"));assert(!html.includes('cardsFrame'));
   for(const m of html.matchAll(/(?:src|href)="([^"?]+)\?v=([^"']+)"/g)){assert(fs.existsSync(new URL(m[1],new URL(p,root))),p+m[1]);if(/collection\/bootstrap\.mjs/.test(m[1]))assert.equal(m[2],pageToken);if(/td\/tdhost\.js/.test(m[1]))assert.equal(m[2],'tea-td-cards-out-20261012-r1');}
  }
  assert(read('collection/bootstrap.mjs').includes('../app.js?v='+uiToken));assert.equal((read('collection/bootstrap.mjs').match(new RegExp('pet/game/app\\.js\\?v='+token,'g'))||[]).length,2);assert(read('preview/collection/bootstrap.mjs').includes('../app.js?collectionHost=1c&v='+uiToken));
