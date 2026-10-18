@@ -4,10 +4,17 @@ name: WebKit/iOS smoke
 # Deliberately NOT triggered on main or on pull_request.
 on:
   workflow_dispatch:
+    inputs:
+      ref:
+        description: '要测的游戏代码 ref（分支名或完整 SHA；留空=本工作流所在提交）。测试脚本始终用本工作流所在提交的 tests/webkit-smoke。'
+        required: false
+        default: ''
   push:
     branches:
       - claude/slack-session-qotgmg
       - 'wangdama/test130-*'
+      - 'wangdama/162-*'
+      - 'wangdama/163-*'
 
 permissions:
   contents: read
@@ -21,6 +28,17 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+          fetch-depth: 0
+
+      # 测试-163：手动传 ref 时，游戏代码用该 ref，测试脚本仍用本工作流所在提交（31/43 的 SHA 里可能没有 scenarios-162）。
+      - name: Use this commit's tests/webkit-smoke
+        if: ${{ inputs.ref }}
+        working-directory: .
+        run: |
+          git checkout ${{ github.sha }} -- tests/webkit-smoke
+          echo "game code: $(git rev-parse HEAD)  tests: ${{ github.sha }}"
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -43,6 +61,15 @@ jobs:
         env:
           WEBKIT_SMOKE_OUT: ${{ github.workspace }}/tests/webkit-smoke/output
         run: node scenarios-130.mjs
+
+      # 测试-163：家宅-31/43 非作者交叉测（WebKit 部分）。单步失败不影响上面两步的结论；报告 report-162.json 随 artifact 上传。
+      - name: Run 测试-162 家宅-31/43 scenarios (WebKit)
+        if: always()
+        continue-on-error: true
+        env:
+          WEBKIT_SMOKE_OUT: ${{ github.workspace }}/tests/webkit-smoke/output
+          ENGINES: webkit
+        run: node scenarios-162.mjs
 
       - name: Upload screenshots + report
         if: always()
