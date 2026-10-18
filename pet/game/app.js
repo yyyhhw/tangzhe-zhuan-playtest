@@ -1416,12 +1416,12 @@ function renderShop() {
   h += `<div class="card"><div class="ava sq">${SHOP_ICON[i]}</div><div class="info"><div class="name">${S.short}<span class="lv">Lv.${s.lv}</span></div>
     <div class="desc">当前基础产量 <b>${fmt(E.shopBase(i, s.lv))}</b>/秒原料${nm ? ` · 下一里程碑 Lv${nm} → 收益 ×${E.milestoneMult(nm)}` : ' · 里程碑全拿下 ×8'}</div>
     ${nm ? `<div class="mbar"><i style="width:${((s.lv - prevM) / (nm - prevM) * 100).toFixed(0)}%"></i></div>` : ''}
-    <div class="gain ${s.emp > 0 || shopTop ? '' : 'warn'}">${shopTop ? `已满级（店铺最高 Lv${E.shopMaxLv(i)}）` : s.emp > 0 ? '升级后 +' + fmt(upGain) + '/秒' : '先雇员工才会自动赚，升级让手点更值钱'}</div>
+    <div class="gain ${s.emp > 0 || shopTop ? '' : 'warn'}">${shopTop ? `已满级（店铺最高 Lv${E.shopMaxLv(i)}）` : s.emp > 0 ? '升级后每秒 +' + fmt(upGain) : '先雇员工才会自动赚，升级让手点更值钱'}</div>
     <details class="details-fold"><summary>倍率怎么算</summary>店铺原料 × 员工 ×${E.empMult(s.emp).toFixed(2)} × CEO ×${info.mult.toFixed(2)}${E.hasSuper(state, i) ? ' × 超级装饰 ×' + CFG.SUPER_RATE : ''} = 每秒 <b>${fmt(sr)}</b></details></div>
     ${shopTop ? '<button class="buy no" disabled data-max="shop">满级</button>' : btn('up', i, '升级' + (k > 1 ? ' ×' + k : ''), upCost)}</div>`;
   h += `<div class="sec-title">员工</div>`;
   if (s.emp <= 0) h += `<div class="card hl">${ava('e' + i)}<div class="info"><div class="name">${S.emp.name}<span class="lv" style="background:#999">未雇</span></div>
-    <div class="desc one">“${S.emp.line}”</div><div class="gain">雇了才自动赚：+${fmt(rateDelta(c => { c.shops[i].emp = 1; }))}/秒</div></div>${btn('hire', i, '雇佣', S.hire)}</div>`;
+    <div class="desc one">“${S.emp.line}”</div><div class="gain">雇了才自动赚：每秒 +${fmt(rateDelta(c => { c.shops[i].emp = 1; }))}</div></div>${btn('hire', i, '雇佣', S.hire)}</div>`;
   else h += `<div class="card">${ava('e' + i)}<div class="info"><div class="name">${S.emp.name}<span class="lv">Lv.${s.emp}</span></div>
     <div class="desc one">“${S.emp.line}”</div><div class="gain">${E.empMaxed(state, i) ? `已满级（员工最高 Lv${E.empMaxLv(i)}）` : `速度 +${CFG.EMP_LV_BONUS * 100}% → +${fmt(rateDelta(c => { c.shops[i].emp++; }))}/秒`}</div></div>
     ${E.empMaxed(state, i) ? '<button class="buy no" disabled data-max="emp">满级</button>' : btn('emp', i, '升级', E.empCost(i, s.emp))}</div>`;
@@ -1430,7 +1430,7 @@ function renderShop() {
     const c = E.CEO_BY_ID[info.id], cs = state.ceos[info.id];
     h += `<div class="card ${info.match ? '' : 'hl'}">${ava(info.id)}<div class="info"><div class="name">${c.name}<span class="lv">Lv.${cs.lv}</span>${ceoTags(i)}</div>
       <div class="desc">经营加成 ×${info.mult.toFixed(2)}（${info.match ? '专长对口' : '跨行'} ×${info.typeMult} · 等级 +${Math.round((info.lvMult - 1) * 100)}%）${info.cross ? '<br><b>' + info.cross.title + '</b>：' + info.cross.desc : ''}</div>
-      <div class="gain">${E.ceoMaxed(state, info.id) ? `已满级（最高 Lv${E.ceoMaxLv(info.id)}）` : '升一级 +' + fmt(rateDelta(x => { x.ceos[info.id].lv++; })) + '/秒（跟着 CEO 走）'}</div></div>
+      <div class="gain">${E.ceoMaxed(state, info.id) ? `已满级（最高 Lv${E.ceoMaxLv(info.id)}）` : '升一级每秒 +' + fmt(rateDelta(x => { x.ceos[info.id].lv++; })) + '（跟着 CEO 走）'}</div></div>
       <div class="btns">${E.ceoMaxed(state, info.id) ? '<button class="buy no" disabled data-max="ceo">满级</button>' : btn('ceoUp', info.id, '升级', E.ceoCost(info.id, cs.lv))}<button class="buy alt" data-act="assignTo" data-arg="${i}">调任</button></div></div>`;
   } else {
     h += `<div class="card hl"><div class="ava">👔</div><div class="info"><div class="name">CEO 空缺</div><div class="desc">派一位 CEO 来：专长对口 ×${CFG.MATCH_MULT}，跨行 ×${CFG.CROSS_MULT} + 专属事件</div></div>
@@ -1493,7 +1493,7 @@ function renderGacha() {
   const ownS = E.SUPER_ITEMS.filter(it => state.gacha.owned.includes(it.id)).length, ownR = owned - ownS;
   let h = '';   // 盲盒-96：顶部说明卡已有盲盒标题，这里不再重复一个 sec-title
   if (!unlocked) {
-    h += `<div class="box-hero"><div class="box-ico">${box}</div><div class="info"><div class="name">还没开放</div><div class="desc">科技公司雇到员工后开放。<br>只花游戏金币，不卖真钱。</div></div></div>`;
+    h += `<div class="box-hero"><div class="box-ico">${box}</div><div class="info"><div class="name">还没开放</div><div class="desc">科技公司雇到员工后开放。<br>只花金币，不卖真钱。</div></div></div>`;
   } else {
     h += `<div class="box-hero"><div class="box-ico" id="boxIco">${box}</div><div class="info"><div class="name">已收集 ${owned}/${total}</div>
       <div class="desc">${rem ? `下一抽：<b>超级装饰 ${P(o.superP)}</b>${o.remSuper ? `（每件 ${P(o.perSuper)}）` : ''} · 普通收藏 ${P(o.regP)}${o.remReg ? `（每件 ${P(o.perReg)}）` : ''}<br>${o.remSuper ? (o.guaranteed ? '<b style="color:var(--red)">这一抽必出超级装饰！</b>' : `保底：再 <b>${o.pityLeft}</b> 抽内必出超级装饰`) : '超级装饰已集齐'}` : (condLeft ? `盒里的都收齐了！还有 ${condLeft} 张故事卡靠特殊条件获得，去收藏页看提示` : `${total} 件全收集！`)}</div>
@@ -1550,8 +1550,8 @@ function renderCol() {
   h += cards.map((c, k) => own.has(c.id)
     ? `<button type="button" class="story story-open" data-act="card" data-arg="${c.id}" aria-label="重看故事卡：${c.name}"><b>${k + 1}. ${c.name}</b>${storyArt(c.id)}<span class="story-text">${c.text}</span><span class="story-replay-hint">已收集 · 点击重看 ›</span></button>` : `<div class="story no${c.cond ? ' cond' : ''}" aria-label="第 ${k + 1} 张故事卡，未收集"><b>${k + 1}. ？？？</b><p>${c.cond ? '提示：' + c.hint : '还没收集 · 盲盒里抽'}</p></div>`).join('');
   h += `<div class="note">${setDone ? `✅ 已集齐 ${cards.length} 张故事卡：解锁专属外观「金牌摊主」（金马甲 + 金厨师帽），在衣橱里给任意 CEO 换上。` : `集齐 ${cards.length} 张故事卡，解锁专属外观「金牌摊主」（金马甲 + 金厨师帽）。`}</div>`;
-  h += `<div class="sec-title">设置</div><div class="card"><div class="info"><div class="name">存档</div><div class="desc">版本 v${state.v} · 自动保存在本机浏览器 · 每日双倍下次重置：本机时间 ${fmtClockLocal(E.nextResetTs(now()))}</div></div>
-    <button class="buy ghost" disabled title="新版存档暂时不能重开">重新开始（暂不可用）</button><div class="note">新版存档暂时不能重开，你的店和收藏都会好好留着。</div></div><div class="note">试玩版 · 只花游戏金币，没有任何真钱购买。</div>`;
+  h += `<div class="sec-title">设置</div><div class="card"><div class="info"><div class="name">设置</div><div class="desc">版本 v${state.v} · 自动保存在本机浏览器 · 每日双倍下次重置：本机时间 ${fmtClockLocal(E.nextResetTs(now()))}</div></div>
+    <button class="buy ghost" disabled title="新版存档暂时不能重开">重新开始（暂不可用）</button><div class="note">新版存档暂时不能重开，你的店和收藏都会好好留着。</div></div><div class="note">试玩版 · 只花金币，没有任何真钱购买。</div>`;
   return h;
 }
 function renderTab() {
@@ -1608,7 +1608,7 @@ function updateCompactHead() {
 function switchShop(i) { if (i < 0 || i > 3) return; if (state.cur !== i) combo.n = 0; state.cur = i; dirty = true; renderTabs(); }
 function renderTabs() {
   $('#shopTabs').innerHTML = E.SHOPS.map((S, i) => { const s = state.shops[i];
-    const sub = s.open ? (s.emp > 0 ? '+' + fmt(E.shopRate(state, i)) + '/秒' : '未雇员工') : (i === 0 || state.shops[i - 1].open ? fmtPrice(S.open) : LOCK_IC + '待解锁');
+    const sub = s.open ? (s.emp > 0 ? '每秒 +' + fmt(E.shopRate(state, i)) : '未雇员工') : (i === 0 || state.shops[i - 1].open ? fmtPrice(S.open) : LOCK_IC + '待解锁');
     return `<button data-shop="${i}" class="${state.cur === i ? 'on' : ''} ${s.open ? '' : 'locked'}"><span class="tn">${SHOP_ICON[i]}${TAB_NAME[i]}</span><small>${sub}</small></button>`; }).join('');
 }
 let lastDyn = 0;
@@ -1792,7 +1792,7 @@ function showPreview(id, target) {
     ...pv.crossOff.map(k => `<div class="off">失去「${E.CROSS[k].title}」：${E.CROSS[k].desc}</div>`),
     ...(pv.offlineCapAfter !== pv.offlineCapBefore ? [`<div>离线上限 ${pv.offlineCapBefore / 3600} 小时 → ${pv.offlineCapAfter / 3600} 小时</div>`] : []),
   ].join('');
-  const dl = s => { const d = s.after - s.before; return `<span class="${cls(s.before, s.after)}">${d >= 0 ? '+' : '−'}${fmt(Math.abs(d))}/秒</span>`; };
+  const dl = s => { const d = s.after - s.before; return `<span class="${cls(s.before, s.after)}">每秒 ${d >= 0 ? '+' : '−'}${fmt(Math.abs(d))}</span>`; };
   const tShop = target >= 0 ? pv.shops[target] : null, fShop = pv.from >= 0 ? pv.shops[pv.from] : null;
   const swapBox = pv.swapped ? `<div class="swap-box"><b>交换任职</b>：${c.name} ⇄ ${E.CEO_BY_ID[pv.swapped].name}
       <div>${SHOP_ICON[target]} ${E.SHOPS[target].short}：${who(tShop.ceoBefore)} → ${who(tShop.ceoAfter)}，${fmt(tShop.before)} → ${fmt(tShop.after)}（${dl(tShop)}）</div>
@@ -1851,7 +1851,7 @@ function showCeoJoin(id) {
   $('#mOk').addEventListener('click', () => { closeModal(); dirty = true; }, { once:true });
 }
 function showGachaOpen() {
-  openModal(`<div class="mbubble">新玩法开放！</div><div class="mtitle">77 收藏盲盒</div><div class="mnote">${E.ITEMS.length} 件不重复：衣服、帽子（给 CEO 穿）、店铺装饰、故事卡，还有 4 件<b>超级装饰</b>（每店一件，加产量和专属效果）。每抽必出新的，概率和保底公开。只花游戏金币，不抽也照样开店升级。</div>
+  openModal(`<div class="mbubble">新玩法开放！</div><div class="mtitle">77 收藏盲盒</div><div class="mnote">${E.ITEMS.length} 件不重复：衣服、帽子（给 CEO 穿）、店铺装饰、故事卡，还有 4 件<b>超级装饰</b>（每店一件，加产量和专属效果）。每抽必出新的，概率和保底公开。只花金币，不抽也照样开店升级。</div>
     <div class="mbtns two"><button class="buy ghost" id="mNo">等会儿</button><button class="buy red" id="mGo">去看看</button></div>`);
   $('#mNo').addEventListener('click', closeModal, { once:true });
   $('#mGo').addEventListener('click', () => { closeModal(); setTab('gacha'); }, { once:true });
@@ -2404,7 +2404,7 @@ function renderMall() {
       <div class="desc">${cat ? cat.name + (f.sub ? ' · ' + (((cat.subs || []).find(x => x.id === f.sub) || {}).name || '') : '') + ' · ' : ''}占地 ${f.w}×${f.h} 格${f.layer === 'rug' ? ' · 可垫在家具下' : ''}${f.wall ? ' · 挂墙面（不占地板）' : ''}<br>已拥有 ${stt.owned}（摆出 ${stt.placed} / 仓库 ${stt.warehouse}）<br>摆在：${where}</div></div>${btn('homeBuy', f.id, '购买', f.price)}</div>`; }).join('');
   const styleEmpty = mallStyle !== 'all' && !E.FURNITURE.some(f => E.furnStyles(f.id).some(s => s.id === mallStyle));
   if (!list.length) h += styleEmpty ? `<div class="note">「${E.FURN_STYLES.find(s => s.id === mallStyle).name}」的家具还在画，上架后在这里就能找到。</div>` : `<div class="note">没有符合条件的家具，试试清除筛选。</div>`;
-  h += `</div><div class="note">商城只花游戏金币，和经营共用一个钱包。家具进公共仓库；一件同时只在一家，想多家都有就多买。家具只加豪华度，不加产速、不影响开店。</div>`;
+  h += `</div><div class="note">商城只花金币，和经营共用一个钱包。家具进公共仓库；一件同时只在一家，想多家都有就多买。家具只加豪华度，不加产速、不影响开店。</div>`;
   return h;
 }
 function confirmHomeBuy(fid) {
