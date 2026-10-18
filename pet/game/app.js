@@ -1511,7 +1511,7 @@ function renderGacha() {
   if (WEARABLES8?.box200HiddenHTML) h += WEARABLES8.box200HiddenHTML(E, state);   // 盲盒-109 fix：未得隐藏款「{unlock} 就送」
   const condCards = E.ITEMS.filter(it => it.type === 'card' && it.cond);
   if (condCards.length) h += `<div class="note" id="storyCondNote">故事卡里的${condCards.map(c => '「' + c.name + '」').join('')}不在盒里，要靠特殊条件获得（去收藏页看提示）；已经抽到的照旧保留。</div>`;
-  h += `<div class="note">规则：不重复收藏盒，共 ${total} 件：普通收藏 ${E.REGULAR_ITEMS.length} 件（衣服 ${E.ITEMS.filter(it => it.type === 'clothes').length} / 帽子 ${E.ITEMS.filter(it => it.type === 'hat').length} / 装饰 ${E.ITEMS.filter(it => it.type === 'decor').length} / 故事卡 ${E.ITEMS.filter(it => it.type === 'card').length}）+ 超级装饰 ${E.SUPER_ITEMS.length} 件。每抽先定类别：<b>超级装饰 ${P(CFG.SUPER_P)}</b>、普通收藏 ${P(1 - CFG.SUPER_P)}，再从该类<b>还没收集的</b>里等概率抽；连续 ${CFG.SUPER_PITY - 1} 抽没出超级装饰，第 ${CFG.SUPER_PITY} 抽必出。某一类抽完了，就只出另一类。每抽必得新物品，最多 ${total} 抽集齐，集齐后不能再买、不扣金币。普通收藏只是好看，<b>不加产速</b>；超级装饰加本店产量和专属效果，但不抽也能正常开齐店铺。单价 ${fmtPrice(CFG.GACHA_PRICE)}。</div>`;
+  h += `<div class="note">规则：盒里共 ${total} 件（普通收藏 ${E.REGULAR_ITEMS.length} 件 + 超级装饰 ${E.SUPER_ITEMS.length} 件），每抽必得一件还没有的，最多 ${total} 抽集齐，集齐后不再扣金币。每抽有 <b>${P(CFG.SUPER_P)}</b> 出超级装饰，连续 ${CFG.SUPER_PITY - 1} 抽没出，第 ${CFG.SUPER_PITY} 抽必出。普通收藏只是好看，<b>不加产速</b>；超级装饰加本店产量，不抽也能开齐店铺。单价 ${fmtPrice(CFG.GACHA_PRICE)}。</div>`;
   if(DECOR6)h+=DECOR6.hiddenHTML(state);
   return h;
 }
@@ -1725,7 +1725,7 @@ function showOffline() {
     ${capped ? `<div class="mnote">（离开了 ${fmtDur(p.gap)}，离线最多算 ${capH} 小时）</div>` : ''}
     <div class="mreward">${coinSm}+<span id="offGain">${fmt(p.amount)}</span></div>
     ${bbBanner ? `<div class="bb70-offline-banner" id="bb70OfflineBanner"><div class="bb70-offline-txt">盲盒上新了：${BB70_NEW_COUNT} 件新衣帽，等老板来开！</div><button type="button" class="buy ${can ? 'ghost' : 'red'}" id="claimBb70">${can ? '直接领取，去开盲盒' : '收下，去开盲盒'}</button></div>` : ''}
-    <div class="mnote" id="offNote">离线 = 在线每秒收益的 50%，最多 ${capH} 小时${capH > 8 ? '（麻辣服务器 +2 小时）' : ''}；团单收入只算在线（离开时进行中的团单会取消）。按你离开时的店铺、员工和 CEO 安排结算。</div>
+    <div class="mnote" id="offNote">离线按平时每秒收益的一半算（不含团单），最多 ${capH} 小时${capH > 8 ? '（麻辣服务器 +2 小时）' : ''}。离开时没做完的团单会取消。</div>
     <div class="mbtns">${can ? `<button class="buy big red" id="claimDouble">今日双倍领取 +${fmt(p.amount * 2)}</button><button class="buy ghost" id="claim">直接领取（双倍留到下次）</button>`
       : `<button class="buy big" id="claim">收下！</button><div class="mnote" style="margin:0">今日双倍已用，${fmtClockLocal(E.nextResetTs(now()))}重置</div>`}</div>`);
   let claimTried = false;   // 同一个结算框只发起一次领取：双击 / 两个按钮连点都不会重领

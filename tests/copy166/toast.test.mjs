@@ -1,6 +1,7 @@
 // 体验-166：「集齐 8 张故事卡：解锁专属外观「金牌摊主」！」走金色对勾（toast-good）；只改四份 TOAST_GOOD，不改调用点/优先级/存档。
 import test from 'node:test';import assert from 'node:assert/strict';import vm from 'node:vm';import fs from 'node:fs';import {createHash} from 'node:crypto';
 import {copy166Delta,withoutCopy166Delta} from './exact-copy-delta.mjs';
+import {withoutCopy06Delta} from '../copy06/exact-copy-delta.mjs';
 const root=new URL('../../',import.meta.url),read=p=>fs.readFileSync(new URL(p,root),'utf8'),hash=s=>createHash('sha256').update(s).digest('hex');
 const APPS=['app.js','pet/game/app.js','preview/app.js','preview/pet/game/app.js'];
 const MSG='集齐 8 张故事卡：解锁专属外观「金牌摊主」！';
@@ -21,7 +22,7 @@ test('copy166: call site unchanged (same text, same duration) in both formal cop
 });
 test('copy166: delta is exact and reverses to the prior bytes; missing/duplicate rejected',()=>{
   for(const [f,row] of Object.entries(copy166Delta)){const s=read(f),[after]=row.replacements[0];
-    assert.equal(hash(s),row.sha256,f);assert.equal(hash(withoutCopy166Delta(f,s)),row.priorSha256,f);
+    assert.equal(hash(withoutCopy06Delta(f,s)),row.sha256,f); // 文案-06 在 166 之后：先撤 06 再比 166 的哈希assert.equal(hash(withoutCopy166Delta(f,s)),row.priorSha256,f);
     assert.throws(()=>withoutCopy166Delta(f,s.replace(after,'')),/NOT_EXACT/);
     assert.throws(()=>withoutCopy166Delta(f,s+after),/NOT_EXACT/);}
 });

@@ -1,0 +1,30 @@
+{
+  "app.js": {
+    "priorSha256": "4eb2c81e3950fcd99777de72b8daec24a2887e181c1c8cac1275e4fa4a31522d",
+    "sha256": "d7d8c3b0ac23598bd19c1d0c9c902a4dc95ce761dcb5a63ead6a5dac8cbbd4eb",
+    "replacements": [
+      [
+        "  h += `<div class=\"note\">规则：盒里共 ${total} 件（普通收藏 ${E.REGULAR_ITEMS.length} 件 + 超级装饰 ${E.SUPER_ITEMS.length} 件），每抽必得一件还没有的，最多 ${total} 抽集齐，集齐后不再扣金币。每抽有 <b>${P(CFG.SUPER_P)}</b> 出超级装饰，连续 ${CFG.SUPER_PITY - 1} 抽没出，第 ${CFG.SUPER_PITY} 抽必出。普通收藏只是好看，<b>不加产速</b>；超级装饰加本店产量，不抽也能开齐店铺。单价 ${fmtPrice(CFG.GACHA_PRICE)}。</div>`;",
+        "  h += `<div class=\"note\">规则：不重复收藏盒，共 ${total} 件：普通收藏 ${E.REGULAR_ITEMS.length} 件（衣服 ${E.ITEMS.filter(it => it.type === 'clothes').length} / 帽子 ${E.ITEMS.filter(it => it.type === 'hat').length} / 装饰 ${E.REGULAR_ITEMS.filter(it => it.type === 'decor').length} / 故事卡 ${E.ITEMS.filter(it => it.type === 'card').length}）+ 超级装饰 ${E.SUPER_ITEMS.length} 件。每抽先定类别：<b>超级装饰 ${P(CFG.SUPER_P)}</b>、普通收藏 ${P(1 - CFG.SUPER_P)}，再从该类<b>还没收集的</b>里等概率抽；连续 ${CFG.SUPER_PITY - 1} 抽没出超级装饰，第 ${CFG.SUPER_PITY} 抽必出。某一类抽完了，就只出另一类。每抽必得新物品，最多 ${total} 抽集齐，集齐后不能再买、不扣金币。普通收藏只是好看，<b>不加产速</b>；超级装饰加本店产量和专属效果，但不抽也能正常开齐店铺。单价 ${fmtPrice(CFG.GACHA_PRICE)}。</div>`;"
+      ],
+      [
+        "离线按平时每秒收益的一半算（不含团单），最多 ${capH} 小时${capH > 8 ? '（麻辣服务器 +2 小时）' : ''}。离开时没做完的团单会取消。",
+        "离线 = 在线每秒收益的 50%，最多 ${capH} 小时${capH > 8 ? '（麻辣服务器 +2 小时）' : ''}；团单收入只算在线（离开时进行中的团单会取消）。按你离开时的店铺、员工和 CEO 安排结算。"
+      ]
+    ]
+  },
+  "pet/game/app.js": {
+    "priorSha256": "0ae4330ad936e6d7238585bc55e32b4b187c85ed37c5e2929e1570ffd0b45f20",
+    "sha256": "254bb3651e2e4390ca370fe0aefddbb25f539b770b3161f24ad65c71858befc4",
+    "replacements": [
+      [
+        "  h += `<div class=\"note\">规则：盒里共 ${total} 件（普通收藏 ${E.REGULAR_ITEMS.length} 件 + 超级装饰 ${E.SUPER_ITEMS.length} 件），每抽必得一件还没有的，最多 ${total} 抽集齐，集齐后不再扣金币。每抽有 <b>${P(CFG.SUPER_P)}</b> 出超级装饰，连续 ${CFG.SUPER_PITY - 1} 抽没出，第 ${CFG.SUPER_PITY} 抽必出。普通收藏只是好看，<b>不加产速</b>；超级装饰加本店产量，不抽也能开齐店铺。单价 ${fmtPrice(CFG.GACHA_PRICE)}。</div>`;",
+        "  h += `<div class=\"note\">规则：不重复收藏盒，共 ${total} 件：普通收藏 ${E.REGULAR_ITEMS.length} 件（衣服 ${E.ITEMS.filter(it => it.type === 'clothes').length} / 帽子 ${E.ITEMS.filter(it => it.type === 'hat').length} / 装饰 ${E.ITEMS.filter(it => it.type === 'decor').length} / 故事卡 ${E.ITEMS.filter(it => it.type === 'card').length}）+ 超级装饰 ${E.SUPER_ITEMS.length} 件。每抽先定类别：<b>超级装饰 ${P(CFG.SUPER_P)}</b>、普通收藏 ${P(1 - CFG.SUPER_P)}，再从该类<b>还没收集的</b>里等概率抽；连续 ${CFG.SUPER_PITY - 1} 抽没出超级装饰，第 ${CFG.SUPER_PITY} 抽必出。某一类抽完了，就只出另一类。每抽必得新物品，最多 ${total} 抽集齐，集齐后不能再买、不扣金币。普通收藏只是好看，<b>不加产速</b>；超级装饰加本店产量和专属效果，但不抽也能正常开齐店铺。单价 ${fmtPrice(CFG.GACHA_PRICE)}。</div>`;"
+      ],
+      [
+        "离线按平时每秒收益的一半算（不含团单），最多 ${capH} 小时${capH > 8 ? '（麻辣服务器 +2 小时）' : ''}。离开时没做完的团单会取消。",
+        "离线 = 在线每秒收益的 50%，最多 ${capH} 小时${capH > 8 ? '（麻辣服务器 +2 小时）' : ''}；团单收入只算在线（离开时进行中的团单会取消）。按你离开时的店铺、员工和 CEO 安排结算。"
+      ]
+    ]
+  }
+}
