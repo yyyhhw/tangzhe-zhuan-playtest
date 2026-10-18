@@ -11,8 +11,8 @@ test('home43: delta is exact and reverses to the 189fbe8 bytes; missing/duplicat
     assert.throws(()=>withoutHome43Delta(f,s+after),/NOT_EXACT/);}
 });
 test('home43 cache: every bumped file carries exactly the recorded count of the new token, none of the old; reversal exact',()=>{
-  for(const [f,n] of Object.entries(home43Cache.counts)){const s=read(f);
-    assert.equal(s.split(home43Cache.new).length-1,n,f);assert(!s.includes(home43Cache.old),f);
+  for(const [f,n] of Object.entries(home43Cache.counts)){const s=read(f),extra=(home43Cache.replacements?.[f]??[]).filter(([a])=>a.includes(home43Cache.new)).length; // r2：preview/index.html 的 economy.js 原号是 home35-…，单列一行精确撤
+    assert.equal(s.split(home43Cache.new).length-1,n+extra,f);assert(!s.includes(home43Cache.old),f);
     const r=withoutHome43CacheDelta(f,s);assert(!r.includes(home43Cache.new),f);assert.equal(r.split(home43Cache.old).length-1,n,f);
     assert.throws(()=>withoutHome43CacheDelta(f,s+home43Cache.new),/NOT_EXACT/);}
 });

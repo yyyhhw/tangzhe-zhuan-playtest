@@ -46,6 +46,12 @@
         "    \"bytes\": 16038,\n    \"sha256\": \"61348d5cea3164e0e05bb2e1cda5faf65005faa6dfa0436bdf6a55dea123c71c\",\n",
         "    \"bytes\": 16046,\n    \"sha256\": \"5a2a5b601f316a190e688629728becb5c6a1892389244b91b4b9af3064b383ee\",\n"
       ]
+    ],
+    "preview/index.html": [
+      [
+        "<script src=\"economy.js?v=home43-20261018-r1\"></script>\n",
+        "<script src=\"economy.js?v=home35-td46-home22-copy52-20261012-r1\"></script>\n"
+      ]
     ]
   }
 }
