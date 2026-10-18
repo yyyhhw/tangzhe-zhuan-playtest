@@ -9,7 +9,8 @@
     "scenarios130": "node scenarios-130.mjs",
     "scenarios139": "node scenarios-139.mjs",
     "scenarios141": "node scenarios-141.mjs",
-    "scenarios162": "node scenarios-162.mjs"
+    "scenarios162": "node scenarios-162.mjs",
+    "scenarios87": "node scenarios-87.mjs"
   },
   "devDependencies": {
     "playwright": "1.49.1"

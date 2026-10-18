@@ -71,6 +71,15 @@ jobs:
           ENGINES: webkit
         run: node scenarios-162.mjs
 
+      # 文案-87 高风险代验（王大妈，非作者）：预览升级/首进文案 + 旧档/刷新/正式不弹提示（WebKit 两个宽度）。
+      - name: Run 文案-87 scenarios (WebKit)
+        if: always()
+        continue-on-error: true
+        env:
+          WEBKIT_SMOKE_OUT: ${{ github.workspace }}/tests/webkit-smoke/output
+          ENGINES: webkit
+        run: node scenarios-87.mjs
+
       - name: Upload screenshots + report
         if: always()
         uses: actions/upload-artifact@v4
