@@ -10,6 +10,7 @@ test('copy167: both formal app.js copies say 去收藏页看提示, old wording 
 });
 test('copy167: delta is exact and reverses to the 349c0e6 bytes; unrelated edits are rejected',()=>{
   for(const [f,row] of Object.entries(copy167Delta)){const s=read(f);
-    assert.equal(hash(withoutCopy166Delta(f,s)),row.sha256,f); // 166 叠在 167 之后assert.equal(hash(withoutCopy167Delta(f,s)),row.priorSha256,f);
+    const t=withoutCopy166Delta(f,s); // 166 叠在 167 之后：先撤 166，再验 167 的正反向哈希
+    assert.equal(hash(t),row.sha256,f);assert.equal(hash(withoutCopy167Delta(f,t)),row.priorSha256,f);
     assert.throws(()=>withoutCopy167Delta(f,s.replace(row.replacements[0][0],'')),/NOT_EXACT/);}
 });
