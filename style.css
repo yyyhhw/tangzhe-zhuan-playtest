@@ -152,6 +152,10 @@ button{font-family:inherit;color:var(--ink);touch-action:manipulation;cursor:poi
 @keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
 .summary{font-size:11.5px;font-weight:800;background:#fff;border:2px dashed var(--ink);border-radius:6px;padding:4px 8px;margin-bottom:8px;line-height:1.45}
 .note{font-size:11px;color:#666;line-height:1.5;margin:4px 2px 12px}
+/* 体验-177：卡片里直接放了说明（收藏页「设置」的存档卡）→ 换行：标题说明占整行，按钮和说明排第二行，不再挤成竖字 */
+.card:has(> .note){flex-wrap:wrap}
+.card:has(> .note) > .info{flex:1 0 100%}
+.card:has(> .note) > .note{flex:1 1 0;min-width:0;margin:0}
 
 /* CEO / cross list */
 .cross-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
