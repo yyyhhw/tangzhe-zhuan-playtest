@@ -1,0 +1,86 @@
+{
+  "app.js": {
+    "priorSha256": "dbc78f3e419abe14352d639cadf8f27f52241df6f50969c60dc3069715142e68",
+    "sha256": "94b63ad772b4f8846444e01579cf73b6fd1da468f1967e5faf05c1fc34f4254e",
+    "replacements": [
+      [
+        "    <div class=\"gain ${s.emp > 0 || shopTop ? '' : 'warn'}\">${shopTop ? `已满级（店铺最高 Lv${E.shopMaxLv(i)}）` : s.emp > 0 ? '升级后每秒 +' + fmt(upGain) : '先雇员工才会自动赚，升级让手点更值钱'}</div>\n",
+        "    <div class=\"gain ${s.emp > 0 || shopTop ? '' : 'warn'}\">${shopTop ? `已满级（店铺最高 Lv${E.shopMaxLv(i)}）` : s.emp > 0 ? '升级后 +' + fmt(upGain) + '/秒' : '先雇员工才会自动赚，升级让手点更值钱'}</div>\n"
+      ],
+      [
+        "    <div class=\"desc one\">“${S.emp.line}”</div><div class=\"gain\">雇了才自动赚：每秒 +${fmt(rateDelta(c => { c.shops[i].emp = 1; }))}</div></div>${btn('hire', i, '雇佣', S.hire)}</div>`;\n",
+        "    <div class=\"desc one\">“${S.emp.line}”</div><div class=\"gain\">雇了才自动赚：+${fmt(rateDelta(c => { c.shops[i].emp = 1; }))}/秒</div></div>${btn('hire', i, '雇佣', S.hire)}</div>`;\n"
+      ],
+      [
+        "      <div class=\"gain\">${E.ceoMaxed(state, info.id) ? `已满级（最高 Lv${E.ceoMaxLv(info.id)}）` : '升一级每秒 +' + fmt(rateDelta(x => { x.ceos[info.id].lv++; })) + '（跟着 CEO 走）'}</div></div>\n",
+        "      <div class=\"gain\">${E.ceoMaxed(state, info.id) ? `已满级（最高 Lv${E.ceoMaxLv(info.id)}）` : '升一级 +' + fmt(rateDelta(x => { x.ceos[info.id].lv++; })) + '/秒（跟着 CEO 走）'}</div></div>\n"
+      ],
+      [
+        "    h += `<div class=\"box-hero\"><div class=\"box-ico\">${box}</div><div class=\"info\"><div class=\"name\">还没开放</div><div class=\"desc\">科技公司雇到员工后开放。<br>只花金币，不卖真钱。</div></div></div>`;\n",
+        "    h += `<div class=\"box-hero\"><div class=\"box-ico\">${box}</div><div class=\"info\"><div class=\"name\">还没开放</div><div class=\"desc\">科技公司雇到员工后开放。<br>只花游戏金币，不卖真钱。</div></div></div>`;\n"
+      ],
+      [
+        "  h += `<div class=\"sec-title\">设置</div><div class=\"card\"><div class=\"info\"><div class=\"name\">关于／鸣谢</div><div class=\"desc\">经营音乐 · Carefree — Kevin MacLeod</div></div><button type=\"button\" class=\"buy ghost\" data-act=\"musicCredits\">查看鸣谢</button></div><div class=\"card\"><div class=\"info\"><div class=\"name\">设置</div><div class=\"desc\">版本 v${state.v} · 自动保存在本机浏览器 · 每日双倍下次重置：本机时间 ${fmtClockLocal(E.nextResetTs(now()))}</div></div>\n    <button class=\"buy ghost\" disabled title=\"新版存档暂时不能重开\">重新开始（暂不可用）</button><div class=\"note\">新版存档暂时不能重开，你的店和收藏都会好好留着。</div></div><div class=\"note\">试玩版 · 只花金币，没有任何真钱购买。</div>`;\n",
+        "  h += `<div class=\"sec-title\">设置</div><div class=\"card\"><div class=\"info\"><div class=\"name\">关于／鸣谢</div><div class=\"desc\">经营音乐 · Carefree — Kevin MacLeod</div></div><button type=\"button\" class=\"buy ghost\" data-act=\"musicCredits\">查看鸣谢</button></div><div class=\"card\"><div class=\"info\"><div class=\"name\">存档</div><div class=\"desc\">版本 v${state.v} · 自动保存在本机浏览器 · 每日双倍下次重置：本机时间 ${fmtClockLocal(E.nextResetTs(now()))}</div></div>\n    <button class=\"buy ghost\" disabled title=\"新版存档暂时不能重开\">重新开始（暂不可用）</button><div class=\"note\">新版存档暂时不能重开，你的店和收藏都会好好留着。</div></div><div class=\"note\">试玩版 · 只花游戏金币，没有任何真钱购买。</div>`;\n"
+      ],
+      [
+        "    const sub = s.open ? (s.emp > 0 ? '每秒 +' + fmt(E.shopRate(state, i)) : '未雇员工') : (i === 0 || state.shops[i - 1].open ? fmtPrice(S.open) : LOCK_IC + '待解锁');\n",
+        "    const sub = s.open ? (s.emp > 0 ? '+' + fmt(E.shopRate(state, i)) + '/秒' : '未雇员工') : (i === 0 || state.shops[i - 1].open ? fmtPrice(S.open) : LOCK_IC + '待解锁');\n"
+      ],
+      [
+        "  const dl = s => { const d = s.after - s.before; return `<span class=\"${cls(s.before, s.after)}\">每秒 ${d >= 0 ? '+' : '−'}${fmt(Math.abs(d))}</span>`; };\n",
+        "  const dl = s => { const d = s.after - s.before; return `<span class=\"${cls(s.before, s.after)}\">${d >= 0 ? '+' : '−'}${fmt(Math.abs(d))}/秒</span>`; };\n"
+      ],
+      [
+        "  openModal(`<div class=\"mbubble\">新玩法开放！</div><div class=\"mtitle\">77 收藏盲盒</div><div class=\"mnote\">${E.ITEMS.length} 件不重复：衣服、帽子（给 CEO 穿）、店铺装饰、故事卡，还有 4 件<b>超级装饰</b>（每店一件，加产量和专属效果）。每抽必出新的，概率和保底公开。只花金币，不抽也照样开店升级。</div>\n",
+        "  openModal(`<div class=\"mbubble\">新玩法开放！</div><div class=\"mtitle\">77 收藏盲盒</div><div class=\"mnote\">${E.ITEMS.length} 件不重复：衣服、帽子（给 CEO 穿）、店铺装饰、故事卡，还有 4 件<b>超级装饰</b>（每店一件，加产量和专属效果）。每抽必出新的，概率和保底公开。只花游戏金币，不抽也照样开店升级。</div>\n"
+      ],
+      [
+        "  h += `</div><div class=\"note\">商城只花金币，和经营共用一个钱包。家具进公共仓库；一件同时只在一家，想多家都有就多买。家具只加豪华度，不加产速、不影响开店。</div>`;\n",
+        "  h += `</div><div class=\"note\">商城只花游戏金币，和经营共用一个钱包。家具进公共仓库；一件同时只在一家，想多家都有就多买。家具只加豪华度，不加产速、不影响开店。</div>`;\n"
+      ]
+    ]
+  },
+  "pet/game/app.js": {
+    "priorSha256": "a36353db098cd26b3a51f55682b1216861cc4addfd6f18013ba5a0a747125aad",
+    "sha256": "f4ca5e5e2d05789b794b90af38a1ecc655492af91c96664f9ee8505f5d04e3c5",
+    "replacements": [
+      [
+        "    <div class=\"gain ${s.emp > 0 || shopTop ? '' : 'warn'}\">${shopTop ? `已满级（店铺最高 Lv${E.shopMaxLv(i)}）` : s.emp > 0 ? '升级后每秒 +' + fmt(upGain) : '先雇员工才会自动赚，升级让手点更值钱'}</div>\n",
+        "    <div class=\"gain ${s.emp > 0 || shopTop ? '' : 'warn'}\">${shopTop ? `已满级（店铺最高 Lv${E.shopMaxLv(i)}）` : s.emp > 0 ? '升级后 +' + fmt(upGain) + '/秒' : '先雇员工才会自动赚，升级让手点更值钱'}</div>\n"
+      ],
+      [
+        "    <div class=\"desc one\">“${S.emp.line}”</div><div class=\"gain\">雇了才自动赚：每秒 +${fmt(rateDelta(c => { c.shops[i].emp = 1; }))}</div></div>${btn('hire', i, '雇佣', S.hire)}</div>`;\n",
+        "    <div class=\"desc one\">“${S.emp.line}”</div><div class=\"gain\">雇了才自动赚：+${fmt(rateDelta(c => { c.shops[i].emp = 1; }))}/秒</div></div>${btn('hire', i, '雇佣', S.hire)}</div>`;\n"
+      ],
+      [
+        "      <div class=\"gain\">${E.ceoMaxed(state, info.id) ? `已满级（最高 Lv${E.ceoMaxLv(info.id)}）` : '升一级每秒 +' + fmt(rateDelta(x => { x.ceos[info.id].lv++; })) + '（跟着 CEO 走）'}</div></div>\n",
+        "      <div class=\"gain\">${E.ceoMaxed(state, info.id) ? `已满级（最高 Lv${E.ceoMaxLv(info.id)}）` : '升一级 +' + fmt(rateDelta(x => { x.ceos[info.id].lv++; })) + '/秒（跟着 CEO 走）'}</div></div>\n"
+      ],
+      [
+        "    h += `<div class=\"box-hero\"><div class=\"box-ico\">${box}</div><div class=\"info\"><div class=\"name\">还没开放</div><div class=\"desc\">科技公司雇到员工后开放。<br>只花金币，不卖真钱。</div></div></div>`;\n",
+        "    h += `<div class=\"box-hero\"><div class=\"box-ico\">${box}</div><div class=\"info\"><div class=\"name\">还没开放</div><div class=\"desc\">科技公司雇到员工后开放。<br>只花游戏金币，不卖真钱。</div></div></div>`;\n"
+      ],
+      [
+        "  h += `<div class=\"sec-title\">设置</div><div class=\"card\"><div class=\"info\"><div class=\"name\">设置</div><div class=\"desc\">版本 v${state.v} · 自动保存在本机浏览器 · 每日双倍下次重置：本机时间 ${fmtClockLocal(E.nextResetTs(now()))}</div></div>\n    <button class=\"buy ghost\" disabled title=\"新版存档暂时不能重开\">重新开始（暂不可用）</button><div class=\"note\">新版存档暂时不能重开，你的店和收藏都会好好留着。</div></div><div class=\"note\">试玩版 · 只花金币，没有任何真钱购买。</div>`;\n",
+        "  h += `<div class=\"sec-title\">设置</div><div class=\"card\"><div class=\"info\"><div class=\"name\">存档</div><div class=\"desc\">版本 v${state.v} · 自动保存在本机浏览器 · 每日双倍下次重置：本机时间 ${fmtClockLocal(E.nextResetTs(now()))}</div></div>\n    <button class=\"buy ghost\" disabled title=\"新版存档暂时不能重开\">重新开始（暂不可用）</button><div class=\"note\">新版存档暂时不能重开，你的店和收藏都会好好留着。</div></div><div class=\"note\">试玩版 · 只花游戏金币，没有任何真钱购买。</div>`;\n"
+      ],
+      [
+        "    const sub = s.open ? (s.emp > 0 ? '每秒 +' + fmt(E.shopRate(state, i)) : '未雇员工') : (i === 0 || state.shops[i - 1].open ? fmtPrice(S.open) : LOCK_IC + '待解锁');\n",
+        "    const sub = s.open ? (s.emp > 0 ? '+' + fmt(E.shopRate(state, i)) + '/秒' : '未雇员工') : (i === 0 || state.shops[i - 1].open ? fmtPrice(S.open) : LOCK_IC + '待解锁');\n"
+      ],
+      [
+        "  const dl = s => { const d = s.after - s.before; return `<span class=\"${cls(s.before, s.after)}\">每秒 ${d >= 0 ? '+' : '−'}${fmt(Math.abs(d))}</span>`; };\n",
+        "  const dl = s => { const d = s.after - s.before; return `<span class=\"${cls(s.before, s.after)}\">${d >= 0 ? '+' : '−'}${fmt(Math.abs(d))}/秒</span>`; };\n"
+      ],
+      [
+        "  openModal(`<div class=\"mbubble\">新玩法开放！</div><div class=\"mtitle\">77 收藏盲盒</div><div class=\"mnote\">${E.ITEMS.length} 件不重复：衣服、帽子（给 CEO 穿）、店铺装饰、故事卡，还有 4 件<b>超级装饰</b>（每店一件，加产量和专属效果）。每抽必出新的，概率和保底公开。只花金币，不抽也照样开店升级。</div>\n",
+        "  openModal(`<div class=\"mbubble\">新玩法开放！</div><div class=\"mtitle\">77 收藏盲盒</div><div class=\"mnote\">${E.ITEMS.length} 件不重复：衣服、帽子（给 CEO 穿）、店铺装饰、故事卡，还有 4 件<b>超级装饰</b>（每店一件，加产量和专属效果）。每抽必出新的，概率和保底公开。只花游戏金币，不抽也照样开店升级。</div>\n"
+      ],
+      [
+        "  h += `</div><div class=\"note\">商城只花金币，和经营共用一个钱包。家具进公共仓库；一件同时只在一家，想多家都有就多买。家具只加豪华度，不加产速、不影响开店。</div>`;\n",
+        "  h += `</div><div class=\"note\">商城只花游戏金币，和经营共用一个钱包。家具进公共仓库；一件同时只在一家，想多家都有就多买。家具只加豪华度，不加产速、不影响开店。</div>`;\n"
+      ]
+    ]
+  }
+}
