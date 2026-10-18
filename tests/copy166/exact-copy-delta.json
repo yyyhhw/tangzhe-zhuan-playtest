@@ -1,0 +1,42 @@
+{
+  "app.js": {
+    "priorSha256": "6a3f600a902217d58c04a51daa8a531de63ec7014bb0a31a1d962e08da6c644b",
+    "sha256": "4eb2c81e3950fcd99777de72b8daec24a2887e181c1c8cac1275e4fa4a31522d",
+    "replacements": [
+      [
+        "const TOAST_GOOD = /送你隐藏款|新故事卡「|集齐 \\d+ 张故事卡：|",
+        "const TOAST_GOOD = /送你隐藏款|新故事卡「|"
+      ]
+    ]
+  },
+  "pet/game/app.js": {
+    "priorSha256": "bbf0706e0713f0b3bef4b5afaee8933a38a81fc71334ef37f4a277dc4fe488d3",
+    "sha256": "0ae4330ad936e6d7238585bc55e32b4b187c85ed37c5e2929e1570ffd0b45f20",
+    "replacements": [
+      [
+        "const TOAST_GOOD = /送你隐藏款|新故事卡「|集齐 \\d+ 张故事卡：|",
+        "const TOAST_GOOD = /送你隐藏款|新故事卡「|"
+      ]
+    ]
+  },
+  "preview/app.js": {
+    "priorSha256": "d683f6ffc88c013c86ecc0d4aa1cb61297633d1fb864f30121f8507917307f9b",
+    "sha256": "668d5a64d9efd71faf264f2c0a7dd7b267b0a51aef278994694d3f7c999e0cdb",
+    "replacements": [
+      [
+        "const TOAST_GOOD = /送你隐藏款|新故事卡「|集齐 \\d+ 张故事卡：|",
+        "const TOAST_GOOD = /送你隐藏款|新故事卡「|"
+      ]
+    ]
+  },
+  "preview/pet/game/app.js": {
+    "priorSha256": "7fa6db76be063025af48e922e90d4ba73122168810d5930158e3ccc3b3b00c51",
+    "sha256": "e72bbf5cd47173f5fd10b0a96a0e42c8a2a7c1c017e2933310ac06c8f1f23b9f",
+    "replacements": [
+      [
+        "const TOAST_GOOD = /送你隐藏款|新故事卡「|集齐 \\d+ 张故事卡：|",
+        "const TOAST_GOOD = /送你隐藏款|新故事卡「|"
+      ]
+    ]
+  }
+}

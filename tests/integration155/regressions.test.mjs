@@ -1,4 +1,5 @@
 import {withoutHome155Delta} from '../home155/protection-delta.mjs';
+import {withoutCopy166Delta} from '../copy166/exact-copy-delta.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -68,7 +69,9 @@ test('actual stale-lock guard redirects once to current version, then refuses wi
 test('preview deltas reconstruct exact main bytes and reject missing, duplicate, modified or unrelated changes',()=>{
   const manifest=JSON.parse(read('tests/integration155/preview-ux-delta.json'));
   for(const [file,deltas]of Object.entries(manifest.deltas)){
-    const source=read(file),normalize=s=>withoutHome155Delta(file,withoutPreviewUxDelta(file,s));
+    // 体验-166：TOAST_GOOD 在 UX158/160 之后又加了一个词；原样字节先整体比一次，反例在撤掉 166 后的字节上构造。
+    const raw=read(file),source=withoutCopy166Delta(file,raw),normalize=s=>withoutHome155Delta(file,withoutPreviewUxDelta(file,s));
+    assert.equal(hash(normalize(raw)),manifest.mainSha256[file]);
     assert.equal(hash(normalize(source)),manifest.mainSha256[file]);
     for(const [after]of deltas)for(const bad of [source.replace(after,''),source+after,source.replace(after,after.replace('const TOAST_GOOD','const WRONG').replace("case 'homeWho'","case 'wrong'"))])assert.throws(()=>normalize(bad),/NOT_EXACT/);
     assert.notEqual(hash(normalize(source+'\n/* unrelated */')),manifest.mainSha256[file]);

@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import {withoutCopy166Delta} from '../copy166/exact-copy-delta.mjs';
 const imports=JSON.parse(fs.readFileSync(new URL('./cache-import-delta.json',import.meta.url)));
 const preview=JSON.parse(fs.readFileSync(new URL('./preview-ux-delta.json',import.meta.url))).deltas;
 function reverse(source,after,before,label){
@@ -12,6 +13,7 @@ export function withoutIntegrationCacheDelta(path,source){
 }
 // Account for the two reviewed UX158/160 preview lines independently of HOME155.
 export function withoutPreviewUxDelta(path,source){
+  source=withoutCopy166Delta(path,source); // 体验-166：TOAST_GOOD 加词在 UX158/160 之后，先撤
   for(const [after,before]of preview[path]??[])source=reverse(source,after,before,path);
   return source;
 }
