@@ -10,9 +10,9 @@ const all = E.FURNITURE.map((f, i) => ({ uid:'u' + i, fid:f.id, x:0, y:0, rot:0 
 
 ok('白名单严格复用：能躺 21 + 能坐 26（含唯一地毯）+ 书架 + 衣柜 = 49；家宅-57 起桌子、暖桌 2 件从「坐」改走「吃」', () => {
   const list = HA.candidates(all, deps), by = k => list.filter(c => c.kind === k).length;
-  assert.strictEqual(by('lie'), 21); assert.strictEqual(by('sit'), 23); assert.strictEqual(by('eat'), 2); assert.strictEqual(by('rug'), 1);
+  assert.strictEqual(by('lie'), 23); assert.strictEqual(by('sit'), 26); assert.strictEqual(by('eat'), 4);   // 家宅-43：烟火小馆 +2 躺 +3 坐 +2 吃 assert.strictEqual(by('rug'), 1);
   assert.strictEqual(by('read'), 1); assert.strictEqual(by('dress'), 1);
-  assert.strictEqual(by('lie') + by('sit') + by('eat') + by('rug') + by('read') + by('dress'), 49);
+  assert.strictEqual(by('lie') + by('sit') + by('eat') + by('rug') + by('read') + by('dress'), 56);
   assert.deepStrictEqual(list.filter(c => c.kind === 'rug').map(c => c.fid), ['furn_s77_quilt_island_rug']);
   for (const fid of ['furn_rug', 'furn_lamp', 'furn_otaku_bunk_manga']) assert(!list.some(c => c.fid === fid), fid);   // 没给时段 → 不选灯
 });

@@ -1,3 +1,4 @@
+import {withoutHome43Delta} from '../home43/exact-delta.mjs';
 import fs from 'node:fs';
 import {withoutCopy166Delta} from '../copy166/exact-copy-delta.mjs';
 const imports=JSON.parse(fs.readFileSync(new URL('./cache-import-delta.json',import.meta.url)));
@@ -8,11 +9,13 @@ function reverse(source,after,before,label){
 }
 // Keep every prior guard and original hash. Only these complete import lines may differ.
 export function withoutIntegrationCacheDelta(path,source){
+  source=withoutHome43Delta(path,source); // 家宅-43 叠在最上面：先撤 43（撤过的原样返回）
   for(const [after,before]of imports[path]??[])source=reverse(source,after,before,path);
   return source;
 }
 // Account for the two reviewed UX158/160 preview lines independently of HOME155.
 export function withoutPreviewUxDelta(path,source){
+  source=withoutHome43Delta(path,source); // 家宅-43 叠在最上面：先撤 43（撤过的原样返回）
   source=withoutCopy166Delta(path,source); // 体验-166：TOAST_GOOD 加词在 UX158/160 之后，先撤
   for(const [after,before]of preview[path]??[])source=reverse(source,after,before,path);
   return source;

@@ -850,11 +850,36 @@
     { id:'furn_rocket_orbital_map_panel', name:'轨道星图灯板', emoji:'💡', color:'#3c4144', w:3, h:2, price:98000, lux:11, wall:true, cat:'wall' },
     { id:'furn_rocket_concrete_succulent', name:'水泥多肉钵', emoji:'🪴', color:'#474649', w:1, h:1, price:800, lux:1, cat:'plant' },
     { id:'furn_rocket_pipe_vase', name:'铜管苔藓瓶', emoji:'🪴', color:'#523b2f', w:1, h:1, price:2400, lux:2, cat:'plant' },
+    // 家宅-43：「烟火小馆」24 件（家宅-30 修订版清单；ID 后缀按家宅-68 参考板；暂无成图，先用 emoji 显示，FURN_ART 不登记）
+    { id:'furn_s77_bamboo_mat_bed', name:'竹榻凉席床', emoji:'🛏️', color:'#c9a85a', w:3, h:1, price:2800, lux:2, cat:'bed' },
+    { id:'furn_s77_attic_curtain_bunk', name:'阁楼帘布通铺', emoji:'🛏️', color:'#b5523b', w:3, h:3, price:26000, lux:7, cat:'bed' },
+    { id:'furn_s77_steamer_stack_cabinet', name:'竹蒸笼叠柜', emoji:'🗄️', color:'#d1b06a', w:1, h:1, price:900, lux:1, cat:'cabinet' },
+    { id:'furn_s77_spice_jar_rack', name:'调料坛子架', emoji:'🏺', color:'#9c5a3c', w:2, h:1, price:3600, lux:2, cat:'cabinet' },
+    { id:'furn_s77_bowl_cupboard', name:'碗筷橱柜', emoji:'🥢', color:'#a8573f', w:2, h:1, price:8500, lux:4, cat:'cabinet' },
+    { id:'furn_s77_open_dish_case', name:'明档菜品柜', emoji:'🍱', color:'#c8442f', w:3, h:1, price:32000, lux:7, cat:'cabinet' },
+    { id:'furn_s77_red_plastic_stool', name:'红色塑料凳', emoji:'🪑', color:'#d9412e', w:1, h:1, price:400, lux:1, cat:'seat' },
+    { id:'furn_s77_long_bench', name:'长条板凳', emoji:'🪑', color:'#b98a52', w:3, h:1, price:1600, lux:2, cat:'seat' },
+    { id:'furn_s77_folding_square_table', name:'折叠方桌', emoji:'🪵', color:'#c79a5e', w:2, h:2, price:4200, lux:2, cat:'seat' },
+    { id:'furn_s77_eight_immortals_table', name:'八仙桌', emoji:'🪵', color:'#8a4a2c', w:2, h:2, price:18000, lux:7, cat:'seat' },
+    { id:'furn_s77_booth_sofa', name:'卡座长沙发', emoji:'🛋️', color:'#b23a2a', w:3, h:2, price:58000, lux:11, cat:'seat' },
+    { id:'furn_s77_small_red_lantern', name:'小红灯笼', emoji:'🏮', color:'#d63a2a', w:1, h:1, price:700, lux:1, cat:'lamp' },
+    { id:'furn_s77_lantern_string', name:'灯笼串', emoji:'🏮', color:'#cf3f2c', w:2, h:1, price:6800, lux:4, cat:'lamp' },
+    { id:'furn_s77_trotting_horse_lamp', name:'走马灯', emoji:'🏮', color:'#d9673a', w:1, h:1, price:12000, lux:4, cat:'lamp' },
+    { id:'furn_s77_skewer_neon', name:'「串」字霓虹灯', emoji:'🍢', color:'#e0473a', w:1, h:2, price:22000, lux:7, cat:'lamp' },
+    { id:'furn_s77_wok_stove', name:'铁锅灶台', emoji:'🍳', color:'#3b3532', w:2, h:1, price:9800, lux:4, cat:'appliance' },
+    { id:'furn_s77_charcoal_grill_cart', name:'炭火烤架车', emoji:'🔥', color:'#4a3a33', w:2, h:1, price:36000, lux:7, cat:'appliance' },
+    { id:'furn_s77_night_market_grill_bar', name:'大排档长炉台', emoji:'🍢', color:'#2f2b29', w:3, h:1, price:128000, lux:16, cat:'appliance' },
+    { id:'furn_s77_checker_mat', name:'红白格防滑垫', emoji:'🟥', color:'#d65a4a', w:2, h:2, price:650, lux:1, layer:'rug', cat:'rug' },
+    { id:'furn_s77_blue_brick_rug', name:'青砖路面毯', emoji:'🧱', color:'#6f7b80', w:3, h:2, price:5600, lux:4, layer:'rug', cat:'rug' },
+    { id:'furn_s77_wood_sign_77', name:'「77」木招牌', emoji:'🪧', color:'#a8703f', w:2, h:1, price:2400, lux:2, wall:true, cat:'wall' },
+    { id:'furn_s77_menu_chalkboard', name:'手写菜单黑板', emoji:'📋', color:'#2f3a34', w:2, h:1, price:15000, lux:4, wall:true, cat:'wall' },
+    { id:'furn_s77_door_chili_string', name:'门口辣椒串', emoji:'🌶️', color:'#c8302a', w:1, h:1, price:950, lux:1, cat:'plant' },
+    { id:'furn_s77_lotus_water_jar', name:'大水缸荷花', emoji:'🪷', color:'#5d7f6e', w:2, h:2, price:46000, lux:11, cat:'plant' },
   ];
   const FURN_BY_ID = {}; FURNITURE.forEach(f => FURN_BY_ID[f.id] = f);
   // 家宅-35：家具风格标签，只用于商城筛选和小色点——不加收益、不改价格、不进存档。
   // 归类按家宅-26 画布 F0C8KALKSVA 逐件表（188 件带标签，其中 11 件双标签；通用 12 件不带）；
-  // 第 8 种「烟火小馆」杨总 10/12 14:24 定，家具（furn_s77_ 新 24 件）还没上架，先空着。
+  // 第 8 种「烟火小馆」杨总 10/12 14:24 定；24 件随家宅-43 上架（竹榻凉席床另挂茶室清雅，长条板凳另挂拼布暖屋）。
   const FURN_STYLES = [
     { id:'cozy', name:'拼布暖屋', color:'#c98a4b' },
     { id:'tea', name:'茶室清雅', color:'#6f9461' },
@@ -866,14 +891,14 @@
     { id:'diner', name:'烟火小馆', color:'#c8442f' },
   ];
   const FURN_STYLE_IDS = {
-    cozy: ['s77_cloud_canopy', 's77_quilt_daybed', 's77_drawer_bed', 's77_peg_cubby', 's77_ladder_shelf', 's77_basket_cabinet', 's77_round_corner_chest', 's77_sewing_cabinet', 's77_pantry_hutch', 's77_attic_trunk', 's77_rocking_chair', 's77_heart_bench', 's77_folding_tray', 's77_quilt_ottoman', 's77_window_bench', 's77_sewing_desk', 's77_curved_sectional', 's77_lantern_stand', 's77_mushroom_lamp', 's77_petal_uplight', 's77_quilt_shade_lamp', 's77_hearth_light', 's77_box_fan', 's77_toaster_cart', 's77_record_console', 's77_sewing_machine_stand', 's77_stove_oven', 's77_laundry_pair', 's77_braided_runner', 's77_patchwork_flower_rug', 's77_quilt_island_rug', 's77_embroidery_hoops', 's77_wood_cuckoo', 's77_quilt_wall', 's77_pressed_flower_frame', 's77_family_silhouette', 's77_watering_stand', 's77_knitting_basket', 's77_olive_planter', 's77_mini_greenhouse', 'pearl_tea_cubby'],
-    tea: ['s77_mushroom_lamp', 'pearl_tea_daybed', 'pearl_cup_carousel', 'pearl_sideboard_island', 'pearl_archive_apothecary', 'pearl_conversation_pit', 'pearl_tea_gongfu_desk', 'pearl_paper_pear_lamp', 'pearl_tea_glass_lamp', 'pearl_tea_mat', 'pearl_tea_river_runner', 'pearl_tea_loft', 'pearl_canopy_lounge', 'pearl_tea_cat_hammock', 'pearl_tea_cubby', 'pearl_tea_trolley_shelf', 'pearl_tea_stool', 'pearl_round_tea_table', 'pearl_tea_bar', 'pearl_fan_shade_lamp', 'pearl_tea_arc_lamp', 'pearl_fountain_light', 'pearl_tea_kettle_cart', 'pearl_tea_brewer', 'pearl_tea_menu_board', 'pearl_cup_wall_rack', 'pearl_sunburst_mirror', 'pearl_tea_leaf_relief', 'pearl_moon_window_art', 'pearl_herb_crate', 'pearl_tea_bonsai', 'pearl_ceramic_cup_stack', 'pearl_tea_tree_screen'],
+    cozy: ['s77_long_bench', 's77_cloud_canopy', 's77_quilt_daybed', 's77_drawer_bed', 's77_peg_cubby', 's77_ladder_shelf', 's77_basket_cabinet', 's77_round_corner_chest', 's77_sewing_cabinet', 's77_pantry_hutch', 's77_attic_trunk', 's77_rocking_chair', 's77_heart_bench', 's77_folding_tray', 's77_quilt_ottoman', 's77_window_bench', 's77_sewing_desk', 's77_curved_sectional', 's77_lantern_stand', 's77_mushroom_lamp', 's77_petal_uplight', 's77_quilt_shade_lamp', 's77_hearth_light', 's77_box_fan', 's77_toaster_cart', 's77_record_console', 's77_sewing_machine_stand', 's77_stove_oven', 's77_laundry_pair', 's77_braided_runner', 's77_patchwork_flower_rug', 's77_quilt_island_rug', 's77_embroidery_hoops', 's77_wood_cuckoo', 's77_quilt_wall', 's77_pressed_flower_frame', 's77_family_silhouette', 's77_watering_stand', 's77_knitting_basket', 's77_olive_planter', 's77_mini_greenhouse', 'pearl_tea_cubby'],
+    tea: ['s77_bamboo_mat_bed', 's77_mushroom_lamp', 'pearl_tea_daybed', 'pearl_cup_carousel', 'pearl_sideboard_island', 'pearl_archive_apothecary', 'pearl_conversation_pit', 'pearl_tea_gongfu_desk', 'pearl_paper_pear_lamp', 'pearl_tea_glass_lamp', 'pearl_tea_mat', 'pearl_tea_river_runner', 'pearl_tea_loft', 'pearl_canopy_lounge', 'pearl_tea_cat_hammock', 'pearl_tea_cubby', 'pearl_tea_trolley_shelf', 'pearl_tea_stool', 'pearl_round_tea_table', 'pearl_tea_bar', 'pearl_fan_shade_lamp', 'pearl_tea_arc_lamp', 'pearl_fountain_light', 'pearl_tea_kettle_cart', 'pearl_tea_brewer', 'pearl_tea_menu_board', 'pearl_cup_wall_rack', 'pearl_sunburst_mirror', 'pearl_tea_leaf_relief', 'pearl_moon_window_art', 'pearl_herb_crate', 'pearl_tea_bonsai', 'pearl_ceramic_cup_stack', 'pearl_tea_tree_screen'],
     sweet: ['pearl_pearl_bed', 'pearl_cup_carousel', 'pearl_bakery_display', 'pearl_boba_globe_lamp', 'pearl_scallop_rug', 'pearl_capsule_daybed', 'pearl_glass_wardrobe', 'pearl_tea_trolley_shelf', 'pearl_cafe_chair', 'pearl_scallop_sofa', 'pearl_tea_bar', 'pearl_bar_stool', 'pearl_picnic_table', 'pearl_egg_swing', 'pearl_juice_press', 'pearl_milk_frother_bar', 'pearl_dessert_chiller', 'pearl_marble_pearl_rug', 'pearl_ceramic_cup_stack', 'pearl_terrarium_orb', 'otaku_mini_fridge', 'rocket_coffee_pressure_unit'],
     pixel: ['otaku_floor_chair', 'otaku_modular_couch', 'otaku_arcade_bench', 'otaku_streaming_desk', 'otaku_controller_rug', 'otaku_pixel_succulent', 'otaku_robot_planter', 'otaku_aquatic_pixel_tank', 'otaku_sofa_sleeper', 'otaku_gaming_pod', 'otaku_projector_bed', 'otaku_cat_keyboard_cave', 'otaku_locker_wardrobe', 'otaku_disc_tower', 'otaku_controller_drawers', 'otaku_modular_pixel_shelf', 'otaku_server_display_rack', 'otaku_beanbag', 'otaku_gaming_chair', 'otaku_snack_sidecar', 'otaku_pixel_cube_light', 'otaku_arcade_marquee_lamp', 'otaku_sleep_timer_totem', 'otaku_console_station', 'otaku_arcade_cabinet', 'otaku_projector_cart', 'otaku_triple_monitor_station', 'otaku_pixel_map_rug', 'otaku_controller_wall_mount', 'otaku_pixel_city_lightbox', 'otaku_cactus_cartridge', 'rocket_planetarium_console'],
     comic: ['s77_book_nook_bed', 's77_reading_stool', 's77_window_bench', 'otaku_panel_rug', 'otaku_speed_runner', 'otaku_manga_book_stack', 'pearl_rattan_bookcase', 'otaku_floor_futon', 'otaku_bunk_manga', 'otaku_figure_vitrine', 'otaku_comic_wheel_cart', 'otaku_modular_pixel_shelf', 'otaku_kotatsu', 'otaku_manga_desk', 'otaku_cocoon_lounger', 'otaku_panel_lamp', 'otaku_gooseneck_stand', 'otaku_orbital_neon_floor', 'otaku_speech_bubble_board', 'otaku_manga_page_triptych', 'rocket_pipe_bookcase'],
     space: ['rocket_rocket_model', 'rocket_meteor_stand', 'rocket_biosphere_dome', 'rocket_capsule_bunk', 'rocket_airlock_wardrobe', 'rocket_mission_table', 'rocket_rocket_nozzle_light', 'rocket_cryo_rest_pod', 'rocket_observatory_bed', 'rocket_landing_cat_pod', 'rocket_specimen_drawer', 'rocket_orbital_archive', 'rocket_captain_chair', 'rocket_orbital_ring_lamp', 'rocket_solar_array_lamp', 'rocket_hydroponic_unit', 'rocket_planetarium_console', 'rocket_orbit_rug', 'rocket_runway_runner', 'rocket_lunar_relief_rug', 'rocket_blueprint_frame', 'rocket_mission_patch_board', 'rocket_moon_sample_relief', 'rocket_orbital_map_panel'],
     industrial: ['rocket_field_cot', 'rocket_cargo_crate', 'rocket_mesh_rack', 'rocket_rail_bench', 'rocket_zero_g_lounger', 'rocket_cage_lamp', 'rocket_tripod_searchlight', 'rocket_pipe_valve_lamp', 'rocket_steel_platform_bed', 'rocket_steel_locker', 'rocket_pipe_bookcase', 'rocket_tool_chest', 'rocket_bolt_stool', 'rocket_workbench', 'rocket_drafting_chair', 'rocket_pipe_sofa', 'rocket_oil_drum_table', 'rocket_cantilever_desk', 'rocket_industrial_fan', 'rocket_vacuum_dock', 'rocket_coffee_pressure_unit', 'rocket_air_purifier', 'rocket_workshop_mat', 'rocket_gear_clock', 'rocket_concrete_succulent', 'rocket_pipe_vase'],
-    diner: [],
+    diner: ['s77_bamboo_mat_bed', 's77_attic_curtain_bunk', 's77_steamer_stack_cabinet', 's77_spice_jar_rack', 's77_bowl_cupboard', 's77_open_dish_case', 's77_red_plastic_stool', 's77_long_bench', 's77_folding_square_table', 's77_eight_immortals_table', 's77_booth_sofa', 's77_small_red_lantern', 's77_lantern_string', 's77_trotting_horse_lamp', 's77_skewer_neon', 's77_wok_stove', 's77_charcoal_grill_cart', 's77_night_market_grill_bar', 's77_checker_mat', 's77_blue_brick_rug', 's77_wood_sign_77', 's77_menu_chalkboard', 's77_door_chili_string', 's77_lotus_water_jar'],
   };
   const FURN_STYLE_OF = {};
   FURN_STYLES.forEach(s => FURN_STYLE_IDS[s.id].forEach(k => (FURN_STYLE_OF['furn_' + k] = FURN_STYLE_OF['furn_' + k] || []).push(s.id)));
@@ -1106,11 +1131,13 @@
   // 第 1 遍：先留下所有合法的墙面件（相对已留下的件检查：不出界、不踩禁区、不互相重叠）；
   // 第 2 遍：不合法的（旧地板挂画 / 踩到新禁区 / 重叠 / 出界）在墙上找离原位最近的空位挪过去，没位就完整退回公共仓库。
   // 两遍分开，挪动的件不会落到后面本来合法的件身上；件数守恒、不碰金币；重复跑结果不变
+  // 家宅-43：仓库里可以存本版本不认识的 fid（数量照记），UI 跳过不显示；以后版本认得了就又能用
+  function keepUnknown(st, fid) { if (typeof fid !== 'string' || !fid) return; const inv = furnInvOf(st); inv[fid] = (Math.floor(num(inv[fid], 0)) || 0) + 1; }
   function reconcileWall(st, id) {
     const h = homeOf(st, id), all = h.placed || [], keep = [], fix = [];
     let moved = 0, stored = 0;
     for (const p of all) {
-      const f = FURN_BY_ID[p.fid]; if (!f) continue;
+      const f = FURN_BY_ID[p.fid]; if (!f) { keepUnknown(st, p.fid); continue; }   // 家宅-43：不认识的 fid（更新版本的家具）退进仓库原样留着，不删
       if (!f.wall) { p.surf = p.surf === 'wall' ? 'floor' : (p.surf || 'floor'); keep.push(p); continue; }
       h.placed = keep;
       const legal = p.surf === 'wall' && canPlace(st, id, p.fid, p.x, p.y, p.rot, p.uid, 'wall').ok;
@@ -1157,7 +1184,7 @@
   // 读档整理：缺的补默认；坏家具/越界/重叠退回公共仓库（不丢）；旧版 per-CEO inv 合并进 furnInv
   function normHomeBundle(rawHomes, rawInv) {
     const inv = {}, wall = { moved:0, stored:0 };
-    if (rawInv && typeof rawInv === 'object') for (const [fid, n] of Object.entries(rawInv)) addInv(inv, fid, n);
+    if (rawInv && typeof rawInv === 'object') for (const [fid, n] of Object.entries(rawInv)) { if (FURN_BY_ID[fid]) addInv(inv, fid, n); else { const k = Math.floor(num(n, 0)); if (k > 0) inv[fid] = (inv[fid] || 0) + k; } }   // 家宅-43：不认识的 fid 原样留
     const out = {};
     CEOS.forEach(c => {
       const o = rawHomes && typeof rawHomes === 'object' && rawHomes[c.id] && typeof rawHomes[c.id] === 'object' ? rawHomes[c.id] : {};
@@ -1166,7 +1193,8 @@
       const h = { lv:Math.max(1, Math.min(HOME_MAX, Math.floor(num(o.lv, 1)))), placed:[], next:Math.max(1, Math.floor(num(o.next, 1))) };
       const tmp = { homes:{ [c.id]:h }, ceos:{ [c.id]:{ unlocked:true } }, furnInv:inv }, seen = {};
       (Array.isArray(o.placed) ? o.placed : []).forEach(p => {
-        if (!p || !FURN_BY_ID[p.fid]) return;
+        if (!p) return;
+        if (!FURN_BY_ID[p.fid]) { if (typeof p.fid === 'string' && p.fid) inv[p.fid] = (inv[p.fid] || 0) + 1; return; }   // 家宅-43：不认识的摆件退仓保留
         const f = FURN_BY_ID[p.fid], rot = Number.isInteger(p.rot) ? p.rot & 3 : 0;
         const uid = typeof p.uid === 'string' && p.uid && !seen[p.uid] ? p.uid : 'u' + (h.next++);
         const surf = p.surf === 'wall' || p.surf === 'floor' ? p.surf : (f.wall ? 'wall' : 'floor');

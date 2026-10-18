@@ -1,6 +1,7 @@
 // 文案-06（收尾版）：盲盒规则、离线说明第一句讲结果、去掉重复细节；数值仍从 CFG / capH 取，不写死。只改两份正式 app.js。
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import {createHash} from 'node:crypto';
 import {copy06Delta,withoutCopy06Delta} from './exact-copy-delta.mjs';
+import {withoutHome43Delta} from '../home43/exact-delta.mjs';
 const root=new URL('../../',import.meta.url),read=p=>fs.readFileSync(new URL(p,root),'utf8'),hash=s=>createHash('sha256').update(s).digest('hex');
 const FORMAL=['app.js','pet/game/app.js'];
 test('copy06: new short wording present once, old long wording gone, numbers still from config',()=>{
@@ -15,7 +16,7 @@ test('copy06: preview copies untouched',()=>{
 });
 test('copy06: delta is exact and reverses to the prior bytes; missing/duplicate rejected',()=>{
   for(const [f,row] of Object.entries(copy06Delta)){const s=read(f);
-    assert.equal(hash(s),row.sha256,f);assert.equal(hash(withoutCopy06Delta(f,s)),row.priorSha256,f);
+    assert.equal(hash(withoutHome43Delta(f,s)),row.sha256,f);assert.equal(hash(withoutCopy06Delta(f,s)),row.priorSha256,f); // 家宅-43 叠在 06 之后：先撤 43 再比 06
     for(const [after] of row.replacements){
       assert.throws(()=>withoutCopy06Delta(f,s.replace(after,'')),/NOT_EXACT/);
       assert.throws(()=>withoutCopy06Delta(f,s+after),/NOT_EXACT/);}}

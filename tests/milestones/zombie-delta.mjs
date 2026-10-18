@@ -1,3 +1,4 @@
+import {withoutHome43Delta} from '../home43/exact-delta.mjs';
 /** Exact second-candidate delta; reverse only these lines before original protection hashes. */
 const delta={
   "qa-protocol2/vendor/cards/card-coordinator.mjs": [
@@ -38,6 +39,7 @@ const delta={
   ]
 };
 export function withoutZombieStartDelta(path,source){
+  source=withoutHome43Delta(path,source); // 家宅-43 叠在最上面：先撤 43（撤过的原样返回）
  for(const [after,before] of delta[path]??[]){if(source.split(after).length!==2)throw Error("MILESTONE_DELTA_NOT_EXACT: "+path);source=source.replace(after,before);}
  return source;
 }

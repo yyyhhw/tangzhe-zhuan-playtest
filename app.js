@@ -2412,7 +2412,7 @@ function renderRoom() {
     : '<span class="rt-sel">点家具选中，拖动换位置</span>') : `<span class="rt-sel">${homeLiveHint(id)}</span>`}
     ${homeMode === 'decor' ? `<button class="buy alt" data-act="homeUndo" data-arg="${id}" ${st.length ? '' : 'disabled'}>↶ 撤销${st.length ? ' ' + st.length : ''}</button>` : ''}</div>`;
   h += petRoomBar(id);
-  const inv = Object.entries(E.furnInvOf(state)).filter(([, n]) => n > 0);
+  const inv = Object.entries(E.furnInvOf(state)).filter(([fid, n]) => n > 0 && E.FURN_BY_ID[fid]);   // 家宅-43：仓库里本版本不认识的 fid 原样留着、不显示
   if (homeMode === 'decor') {
     h += `<div class="tray-head"><b>公共家具仓库</b><span>${inv.length ? '按住拖进房间 · 轻点自动摆' : '空空的'}</span><button class="buy alt mall-go" data-act="homeSub" data-arg="mall">${ic('mall')}去商城</button></div>`;
     h += inv.length ? `<div class="inv-strip">${inv.map(([fid, n]) => { const f = E.FURN_BY_ID[fid], stt = E.furnStats(state, fid);

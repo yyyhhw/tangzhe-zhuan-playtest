@@ -8,10 +8,10 @@ const deps = { capability:HI.capability, liveAct:E.furnLiveAct, itemSurf:E.itemS
 const all = E.FURNITURE.map((f, i) => ({ uid:'u' + i, fid:f.id, x:0, y:0, rot:0 }));
 const CEOS = ['c77', 'pearl', 'otaku', 'rocket'];
 
-ok('五类新动作逐件 84 个 ID，全在目录里、面向正确，不在清单的不自动加入', () => {
-  const cnt = { eat:2, water:14, lamp:24, use:24, wall:20 };
+ok('五类新动作逐件 96 个 ID（家宅-43 加烟火小馆 12 件），全在目录里、面向正确，不在清单的不自动加入', () => {
+  const cnt = { eat:4, water:15, lamp:28, use:27, wall:22 };
   for (const k in cnt) assert.strictEqual(HA.IDS[k].length, cnt[k], k);
-  const ids = Object.values(HA.IDS).flat(); assert.strictEqual(ids.length, 84); assert.strictEqual(new Set(ids).size, 84);
+  const ids = Object.values(HA.IDS).flat(); assert.strictEqual(ids.length, 96); assert.strictEqual(new Set(ids).size, 96);
   for (const k in HA.IDS) for (const id of HA.IDS[k]) { const f = E.FURN_BY_ID[id]; assert(f, id); assert.strictEqual(!!f.wall, k === 'wall', id); }
   const list = HA.candidates(all, { ...deps, period:'night' }), by = k => list.filter(c => c.kind === k).length;
   for (const k in cnt) assert.strictEqual(by(k), cnt[k], k);

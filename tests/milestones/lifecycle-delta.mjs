@@ -1,3 +1,4 @@
+import {withoutHome43Delta} from '../home43/exact-delta.mjs';
 /** Exact r3 lifecycle delta; all other bytes must retain the r2/main baseline. */
 const delta={
   "app.js": [
@@ -90,6 +91,7 @@ const delta={
   ]
 };
 export function withoutStartLifecycleDelta(path,source){
+  source=withoutHome43Delta(path,source); // 家宅-43 叠在最上面：先撤 43（撤过的原样返回）
  for(const [after,before] of delta[path]??[]){if(source.split(after).length!==2)throw Error("LIFECYCLE_DELTA_NOT_EXACT: "+path);source=source.replace(after,before);}
  return source;
 }

@@ -1,3 +1,4 @@
+import {withoutHome43Delta} from '../home43/exact-delta.mjs';
 import fs from 'node:fs';
 import {withoutCopy166Delta} from '../copy166/exact-copy-delta.mjs';
 export const delta=JSON.parse(fs.readFileSync(new URL('./exact-copy-delta.json',import.meta.url)));
@@ -5,6 +6,7 @@ export const cacheDelta=JSON.parse(fs.readFileSync(new URL('./exact-cache-delta.
 // 文案-167：在 copy87 之后的纯文案改动；先精确撤回它，再走 copy87 的撤回。
 export const copy167Delta=JSON.parse(fs.readFileSync(new URL('../copy167/exact-copy-delta.json',import.meta.url)));
 export function withoutCopy167Delta(path,source){
+  source=withoutHome43Delta(path,source); // 家宅-43 叠在最上面：先撤 43（撤过的原样返回）
   source=withoutCopy166Delta(path,source); // 体验-166 在 167 之后，先撤 166
   for(const [after,before]of copy167Delta[path]?.replacements??[]){
     if(source.split(after).length!==2)throw Error('COPY167_DELTA_NOT_EXACT: '+path);
@@ -13,6 +15,7 @@ export function withoutCopy167Delta(path,source){
   return source;
 }
 export function withoutCopy87CacheDelta(path,source){
+  source=withoutHome43Delta(path,source); // 家宅-43 叠在最上面：先撤 43（撤过的原样返回）
   source=withoutCopy167Delta(path,source);
   for(const [after,before]of cacheDelta[path]?.replacements??[]){
     if(source.split(after).length!==2)throw Error('COPY87_CACHE_DELTA_NOT_EXACT: '+path);
@@ -21,6 +24,7 @@ export function withoutCopy87CacheDelta(path,source){
   return source;
 }
 export function withoutCopy87Delta(path,source){
+  source=withoutHome43Delta(path,source); // 家宅-43 叠在最上面：先撤 43（撤过的原样返回）
   source=withoutCopy87CacheDelta(path,source);
   for(const [after,before]of delta[path]?.replacements??[]){
     if(source.split(after).length!==2)throw Error('COPY87_DELTA_NOT_EXACT: '+path);
