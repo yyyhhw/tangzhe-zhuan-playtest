@@ -1,6 +1,6 @@
-import {recordTransition} from '../../../milestones/domain.mjs?v=home43-20261018-r1';
+import {recordTransition} from '../../../milestones/domain.mjs?v=copy04-20261018-r1';
 import {planHiddenClaim,validHiddenTransition} from '../../../collectibles/decor6-grants.mjs?v=xingtu135-20261015-r1';
-import {moonView,planMoon,researchSpend,MOON_RULES} from '../../../space/moon.mjs?v=home43-20261018-r1';
+import {moonView,planMoon,researchSpend,MOON_RULES} from '../../../space/moon.mjs?v=copy04-20261018-r1';
 import {migrateSpace,spaceTransition} from '../../../space/domain.mjs?v=xingtu135-20261015-r1';
 import {createCardTransitionGuard} from './card-transition.mjs?v=xingtu135-20261015-r1';
 export const CARD_ADAPTER_ENABLED=false;

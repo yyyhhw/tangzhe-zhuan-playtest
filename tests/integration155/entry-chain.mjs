@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-export const TOKEN='home43-20261018-r1';
+export const TOKEN='copy04-20261018-r1';
 export function assertEntryChain(read){
   for(const prefix of ['','pet/game/','preview/','preview/pet/game/']){
     const version=(prefix.startsWith('preview/')?'preview-':'formal-')+TOKEN;
