@@ -55,6 +55,15 @@ jobs:
       - name: Install WebKit browser
         run: npx playwright install --with-deps webkit
 
+      # 测试-178 收尾 WebKit 回归（王大妈，只测不改）：四入口 × 390/844，打开/缓存号/体验-177/文案-04。报告 report-178.json。
+      - name: Run 测试-178 final regression (WebKit)
+        if: always()
+        continue-on-error: true
+        env:
+          WEBKIT_SMOKE_OUT: ${{ github.workspace }}/tests/webkit-smoke/output
+          ENGINES: webkit
+        run: node scenarios-178.mjs
+
       - name: Run WebKit smoke
         env:
           WEBKIT_SMOKE_OUT: ${{ github.workspace }}/tests/webkit-smoke/output
