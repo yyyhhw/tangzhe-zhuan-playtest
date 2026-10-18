@@ -1,8 +1,8 @@
-Copy87 minimal preview wording candidate — not merged or deployed
+Copy87 final wording + cache-complete candidate — not merged or deployed
 Base: a739f613c326c000fbc5cdda7a6a78ab79dc2e49, independently read from current remote main.
 New isolated worktree/branch; no old b9b366c rebase/cherry-pick. No AGENTS.md found in repository/ancestors.
 
-Product scope: exactly three string substitutions in two files.
+Player-facing wording scope: exactly three string substitutions in two files. Companion cache changes are listed below.
 collectibles/entry.mjs: preview upgrade summary and expandable explanation.
 collectibles/legacy-entry.mjs: preview legacy initialization explanation only; formal text unchanged.
 Update 66/60/2 to actual200/188/4/8, remove old 24+6 expansion description and protocol2/writeback jargon.
@@ -23,9 +23,9 @@ Same-Mac Node24.19.0 complete comparison
 Command in each isolated tree:
 PLAYWRIGHT_BROWSERS_PATH=<workspace>/browsers <Node24> --experimental-vm-modules --test
 Current main:1076 total,1044 pass,24 fail,8 skip.
-Candidate:1082 total,1050 pass,24 fail,8 skip.
+Candidate:1084 total,1052 pass,24 fail,8 skip.
 Added failures0; removed0; full failure names adjacent review-results.json.
-Six new exact-copy/catalog/save-order/fault tests pass.
+Eight new exact-copy/catalog/save-order/fault/cache tests pass. Combined focused copy/cache + integration suite:18/18.
 Explicit preview snapshot/backup write-failure tests: exact P1 main and original source retained, protected/no gameplay.
 Confirmed order: snapshot, P1 backup, P2 main; coins/fraction/owned unchanged by migration.
 Existing full suite also exercises formal automatic upgrades, archive/backup failures and evidence corruption.
@@ -42,6 +42,15 @@ Initial browser harness mistakenly required final backup to remain P1 (normal ga
 Reproduce:
 PLAYWRIGHT_BROWSERS_PATH=<workspace>/browsers COPY87_OUT=<empty-output-directory> <Node24> tests/copy87/browser.mjs
 
-Release boundary
-This is a text-only review candidate, not release-ready cache metadata. Resource URLs/version tokens intentionally remain the reviewed main values. A separately reviewed cache bump/ancestor invalidation is required before any later deployment; do not merge/deploy this SHA directly as a cache-complete release.
-No CI/Actions/checks/logs/artifacts,163,tower54,31/43 or live-site edits performed. Previously deployed155/158/160 remains deployed with 熊二验收待完成; no acceptance row closed.
+Final cache closure and handoff
+Release token: copy87-preview-20261018-r1. Four HTML reload/version pairs and root/pet stale-lock guards agree.
+Changed entry→legacy-entry now has current token. Existing a739 app/module ancestor chain stays synchronized, with formal CSS/economy/home/pet resource URLs updated together. Unchanged unrelated resource tokens remain pinned as before.
+Five dependency pin rows updated to actual bytes: validator, card-coordinator, moon, overlay, xingtu-views. All runtime pins verify.
+22 exact cache-delta paths restore previous e3ad626 bytes; three exact copy strings then restore a739 source bytes. Missing/duplicate/stale allowed lines, unrelated changes and guard mutations are rejected. Original a739 accepted hashes and five protected hash manifests are unchanged; no broad hash reset.
+Additional double-browser checks: actual four-entry changed-module requests16/16, including legacy-entry; actual stale-lock branch4/4 (single redirect, current-version refusal, zero Storage calls/pageerrors). Final browser total116/116 including wording/migration96/96.
+Reproduce extra browser checks with the same PLAYWRIGHT_BROWSERS_PATH/COPY87_OUT:
+  <Node24> tests/copy87/cache-browser.mjs
+  <Node24> tests/copy87/stale-lock-browser.mjs
+The final candidate includes cache readiness; reviewer must review this final SHA. No merge or deployment performed.
+Previous a739 batch: deployed and final non-author PASS confirmed; prior12:40 pending state is superseded and acceptance may close.
+No CI/Actions/checks/logs/artifacts,163,tower54,31/43 or live-site edits performed.

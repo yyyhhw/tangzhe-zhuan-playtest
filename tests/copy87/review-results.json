@@ -1,5 +1,7 @@
 {
   "base": "a739f613c326c000fbc5cdda7a6a78ab79dc2e49",
+  "priorCandidate": "e3ad6264b819a0e915d81c09cb50fb5c464ab937",
+  "cacheToken": "copy87-preview-20261018-r1",
   "main": {
     "counts": {
       "tests": 1076,
@@ -36,8 +38,8 @@
   },
   "candidate": {
     "counts": {
-      "tests": 1082,
-      "pass": 1050,
+      "tests": 1084,
+      "pass": 1052,
       "fail": 24,
       "skipped": 8
     },
@@ -70,8 +72,22 @@
   },
   "added": [],
   "removed": [],
+  "focused": {
+    "pass": 18,
+    "fail": 0
+  },
   "browser": {
-    "passed": 96,
-    "total": 96
+    "browser": {
+      "pass": 96,
+      "total": 96
+    },
+    "cache-browser": {
+      "pass": 16,
+      "total": 16
+    },
+    "stale-lock": {
+      "pass": 4,
+      "total": 4
+    }
   }
 }

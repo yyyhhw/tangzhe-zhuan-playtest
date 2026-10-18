@@ -1,4 +1,4 @@
-import {validMilestones,newGameMilestones} from '../milestones/domain.mjs?v=home155-ux158-160-20261018-r2';
+import {validMilestones,newGameMilestones} from '../milestones/domain.mjs?v=copy87-preview-20261018-r1';
 import {readSpace,migrateSpace,spaceTransition} from '../space/domain.mjs?v=xingtu135-20261015-r1';
 /** FORMAL isolated save protocol. No global storage, no automatic import, no rollback writes. */
 import {sha256,validateV15} from './domain/sha256.mjs?v=formal-cards-candidate-7';

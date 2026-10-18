@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-export const TOKEN='home155-ux158-160-20261018-r2';
+export const TOKEN='copy87-preview-20261018-r1';
 export function assertEntryChain(read){
   for(const prefix of ['','pet/game/','preview/','preview/pet/game/']){
     const version=(prefix.startsWith('preview/')?'preview-':'formal-')+TOKEN;
@@ -17,6 +17,7 @@ export function assertEntryChain(read){
     for(const resource of ['host-save.mjs','collectibles/entry.mjs','qa-protocol2/entry.mjs'])assert(read(file).includes(resource+'?v='+TOKEN),file+' '+resource);
   }
   assert(read('collectibles/entry.mjs').includes('space/overlay.mjs?v='+TOKEN));
+  assert(read('collectibles/entry.mjs').includes("'./legacy-entry.mjs?v="+TOKEN+"'"));
   assert(read('collectibles/entry.mjs').includes("+'?v='+ '"+TOKEN+"',sourceBase)"));
   assert(read('qa-protocol2/entry.mjs').includes('app.js?qaProtocol2=1&v='+TOKEN));
   // Unchanged economy/domain keep their separately pinned legacy URLs.

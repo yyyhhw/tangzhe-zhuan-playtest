@@ -1,0 +1,308 @@
+{
+  "app.js": {
+    "priorSha256": "eaffb4f5d25ff029257b59a1d34c9458db3e2d1119f4b40dab0bb72b091e1af5",
+    "replacements": [
+      [
+        "  if(url.searchParams.get('v')!=='formal-copy87-preview-20261018-r1') {url.searchParams.set('v','formal-copy87-preview-20261018-r1');location.replace(url.href);}\n",
+        "  if(url.searchParams.get('v')!=='formal-home155-ux158-160-20261018-r2') {url.searchParams.set('v','formal-home155-ux158-160-20261018-r2');location.replace(url.href);}\n"
+      ]
+    ]
+  },
+  "collectibles/entry.mjs": {
+    "priorSha256": "2bc070a7a043b2f2c966afd0e7e709826c41e1faeda55dbaca9f34130e6df6b1",
+    "replacements": [
+      [
+        "import {ensureLegacyReady} from './legacy-entry.mjs?v=copy87-preview-20261018-r1';\n",
+        "import {ensureLegacyReady} from './legacy-entry.mjs?v=xingtu135-20261015-r1';\n"
+      ],
+      [
+        "import {createProtocol2Validator} from '../qa-protocol2/vendor/runtime/validator.mjs?v=copy87-preview-20261018-r1';\nimport {createCardAwareSession} from '../qa-protocol2/vendor/cards/card-coordinator.mjs?v=copy87-preview-20261018-r1';\n",
+        "import {createProtocol2Validator} from '../qa-protocol2/vendor/runtime/validator.mjs?v=home155-ux158-160-20261018-r2';\nimport {createCardAwareSession} from '../qa-protocol2/vendor/cards/card-coordinator.mjs?v=home155-ux158-160-20261018-r2';\n"
+      ],
+      [
+        "          await import(new URL((pet?'pet/game/app.js':'app.js')+'?v='+ 'copy87-preview-20261018-r1',sourceBase));\n",
+        "          await import(new URL((pet?'pet/game/app.js':'app.js')+'?v='+ 'home155-ux158-160-20261018-r2',sourceBase));\n"
+      ],
+      [
+        "          const {installMoonOverlay}=await import('../space/overlay.mjs?v=copy87-preview-20261018-r1');\n",
+        "          const {installMoonOverlay}=await import('../space/overlay.mjs?v=home155-ux158-160-20261018-r2');\n"
+      ]
+    ]
+  },
+  "collection/bootstrap.mjs": {
+    "priorSha256": "b180113869cea90766227e7fb0576473e5065d08d66922ccd11f8781d9072a92",
+    "replacements": [
+      [
+        "import { KEYS, LOCK_NAME, createSaveCoordinator } from './host-save.mjs?v=copy87-preview-20261018-r1';\n",
+        "import { KEYS, LOCK_NAME, createSaveCoordinator } from './host-save.mjs?v=home155-ux158-160-20261018-r2';\n"
+      ],
+      [
+        "    await import(new URL(location.pathname.includes('/pet/game/')?'../pet/game/app.js?v=copy87-preview-20261018-r1':'../app.js?v=copy87-preview-20261018-r1',import.meta.url));return;\n",
+        "    await import(new URL(location.pathname.includes('/pet/game/')?'../pet/game/app.js?v=home155-ux158-160-20261018-r2':'../app.js?v=home155-ux158-160-20261018-r2',import.meta.url));return;\n"
+      ],
+      [
+        "    await import(new URL(location.pathname.includes('/pet/game/')?'../pet/game/app.js?v=copy87-preview-20261018-r1':'../app.js?v=copy87-preview-20261018-r1',import.meta.url));\n",
+        "    await import(new URL(location.pathname.includes('/pet/game/')?'../pet/game/app.js?v=home155-ux158-160-20261018-r2':'../app.js?v=home155-ux158-160-20261018-r2',import.meta.url));\n"
+      ],
+      [
+        "  import('../qa-protocol2/entry.mjs?v=copy87-preview-20261018-r1').then(module=>module.launchRealPageQA({\n",
+        "  import('../qa-protocol2/entry.mjs?v=home155-ux158-160-20261018-r2').then(module=>module.launchRealPageQA({\n"
+      ],
+      [
+        "  import('../collectibles/entry.mjs?v=copy87-preview-20261018-r1').then(module=>module.launchProductionCollectibles({\n",
+        "  import('../collectibles/entry.mjs?v=home155-ux158-160-20261018-r2').then(module=>module.launchProductionCollectibles({\n"
+      ]
+    ]
+  },
+  "collection/host-save.mjs": {
+    "priorSha256": "50c7b10846d7018aa989ee8f237ab59104acfa47966d10c37c6a5934347e6fc6",
+    "replacements": [
+      [
+        "import {validMilestones,newGameMilestones} from '../milestones/domain.mjs?v=copy87-preview-20261018-r1';\n",
+        "import {validMilestones,newGameMilestones} from '../milestones/domain.mjs?v=home155-ux158-160-20261018-r2';\n"
+      ]
+    ]
+  },
+  "index.html": {
+    "priorSha256": "6b13e68da378b056dccc55eae63f7d9552330f6646907854686a5ea0d4b6d325",
+    "replacements": [
+      [
+        "<link rel=\"stylesheet\" href=\"style.css?v=copy87-preview-20261018-r1\">\n<link rel=\"stylesheet\" href=\"home/story-home.css?v=copy87-preview-20261018-r1\">\n",
+        "<link rel=\"stylesheet\" href=\"style.css?v=home155-ux158-160-20261018-r2\">\n<link rel=\"stylesheet\" href=\"home/story-home.css?v=home155-ux158-160-20261018-r2\">\n"
+      ],
+      [
+        "(function(){if((new URLSearchParams(location.search).has('collectionQA')||new URLSearchParams(location.search).has('wearables8'))&&['localhost','127.0.0.1','[::1]'].includes(location.hostname))return;var B='formal-copy87-preview-20261018-r1';try{fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(j){if(!j||!j.v)return;if(String(j.v)===B){try{sessionStorage.removeItem('tzz-reload-'+B);}catch(e){}try{sessionStorage.removeItem('tzz-reload-path:'+location.pathname.replace(/\\/index\\.html$/,'/')+':'+B);}catch(e){}return;}var k='tzz-reload-path:'+location.pathname.replace(/\\/index\\.html$/,'/')+':'+j.v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');var q=location.search.replace(/^\\?/,'').split('&').filter(function(x){return x&&x.split('=')[0]!=='v'});q.unshift('v='+j.v);location.replace(location.pathname+'?'+q.join('&')+location.hash);}).catch(function(){});}catch(e){}})();\n",
+        "(function(){if((new URLSearchParams(location.search).has('collectionQA')||new URLSearchParams(location.search).has('wearables8'))&&['localhost','127.0.0.1','[::1]'].includes(location.hostname))return;var B='formal-home155-ux158-160-20261018-r2';try{fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(j){if(!j||!j.v)return;if(String(j.v)===B){try{sessionStorage.removeItem('tzz-reload-'+B);}catch(e){}try{sessionStorage.removeItem('tzz-reload-path:'+location.pathname.replace(/\\/index\\.html$/,'/')+':'+B);}catch(e){}return;}var k='tzz-reload-path:'+location.pathname.replace(/\\/index\\.html$/,'/')+':'+j.v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');var q=location.search.replace(/^\\?/,'').split('&').filter(function(x){return x&&x.split('=')[0]!=='v'});q.unshift('v='+j.v);location.replace(location.pathname+'?'+q.join('&')+location.hash);}).catch(function(){});}catch(e){}})();\n"
+      ],
+      [
+        "<script src=\"economy.js?v=copy87-preview-20261018-r1\"></script>\n",
+        "<script src=\"economy.js?v=home155-ux158-160-20261018-r2\"></script>\n"
+      ],
+      [
+        "<script src=\"home-interaction.js?v=copy87-preview-20261018-r1\"></script>\n<script src=\"home/home-autonomy.js?v=copy87-preview-20261018-r1\"></script>\n<script src=\"home/story-home.js?v=copy87-preview-20261018-r1\"></script>\n<script src=\"pet/game/petgame.js?v=copy87-preview-20261018-r1\"></script>\n",
+        "<script src=\"home-interaction.js?v=home155-ux158-160-20261018-r2\"></script>\n<script src=\"home/home-autonomy.js?v=home155-ux158-160-20261018-r2\"></script>\n<script src=\"home/story-home.js?v=home155-ux158-160-20261018-r2\"></script>\n<script src=\"pet/game/petgame.js?v=home155-ux158-160-20261018-r2\"></script>\n"
+      ],
+      [
+        "<script type=\"module\" src=\"collection/bootstrap.mjs?v=copy87-preview-20261018-r1\"></script>\n",
+        "<script type=\"module\" src=\"collection/bootstrap.mjs?v=home155-ux158-160-20261018-r2\"></script>\n"
+      ]
+    ]
+  },
+  "pet/game/app.js": {
+    "priorSha256": "9e566772cdb6379b7c4ceff8aa7d38ea32926e15a1a1aa89b944dce30ff52898",
+    "replacements": [
+      [
+        "  if(url.searchParams.get('v')!=='formal-copy87-preview-20261018-r1') {url.searchParams.set('v','formal-copy87-preview-20261018-r1');location.replace(url.href);}\n",
+        "  if(url.searchParams.get('v')!=='formal-home155-ux158-160-20261018-r2') {url.searchParams.set('v','formal-home155-ux158-160-20261018-r2');location.replace(url.href);}\n"
+      ]
+    ]
+  },
+  "pet/game/index.html": {
+    "priorSha256": "3191500e6b5df821fdc2882b6ff3ba10e3e369f9cae7e344bca10ae32dbc9720",
+    "replacements": [
+      [
+        "<link rel=\"stylesheet\" href=\"style.css?v=copy87-preview-20261018-r1\">\n<link rel=\"stylesheet\" href=\"../../home/story-home.css?v=copy87-preview-20261018-r1\">\n",
+        "<link rel=\"stylesheet\" href=\"style.css?v=home155-ux158-160-20261018-r2\">\n<link rel=\"stylesheet\" href=\"../../home/story-home.css?v=home155-ux158-160-20261018-r2\">\n"
+      ],
+      [
+        "(function(){if((new URLSearchParams(location.search).has('collectionQA')||new URLSearchParams(location.search).has('wearables8'))&&['localhost','127.0.0.1','[::1]'].includes(location.hostname))return;var B='formal-copy87-preview-20261018-r1';try{fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(j){if(!j||!j.v)return;if(String(j.v)===B){try{sessionStorage.removeItem('tzz-reload-'+B);}catch(e){}try{sessionStorage.removeItem('tzz-reload-path:'+location.pathname.replace(/\\/index\\.html$/,'/')+':'+B);}catch(e){}return;}var k='tzz-reload-path:'+location.pathname.replace(/\\/index\\.html$/,'/')+':'+j.v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');var q=location.search.replace(/^\\?/,'').split('&').filter(function(x){return x&&x.split('=')[0]!=='v'});q.unshift('v='+j.v);location.replace(location.pathname+'?'+q.join('&')+location.hash);}).catch(function(){});}catch(e){}})();\n",
+        "(function(){if((new URLSearchParams(location.search).has('collectionQA')||new URLSearchParams(location.search).has('wearables8'))&&['localhost','127.0.0.1','[::1]'].includes(location.hostname))return;var B='formal-home155-ux158-160-20261018-r2';try{fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(j){if(!j||!j.v)return;if(String(j.v)===B){try{sessionStorage.removeItem('tzz-reload-'+B);}catch(e){}try{sessionStorage.removeItem('tzz-reload-path:'+location.pathname.replace(/\\/index\\.html$/,'/')+':'+B);}catch(e){}return;}var k='tzz-reload-path:'+location.pathname.replace(/\\/index\\.html$/,'/')+':'+j.v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');var q=location.search.replace(/^\\?/,'').split('&').filter(function(x){return x&&x.split('=')[0]!=='v'});q.unshift('v='+j.v);location.replace(location.pathname+'?'+q.join('&')+location.hash);}).catch(function(){});}catch(e){}})();\n"
+      ],
+      [
+        "<script src=\"economy.js?v=copy87-preview-20261018-r1\"></script>\n",
+        "<script src=\"economy.js?v=home155-ux158-160-20261018-r2\"></script>\n"
+      ],
+      [
+        "<script src=\"../../home-interaction.js?v=copy87-preview-20261018-r1\"></script>\n<script src=\"../../home/home-autonomy.js?v=copy87-preview-20261018-r1\"></script>\n<script src=\"../../home/story-home.js?v=copy87-preview-20261018-r1\"></script>\n<script src=\"petgame.js?v=copy87-preview-20261018-r1\"></script>\n",
+        "<script src=\"../../home-interaction.js?v=home155-ux158-160-20261018-r2\"></script>\n<script src=\"../../home/home-autonomy.js?v=home155-ux158-160-20261018-r2\"></script>\n<script src=\"../../home/story-home.js?v=home155-ux158-160-20261018-r2\"></script>\n<script src=\"petgame.js?v=home155-ux158-160-20261018-r2\"></script>\n"
+      ],
+      [
+        "<script type=\"module\" src=\"../../collection/bootstrap.mjs?v=copy87-preview-20261018-r1\"></script>\n",
+        "<script type=\"module\" src=\"../../collection/bootstrap.mjs?v=home155-ux158-160-20261018-r2\"></script>\n"
+      ]
+    ]
+  },
+  "pet/game/version.json": {
+    "priorSha256": "e3d04b6e5d8af40d79dcce1056cd3b990172253b329d6fd8dfc5a3d96ec7cba8",
+    "replacements": [
+      [
+        "{\"v\":\"formal-copy87-preview-20261018-r1\"}\n",
+        "{\"v\":\"formal-home155-ux158-160-20261018-r2\"}\n"
+      ]
+    ]
+  },
+  "preview/collection/bootstrap.mjs": {
+    "priorSha256": "bb122df2bc5949f725ad074ab6acfc08afd342d0099e5189d7e1fe4caa200325",
+    "replacements": [
+      [
+        "import { KEYS, LOCK_NAME, createSaveCoordinator } from './host-save.mjs?v=copy87-preview-20261018-r1';\n",
+        "import { KEYS, LOCK_NAME, createSaveCoordinator } from './host-save.mjs?v=home155-ux158-160-20261018-r2';\n"
+      ],
+      [
+        "    await import('../app.js?collectionHost=1c&v=copy87-preview-20261018-r1');\n",
+        "    await import('../app.js?collectionHost=1c&v=home155-ux158-160-20261018-r2');\n"
+      ],
+      [
+        "  import('../../qa-protocol2/entry.mjs?v=copy87-preview-20261018-r1').then(module=>module.launchRealPageQA({\n",
+        "  import('../../qa-protocol2/entry.mjs?v=home155-ux158-160-20261018-r2').then(module=>module.launchRealPageQA({\n"
+      ],
+      [
+        "  import('../../collectibles/entry.mjs?v=copy87-preview-20261018-r1').then(module=>module.launchProductionCollectibles({\n",
+        "  import('../../collectibles/entry.mjs?v=home155-ux158-160-20261018-r2').then(module=>module.launchProductionCollectibles({\n"
+      ]
+    ]
+  },
+  "preview/collection/host-save.mjs": {
+    "priorSha256": "4e83da4d1e4adf76cdb58280a36b78fd95871d91515201b063ebec2185e6954f",
+    "replacements": [
+      [
+        "import {validMilestones,newGameMilestones} from '../../milestones/domain.mjs?v=copy87-preview-20261018-r1';\n",
+        "import {validMilestones,newGameMilestones} from '../../milestones/domain.mjs?v=home155-ux158-160-20261018-r2';\n"
+      ]
+    ]
+  },
+  "preview/index.html": {
+    "priorSha256": "7f46fb33ba22cc71a88faa6e49137238a294523eb2b702cc0adcfa1b90b86c05",
+    "replacements": [
+      [
+        "(function(){if((new URLSearchParams(location.search).has('collectionQA')||new URLSearchParams(location.search).has('wearables8'))&&['localhost','127.0.0.1','[::1]'].includes(location.hostname))return;var B='preview-copy87-preview-20261018-r1';try{fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(j){if(!j||!j.v)return;if(String(j.v)===B){try{sessionStorage.removeItem('tzz-reload-'+B);}catch(e){}try{sessionStorage.removeItem('tzz-reload-path:'+location.pathname.replace(/\\/index\\.html$/,'/')+':'+B);}catch(e){}return;}var k='tzz-reload-path:'+location.pathname.replace(/\\/index\\.html$/,'/')+':'+j.v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');var q=location.search.replace(/^\\?/,'').split('&').filter(function(x){return x&&x.split('=')[0]!=='v'});q.unshift('v='+j.v);location.replace(location.pathname+'?'+q.join('&')+location.hash);}).catch(function(){});}catch(e){}})();\n",
+        "(function(){if((new URLSearchParams(location.search).has('collectionQA')||new URLSearchParams(location.search).has('wearables8'))&&['localhost','127.0.0.1','[::1]'].includes(location.hostname))return;var B='preview-home155-ux158-160-20261018-r2';try{fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(j){if(!j||!j.v)return;if(String(j.v)===B){try{sessionStorage.removeItem('tzz-reload-'+B);}catch(e){}try{sessionStorage.removeItem('tzz-reload-path:'+location.pathname.replace(/\\/index\\.html$/,'/')+':'+B);}catch(e){}return;}var k='tzz-reload-path:'+location.pathname.replace(/\\/index\\.html$/,'/')+':'+j.v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');var q=location.search.replace(/^\\?/,'').split('&').filter(function(x){return x&&x.split('=')[0]!=='v'});q.unshift('v='+j.v);location.replace(location.pathname+'?'+q.join('&')+location.hash);}).catch(function(){});}catch(e){}})();\n"
+      ],
+      [
+        "<script type=\"module\" src=\"collection/bootstrap.mjs?v=copy87-preview-20261018-r1\"></script>\n",
+        "<script type=\"module\" src=\"collection/bootstrap.mjs?v=home155-ux158-160-20261018-r2\"></script>\n"
+      ]
+    ]
+  },
+  "preview/pet/game/index.html": {
+    "priorSha256": "92d303c833d9bdf584de8f1e1461b6237b2a03eed731ea1ed539cb56fbe14d50",
+    "replacements": [
+      [
+        "(function(){var B='preview-copy87-preview-20261018-r1';try{fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(j){if(!j||!j.v||String(j.v)===B)return;var k='tzz-reload-'+j.v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');var q=location.search.replace(/^\\?/,'').split('&').filter(function(x){return x&&x.split('=')[0]!=='v'});q.unshift('v='+j.v);location.replace(location.pathname+'?'+q.join('&')+location.hash);}).catch(function(){});}catch(e){}})();\n",
+        "(function(){var B='preview-home155-ux158-160-20261018-r2';try{fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(function(r){return r.ok?r.json():null}).then(function(j){if(!j||!j.v||String(j.v)===B)return;var k='tzz-reload-'+j.v;if(sessionStorage.getItem(k))return;sessionStorage.setItem(k,'1');var q=location.search.replace(/^\\?/,'').split('&').filter(function(x){return x&&x.split('=')[0]!=='v'});q.unshift('v='+j.v);location.replace(location.pathname+'?'+q.join('&')+location.hash);}).catch(function(){});}catch(e){}})();\n"
+      ],
+      [
+        "<script src=\"app.js?v=copy87-preview-20261018-r1\"></script>\n",
+        "<script src=\"app.js?v=home155-ux158-160-20261018-r2\"></script>\n"
+      ]
+    ]
+  },
+  "preview/pet/game/version.json": {
+    "priorSha256": "39e3940188167c9f0fbf41e161c2dc304ff90bb0382cf6867e887f8e5dd01ac8",
+    "replacements": [
+      [
+        "{\"v\":\"preview-copy87-preview-20261018-r1\"}\n",
+        "{\"v\":\"preview-home155-ux158-160-20261018-r2\"}\n"
+      ]
+    ]
+  },
+  "preview/version.json": {
+    "priorSha256": "39e3940188167c9f0fbf41e161c2dc304ff90bb0382cf6867e887f8e5dd01ac8",
+    "replacements": [
+      [
+        "{\"v\":\"preview-copy87-preview-20261018-r1\"}\n",
+        "{\"v\":\"preview-home155-ux158-160-20261018-r2\"}\n"
+      ]
+    ]
+  },
+  "qa-protocol2/dependency-pins.json": {
+    "priorSha256": "5ad15121c148c9a91c5d37453618d7b42b322b0b81d91d5df1ea15f045a4ca1b",
+    "replacements": [
+      [
+        "    \"bytes\": 13690,\n    \"sha256\": \"d3d473638ebe21e53c1015707cbfc61e0869b86e391fe03b9af05872490a6e20\",\n",
+        "    \"bytes\": 13693,\n    \"sha256\": \"b9e272c3404f39717c4dc603c0b3e1ed8bc0f11ba4ad4c06b63c53cc071d6745\",\n"
+      ],
+      [
+        "    \"bytes\": 13680,\n    \"sha256\": \"5442f826bb78e99bdea4910afe15bcf1c9943571b804d71236cdd9ccdee0ff6d\",\n",
+        "    \"bytes\": 13686,\n    \"sha256\": \"4346f57824c979f6cd4a6e4ce67388a19575466aae1a77a98bae8c51b3c4f47f\",\n"
+      ],
+      [
+        "    \"bytes\": 15092,\n    \"sha256\": \"fb0b20a26b4afbd721378549b66d391702c0d22b73248a5a39979790ed129dbc\",\n",
+        "    \"bytes\": 15095,\n    \"sha256\": \"c328581163841e5150e3f93f35d7d03d49076260fecd0ef1d82515a1c54aca8e\",\n"
+      ],
+      [
+        "    \"bytes\": 21331,\n    \"sha256\": \"fc85e884ed7ab903e51f0c4509cc6a74123ccb3616b4ad8a2e77988964440552\",\n",
+        "    \"bytes\": 21337,\n    \"sha256\": \"eb3d96072d2dc23e96ea06603d613a5a1d7f4a31539f83db42f2f07f12eb2920\",\n"
+      ],
+      [
+        "    \"bytes\": 16046,\n    \"sha256\": \"5a2a5b601f316a190e688629728becb5c6a1892389244b91b4b9af3064b383ee\",\n",
+        "    \"bytes\": 16049,\n    \"sha256\": \"2acede231ffeec27e3832c8fce4719738b7e292d54158cc85e59ba58c1d90a1c\",\n"
+      ]
+    ]
+  },
+  "qa-protocol2/entry.mjs": {
+    "priorSha256": "7c4266d3760d13d8a0832aeb296abcf4aaf9059bdd0f9e8bf9b8ffdff861da0d",
+    "replacements": [
+      [
+        "import {createProtocol2Validator} from './vendor/runtime/validator.mjs?v=copy87-preview-20261018-r1';\nimport {createCardAwareSession} from './vendor/cards/card-coordinator.mjs?v=copy87-preview-20261018-r1';\n",
+        "import {createProtocol2Validator} from './vendor/runtime/validator.mjs?v=home155-ux158-160-20261018-r2';\nimport {createCardAwareSession} from './vendor/cards/card-coordinator.mjs?v=home155-ux158-160-20261018-r2';\n"
+      ],
+      [
+        "          await import(new URL(pet?'pet/game/app.js?qaProtocol2=1&v=copy87-preview-20261018-r1':'app.js?qaProtocol2=1&v=copy87-preview-20261018-r1',sourceBase));\n",
+        "          await import(new URL(pet?'pet/game/app.js?qaProtocol2=1&v=home155-ux158-160-20261018-r2':'app.js?qaProtocol2=1&v=home155-ux158-160-20261018-r2',sourceBase));\n"
+      ]
+    ]
+  },
+  "qa-protocol2/vendor/cards/card-coordinator.mjs": {
+    "priorSha256": "4346f57824c979f6cd4a6e4ce67388a19575466aae1a77a98bae8c51b3c4f47f",
+    "replacements": [
+      [
+        "import {recordTransition} from '../../../milestones/domain.mjs?v=copy87-preview-20261018-r1';\n",
+        "import {recordTransition} from '../../../milestones/domain.mjs?v=home155-ux158-160-20261018-r2';\n"
+      ],
+      [
+        "import {moonView,planMoon,researchSpend,MOON_RULES} from '../../../space/moon.mjs?v=copy87-preview-20261018-r1';\n",
+        "import {moonView,planMoon,researchSpend,MOON_RULES} from '../../../space/moon.mjs?v=home155-ux158-160-20261018-r2';\n"
+      ]
+    ]
+  },
+  "qa-protocol2/vendor/runtime/validator.mjs": {
+    "priorSha256": "b9e272c3404f39717c4dc603c0b3e1ed8bc0f11ba4ad4c06b63c53cc071d6745",
+    "replacements": [
+      [
+        "import {validMilestones} from '../../../milestones/domain.mjs?v=copy87-preview-20261018-r1';\n",
+        "import {validMilestones} from '../../../milestones/domain.mjs?v=home155-ux158-160-20261018-r2';\n"
+      ]
+    ]
+  },
+  "space/moon.mjs": {
+    "priorSha256": "c328581163841e5150e3f93f35d7d03d49076260fecd0ef1d82515a1c54aca8e",
+    "replacements": [
+      [
+        "import {gate} from './xingtu-views.mjs?v=copy87-preview-20261018-r1';\n",
+        "import {gate} from './xingtu-views.mjs?v=home155-ux158-160-20261018-r2';\n"
+      ]
+    ]
+  },
+  "space/overlay.mjs": {
+    "priorSha256": "eb3d96072d2dc23e96ea06603d613a5a1d7f4a31539f83db42f2f07f12eb2920",
+    "replacements": [
+      [
+        "import {TIER_PRICE,MOON_RULES} from './moon.mjs?v=copy87-preview-20261018-r1';\n",
+        "import {TIER_PRICE,MOON_RULES} from './moon.mjs?v=home155-ux158-160-20261018-r2';\n"
+      ],
+      [
+        "import {renderMap,renderShip,gate,ART,ROUTE_TIME,renderEnding,renderCredits,renderEarth,renderRecap} from './xingtu-views.mjs?v=copy87-preview-20261018-r1';\n",
+        "import {renderMap,renderShip,gate,ART,ROUTE_TIME,renderEnding,renderCredits,renderEarth,renderRecap} from './xingtu-views.mjs?v=home155-ux158-160-20261018-r2';\n"
+      ]
+    ]
+  },
+  "space/xingtu-views.mjs": {
+    "priorSha256": "2acede231ffeec27e3832c8fce4719738b7e292d54158cc85e59ba58c1d90a1c",
+    "replacements": [
+      [
+        "import {recap} from '../milestones/domain.mjs?v=copy87-preview-20261018-r1';\n",
+        "import {recap} from '../milestones/domain.mjs?v=home155-ux158-160-20261018-r2';\n"
+      ]
+    ]
+  },
+  "version.json": {
+    "priorSha256": "e3d04b6e5d8af40d79dcce1056cd3b990172253b329d6fd8dfc5a3d96ec7cba8",
+    "replacements": [
+      [
+        "{\"v\":\"formal-copy87-preview-20261018-r1\"}\n",
+        "{\"v\":\"formal-home155-ux158-160-20261018-r2\"}\n"
+      ]
+    ]
+  }
+}
