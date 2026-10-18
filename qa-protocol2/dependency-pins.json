@@ -145,8 +145,8 @@
     "path": "milestones/domain.mjs",
     "sourcePackage": "xingtu02-candidate",
     "sourcePath": "milestones/domain.mjs",
-    "bytes": 5446,
-    "sha256": "b2f56b397b71900f5a5d6ec88dcea0010a889fa45ca8063eea3aadb4d94d9d61",
+    "bytes": 5510,
+    "sha256": "21978575e2cac5c8635a4c3cdc186e9d94047b5b8a31e76b6c2a9822dce94bf7",
     "integrationChange": "; home155/ux158/160 cache-chain integration (imports only where applicable)"
   },
   {

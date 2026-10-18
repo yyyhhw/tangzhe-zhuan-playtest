@@ -1,0 +1,54 @@
+{
+  "app.js": {
+    "priorSha256": "b3f1c1c116265863b0a1b0089ba59aad1526c4d287421e4e8e55086321eb65a5",
+    "sha256": "6a3f600a902217d58c04a51daa8a531de63ec7014bb0a31a1d962e08da6c644b",
+    "replacements": [
+      [
+        "还有 ${condLeft} 张故事卡靠特殊条件获得，去收藏页看提示",
+        "还有 ${condLeft} 张故事卡靠特殊条件获得，去图鉴看提示"
+      ],
+      [
+        "要靠特殊条件获得（去收藏页看提示）；",
+        "要靠特殊条件获得（提示见收藏页图鉴）；"
+      ]
+    ]
+  },
+  "pet/game/app.js": {
+    "priorSha256": "6dabe91228cc0edee7588c74ab72efdaa1fab239adc2c498e3b6239465c290c9",
+    "sha256": "bbf0706e0713f0b3bef4b5afaee8933a38a81fc71334ef37f4a277dc4fe488d3",
+    "replacements": [
+      [
+        "还有 ${condLeft} 张故事卡靠特殊条件获得，去收藏页看提示",
+        "还有 ${condLeft} 张故事卡靠特殊条件获得，去图鉴看提示"
+      ],
+      [
+        "要靠特殊条件获得（去收藏页看提示）；",
+        "要靠特殊条件获得（提示见收藏页图鉴）；"
+      ]
+    ]
+  },
+  "milestones/domain.mjs": {
+    "priorSha256": "b2f56b397b71900f5a5d6ec88dcea0010a889fa45ca8063eea3aadb4d94d9d61",
+    "sha256": "21978575e2cac5c8635a4c3cdc186e9d94047b5b8a31e76b6c2a9822dce94bf7",
+    "replacements": [
+      [
+        "// 体验-158：不到 1 天不写「0 天」，不到 1 小时写「不到 1 小时」；文案-167：整天不写「0 小时」。",
+        "// 体验-158：不到 1 天不写「0 天」，不到 1 小时写「不到 1 小时」。"
+      ],
+      [
+        "return d?(h?`用了 ${d} 天 ${h} 小时`:`用了 ${d} 天`):h?",
+        "return d?`用了 ${d} 天 ${h} 小时`:h?"
+      ]
+    ]
+  },
+  "qa-protocol2/dependency-pins.json": {
+    "priorSha256": "ab244cd3beb86db19e779ccc28938bbc2f80e476e1a8f20b6525d3cc24c49740",
+    "sha256": "f03cf9e15165589f1420b9d878008100839d10498ef27f452b53f025e079789e",
+    "replacements": [
+      [
+        "\"bytes\": 5510,\n    \"sha256\": \"21978575e2cac5c8635a4c3cdc186e9d94047b5b8a31e76b6c2a9822dce94bf7\",",
+        "\"bytes\": 5446,\n    \"sha256\": \"b2f56b397b71900f5a5d6ec88dcea0010a889fa45ca8063eea3aadb4d94d9d61\","
+      ]
+    ]
+  }
+}
