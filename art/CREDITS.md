@@ -7,21 +7,22 @@
 
 - 位置：`art/spacecards/*.webp`，1024×768 WebP。8 条航线各 3 张，另加 signal 1 张，和 `space/album.mjs` 里的 25 张卡一一对应。
 - 逐张清单（路径、尺寸、字节数、SHA256）：`tests/xt11/art-files.json`。清单留在原处，不挪进 `art/spacecards/`。
-- 来源：AI 生成，用 `image_gen.imagegen` 工具出图，没有用第三方素材。每张原图的工作区路径和原图 SHA256 记在 `tests/xt11/generation-sources.json`。原 PNG 不在仓库里，仓库里只能核到 WebP 这一层。
+- 来源：AI 生成，原图都在生成方工作区的 `generated_images/` 下。每张原图的工作区路径和原图 SHA256 记在 `tests/xt11/generation-sources.json`。原 PNG 不在仓库里，仓库里只能核到 WebP 这一层。
+- 生成工具和商用授权条款：未知，待熊大核。卡图的生成记录里没有写工具名，这里不照舱图去推断。
 - 游戏里由 `space/overlay.mjs` 引用。
 
 ## 星途四舱五级插画（20 张）
 
 - 位置：`art/xingtu-cabins/{bridge,gun,medical,kitchen}-{1..5}.webp`，1200×900 WebP。
 - 逐张清单（路径、尺寸、格式、字节数、SHA256）：`art/xingtu-cabins/manifest.json`。
-- 来源：AI 生成，用 `image_gen.imagegen` 工具出图，没有用第三方素材。生成方法和人物参考见同目录的 `DELIVERY.md`；每张原图的工作区路径记在 `art/xingtu-cabins/generation-sources.json`。
+- 来源：AI 生成。`generation-sources.json` 和 `DELIVERY.md` 写的工具是 `image_gen.imagegen`；生成方法和人物参考见同目录的 `DELIVERY.md`；每张原图的工作区路径记在 `art/xingtu-cabins/generation-sources.json`。
 - 原图哈希缺失：`generation-sources.json` 只记了原 PNG 的路径，没记哈希，原 PNG 也不在仓库里，所以没法补。仓库里能核的只有 WebP 这一层（manifest 里的 SHA256）。
-- `comparison-1-5.jpg`、`progression-1-5.jpg` 是交付时给人看的对比图，游戏里不引用。
 - 游戏里由 `space/xingtu-views.mjs` 引用。
+- 商用授权条款：未知，待熊大核。
 
 ## 人物参考：四位 CEO 立绘
 
-舱图的人物是照仓库里这四张已有立绘画的，没有照真人重新设计（见 `art/xingtu-cabins/DELIVERY.md`）。这四张图本身的出图来源，仓库里没有记录。
+舱图的人物是照仓库里这四张已有立绘画的，没有照真人重新设计（见 `art/xingtu-cabins/DELIVERY.md`）。这四张图本身的出图来源和授权：未知，仓库里没有记录，待熊大核。
 
 | 文件 | 字节数 | SHA256 |
 |---|---|---|
