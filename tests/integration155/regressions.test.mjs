@@ -1,3 +1,4 @@
+import {withoutHome43CacheDelta,home43Cache} from '../home43/exact-delta.mjs';
 import {withoutHome155Delta} from '../home155/protection-delta.mjs';
 import {withoutCopy166Delta} from '../copy166/exact-copy-delta.mjs';
 import test from 'node:test';
@@ -13,9 +14,9 @@ const extract=(s,n)=>s.match(new RegExp(`function ${n}\\([^\\n]*\\) \\{[\\s\\S]*
 test('exact cache deltas reject missing, duplicate and changed imports; preserve guard mutations',()=>{
   const rows=JSON.parse(read('tests/integration155/cache-import-delta.json'));
   for(const [file,deltas]of Object.entries(rows)){
-    const s=read(file),baseline=withoutIntegrationCacheDelta(file,s);
+    const s=withoutHome43CacheDelta(file,read(file)),baseline=withoutIntegrationCacheDelta(file,s); // 家宅-43 缓存号叠在上面：先撤
     for(const [after]of deltas){
-      for(const bad of [s.replace(after,''),s+after,s.replace(after,after.replace(TOKEN,'stale'))])assert.throws(()=>withoutIntegrationCacheDelta(file,bad),/NOT_EXACT/);
+      for(const bad of [s.replace(after,''),s+after,s.replace(after,after.replace(home43Cache.old,'stale'))])assert.throws(()=>withoutIntegrationCacheDelta(file,bad),/NOT_EXACT/);
     }
     const guard=file.includes('card-coordinator')?"if(!lease.owns())fail('LOCK_NOT_OWNED');":"if(!validMilestones(s))error('MILESTONES_INVALID');";
     assert(s.includes(guard));assert.notEqual(hash(withoutIntegrationCacheDelta(file,s.replace(guard,''))),hash(baseline));

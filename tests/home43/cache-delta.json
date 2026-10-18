@@ -1,0 +1,51 @@
+{
+  "old": "copy87-preview-20261018-r1",
+  "new": "home43-20261018-r1",
+  "counts": {
+    "app.js": 2,
+    "collectibles/entry.mjs": 5,
+    "collection/bootstrap.mjs": 7,
+    "collection/host-save.mjs": 1,
+    "index.html": 9,
+    "pet/game/app.js": 2,
+    "pet/game/index.html": 9,
+    "pet/game/version.json": 1,
+    "preview/collection/bootstrap.mjs": 4,
+    "preview/collection/host-save.mjs": 1,
+    "preview/index.html": 2,
+    "preview/pet/game/index.html": 2,
+    "preview/pet/game/version.json": 1,
+    "preview/version.json": 1,
+    "qa-protocol2/entry.mjs": 4,
+    "qa-protocol2/vendor/cards/card-coordinator.mjs": 2,
+    "qa-protocol2/vendor/runtime/validator.mjs": 1,
+    "space/moon.mjs": 1,
+    "space/overlay.mjs": 2,
+    "space/xingtu-views.mjs": 1,
+    "version.json": 1
+  },
+  "replacements": {
+    "qa-protocol2/dependency-pins.json": [
+      [
+        "    \"bytes\": 13682,\n    \"sha256\": \"43a14ed9132766a574b3a3c20dec59b4e1063bbc749b5ec4cfffa5d41289eea3\",\n",
+        "    \"bytes\": 13690,\n    \"sha256\": \"d3d473638ebe21e53c1015707cbfc61e0869b86e391fe03b9af05872490a6e20\",\n"
+      ],
+      [
+        "    \"bytes\": 13664,\n    \"sha256\": \"b38ad95a108ee1df579d6b5b79117b8fe3ce38984d207631091d35ec1d8c2487\",\n",
+        "    \"bytes\": 13680,\n    \"sha256\": \"5442f826bb78e99bdea4910afe15bcf1c9943571b804d71236cdd9ccdee0ff6d\",\n"
+      ],
+      [
+        "    \"bytes\": 15084,\n    \"sha256\": \"2b8ebc707bcda67d27c7cc71dd4ce73cff6621f17939e8e1cdcaf434a09524f0\",\n",
+        "    \"bytes\": 15092,\n    \"sha256\": \"fb0b20a26b4afbd721378549b66d391702c0d22b73248a5a39979790ed129dbc\",\n"
+      ],
+      [
+        "    \"bytes\": 21315,\n    \"sha256\": \"a447557ee85693d5a596f24a7e6e9b0d7050ec3858eebfdd5bf62c583af9a4fe\",\n",
+        "    \"bytes\": 21331,\n    \"sha256\": \"fc85e884ed7ab903e51f0c4509cc6a74123ccb3616b4ad8a2e77988964440552\",\n"
+      ],
+      [
+        "    \"bytes\": 16038,\n    \"sha256\": \"61348d5cea3164e0e05bb2e1cda5faf65005faa6dfa0436bdf6a55dea123c71c\",\n",
+        "    \"bytes\": 16046,\n    \"sha256\": \"5a2a5b601f316a190e688629728becb5c6a1892389244b91b4b9af3064b383ee\",\n"
+      ]
+    ]
+  }
+}

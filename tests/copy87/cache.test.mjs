@@ -1,14 +1,15 @@
+import {withoutHome43CacheDelta,home43Cache} from '../home43/exact-delta.mjs';
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import {createHash} from 'node:crypto';
 import {cacheDelta,withoutCopy87CacheDelta} from './exact-copy-delta.mjs';
 import {assertEntryChain,TOKEN} from '../integration155/entry-chain.mjs';
 const read=p=>fs.readFileSync(new URL('../../'+p,import.meta.url),'utf8'),hash=s=>createHash('sha256').update(s).digest('hex');
 test('copy87 cache delta restores exact previous candidate; rejects missing/duplicate/stale lines and unrelated changes',()=>{
   for(const [file,row]of Object.entries(cacheDelta)){
-    const s=read(file),check=value=>assert.equal(hash(withoutCopy87CacheDelta(file,value)),row.priorSha256);
+    const s=withoutHome43CacheDelta(file,read(file)),check=value=>assert.equal(hash(withoutCopy87CacheDelta(file,value)),row.priorSha256);
     check(s);
     for(const [after]of row.replacements){
       assert.throws(()=>check(s.replace(after,'')));assert.throws(()=>check(s+after));
-      if(after.includes(TOKEN))assert.throws(()=>check(s.replace(after,after.replaceAll(TOKEN,'stale'))));
+      if(after.includes(home43Cache.old))assert.throws(()=>check(s.replace(after,after.replaceAll(home43Cache.old,'stale')))); // 这一层的号是 copy87 旧号（43 缓存号已先撤）
     }
     assert.throws(()=>check(s+'\n/* unrelated */'));
   }
