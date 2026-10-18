@@ -1,0 +1,162 @@
+{
+  "baseMain": "3cbd88b9e9846ca6e2fc9983936246e72928a55e",
+  "previousCandidate": "be0d47b9b4e4dc14760303399518adb524319fe1",
+  "node": "24.19.0",
+  "plain": {
+    "main": {
+      "tests": 1060,
+      "pass": 710,
+      "fail": 342,
+      "cancelled": 0,
+      "skipped": 8
+    },
+    "previousCandidate": {
+      "tests": 1070,
+      "pass": 698,
+      "fail": 364,
+      "cancelled": 0,
+      "skipped": 8
+    },
+    "repaired": {
+      "tests": 1076,
+      "pass": 728,
+      "fail": 340,
+      "cancelled": 0,
+      "skipped": 8
+    },
+    "previousAddedFailureNames": [
+      "app.js: low FPS elapsed 15 seconds, no dt-clamp drift or catch-up burst",
+      "app.js: successful immediate save resets deadline from completion",
+      "app.js: immediate save inside tick suppresses same-frame automatic duplicate",
+      "app.js: pet save near deadline restarts only on confirmed success",
+      "app.js: failed autosave does not retry every frame",
+      "app.js: protected uncertain result and lock loss perform no further writes",
+      "app.js: ordinary income state is not changed by scheduling and no clock dates enter save schema",
+      "pet/game/app.js: low FPS elapsed 15 seconds, no dt-clamp drift or catch-up burst",
+      "pet/game/app.js: successful immediate save resets deadline from completion",
+      "pet/game/app.js: immediate save inside tick suppresses same-frame automatic duplicate",
+      "pet/game/app.js: pet save near deadline restarts only on confirmed success",
+      "pet/game/app.js: failed autosave does not retry every frame",
+      "pet/game/app.js: protected uncertain result and lock loss perform no further writes",
+      "pet/game/app.js: ordinary income state is not changed by scheduling and no clock dates enter save schema",
+      "index.html: economy.js uses current release token",
+      "index.html: every local ?v= asset uses current token or is byte-identical to its pinned version",
+      "pet/game/index.html: economy.js uses current release token",
+      "pet/game/index.html: every local ?v= asset uses current token or is byte-identical to its pinned version",
+      "all three entry persist/petSave/frame bodies exactly retain published 7ce857d autosave15 r2",
+      "protected implementations and explicit reviewed decor16 extensions retain their fingerprints",
+      "protection baseline admits only exact candidate delta; changed guard still changes hash",
+      "entry cache refuses stale pre-xingtu URL; entry chain is xingtu token"
+    ],
+    "addedFailureNames": [],
+    "removedFailureNames": [
+      "both changed bb70 stylesheets use current release URLs; stale prior CSS URL fails the check",
+      "complete changed ancestor→bootstrap→entry→app→overlay→intent chain uses one candidate token and real pins"
+    ]
+  },
+  "experimentalVmModules": {
+    "main": {
+      "tests": 1060,
+      "pass": 1026,
+      "fail": 26,
+      "cancelled": 0,
+      "skipped": 8
+    },
+    "repaired": {
+      "tests": 1076,
+      "pass": 1044,
+      "fail": 24,
+      "cancelled": 0,
+      "skipped": 8
+    },
+    "addedFailureNames": [],
+    "removedFailureNames": [
+      "both changed bb70 stylesheets use current release URLs; stale prior CSS URL fails the check",
+      "complete changed ancestor→bootstrap→entry→app→overlay→intent chain uses one candidate token and real pins"
+    ],
+    "remainingFailureNames": [
+      "A2j main readable again but holds a future dataVersion: read-only, never overwritten by backup",
+      "A7 future dataVersion: read-only, nothing written",
+      "offline gap/50% economy, atomic transactions, reveal, lifecycle save bodies and explicit protection-extension fingerprints match reviewed baseline (registration checked separately)",
+      "70 combination preserves 16 catalogs, renderer, ordered clone, protection, lifecycle entry, economics and preview byte-for-byte except resource token",
+      "index.html + pet/game/index.html load the bumped tokens",
+      "tests/formal/carefree-bgm.test.mjs",
+      "tests/formal/copy52-display.test.mjs",
+      "four entry version/changed-resource closure and preserved pet channel",
+      "root/preview/pet app imports all carry the xingtu release token",
+      "changed overlay exact import token and pin reject stale pre-xingtu URL",
+      "all protected01a/economy/42 CSS/47 icon/46 TD/previewpet/retired battle blobs exactly match main 66abd4c (unchanged by xingtu)",
+      "actual candidate production flag/token, root/preview/rootpet version chain and separate unchanged previewpet",
+      "all literal imports in new module closure resolve inside project and use the final token; derived pins match executed bytes",
+      "changed shared home renderer: every actual HTML entry uses the exact production token",
+      "negative control: old v=15c renderer URL is rejected for both root and formal pet",
+      "/ station 领完：上趟报告和下次月面出航明确区分，显示不写档",
+      "/ mars 领完：上趟报告和下次月面出航明确区分，显示不写档",
+      "/ moon 领完：上趟报告和下次月面出航明确区分，显示不写档",
+      "/pet/game/ station 领完：上趟报告和下次月面出航明确区分，显示不写档",
+      "/pet/game/ mars 领完：上趟报告和下次月面出航明确区分，显示不写档",
+      "/pet/game/ moon 领完：上趟报告和下次月面出航明确区分，显示不写档",
+      "/preview/ station 领完：上趟报告和下次月面出航明确区分，显示不写档",
+      "/preview/ mars 领完：上趟报告和下次月面出航明确区分，显示不写档",
+      "/preview/ moon 领完：上趟报告和下次月面出航明确区分，显示不写档"
+    ]
+  },
+  "focused": {
+    "pass": 43,
+    "fail": 0
+  },
+  "scopeAuditChecks": 26,
+  "status": "Ready for independent re-review; not approved to merge or publish; full repository retains baseline failures.",
+  "browser": {
+    "153-chromium": {
+      "pass": 159,
+      "total": 159,
+      "jsErrors": 0
+    },
+    "154-chromium": {
+      "pass": 269,
+      "total": 269,
+      "jsErrors": 0
+    },
+    "155-preview-chromium": {
+      "pass": 48,
+      "total": 48,
+      "jsErrors": 0
+    },
+    "153-webkit": {
+      "pass": 159,
+      "total": 159,
+      "jsErrors": 0
+    },
+    "154-webkit": {
+      "pass": 269,
+      "total": 269,
+      "jsErrors": 0
+    },
+    "155-preview-webkit": {
+      "pass": 48,
+      "total": 48,
+      "jsErrors": 0
+    },
+    "story": {
+      "pass": 12,
+      "total": 12
+    },
+    "duration": {
+      "pass": 32,
+      "total": 32
+    },
+    "160": {
+      "pass": 24,
+      "total": 24
+    },
+    "cache-browser": {
+      "pass": 16,
+      "total": 16
+    },
+    "stale-lock": {
+      "pass": 4,
+      "total": 4
+    }
+  }
+}

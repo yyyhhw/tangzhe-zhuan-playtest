@@ -6,7 +6,7 @@ function harness(file){
  const c={ms:0,writes:[],ok:true,owns:true,elapsedCommit:0,performance:{now:()=>c.ms},now:()=>c.ms,window:{},TEST_MODE:false,frozen:false,saveBlocked:false,state:{lastSeen:0,maxSeen:0},E:{validState:()=>[]},COLLECTION:{qaProtocol2:true,ownsLock:()=>c.owns,coordinator:{raw:'saved',failed:null,commit:()=>{c.writes.push(c.ms);c.ms+=c.elapsedCommit;return {ok:c.ok,code:'TEST_FAILURE'};}}},lastGood:null,restoreGood(){},petBeforePersist(){},toast(){},showCollectionProtection(){},requestAnimationFrame(){},lastFrame:0,clock:0,dynAcc:0,petManual:false,dirty:false,focusT:0,shake:0,nextBubbleAt:Infinity,tab:'shop'};
  for(const n of ['tick','updateBig','updateGuests','updateSupers','render','refreshDynamic','homeAdvanceActor','renderTab','petFrame'])c[n]=()=>{};
  vm.createContext(c);Object.assign(c,{STORAGE:{},SAVE_KEY:'main',BAK_KEY:'backup',upgradeWritable:()=>c.owns&&!c.saveBlocked,freeze:()=>{c.frozen=true;}});c.E.commitSave=()=>c.COLLECTION.coordinator.commit();
- vm.runInContext(extract('persist')+'\n'+extract('petSave')+'\n'+extract('frame'),c);
+ vm.runInContext((source.includes('function storyRefreshPeriod(')?'let storyObservedPeriod = null;\n'+extract('storyRefreshPeriod')+'\n':'')+extract('persist')+'\n'+extract('petSave')+'\n'+extract('frame'),c);
  return {c,step(ms){c.ms=ms;c.frame(ms);},save(ms=0){c.ms=ms;return c.persist();}};
 }
 for(const file of files){

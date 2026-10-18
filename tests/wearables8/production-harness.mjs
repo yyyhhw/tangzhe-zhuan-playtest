@@ -10,6 +10,7 @@ export const ORIGIN='https://play.example.invalid';
 export const copy=x=>JSON.parse(JSON.stringify(x));
 export const source=(relative, root=ROOT)=>readFileSync(new URL(relative,root),'utf8');
 export const RELEASE=source('collectibles/release.mjs').match(/COLLECTIBLES_RELEASE\s*=\s*['"]([^'"]+)/)[1];
+export const APP_RELEASE=JSON.parse(source('version.json')).v.replace(/^formal-/,'');
 export async function until(predicate,label) {
   const deadline=Date.now()+3000;
   do {if(predicate())return;await new Promise(r=>setImmediate(r));}while(Date.now()<deadline);
@@ -150,7 +151,7 @@ export async function assembly({scope='formal',path,query='',projectRoot='/',ena
   function moduleFor(url){
     if(!modules.has(url)){
       moduleLoads.push(url);const u=new URL(url);
-      const app=u.pathname.endsWith('/app.js')&&[RELEASE,'xingtu135-20261015-r1'].includes(u.searchParams.get('v'));
+      const app=u.pathname.endsWith('/app.js')&&[APP_RELEASE,RELEASE,'xingtu135-20261015-r1'].includes(u.searchParams.get('v'));
       const code=app?actualAppHooks(url):getSource(url);if(app){const loaded=loadedSources.get(url);loaded.executedSha256=createHash('sha256').update(code).digest('hex');loaded.transform='EXTRACTED_ACTUAL_SAVE_HOOKS_AND_BOOT_PREFIX';}
       modules.set(url,new vm.SourceTextModule(code,{context,identifier:url,initializeImportMeta(meta){meta.url=url;},
         async importModuleDynamically(specifier,ref){const next=new URL(specifier,ref.identifier).href;dynamicImports.push(next);if(rejectModule&&next.includes(rejectModule))throw Error('MODEL_MODULE_404');return evaluate(next);}}));

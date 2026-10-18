@@ -1,5 +1,6 @@
 import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import path from 'node:path';import {createHash} from 'node:crypto';import {createRequire} from 'node:module';
-import display from '../../qa-protocol2/wearables8-display.mjs';import {prepareEightWearableCatalog,EIGHT_WEARABLES} from '../../qa-protocol2/eight-catalog.mjs';import {assembly,until,source,RELEASE,ROOT} from './production-harness.mjs';
+import display from '../../qa-protocol2/wearables8-display.mjs';import {prepareEightWearableCatalog,EIGHT_WEARABLES} from '../../qa-protocol2/eight-catalog.mjs';import {assembly,until,source,RELEASE,APP_RELEASE,ROOT} from './production-harness.mjs';
+const changedModules=new Set(JSON.parse(source('tests/integration155/cache-manifest.json')).changedModules);
 const ENTRY_TOKEN='xingtu135-20261015-r1';
 const UI_TOKEN="xingtu135-20261015-r1";
 const root=path.fileURLToPath?path.fileURLToPath(ROOT):decodeURIComponent(ROOT.pathname),require=createRequire(import.meta.url);const sha=b=>createHash('sha256').update(b).digest('hex');
@@ -27,7 +28,7 @@ test('all eight exact owned images are present and versioned; display does not g
 });
 for(const scope of ['formal','preview'])test(scope+': actual no-query bootstrap uses production entry under GitHub project subpath; new closure comes from exact candidate files', {timeout:15000},async t=>{
  const h=await assembly({scope,projectRoot:'/tangzhe-zhuan-playtest/',mode:'bootstrap'});t.after(()=>h.close());await until(()=>h.view()?.phase==='prompt'||h.app||h.errors.length,'prompt or formal auto-upgrade');if(scope==='formal'){assert.equal(h.node('collectibleUpgradeConfirm'),null,'formal has no upgrade prompt');assert.equal(h.node('collectibleUpgradeCancel'),null);}else await h.click('collectibleUpgradeConfirm');await until(()=>h.app,'app');assert.equal(h.runtime.qa,false);assert.equal(h.runtime.entryEnabled,false);
- for(const [url,row]of h.loadedSources){assert(row.file.startsWith(root));assert.equal(row.sha256,sha(fs.readFileSync(row.file)));if(/\/(?:collectibles|qa-protocol2)\//.test(new URL(url).pathname))assert.equal(new URL(url).searchParams.get('v'),RELEASE,url);}
+ for(const [url,row]of h.loadedSources){assert(row.file.startsWith(root));assert.equal(row.sha256,sha(fs.readFileSync(row.file)));if(/\/(?:collectibles|qa-protocol2)\//.test(new URL(url).pathname))assert.equal(new URL(url).searchParams.get('v'),changedModules.has(path.relative(root,row.file))?APP_RELEASE:RELEASE,url);}
 });
 
 // The shared renderer changed in this candidate; existence alone cannot detect stale HTTP URLs.

@@ -1,0 +1,28 @@
+{
+  "deltas": {
+    "preview/app.js": [
+      [
+        "const TOAST_GOOD = /送你隐藏款|新故事卡「|到账 ?\\+|收入 \\+|小红包|已入账|已领取：|已摆出|安排已保存|！收益 ×|完成|开张啦|！开始自动赚钱|已进公共仓库|搬进[^！]{1,12}啦！|大订单 \\+|连续爆单|超频 \\d|来了「|来了特殊客人「|已调任|交换任职|撤销了一步|转好了|收回仓库|已从四家店收起|跑出来了|存档已升级/;\n",
+        "const TOAST_GOOD = /送你隐藏款|到账 ?\\+|收入 \\+|小红包|已入账|已领取：|已摆出|安排已保存|！收益 ×|完成|开张啦|！开始自动赚钱|已进公共仓库|搬进[^！]{1,12}啦！|大订单 \\+|连续爆单|超频 \\d|来了「|来了特殊客人「|已调任|交换任职|撤销了一步|转好了|收回仓库|已从四家店收起|跑出来了|存档已升级/;\n"
+      ],
+      [
+        "    case 'homeWho': if (homeWho !== arg) { homeWho = arg; homeSel = null; sfx('tap'); } dirty = true; return; // 体验-160：锁着的 CEO 下面已有锁定房卡/仓库提示，不再弹红 toast\n",
+        "    case 'homeWho': if (homeWho !== arg) { homeWho = arg; homeSel = null; sfx('tap'); } if (!E.homeOpen(state, arg)) toast('这位 CEO 还没加入'); dirty = true; return;\n"
+      ]
+    ],
+    "preview/pet/game/app.js": [
+      [
+        "const TOAST_GOOD = /送你隐藏款|新故事卡「|到账 ?\\+|收入 \\+|小红包|已入账|已领取：|已摆出|安排已保存|！收益 ×|完成|开张啦|！开始自动赚钱|已进公共仓库|搬进[^！]{1,12}啦！|大订单 \\+|连续爆单|超频 \\d|来了「|来了特殊客人「|已调任|交换任职|撤销了一步|转好了|收回仓库|已从四家店收起|跑出来了|存档已升级/;\n",
+        "const TOAST_GOOD = /送你隐藏款|到账 ?\\+|收入 \\+|小红包|已入账|已领取：|已摆出|安排已保存|！收益 ×|完成|开张啦|！开始自动赚钱|已进公共仓库|搬进[^！]{1,12}啦！|大订单 \\+|连续爆单|超频 \\d|来了「|来了特殊客人「|已调任|交换任职|撤销了一步|转好了|收回仓库|已从四家店收起|跑出来了|存档已升级/;\n"
+      ],
+      [
+        "    case 'homeWho': if (homeWho !== arg) { homeWho = arg; homeSel = null; sfx('tap'); } dirty = true; return; // 体验-160：锁着的 CEO 下面已有锁定房卡/仓库提示，不再弹红 toast\n",
+        "    case 'homeWho': if (homeWho !== arg) { homeWho = arg; homeSel = null; sfx('tap'); } if (!E.homeOpen(state, arg)) toast('这位 CEO 还没加入'); dirty = true; return;\n"
+      ]
+    ]
+  },
+  "mainSha256": {
+    "preview/app.js": "715fbc68172a7fcdbff85495509e5048173e2dcefdf67d418044e7fb3bf1b88b",
+    "preview/pet/game/app.js": "aad362aebce437c00dd7d735adc104eb64cba8e228a771b980d5b135248fcc80"
+  }
+}

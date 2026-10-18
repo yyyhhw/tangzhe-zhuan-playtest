@@ -1,0 +1,18 @@
+{
+  "qa-protocol2/vendor/runtime/validator.mjs": [
+    [
+      "import {validMilestones} from '../../../milestones/domain.mjs?v=home155-ux158-160-20261018-r2';\n",
+      "import {validMilestones} from '../../../milestones/domain.mjs?v=xingtu135-20261015-r1';\n"
+    ]
+  ],
+  "qa-protocol2/vendor/cards/card-coordinator.mjs": [
+    [
+      "import {recordTransition} from '../../../milestones/domain.mjs?v=home155-ux158-160-20261018-r2';\n",
+      "import {recordTransition} from '../../../milestones/domain.mjs?v=xingtu135-20261015-r1';\n"
+    ],
+    [
+      "import {moonView,planMoon,researchSpend,MOON_RULES} from '../../../space/moon.mjs?v=home155-ux158-160-20261018-r2';\n",
+      "import {moonView,planMoon,researchSpend,MOON_RULES} from '../../../space/moon.mjs?v=xingtu135-20261015-r1';\n"
+    ]
+  ]
+}

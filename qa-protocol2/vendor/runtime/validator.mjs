@@ -1,4 +1,4 @@
-import {validMilestones} from '../../../milestones/domain.mjs?v=home155-ux158-160-20261018-r1';
+import {validMilestones} from '../../../milestones/domain.mjs?v=home155-ux158-160-20261018-r2';
 import {validateHiddenLedger} from '../../../collectibles/decor6-grants.mjs?v=xingtu135-20261015-r1';
 /** Pure protocol2 validation: admitted catalog, immutable migration identity and
  * bounded hidden receipts. No normalization, award side effects or storage. */

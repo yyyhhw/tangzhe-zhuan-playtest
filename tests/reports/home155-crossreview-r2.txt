@@ -1,0 +1,86 @@
+Cross-review repair r2 — supersedes be0d47b acceptance claim
+2026-10-18, original connected Mac arm64; Node 24.19.0.
+Base main: 3cbd88b9e9846ca6e2fc9983936246e72928a55e.
+Previous candidate: be0d47b9b4e4dc14760303399518adb524319fe1 (retained in history).
+Target: xiongda/home155-158-160-integration; append-only normal push; no main merge/deployment.
+No applicable AGENTS.md found in current repository or workspace ancestors.
+
+Reproduction and final comparison
+Same Mac, same Node, separate frozen baseline-main / candidate-be0-review worktrees.
+node --test:
+  main: 1060 total, 710 pass, 342 fail, 8 skipped.
+  frozen be0: 1070 total, 698 pass, 364 fail, 8 skipped.
+  repaired: 1076 total, 728 pass, 340 fail, 8 skipped.
+  be0 minus main: 22 additional failing test names/occurrences, zero removed.
+  repaired minus main: ZERO additional failures, two removed.
+Counts differ by +1 in both main/be0 from the reviewer's 341/363; this machine independently reproduced 342/364. Do not claim to have reproduced the reviewer's exact environment count.
+The plain invocation lacks vm.SourceTextModule support; many existing failures are model boot/VM errors.
+Supplement with node --experimental-vm-modules --test, using installed Playwright browsers:
+  main: 1060 total, 1026 pass, 26 fail, 8 skipped.
+  repaired: 1076 total, 1044 pass, 24 fail, 8 skipped.
+  ZERO additional failures, same two removed. Complete difference names and remaining VM failures are in the adjacent JSON.
+This is not a claim that the complete repository is green. Baseline failure count alone is not an exemption from review.
+
+22 reproduced incremental failures and fixes
+14 autosave15/cadence failures (root/pet seven each): ReferenceError storyRefreshPeriod.
+  The harness now loads the actual product function and state declaration, not a no-op substitute.
+  Added actual-function boundary/inactive-page checks. Product frame hook remains active in both real browsers.
+1 decor6/published15 frame hash: normalize exactly one hook immediately after homeAdvanceActor.
+  Published hash manifest unchanged; missing hook throws, duplicate hook and altered autosave/guard fail the original hash.
+2 milestone/lifecycle protection failures: MILESTONE_DELTA_NOT_EXACT on versioned imports.
+  Reverse only full exact import lines for validator and card-coordinator before existing milestone/zombie delta checks.
+  Missing/duplicate/altered import fails; guard changes remain hash-visible. No guard or lifecycle product code changed.
+4 cachefix failures: formal HTML current-release assets retained home150 token.
+  Formal style/economy and other formerly current-release home/pet asset URL tokens now match r2.
+  Asset bytes unchanged. Existing pinned unrelated resource URLs remain unchanged.
+1 moon/lock-lifetime entry chain failure: stale one-token expectation.
+  Assert exact current entry/app token, retain old-URL rejection and no-locks.query assertion.
+Additional reported real product omission: root/pet stale-lock guard still pointed to old formal version.
+  Both guards now match formal version.json; actual browser test redirects once, then gives refusal without storage access.
+All changed module ancestors use home155-ux158-160-20261018-r2, distinct from already-pushed r1.
+Unchanged legacy economy/domain release remains xingtu135; source-specific URL assertions distinguish these from changed imports.
+
+VM-enabled follow-through
+The production model recognized only old app query tokens, so new app URLs initially executed the complete DOM app inside the synthetic save-hook harness.
+The model now recognizes the explicit current APP_RELEASE derived from version.json, preserving actual source-hook extraction.
+14 dependent runtime URL assertions now expect current entry/app version, or the legacy version for unchanged modules.
+Actual storage/lease/rollback assertions were not relaxed. Lock/lifecycle subset: 23 pass, 0 fail, 2 existing skips.
+
+Five pre-existing protection failures, individually reconciled
+1 autosave15/scope: be0 cache import failure was hiding an older preview/pet whole-file mismatch.
+  Exact import/preview deltas now reveal the SAME main actual aad362ae... versus expected dfa3f984... hash.
+2 bb70 integration integrity: normalize only the two authorized preview UX lines, plus existing HOME155 one-line delta.
+  SAME main actual 519b128c... versus expected 1675ab1d... preview/app hash remains.
+3 bb70 CSS URL: now passes. Test reads the formal version rather than the unrelated collectibles economy release; stale CSS negative control remains.
+4 moon protected blobs: SAME main preview/pet actual aad362ae... versus expected dfa3f984... remains.
+5 moon resource chain: now passes. Tests formal/preview/direct-preview-pet entry paths, changed ancestors/app/overlay, unchanged domain URLs and actual byte pins. Added per-entry/ancestor stale-URL negative controls.
+All five original protected hash manifests remain byte-identical. Preview normalization is independent of HOME155 and reverses exactly two whole lines per preview file; reconstructs exact main bytes and rejects missing/duplicate/modified lines or unrelated changes.
+
+Independent browser regression, fresh contexts
+Playwright 1.58.2; Chromium 145.0.7632.6 build1208; WebKit 26.0 build2248.
+153: 159/159 per engine. 154: 269/269 per engine. 155-preview: 48/48 per engine.
+Six suites: 952/952, zero JS errors.
+Story success toast/collection wording/refresh: 12/12.
+Real Earth purchase recap <1h and <1day, exact ledger/earth persisted after refresh: 32/32.
+160 locked CEO, mall switch and four entrances: 24/24.
+Observed changed module requests at four entrances: 16/16, all current r2.
+Actual stale-lock app branch root/pet in both engines: 4/4; exactly one redirect to current formal URL, refusal notice, zero storage reads/writes and zero pageerrors.
+Visually inspected WebKit live-night room and <1h pet recap screenshots.
+Focused regression and negative-control suite: 43/43.
+Source audit: 26 checks; all product differences since be0 are exact version substitutions; five protected hash manifests unchanged.
+
+Commands (NODE is the verified local Node24 executable; all tests run locally)
+In each corresponding worktree: "$NODE" --test
+In baseline-main and integrated: PLAYWRIGHT_BROWSERS_PATH="$AUDIT/browsers" "$NODE" --experimental-vm-modules --test
+From audit workspace, for each BROWSER=chromium/webkit:
+  PLAYWRIGHT_BROWSERS_PATH="$AUDIT/browsers" WEBKIT_SMOKE_OUT="$AUDIT/evidence/revision2/browser" BROWSER="$BROWSER" "$NODE" integrated/tests/webkit-smoke/scenarios-153.mjs
+  repeat with scenarios-154.mjs and scenarios-155-preview.mjs
+Focused: "$NODE" --test integrated/tests/integration155/*.test.mjs integrated/tests/autosave15/cadence.test.mjs integrated/tests/decor6/published15.test.mjs integrated/tests/milestones/protection.test.mjs integrated/tests/cachefix/*.test.mjs
+Additional local audit scripts: audit-revision2-story.mjs, audit-revision2-duration.mjs, audit-revision2-160.mjs, audit-revision2-cache.mjs, audit-revision2-stale-lock.mjs (same PLAYWRIGHT_BROWSERS_PATH).
+Raw local evidence: evidence/revision2/{main-full,be0-frozen-full,candidate-plain-final,main-vm-full,candidate-vm-final}.tap; {old,plain,vm}-exact-diff.json; five-legacy-causes.json; source-audit.json; browser/ reports/screenshots.
+
+Limits and handoff
+Ready for independent re-review of new SHA, not merge approval. Do not merge main or deploy until reviewer clears the exact new commit.
+No iOS device, real-world wait to 19:00, suspension recovery, historical warm-cache upgrade rehearsal, or deployment tested.
+Stale-lock test uses real served app with controlled missing-bootstrap HTML and storage spies, not an actual historical release cache.
+Existing main failures remain; no 87/31/43, v10a edits, Slack, CI/Actions/checks/logs/artifact access performed.

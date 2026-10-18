@@ -52,7 +52,7 @@
     "sourcePackage": "collectible-protocol2-runtime-v1",
     "sourcePath": "module/validator.mjs",
     "bytes": 13693,
-    "sha256": "57ae2a181cdbfaf8e73d26a999e5170bf9ccdebfb03e1c33e0e8f9242e3fded8",
+    "sha256": "b9e272c3404f39717c4dc603c0b3e1ed8bc0f11ba4ad4c06b63c53cc071d6745",
     "sourceSha256": "b710aa9da4c979036e980ffdbdf2f8ed46259d13c5d7ac90bf07ea42a806511a",
     "sourceBytes": 8201,
     "derivation": "Revision 2 exact boot migration markers, formal leaderboard mirror, optional source-bound pet roster transition guard; original reviewed archive unchanged. Revision 3: instance-local, single-entry cache of fully verified immutable snapshot/original raw pairs; current validation and write protections unchanged. Revision 4 (杨总 16:12): optional mutable gachaDaily {day,n} for the 5-per-day blind box limit; absent = 0 today.",
@@ -63,7 +63,7 @@
     "sourcePackage": "collectible-card-adapter-v1",
     "sourcePath": "module/card-coordinator.mjs",
     "bytes": 13686,
-    "sha256": "ecf5400e2fa5c73a379ca938779125c27916e325769268b86f4e2a003c985995",
+    "sha256": "4346f57824c979f6cd4a6e4ce67388a19575466aae1a77a98bae8c51b3c4f47f",
     "reviewedInputSha256": "c39527224902c835f2cc611527a5fcec2a23293adebd3b78bbb8684d2b41a034",
     "reviewedInputBytes": 8203,
     "integrationChange": "xingtu02 r2 candidate on 0b7218d: first-event ledger, confirmed zombie participation and recap; pending independent review; home155/ux158/160 cache-chain integration (imports only where applicable)"
@@ -105,7 +105,7 @@
     "sourceCommit": "472349b5f31df4446e79694b6be5bd6f66bd6db4",
     "derivation": "Reviewed01a domain unchanged; new authored candidate moon intent/overlay increment; artwork selectively from pinned a1bc784b demo",
     "bytes": 15095,
-    "sha256": "938a3151d2431a47ac1e5f859210e747ef3fa447b286d229f8981215488660c5",
+    "sha256": "c328581163841e5150e3f93f35d7d03d49076260fecd0ef1d82515a1c54aca8e",
     "integrationChange": "; home155/ux158/160 cache-chain integration (imports only where applicable)"
   },
   {
@@ -122,7 +122,7 @@
     "sourceCommit": "472349b5f31df4446e79694b6be5bd6f66bd6db4",
     "derivation": "Reviewed01a domain unchanged; new authored candidate moon intent/overlay increment; artwork selectively from pinned a1bc784b demo",
     "bytes": 21337,
-    "sha256": "2efabe02934b8740789ff46f4d275b81646a075a0bb971186fb5bcc2fa965d49",
+    "sha256": "eb3d96072d2dc23e96ea06603d613a5a1d7f4a31539f83db42f2f07f12eb2920",
     "integrationChange": "xingtu02 r2 candidate on 0b7218d: first-event ledger, confirmed zombie participation and recap; pending independent review; home155/ux158/160 cache-chain integration (imports only where applicable)"
   },
   {
@@ -154,7 +154,7 @@
     "sourcePackage": "xingtu02-candidate",
     "sourcePath": "space/xingtu-views.mjs",
     "bytes": 16049,
-    "sha256": "1adedb34f941ebe370e1f57a0c89a1a0cec1176eca3f37c4da924997286daab9",
+    "sha256": "2acede231ffeec27e3832c8fce4719738b7e292d54158cc85e59ba58c1d90a1c",
     "integrationChange": "xingtu02 r2 candidate on 0b7218d: first-event ledger, confirmed zombie participation and recap; pending independent review; home155/ux158/160 cache-chain integration (imports only where applicable)"
   }
 ]
