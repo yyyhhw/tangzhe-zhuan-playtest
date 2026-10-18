@@ -1,0 +1,11 @@
+import {test} from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {tower,verify} from './mapping.mjs';
+const root=new URL('../../',import.meta.url),bytes=fs.readFileSync(new URL(tower.path,root));
+test('current Tower Defense asset matches the verified original',()=>verify(bytes));
+test('reject same-length altered audio',()=>{const bad=Buffer.from(bytes);bad[500]^=1;assert.throws(()=>verify(bad),/SHA256/);});
+test('reject truncated audio',()=>assert.throws(()=>verify(bytes.subarray(1)),/byte length/));
+test('reject wrong local file mapping',()=>assert.throws(()=>verify(bytes,{...tower,path:'audio/hot-springs-town.mp3'}),/mapping changed/));
+test('reject confusing display name with download target',()=>assert.throws(()=>verify(bytes,{...tower,url:tower.url.replace('_1.mp3','.mp3')}),/mapping changed/));
+test('credits retain explicit source mapping and Carefree attribution',()=>{const s=fs.readFileSync(new URL('audio/CREDITS.md',root),'utf8');for(const v of [tower.page,tower.display,tower.url,tower.path,tower.sha256,'Kevin MacLeod','https://creativecommons.org/licenses/by/4.0/','USUAN1400037','bart'])assert(s.includes(v),v);});
